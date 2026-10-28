@@ -1,0 +1,8 @@
+* text=auto
+*.py text eol=lf
+*.mjs text eol=lf
+*.command text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+goal-fx-multiplayer-20261026/gvproxy-eim-wrapper text eol=lf

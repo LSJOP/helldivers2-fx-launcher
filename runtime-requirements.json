@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "release_kind": "source-only",
+  "fresh_machine_verified": false,
+  "host": {
+    "architecture": "arm64 (Apple Silicon); other architectures unverified",
+    "python_tested": "3.9.6",
+    "node_required_globals": [
+      "fetch",
+      "WebSocket"
+    ]
+  },
+  "components": [
+    {
+      "name": "FX steamac-vm",
+      "included": false,
+      "path": "performance-stutter-20261027/FX HUD隔离诊断.app/Contents/MacOS/steamac-vm",
+      "sha256": "0db013e9766b77e1c40f588c5f02ce1bab5937ec88cc17d6a8ade6c53e00b0cb"
+    },
+    {
+      "name": "gvproxy-eim",
+      "included": false,
+      "path": "goal-fx-multiplayer-20261026/gvproxy-eim",
+      "sha256": "27136dd87a6e8c35c2607077a6303082e577751a9e31ebcaa1bd81c93cc58444"
+    },
+    {
+      "name": "Proton-JE",
+      "included": false,
+      "guest_path": "~/.local/share/Steam/compatibilitytools.d/proton-je-11.0-20261014-3",
+      "wine_core_sha256": {
+        "x86_64-windows/user32.dll": "e51cd4a5e451b5bf6c2f89582bd1b341bfec9309c468bed5ed5f49d3dd5c7e09",
+        "x86_64-windows/win32u.dll": "1bfc85f5aacb14b405794bbe82cbf733eb7f09701697aa2300dbb9e22a123a92",
+        "x86_64-windows/kernelbase.dll": "1c4eb48f08594541605e31391835b5d150a4bf46691236df7896cda51001b5b8",
+        "x86_64-unix/win32u.so": "05a159f75fb302bfe3c67386a6d17b53f4db521e0726281a8dad7121006e627c"
+      },
+      "ntdll_sha256": "a699b73899f8a3ae464dd5ee237dd1f1f1587287a0941fbab5934698d633cbfe"
+    },
+    {
+      "name": "FEX",
+      "included": false,
+      "guest_path": "~/.local/share/Steam/steamapps/common/FEX-Emu/usr/bin/FEX",
+      "sha256": "ce93cadae7b7d3ef01376ba2acd58aedb602a7fc077e49592179766d13c294bf"
+    }
+  ],
+  "network_assumptions": {
+    "guest_host_gateway": "192.168.127.254",
+    "host_proxy_port": 7890,
+    "ssh_default_host": "127.0.0.1",
+    "ssh_default_port": 2222
+  },
+  "pending": [
+    "Public component download/build recipe",
+    "Third-party source/license provenance",
+    "Fresh-machine install test",
+    "More Mac/macOS hardware validation",
+    "FX install-location discovery",
+    "Reproducible compatibility-component installation and rollback",
+    "Optional user-configured networking instead of mandatory port 7890"
+  ],
+  "target_distribution": "Install specified FX, prepare reproducible compatibility components, launch using each player's own network.",
+  "portable_install_implemented": false,
+  "network_decoupling_implemented": false
+}

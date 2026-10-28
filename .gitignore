@@ -1,0 +1,53 @@
+# Personal settings and credentials
+settings.json
+network-profile.json
+network-snapshots/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+.ssh/
+*.sock
+*.sqlite*
+*.db
+*.plist
+*.vdf
+*.yaml
+*.yml
+# Runtime output and private evidence
+**/backups/
+**/reports/
+**/network-snapshots/
+**/diagnostics*/
+**/success-session*/
+**/network-incident*/
+**/*-backup*/
+**/previews/
+*.log
+*.pcap
+*.pcapng
+*.core
+# Runtime binaries / game files / images
+*.app/
+*.dmg
+*.iso
+*.img
+*.qcow2
+*.vhd*
+*.dll
+*.dylib
+*.so
+*.exe
+*.zip
+*.tar*
+goal-fx-multiplayer-20261026/gvproxy-eim
+# Local generated files
+.DS_Store
+._*
+__pycache__/
+*.py[cod]
+.venv/
+node_modules/

@@ -1,0 +1,4 @@
+#!/bin/sh
+export GVPROXY_UDP_PORT_MAPPING=endpoint-independent
+steamac_network_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd) || exit 1
+exec "$steamac_network_dir/gvproxy-eim" "$@"

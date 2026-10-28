@@ -1,0 +1,6 @@
+{
+  "fixture": "Synthetic public regression input; not a gameplay record.",
+  "helper_state": {
+    "launch": "VKD3D_CONFIG=single_queue https_proxy=http://192.168.127.254:7890 FEX_NEEDSSECCOMP=1 FEX_DISKCACHE=0 WINEDEBUG=-all PROTON_USE_XALIA=0 PROTON_LOG=1 PROTON_LOG_DIR=/tmp taskset -c $(cat /sys/devices/system/cpu/online) %command%"
+  }
+}
