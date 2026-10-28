@@ -140,6 +140,8 @@
     "latency.paused": "pausiert",
     "launcher.already_open": "Der Launcher läuft bereits. Zum vorhandenen Fenster wechseln oder dort 0 drücken und danach neu öffnen. Das Spiel läuft weiter.",
     "runtime.title": "Runtime requirements",
+    "runtime.local_ready": "Lokale Voraussetzungen bereit",
+    "runtime.unchecked": "Umgebung: ungeprüft",
     "runtime.missing": "Environment not ready: {count} missing runtime dependencies",
     "runtime.attention": "Environment not ready: {count} items need checking",
     "runtime.attention_short": "{count} need checking",

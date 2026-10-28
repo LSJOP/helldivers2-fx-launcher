@@ -140,6 +140,8 @@
     "latency.paused": "暫停",
     "launcher.already_open": "啟動器已在執行。請返回原視窗，或在原視窗按 0 結束後重開；遊戲持續執行。",
     "runtime.title": "遊戲執行依賴",
+    "runtime.local_ready": "本機依賴已就緒",
+    "runtime.unchecked": "環境狀態：未檢查",
     "runtime.missing": "環境未就緒：缺少 {count} 項執行依賴",
     "runtime.attention": "環境未就緒：{count} 項需要檢查",
     "runtime.attention_short": "{count} 項需要檢查",

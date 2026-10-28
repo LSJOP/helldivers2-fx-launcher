@@ -96,7 +96,7 @@ def dashboard_data():
     def role(value):
         if value == unknown:return 'muted'
         return 'green' if value in [tr('运行中','running'),tr('端口就绪','port open'),tr('验证通过','verified'),tr('已登录','signed in')] else 'red'
-    return dict(zip(['fx','ssh','steam','proxy','game'], [(value,role(value)) for value in [fx,ssh,steam,proxy,game]]), note=age)
+    return dict(zip(['fx','ssh','steam','proxy','game'], [(value,role(value)) for value in [fx,ssh,steam,proxy,game]]), note=age,runtime_limited=False)
 
 
 def runtime_dependencies():
@@ -113,7 +113,10 @@ def limited_dashboard(report):
 def refresh_dashboard(language):
     report=runtime_dependencies()
     if not report['ready']:return limited_dashboard(report)
-    return status_monitor.snapshot(prefs,helper,language)
+    data=status_monitor.snapshot(prefs,helper,language)
+    # Presentation flag only: use the existing report['ready'] decision above.
+    data['runtime_limited']=False
+    return data
 
 
 def show_runtime_dependencies(report):

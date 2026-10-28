@@ -8,6 +8,24 @@
 
 当前是源码技术预览。可以自动检查、经用户确认后通过已有 Homebrew 安装 Python/Node.js；**不能据此完成全部游戏运行环境安装**。
 
+### 复制给 AI 助手的完整提示词
+
+将下面整段复制给 ChatGPT、Codex、Claude Code 等助手。请使用你自己的项目目录；无需向助手提供密码、令牌或代理订阅。
+
+```text
+请协助我在 Apple Silicon Mac 上准备 HELLDIVERS 2 FX Launcher 源码技术预览。
+仓库：https://github.com/LSJOP/helldivers2-fx-launcher
+
+1. 先确认你是否能访问我的本地文件和终端。不能访问时，请逐步指导我执行，并让我返回脱敏结果；不要声称已经检查或安装。确认我解压或克隆的项目文件夹，不要假定下载目录。
+2. 在实际项目中阅读 README.md、docs/AI_INSTALL.md、tools/install_dependencies.sh、tools/runtime_paths.sh、tools/check_node.cjs 和依赖检查文件。以当前文件为准，遇到缺失或不一致先报告，不猜测命令或参数。
+3. 先做只读检查：uname -s、uname -m，以及 /bin/bash tools/install_dependencies.sh --check。确认原生 Darwin/arm64、Python 3.9+、Node.js 22.0.0+ 及原生 fetch/WebSocket 功能；已满足要求的组件直接跳过。
+4. 安装任何软件或修改系统前，先说明准确操作、包名、联网和磁盘影响，并等待我确认。确认后优先使用现有原生 Homebrew，通过 /bin/bash tools/install_dependencies.sh 安装缺失的基础依赖。没有 Homebrew 时让我选择 Homebrew 官方说明或 Python/Node 官方安装包，不自动安装 Homebrew。不要覆盖系统 Python、强制链接、编辑 shell profile 或批量升级软件；密码和系统授权由我自行操作。
+5. 安装后重新执行 /bin/bash tools/install_dependencies.sh --check，再执行 /bin/zsh Start.command --check-local。报告实际版本、功能结果和 Python 路径。后者返回 3 表示游戏组件不完整但可进入受限模式，返回 2 表示启动器基础条件有问题；不要把缺失或未验证说成成功。
+6. 如需配置语言、外观或 SSH，请通过现有菜单 7、9、8 引导我操作，写入个人设置或保存密码前逐项确认。真实 SSH、FX 环境配置、Steam 和游戏启动需要另外获得我的明确授权。
+7. 当前没有完整游戏环境安装包。不要猜测 FX、FEX、Proton 或 gvproxy 的下载地址和兼容版本，不安装来源不明的二进制，不关闭 SIP、Gatekeeper 或其他 macOS 安全保护，不改 DNS、IPv6、防火墙或代理节点。
+8. 最后汇报：安装了什么、跳过了什么、验证了什么、仍缺少什么，以及我下一步可以做什么。明确区分“基础依赖就绪”“可打开受限模式菜单”和“游戏运行或联机已验证”。
+```
+
 ### 可执行范围与确认边界
 
 | 操作 | 是否可直接执行 |
@@ -99,6 +117,24 @@ uname -m
 ## English
 
 This guide works with assistants that can inspect local files or guide Terminal use. Without local access, provide instructions and request redacted results; never claim execution. This source preview can inspect Python/Node and install missing tools through existing Homebrew **after user consent**. It cannot complete the entire game environment.
+
+### Copy the complete prompt
+
+Copy the entire block into ChatGPT, Codex, Claude Code or another assistant. Use your own project folder; do not share passwords, tokens or proxy subscriptions.
+
+```text
+Help me prepare the HELLDIVERS 2 FX Launcher source technical preview on an Apple Silicon Mac.
+Repository: https://github.com/LSJOP/helldivers2-fx-launcher
+
+1. Confirm whether you can access my local files and Terminal. Without access, guide me one step at a time and request redacted results; never claim you ran checks or installations. Confirm my extracted or cloned project folder instead of assuming its location.
+2. Read README.md, docs/AI_INSTALL.md, tools/install_dependencies.sh, tools/runtime_paths.sh, tools/check_node.cjs and the actual dependency-check files. Follow the current repository; report missing or inconsistent files instead of inventing commands or flags.
+3. Start with read-only checks: uname -s, uname -m, and /bin/bash tools/install_dependencies.sh --check. Check native Darwin/arm64, Python 3.9+, and Node.js 22.0.0+ with native fetch/WebSocket. Skip tools that already meet the requirements.
+4. Before software installation or system changes, explain the exact operations, packages and network/disk impact, then wait for my approval. After approval, prefer existing native Homebrew through /bin/bash tools/install_dependencies.sh to install missing basic dependencies. If Homebrew is absent, let me choose official Homebrew instructions or Python/Node installers; do not install Homebrew automatically. Do not replace system Python, force links, edit shell profiles or upgrade all packages. Let me handle passwords and OS authorization.
+5. Rerun /bin/bash tools/install_dependencies.sh --check, followed by /bin/zsh Start.command --check-local. Report actual versions, feature checks and the selected Python path. The latter returns 3 for incomplete game components with limited mode available, or 2 for broken launcher basics. Do not report missing or unverified items as successful.
+6. Guide any language, appearance or SSH setup through existing menus 7, 9 and 8. Obtain approval for each personal-setting write or password-storage action. Real SSH, FX environment configuration, Steam and game startup require separate explicit authorization.
+7. A complete game environment installer is not available. Do not guess FX, FEX, Proton or gvproxy download URLs or compatible versions, install unknown binaries, disable SIP, Gatekeeper or other macOS protections, or change DNS, IPv6, firewall or proxy nodes.
+8. Summarize what was installed, skipped and verified, what remains missing, and my next steps. Distinguish basic dependencies being ready, limited-mode menus being available, and verified gameplay or multiplayer.
+```
 
 ### Permissions
 

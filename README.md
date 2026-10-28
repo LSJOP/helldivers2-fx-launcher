@@ -2,14 +2,38 @@
 
 [简体中文](#简体中文) · [English](#english)
 
+**🤖 AI 辅助安装 / Install with AI** · [中文指南与完整提示词](docs/AI_INSTALL.md#简体中文) · [English guide & copyable prompt](docs/AI_INSTALL.md#english)
+
 <!-- launcher-version:start -->
 **当前源码版本 / Current source version: `0.1.0-preview.1`** · [VERSION](VERSION) · [CHANGELOG](CHANGELOG.md)
 源码技术预览；尚无完整安装包，版本号不代表已创建 GitHub Release。 / Source technical preview; no complete installer or GitHub Release is implied.
 <!-- launcher-version:end -->
 
-![Launcher UI preview with all runtime states unchecked / 启动器界面预览，所有运行状态均未检查](docs/images/launcher-en.png)
+<table>
+  <tr>
+    <th width="50%">简体中文 UI</th>
+    <th width="50%">English UI</th>
+  </tr>
+  <tr>
+    <td><a href="docs/images/launcher-zh-CN.png"><img src="docs/images/launcher-zh-CN.png" alt="简体中文启动器 UI：受限模式离线预览，运行状态均未检查" width="100%"></a></td>
+    <td><a href="docs/images/launcher-en.png"><img src="docs/images/launcher-en.png" alt="English launcher UI: offline limited-mode preview, all runtime states unchecked" width="100%"></a></td>
+  </tr>
+</table>
 
-*当前 UI 代码的离线渲染预览，不是游戏运行或联机成功截图。 / Offline preview rendered from the current UI code; no game, EAC or multiplayer success is implied.* [中文界面 / Chinese UI](docs/images/launcher-zh-CN.png) · [截图来源 / Image provenance](docs/images/README.md)
+<details>
+<summary>📱 手机或小屏幕：展开大图 / Small screen: expand full-width previews</summary>
+
+**简体中文 UI**
+
+[![简体中文启动器 UI，点击查看原图](docs/images/launcher-zh-CN.png)](docs/images/launcher-zh-CN.png)
+
+**English UI**
+
+[![English launcher UI — click for original size](docs/images/launcher-en.png)](docs/images/launcher-en.png)
+
+</details>
+
+*可点击图片查看原图。两图均为当前 UI 代码的离线渲染预览，不是游戏运行或联机成功截图。 / Click either image for its original size. Both are offline previews rendered from the current UI code; no game, EAC or multiplayer success is implied.* [截图来源 / Image provenance](docs/images/README.md)
 
 **源码技术预览 / Source Technical Preview**
 
@@ -72,13 +96,9 @@ cd "$HOME/Downloads/helldivers2-fx-launcher-main" && /bin/bash tools/install_dep
 
 ### 🤖 使用 AI 助手安装
 
-可把下面的内容复制给有本地工具权限的 ChatGPT、Codex 或 Claude Code；没有本地访问权限时，让它指导你执行。
+打开[中文 AI 安装指南与完整提示词](docs/AI_INSTALL.md#简体中文)，将提示词复制给 ChatGPT、Codex 或 Claude Code。没有本地工具权限的助手可以逐步指导你操作；安装或修改设置前仍需你确认。当前仅可辅助准备基础依赖，完整游戏环境尚未提供。
 
-```text
-请协助安装 helldivers2-fx-launcher。先让我确认解压目录，读取 README.md 和 docs/AI_INSTALL.md，按仓库实际脚本做只读检查。仅处理 Python 3.9+ 与满足版本和功能要求的 Node.js，已满足就跳过。任何软件安装、系统修改或个人设置写入前，先说明准确操作并征得我确认。没有 Homebrew 不要自动安装，给我官方方式选择。不要猜测游戏组件下载地址，不关闭 SIP/Gatekeeper，不自动连接 SSH 或启动游戏。验证后报告版本、路径及仍缺少的事项，不能把基础依赖就绪说成游戏安装成功。
-```
-
-[AI 安装详细指南](docs/AI_INSTALL.md) · [统一版本与更新记录](docs/VERSIONING.md)
+[统一版本与更新记录](docs/VERSIONING.md)
 
 ### 第 2 步：双击启动入口
 
@@ -181,13 +201,9 @@ The installer and shortcut share Python selection rules. Results show versions, 
 
 ### 🤖 Install with AI
 
-Copy this prompt into an assistant with local tool access, or ask an assistant without it to guide your actions:
+Open the [English AI installation guide and complete prompt](docs/AI_INSTALL.md#english), then copy the prompt into ChatGPT, Codex or Claude Code. Assistants without local tools can guide you step by step. Installation and setting changes still need your approval; the complete game environment is not available yet.
 
-```text
-Help me set up helldivers2-fx-launcher. Confirm the extracted folder, read README.md and docs/AI_INSTALL.md, and use the actual repository scripts for read-only checks. Handle only Python 3.9+ and Node.js meeting the project version and feature requirements; skip suitable tools. Explain and obtain my approval before software installation, system changes or personal-setting writes. If Homebrew is absent, offer official choices rather than installing it automatically. Do not guess game-component URLs, disable SIP/Gatekeeper, connect SSH or start the game automatically. Verify and report versions, paths and remaining gaps; basic dependencies being ready does not mean the game is installed.
-```
-
-[Detailed AI installation guide](docs/AI_INSTALL.md#english) · [Versioning and changelog](docs/VERSIONING.md)
+[Versioning and changelog](docs/VERSIONING.md)
 
 ### Step 2: Open the shortcut
 

@@ -140,6 +140,8 @@
     "latency.paused": "пауза",
     "launcher.already_open": "Лаунчер уже работает. Вернитесь в его окно или нажмите там 0 перед повторным запуском. Игра продолжит работать.",
     "runtime.title": "Runtime requirements",
+    "runtime.local_ready": "Локальные компоненты готовы",
+    "runtime.unchecked": "Среда: не проверена",
     "runtime.missing": "Environment not ready: {count} missing runtime dependencies",
     "runtime.attention": "Environment not ready: {count} items need checking",
     "runtime.attention_short": "{count} need checking",

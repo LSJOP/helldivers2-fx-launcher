@@ -140,6 +140,8 @@
     "latency.paused": "일시중지",
     "launcher.already_open": "실행기가 이미 실행 중입니다. 기존 창으로 돌아가거나 0으로 종료한 뒤 다시 여세요. 게임은 계속 실행됩니다.",
     "runtime.title": "Runtime requirements",
+    "runtime.local_ready": "로컬 필수 구성 요소 준비 완료",
+    "runtime.unchecked": "환경: 확인되지 않음",
     "runtime.missing": "Environment not ready: {count} missing runtime dependencies",
     "runtime.attention": "Environment not ready: {count} items need checking",
     "runtime.attention_short": "{count} need checking",

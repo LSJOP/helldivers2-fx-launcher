@@ -23,9 +23,11 @@ _version_spec.loader.exec_module(launcher_version)
 
 COLORS = {
     'background': '#101114', 'yellow': '#FFD600', 'muted': '#737780',
-    'green': '#55D68A', 'red': '#FF5757', 'text': '#DFE2E8', 'line': '#41454D',
+    'green': '#55D68A', 'red': '#FF5757', 'warning': '#FF6B4A',
+    'text': '#DFE2E8', 'line': '#41454D',
 }
-COLOR_INDEX = {'background':233,'yellow':220,'muted':243,'green':78,'red':203,'text':253,'line':238}
+COLOR_INDEX = {'background':233,'yellow':220,'muted':243,'green':78,'red':203,'warning':203,'text':253,'line':238}
+ANSI_FG = {'background':30,'yellow':93,'muted':90,'green':92,'red':91,'warning':91,'text':37,'line':90}
 ASSETS = Path(__file__).resolve().parent/'assets'
 ORDER = ['1','2','3','4','10','8','9','7','6','5','0']
 LEFT = ['1','2','3','4','10']
@@ -94,7 +96,7 @@ class Frame:
     def plain(self):
         return '\n'.join(''.join(cell[0] for cell in line).rstrip() for line in self.cells)
 
-    def ansi(self,colors=True,truecolor=True):
+    def ansi(self,colors=True,truecolor=True,colors256=True):
         output=['\033[?7l\033[H']
         for y,line in enumerate(self.cells):
             output.append('\033['+str(y+1)+';1H')
@@ -107,7 +109,8 @@ class Frame:
                     if truecolor:
                         r,g,b=rgb(fg);br,bg_,bb=rgb(bg)
                         output.append(prefix+'38;2;'+str(r)+';'+str(g)+';'+str(b)+';48;2;'+str(br)+';'+str(bg_)+';'+str(bb)+'m')
-                    else:output.append(prefix+'38;5;'+str(COLOR_INDEX[fg])+';48;5;'+str(COLOR_INDEX[bg])+'m')
+                    elif colors256:output.append(prefix+'38;5;'+str(COLOR_INDEX[fg])+';48;5;'+str(COLOR_INDEX[bg])+'m')
+                    else:output.append(prefix+str(ANSI_FG[fg])+';'+str(ANSI_FG[bg]+10)+'m')
                 output.append(char)
                 previous=style
         output.append('\033[0m')
@@ -197,28 +200,36 @@ def build_home(columns,rows,language,appearance,labels,status,selected='1'):
     else:
         art=emblem(appearance.get('emblem','current'),max(20,int(c*.28)),7)
         for i,line in enumerate(art):f.put(1+i,margin,line,'yellow')
-        title_x=max(29,int(c*.30))
+        title_x=max(29,int(c*.30),margin+max(map(len,art),default=0)+2)
         for i,line in enumerate(wordmark(c-title_x-margin-4)):f.put(1+i,title_x,line,'yellow',bold=True)
         for row in range(1,7):f.put(row,title_x-2,'│','yellow')
         f.put(4,title_x,'F X  L A U N C H E R  /  U I  2 . 0','text')
         f.put(6,title_x,'FOR SUPER EARTH / FOR DEMOCRACY','muted')
-        f.rule(7,margin,c-margin)
+        # The emblem occupies rows 1–7; keep its final row intact.
+        f.rule(8,margin,c-margin)
         split=int(c*.59)
-        left_rows=[9,12,14,16,18];right_rows=[10,12,14,16,18]
+        last_menu=min(19,r-7)
+        left_rows=[11+(i*(last_menu-11)+2)//4 for i in range(5)]
+        right_rows=list(left_rows)
+    f.environment_row=3 if compact and r>=16 else (1 if compact else 9)
     if status.get('runtime_limited'):
         missing=status.get('runtime_missing_count',0)
         attention=status.get('runtime_attention_count',0)
         notice=T('runtime.missing',count=missing) if missing else T('runtime.attention',count=attention)
         if missing and attention:notice+=' · '+T('runtime.attention_short',count=attention)
-        row=3 if compact and r>=16 else (1 if compact else 7)
-        f.fill(row,margin,c-margin*2)
-        f.put(row,margin,notice,'yellow',limit=c-margin*2)
+        notice='[!!] '+notice;role='warning'
+    elif status.get('runtime_limited') is False:
+        notice='[OK] '+T('runtime.local_ready');role='green'
+    else:
+        notice='[--] '+T('runtime.unchecked');role='muted'
+    f.fill(f.environment_row,margin,c-margin*2)
+    f.put(f.environment_row,margin,notice,role,limit=c-margin*2)
     status_y=r-6
     if split is not None:
         left_x=margin;left_w=split-margin-2;right_x=split+2;right_w=c-right_x-margin
         if not compact:
-            f.put(8,right_x,T('ui.tools'),'muted',limit=right_w)
-            for row in range(9,min(20,status_y)):f.put(row,split,'│','yellow')
+            f.put(10,right_x,T('ui.tools'),'muted',limit=right_w)
+            for row in range(11,min(21,status_y)):f.put(row,split,'│','yellow')
         for keys,positions,x,width in [(LEFT,left_rows,left_x,left_w),(RIGHT,right_rows,right_x,right_w)]:
             for key,row in zip(keys,positions):
                 f.positions[key]=(row,x,width)
@@ -436,7 +447,7 @@ def choose_list(title,options,default='1',language='en'):
     def draw():
         size=terminal_size((80,24))
         frame=build_list(size.columns,size.lines,title,options,index,pending,language)
-        sys.stdout.write(frame.ansi(colors,truecolor));sys.stdout.flush()
+        sys.stdout.write(frame.ansi(colors,truecolor,'256color' in os.environ.get('TERM','').lower()));sys.stdout.flush()
         return frame
     try:
         tty.setcbreak(fd,termios.TCSANOW)
@@ -511,7 +522,7 @@ def choose_home(language,appearance,labels,status,toggle_layout,refresh_status=N
         if notice:
             frame.fill(frame.rows-1,0,frame.columns)
             frame.put(frame.rows-1,2,notice,'yellow',limit=frame.columns-4)
-        sys.stdout.write(frame.ansi(colors,truecolor));sys.stdout.flush()
+        sys.stdout.write(frame.ansi(colors,truecolor,'256color' in os.environ.get('TERM','').lower()));sys.stdout.flush()
         return frame
     try:
         tty.setcbreak(fd,termios.TCSANOW)

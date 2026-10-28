@@ -140,6 +140,8 @@
     "latency.paused": "暂停",
     "launcher.already_open": "启动器已在运行。请返回原窗口，或在原窗口按 0 退出后重开；游戏保持运行。",
     "runtime.title": "游戏运行依赖",
+    "runtime.local_ready": "本地依赖已就绪",
+    "runtime.unchecked": "环境状态：未检测",
     "runtime.missing": "环境未就绪：缺少 {count} 项运行依赖",
     "runtime.attention": "环境未就绪：{count} 项需要检查",
     "runtime.attention_short": "{count} 项需要检查",

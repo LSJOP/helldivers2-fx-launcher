@@ -140,6 +140,8 @@
     "latency.paused": "停止中",
     "launcher.already_open": "ランチャーは既に起動しています。元のウィンドウに戻るか、0 で終了してから開き直してください。ゲームは続行します。",
     "runtime.title": "Runtime requirements",
+    "runtime.local_ready": "ローカル依存関係の準備完了",
+    "runtime.unchecked": "環境：未確認",
     "runtime.missing": "Environment not ready: {count} missing runtime dependencies",
     "runtime.attention": "Environment not ready: {count} items need checking",
     "runtime.attention_short": "{count} need checking",
