@@ -1,0 +1,70 @@
+name: 启动问题 / Startup
+description: SSH、Steam、游戏启动或 EAC 阶段 / SSH, Steam, game startup or EAC
+title: '[Startup] '
+body:
+- type: markdown
+  attributes:
+    value: |-
+      当前是源码技术预览，完整安装包尚未提供。/ This is a source technical preview; a complete installer is not available.
+
+      仅提供最少量已脱敏信息。不要上传密码、令牌、SSH 密钥、Steam 账号、IP 地址、代理节点/订阅、个人配置、完整日志或虚拟机磁盘。/ Share minimal redacted details only. Do not attach credentials, account details, addresses, proxy nodes/subscriptions, personal settings, full logs or VM disks.
+- type: dropdown
+  id: stage
+  attributes:
+    label: 最后到达的阶段 / Last stage reached
+    options:
+    - 本地检查 / Local checks
+    - FX 启动 / FX startup
+    - SSH 连接 / SSH connection
+    - 环境准备 / Environment preparation
+    - Steam 登录 / Steam login
+    - 游戏进程 / Game process
+    - EAC 检查 / EAC check
+    - 不知道 / Unknown
+  validations:
+    required: true
+- type: textarea
+  id: environment
+  attributes:
+    label: 环境 / Environment
+    description: 不知道的项目写 unknown；不要写序列号、账号或个人路径。/ Use unknown where needed; omit serial numbers, accounts
+      and personal paths.
+    placeholder: |-
+      Mac chip + memory category / 芯片与内存档位:
+      macOS version / 系统版本:
+      Launcher commit or download date / 启动器提交或下载日期:
+      FX, FEX, Proton versions (if known) / 版本（如知道）:
+  validations:
+    required: true
+- type: textarea
+  id: steps
+  attributes:
+    label: 复现步骤 / Steps to reproduce
+    description: 从下载或进入菜单开始，写出最短步骤。/ List the shortest steps from download or the menu.
+  validations:
+    required: true
+- type: textarea
+  id: result
+  attributes:
+    label: 预期与实际结果 / Expected and actual result
+    description: 错误只贴最少量已脱敏文字；无需完整日志。/ Include only minimal redacted error text; full logs are not needed.
+  validations:
+    required: true
+- type: dropdown
+  id: game_state
+  attributes:
+    label: 游戏是否已在运行？ / Was a game already running?
+    options:
+    - 否 / No
+    - 是 / Yes
+    - 不知道 / Unknown
+  validations:
+    required: true
+- type: checkboxes
+  id: privacy
+  attributes:
+    label: 信息检查 / Privacy check
+    options:
+    - label: 我已检查内容和附件，移除了凭据与个人信息。/ I checked the text and attachments and removed credentials and personal
+        information.
+      required: true

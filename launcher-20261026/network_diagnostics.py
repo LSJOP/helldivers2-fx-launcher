@@ -23,6 +23,11 @@ import tty
 import uuid
 from zoneinfo import ZoneInfo
 
+import importlib.util
+_version_spec=importlib.util.spec_from_file_location('hd2fx_diagnostic_version',Path(__file__).with_name('launcher_version.py'))
+launcher_version=importlib.util.module_from_spec(_version_spec)
+_version_spec.loader.exec_module(launcher_version)
+
 ZONE = ZoneInfo('Asia/Shanghai')
 DIRECTORY = Path.home() / 'Library/Application Support/Helldivers2FXLauncher/Diagnostics'
 TARGETS = ('www.apple.com', 'www.cloudflare.com')
@@ -316,7 +321,7 @@ class Store:
             clean.append(dict(item, kind=kind))
         # Defense in depth against unexpected text in allowlisted imported fields.
         clean = scrub(clean)
-        data = {'version': 1, 'time': stamp(), 'limitations': LIMITATION,
+        data = {'version': 1, 'launcher_version': launcher_version.get_version(), 'time': stamp(), 'limitations': LIMITATION,
                 'records': clean, 'statistics': scrub(summarize(clean, windows)),
                 'privacy': 'IPs, interfaces, paths, process arguments and notes omitted'}
         self.directory.mkdir(parents=True, exist_ok=True, mode=0o700)

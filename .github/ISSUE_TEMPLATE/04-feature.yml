@@ -1,0 +1,55 @@
+name: 功能建议 / Feature request
+description: 玩家体验、开发者工具或后续安装方案 / Player experience, developer tooling or future setup
+title: '[Feature] '
+body:
+- type: markdown
+  attributes:
+    value: |-
+      当前是源码技术预览，完整安装包尚未提供。/ This is a source technical preview; a complete installer is not available.
+
+      仅提供最少量已脱敏信息。不要上传密码、令牌、SSH 密钥、Steam 账号、IP 地址、代理节点/订阅、个人配置、完整日志或虚拟机磁盘。/ Share minimal redacted details only. Do not attach credentials, account details, addresses, proxy nodes/subscriptions, personal settings, full logs or VM disks.
+- type: dropdown
+  id: audience
+  attributes:
+    label: 主要使用者 / Main audience
+    options:
+    - 普通玩家 / Players
+    - 开发者 / Developers
+    - 两者 / Both
+  validations:
+    required: true
+- type: textarea
+  id: problem
+  attributes:
+    label: 要解决的问题 / Problem to solve
+  validations:
+    required: true
+- type: textarea
+  id: proposal
+  attributes:
+    label: 希望的行为 / Proposed behavior
+    description: 请描述用户会看到什么、怎样判断完成。/ Describe the user-visible behavior and how to tell it is complete.
+  validations:
+    required: true
+- type: textarea
+  id: alternatives
+  attributes:
+    label: 现有做法或替代方案 / Current workflow or alternatives
+  validations:
+    required: false
+- type: textarea
+  id: constraints
+  attributes:
+    label: 限制与影响 / Constraints and impact
+    description: 例如新增依赖、数据处理、网络或系统写入；可写 unknown。/ For example new dependencies, data handling, network
+      or system writes; unknown is acceptable.
+  validations:
+    required: false
+- type: checkboxes
+  id: privacy
+  attributes:
+    label: 信息检查 / Privacy check
+    options:
+    - label: 我已检查内容和附件，移除了凭据与个人信息。/ I checked the text and attachments and removed credentials and personal
+        information.
+      required: true

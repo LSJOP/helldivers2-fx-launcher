@@ -2,7 +2,12 @@
 # English and Chinese shortcuts share this one entry point.
 emulate -L zsh
 cd -- "${0:A:h}" || exit 1
-export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+if [[ ! -r tools/runtime_paths.sh ]]; then
+    print 'Launcher file missing / 启动器文件缺失：tools/runtime_paths.sh'
+    exit 2
+fi
+source tools/runtime_paths.sh
+hd2_setup_paths
 
 pause_before_closing() {
     if [[ -t 0 ]]; then
@@ -25,13 +30,7 @@ print 'HELLDIVERS 2 · Start / 启动'
 print 'Checking required files / 正在检查所需文件…'
 print ''
 
-launcher_python=''
-for candidate in "$(command -v python3 2>/dev/null)" /opt/homebrew/bin/python3 /usr/local/bin/python3 /usr/bin/python3; do
-    if [[ -n "$candidate" && -x "$candidate" ]] && "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' >/dev/null 2>&1; then
-        launcher_python="$candidate"
-        break
-    fi
-done
+launcher_python=$(hd2_find_python) || launcher_python=''
 
 if [[ -z "$launcher_python" ]]; then
     print 'Python 3.9 or newer is needed. Install Python for macOS, then open this file again.'
@@ -41,17 +40,16 @@ if [[ -z "$launcher_python" ]]; then
     exit 2
 fi
 
-"$launcher_python" tools/check_dependencies.py
+if [[ "${1:-}" == '--check-local' ]]; then
+    "$launcher_python" tools/check_dependencies.py
+    exit $?
+fi
+
+"$launcher_python" tools/check_dependencies.py --base-only
 launcher_result=$?
 if [[ $launcher_result -ne 0 ]]; then
     pause_before_closing
     exit "$launcher_result"
-fi
-
-if [[ "${1:-}" == '--check-local' ]]; then
-    print 'Local checks finished. Guest and game are not verified.'
-    print '本地检查已完成，虚拟机内部和游戏状态仍未验证。'
-    exit 0
 fi
 
 print ''

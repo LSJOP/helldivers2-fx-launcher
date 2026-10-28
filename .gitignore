@@ -62,3 +62,5 @@ docs/SANITIZATION.md
 docs/PORTABLE_RELEASE_PLAN.md
 export-changes.json
 source-manifest.sha256
+# Public GitHub Issue form definitions (personal YAML remains ignored)
+!.github/ISSUE_TEMPLATE/*.yml

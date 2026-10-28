@@ -17,6 +17,9 @@ import unicodedata
 _locale_spec=importlib.util.spec_from_file_location('hd2fx_ui_locales',Path(__file__).with_name('i18n.py'))
 i18n=importlib.util.module_from_spec(_locale_spec)
 _locale_spec.loader.exec_module(i18n)
+_version_spec=importlib.util.spec_from_file_location('hd2fx_ui_version',Path(__file__).with_name('launcher_version.py'))
+launcher_version=importlib.util.module_from_spec(_version_spec)
+_version_spec.loader.exec_module(launcher_version)
 
 COLORS = {
     'background': '#101114', 'yellow': '#FFD600', 'muted': '#737780',
@@ -174,7 +177,10 @@ def build_home(columns,rows,language,appearance,labels,status,selected='1'):
     if forced_compact and appearance.get('layout','immersive')=='immersive':mode+='·'+T('ui.auto')
     mode='[M] '+mode
     mode_x=c-margin-text_width(mode)
-    f.put(0,margin,T('app.title'),'muted',limit=max(0,mode_x-margin-2))
+    title=T('app.title')+' · v'+launcher_version.get_version()
+    available=max(0,mode_x-margin-2)
+    if text_width(title)>available:title='HD2 · v'+launcher_version.get_version()
+    f.put(0,margin,title,'muted',limit=available)
     f.put(0,mode_x,mode,'yellow')
     if compact:
         if r>=16:
@@ -199,6 +205,14 @@ def build_home(columns,rows,language,appearance,labels,status,selected='1'):
         f.rule(7,margin,c-margin)
         split=int(c*.59)
         left_rows=[9,12,14,16,18];right_rows=[10,12,14,16,18]
+    if status.get('runtime_limited'):
+        missing=status.get('runtime_missing_count',0)
+        attention=status.get('runtime_attention_count',0)
+        notice=T('runtime.missing',count=missing) if missing else T('runtime.attention',count=attention)
+        if missing and attention:notice+=' · '+T('runtime.attention_short',count=attention)
+        row=3 if compact and r>=16 else (1 if compact else 7)
+        f.fill(row,margin,c-margin*2)
+        f.put(row,margin,notice,'yellow',limit=c-margin*2)
     status_y=r-6
     if split is not None:
         left_x=margin;left_w=split-margin-2;right_x=split+2;right_w=c-right_x-margin

@@ -42,6 +42,9 @@ _records_spec.loader.exec_module(network_records)
 _instance_spec = importlib.util.spec_from_file_location('hd2fx_launcher_instance', Path(__file__).with_name('launcher_instance.py'))
 launcher_instance = importlib.util.module_from_spec(_instance_spec)
 _instance_spec.loader.exec_module(launcher_instance)
+_deps_spec = importlib.util.spec_from_file_location('hd2fx_dependencies', Path(__file__).with_name('dependencies.py'))
+dependencies = importlib.util.module_from_spec(_deps_spec)
+_deps_spec.loader.exec_module(dependencies)
 LANG = 'zh'
 ANSI = re.compile(r'\x1b\[[0-9;]*[A-Za-z]')
 OBSERVATION = {'endpoint': None, 'ssh_at': None, 'guest_at': None, 'guest': None}
@@ -66,6 +69,8 @@ def observe_ssh(guest=None):
 
 
 def dashboard_data():
+    report=runtime_dependencies()
+    if not report['ready']:return limited_dashboard(report)
     if OBSERVATION['endpoint'] != endpoint_key():reset_observation()
     now = time.monotonic()
     ssh_fresh = OBSERVATION['ssh_at'] is not None and now-OBSERVATION['ssh_at'] <= STATUS_TTL
@@ -92,6 +97,41 @@ def dashboard_data():
         if value == unknown:return 'muted'
         return 'green' if value in [tr('运行中','running'),tr('端口就绪','port open'),tr('验证通过','verified'),tr('已登录','signed in')] else 'red'
     return dict(zip(['fx','ssh','steam','proxy','game'], [(value,role(value)) for value in [fx,ssh,steam,proxy,game]]), note=age)
+
+
+def runtime_dependencies():
+    return dependencies.inspect_runtime(helper)
+
+
+def limited_dashboard(report):
+    data={name:(i18n.text('status.unchecked',LANG),'muted') for name in ['fx','ssh','steam','proxy','game']}
+    data.update(runtime_missing_count=report['missing_count'],runtime_attention_count=report['attention_count'],
+                runtime_limited=True,note=i18n.text('runtime.menu_available',LANG))
+    return data
+
+
+def refresh_dashboard(language):
+    report=runtime_dependencies()
+    if not report['ready']:return limited_dashboard(report)
+    return status_monitor.snapshot(prefs,helper,language)
+
+
+def show_runtime_dependencies(report):
+    print('\n'+i18n.text('runtime.title',LANG))
+    for item in report['items']:
+        print('  - '+i18n.text('runtime.name.'+item['id'],LANG)+': '+
+              i18n.text('runtime.state.'+item['state'],LANG))
+    if any(item['id'] in ['fx','gvproxy'] and item['state']=='missing' for item in report['items']):
+        print(i18n.text('runtime.preview_component',LANG))
+    print(i18n.text('runtime.instructions',LANG))
+
+
+def require_runtime():
+    report=runtime_dependencies()  # Fresh check for every launch/configure attempt.
+    if report['ready']:return True
+    show_runtime_dependencies(report)
+    print(i18n.text('runtime.return_menu',LANG))
+    return False
 
 
 def render_dashboard():
@@ -411,6 +451,9 @@ def show_performance_profile():
 
 def launch_game(configure=False):
     global ACTIVE_PROGRESS
+    if not require_runtime():return False
+    if not prefs.load()['ssh_configured']:
+        if not edit_ssh(first_run=True):return False
     if configure:show_performance_profile()
     if not configure:
         network_launch_notice()
@@ -438,6 +481,8 @@ def launch_game(configure=False):
 
 
 def test_ssh_connection():
+    if not shutil.which('ssh'):
+        raise RuntimeError(i18n.text('runtime.name.ssh',LANG)+': '+i18n.text('runtime.state.missing',LANG))
     reset_observation()
     client = prefs.SSHClient(prefs.load(),test=True)
     client.prompt_secret = secret_prompt
@@ -518,6 +563,9 @@ def edit_ssh(first_run=False):
             continue
         refresh_connection()
         reset_observation()
+        if not runtime_dependencies()['ready']:
+            print(i18n.text('runtime.settings_saved',LANG))
+            return True
         print(tr('SSH 参数已保存，正在验证连接。以后可通过菜单 8 修改。', 'SSH settings saved; checking the connection. Use menu 8 for future changes.'))
         if verify_saved_ssh() == 'edit':
             first_run = False
@@ -610,8 +658,7 @@ def select_emblem():
 
 def run_action(action):
     try:
-        action()
-        return True
+        return action() is not False
     except network_profile.ProfileError as error:
         print(i18n.text('network.error.'+error.code, LANG), flush=True)
     except subprocess.CalledProcessError as error:
@@ -622,10 +669,18 @@ def run_action(action):
 
 
 def collect_status():
+    report=runtime_dependencies()
+    if not report['ready'] or not prefs.load()['ssh_configured']:
+        states={item['id']:item['state'] for item in report['items']}
+        return {'time':time.strftime('%Y-%m-%d %H:%M:%S %z'),
+                'runtime_dependencies':report,'fx_installed':states.get('fx')=='ready',
+                'network_component_valid':states.get('gvproxy')=='ready',
+                'proxy_available':None,'vm_available':None,'guest_checks':'unverified'}
     refresh_connection()
     reset_observation()
     network_mode = 'tun' if helper.tun_active() else 'proxy'
     data = {
+        'runtime_dependencies':report,
         'time': time.strftime('%Y-%m-%d %H:%M:%S %z'),
         'fx_installed': Path(helper.APP).is_dir(),
         'proxy_available': helper.reachable(7890),
@@ -645,6 +700,10 @@ def print_status(data):
     def row(zh, en, state):
         print('  '+status_label(state, tr(zh, en)))
     print(tr('\n环境检查（检查不会启动或关闭游戏）', '\nEnvironment check (leaves the game running or stopped as it is)'))
+    if data.get('guest_checks')=='unverified':
+        show_runtime_dependencies(data['runtime_dependencies'])
+        print(i18n.text('runtime.guest_unknown',LANG))
+        return
     row('FX 已安装', 'FX is installed', data['fx_installed'])
     row('代理端口 7890 可连接', 'Proxy port 7890 is reachable',
         data['proxy_available'] if data['proxy_available'] or data['vm_available'] else None)
@@ -691,8 +750,16 @@ def check_environment():
     print_status(collect_status())
 
 
+def status_json():
+    # Preserve the established --status payload for configured, ready systems.
+    if runtime_dependencies()['ready'] and prefs.load()['ssh_configured']:
+        return helper.main()
+    print(json.dumps(collect_status(),ensure_ascii=False,indent=2))
+
+
 def export_report():
     data = collect_status()
+    data['launcher_version']=ui2.launcher_version.get_version()
     if data.get('guest'):
         launch = data['guest'].pop('launch')
         data['guest']['launch_matches_verified'] = launch.strip() == data.get('expected_launch',helper.WORKING_LAUNCH)
@@ -708,6 +775,7 @@ def export_report():
 
 def instructions():
     print('\n'+i18n.text('home.help',LANG))
+    print('HELLDIVERS 2 FX Launcher · v'+ui2.launcher_version.get_version())
     for number,label in home_labels().items():print(number+'. '+label)
     for key in ['setup','components','language','password','keys']:
         print('\n'+i18n.text('help.'+key,LANG))
@@ -870,7 +938,7 @@ def _diagnostic_menu_context():
 def menu():
     while True:
         choice = ui2.choose_home(LANG, prefs.load()['appearance'], home_labels(), dashboard_data(), toggle_layout,
-                                 refresh_status=lambda language=LANG:status_monitor.snapshot(prefs,helper,language))
+                                 refresh_status=lambda language=LANG:refresh_dashboard(language))
         if choice == '0':
             return
         if choice == '7':
@@ -908,26 +976,20 @@ def configure_terminal_window():
 def run_cli(args):
     global LANG
     saved_language = prefs.load()['appearance']['language']
-    LANG = i18n.normalize(args.lang or saved_language or 'zh-CN')
-    if any(getattr(args, name) for name in ['launch', 'configure', 'check', 'report', 'status']) and not prefs.load()['ssh_configured']:
-        print(tr('首次使用请先不带参数运行脚本，完成 SSH 配置。', 'First run: open the launcher without action flags to set up SSH.'))
-        return 1
+    LANG = i18n.initial_language(saved=saved_language,requested=args.lang)
     direct = {
         'launch': launch_game,
         'configure': lambda: launch_game(configure=True),
         'check': check_environment,
         'report': export_report,
-        'status': helper.main,
+        'status': status_json,
     }
     for name, action in direct.items():
         if getattr(args, name):
             return 0 if run_action(action) else 1
     configure_terminal_window()
     startup_animation()
-    if args.lang or saved_language or choose_language():
-        if not prefs.load()['ssh_configured']:
-            if not edit_ssh(first_run=True):return 0
-        menu()
+    menu()
     return 0
 
 
@@ -942,7 +1004,7 @@ def main():
     if args.check or args.report or args.status:return run_cli(args)
     with launcher_instance.claim(prefs.path()) as acquired:
         if not acquired:
-            language=args.lang or prefs.load()['appearance']['language'] or 'zh-CN'
+            language=i18n.initial_language(prefs.load()['appearance']['language'],args.lang)
             print(i18n.text('launcher.already_open',language))
             return 1
         return run_cli(args)

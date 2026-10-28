@@ -9,13 +9,13 @@
 ### 电脑上需要什么
 
 - 搭载 Apple 芯片（M 系列）的 Mac。具体最低 macOS 版本尚未验证。
-- Python 3.9 或更新版本，以及具备全局 `fetch` 和 `WebSocket` 功能的 Node.js。入口会检查这两项。
-- 匹配的 FX 应用及虚拟机网络组件。启动器依照精确的文件校验值检查兼容性。
+- Python 3.9 或更新版本用于启动器；Node.js 22.0.0+，具备全局 `fetch` 和 `WebSocket` 功能 用于运行操作，缺少时仍能进入菜单。
+- 匹配的 FX 应用及虚拟机网络组件。启动器依照精确的文件校验值检查兼容性；这些游戏组件缺失时仍可使用菜单。
 - 虚拟机内部匹配的 FEX、Proton/Wine；自己的 Steam 账号和游戏。
 
 当前使用的版本基线是 FX 1.9.4 和 Proton-JE `11.0-20261014-3`，但仍有本地补丁。**相同版本号不代表所有组件都已匹配。** [FX 1.9.4 官方发布页](https://github.com/fxgl/steamac/releases/tag/v1.9.4)仅供了解该版本；下载普通发行版不能替代尚缺的完整兼容组件包。
 
-### 为什么本地检查会停下
+### 哪些缺失会进入受限模式
 
 | 所需文件／组件 | 当前状态 |
 | --- | --- |
@@ -42,13 +42,13 @@ This page is for users who already have a compatible environment. **The full set
 ### Required components
 
 - A Mac with Apple silicon (M-series chip). The minimum macOS version is unverified.
-- Python 3.9 or newer, and Node.js with global `fetch` and `WebSocket`. The shortcut checks these locally.
-- A matching FX application and virtual-machine network component. Compatibility checks use exact file hashes.
+- Python 3.9 or newer, and Node.js 22.0.0+ with global `fetch` and `WebSocket`. Python is needed for the launcher; Node.js is only required for runtime actions.
+- A matching FX application and virtual-machine network component. Compatibility checks use exact file hashes; missing runtime components do not block the menu.
 - Matching FEX and Proton/Wine components inside the virtual machine, plus your own Steam account and game.
 
 The version baseline is FX 1.9.4 and Proton-JE `11.0-20261014-3`, with additional local patches. **Matching version numbers alone do not satisfy the component checks.** The [official FX 1.9.4 release page](https://github.com/fxgl/steamac/releases/tag/v1.9.4) identifies the baseline; the ordinary release does not replace the missing full compatibility package.
 
-### Why local checks stop
+### Which missing components enable limited mode
 
 | Required file or component | Current status |
 | --- | --- |
@@ -67,3 +67,11 @@ The existing resource budget is 8 CPUs, 8 GiB guest RAM and a 6 GiB advertised G
 ### Your personal information
 
 SSH settings are stored under `~/Library/Application Support/Helldivers2FXLauncher/`. Password storage uses macOS Keychain only when you opt in. Do not share that user directory, Steam login files, virtual-machine disks, SSH keys or proxy configurations and subscriptions.
+
+首次语言识别通过 macOS CoreFoundation 只读取 AppleLanguages，不需要 Node、SSH 或网络；保存的手动选择优先，检测失败静默回退到 English。
+
+First-run language matching reads AppleLanguages through native CoreFoundation only. Saved manual choices take precedence; failures fall back silently to English. No Node, SSH or network is needed.
+
+Python/Node 自动检查与安装只通过已有 Homebrew 完成，并先征得用户确认；详细操作见 [AI 安装指南](AI_INSTALL.md)。无 Homebrew 时提供官方安装包选项，不自动安装 Homebrew。
+
+See the [AI installation guide](AI_INSTALL.md#english) for confirmed Python/Node setup using existing Homebrew. No Homebrew bootstrap or game-runtime installation is performed automatically.

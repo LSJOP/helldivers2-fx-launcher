@@ -12,6 +12,11 @@ import tempfile
 from urllib.parse import urlsplit, urlunsplit
 import uuid
 
+import importlib.util
+_version_spec=importlib.util.spec_from_file_location('hd2fx_record_version',Path(__file__).with_name('launcher_version.py'))
+launcher_version=importlib.util.module_from_spec(_version_spec)
+_version_spec.loader.exec_module(launcher_version)
+
 
 def stamp():
     return datetime.now().astimezone().isoformat(timespec='seconds')
@@ -187,7 +192,7 @@ def guest_snapshot(helper):
 
 def capture(helper,network):
     local=network.inspect();conditions=network.success_conditions()
-    return {'version':1,'kind':'user_designated_successful_network_profile','captured_at':stamp(),
+    return {'version':1,'launcher_version':launcher_version.get_version(),'kind':'user_designated_successful_network_profile','captured_at':stamp(),
             'verification':'user_designated_not_an_automatic_multiplayer_test',
             'network':{'default_interface':local.get('default_interface'),'wired_default':local.get('wired_default'),
                        'wifi':[{'device':w.get('device'),'on':w.get('on')} for w in local.get('wifi',[])],
