@@ -1,12 +1,7 @@
-# 启动器源码
+# 启动器文件 / Launcher files
 
-完整的公开说明位于项目根目录 [README](../README.md)。当前目录保留原有模块布局，避免仅为发布而重构启动链。
+**使用教程请看上一级的 [README](../README.md)。打开整个文件夹里的 `Start.command` 或 `启动绝地潜兵2.command` 即可，不需要逐个打开这些文件。**
 
-- `menu.py`：终端入口；`legacy_menu.py`：旧版界面。
-- `preferences.py` / `keychain_store.py`：用户设置与可选密码存储。
-- `network_*.py`：网络操作、诊断与脱敏记录。
-- `status_monitor.py` / `performance_profile.py`：状态与性能设置。
-- `locales/`、`assets/`：本地语言与图案资源。
-- `test_*.py`：离线回归测试；`fixtures/` 只包含公开合成数据。
+**For setup instructions, read the main [README](../README.md). Open `Start.command` or `启动绝地潜兵2.command` in the project folder. You do not need to open these files individually.**
 
-不要将运行生成的 `backups/`、`reports/` 或任何个人配置上传。
+This directory contains the launcher menu, connection handling, translations and supporting resources. Keep it intact. / 本目录包含菜单、连接处理、翻译和配套资源，请保持完整。

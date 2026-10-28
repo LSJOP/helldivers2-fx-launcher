@@ -51,3 +51,14 @@ __pycache__/
 *.py[cod]
 .venv/
 node_modules/
+# Maintainer-only checks stay outside the player download
+**/test_*.py
+**/fixtures/
+tests/
+tools/run_offline_tests.py
+tools/scan_release.py
+docs/VALIDATION.md
+docs/SANITIZATION.md
+docs/PORTABLE_RELEASE_PLAN.md
+export-changes.json
+source-manifest.sha256

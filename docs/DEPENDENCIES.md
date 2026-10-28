@@ -1,36 +1,69 @@
-# 依赖与安装边界
+# 详细依赖 / Dependency details
 
-本清单从导出的代码读取，表示当前脚本的兼容性检查条件，不表示已经验证所有同版本组件都能运行。
+[返回中文教程](../README.md#简体中文) · [Back to the English guide](../README.md#english)
 
-## Host
+## 简体中文
 
-- Apple Silicon Mac；其他硬件与最低 macOS 版本尚未验证。
-- Python 3.9 或更新版本（当前验证解释器为系统 Python 3.9.6）；启动器仅用标准库。
-- macOS 自带 SSH、zsh、网络及偏好命令；Keychain 为可选功能。
-- Node.js，必须能直接使用全局 `fetch` 和 `WebSocket`；不需要 npm 包。可手动执行 `node -e "console.log(typeof fetch, typeof WebSocket)"` 检查，两项应为 `function`。这里没有核验最低 Node 版本。
-- 本方案使用的本地代理端口 7890，以及从 Guest 可访问的 Host 网关 192.168.127.254；FlClash 配置、订阅、节点由使用者自己准备，不包含在仓库里。
+这是给已经有兼容环境的用户看的补充说明。**完整安装包仍在准备中，新玩家目前无法仅靠本仓库完成安装。**
 
-## 缺少的运行组件
+### 电脑上需要什么
 
-仓库内保留兼容路径，但**不包含下列二进制**：
+- 搭载 Apple 芯片（M 系列）的 Mac。具体最低 macOS 版本尚未验证。
+- Python 3.9 或更新版本，以及具备全局 `fetch` 和 `WebSocket` 功能的 Node.js。入口会检查这两项。
+- 匹配的 FX 应用及虚拟机网络组件。启动器依照精确的文件校验值检查兼容性。
+- 虚拟机内部匹配的 FEX、Proton/Wine；自己的 Steam 账号和游戏。
 
-| 组件 | 脚本预期路径／版本 |
+当前使用的版本基线是 FX 1.9.4 和 Proton-JE `11.0-20261014-3`，但仍有本地补丁。**相同版本号不代表所有组件都已匹配。** [FX 1.9.4 官方发布页](https://github.com/fxgl/steamac/releases/tag/v1.9.4)仅供了解该版本；下载普通发行版不能替代尚缺的完整兼容组件包。
+
+### 为什么本地检查会停下
+
+| 所需文件／组件 | 当前状态 |
 | --- | --- |
-| 专用 FX 应用 | `performance-stutter-20261027/FX HUD隔离诊断.app` |
-| EIM 网络转发程序 | `goal-fx-multiplayer-20261026/gvproxy-eim`；wrapper 已包含 |
-| Guest Proton-JE | `~/.local/share/Steam/compatibilitytools.d/proton-je-11.0-20261014-3` |
-| Guest FEX | `~/.local/share/Steam/steamapps/common/FEX-Emu/usr/bin/FEX` |
-| Wine 系统组件 | 上述 Proton 的 `files/lib/wine/`，需要匹配组件哈希 |
-| Steam 与游戏 | 使用者自己安装、登录、下载；不包含 Guest 磁盘映像 |
+| `performance-stutter-20261027/FX HUD隔离诊断.app` | 不包含在本次下载中；普通安装位置暂未自动适配。 |
+| `goal-fx-multiplayer-20261026/gvproxy-eim` | 不包含二进制；只保留启动 wrapper。 |
+| Guest Proton-JE / FEX / Wine | 需要匹配补丁，自动下载与安装尚未提供。 |
 
-准确的组件哈希和路径见 [机器可读清单](../runtime-requirements.json)。不要通过删除哈希检查来绕过缺失依赖。相同产品名或随意替换的新版本不能视为兼容；公开下载链接、补丁源码与可复现构建步骤仍待整理，当前源码包没有自动安装这些组件。
+高级用户可在 [`runtime-requirements.json`](../runtime-requirements.json) 查看当前校验条件。请勿删除文件校验来跳过缺失组件；校验通过也不证明游戏或联机成功。
 
-脚本保留 `Path.home()` 下的通用 Codex runtime Node 查找候选作为原有行为；这是动态路径模板，没有包含作者用户名，普通使用者应自行安装 Node。
+### 当前网络限制
 
-## 配置与启动
+发布目标是让玩家使用各自的网络。当前代码尚固定本机代理端口 `7890` 和 Guest 到 Host 的 `192.168.127.254:7890`，也保留 TUN / FlClash 分支。直连、其他代理软件与自定义端口的通用适配尚未完成。
 
-首次运行通过菜单填写自己的 SSH host、端口、用户名及认证方式。默认 `127.0.0.1:2222` / `steamos` 是本地虚拟机示例，不含密码。实际首次认证仍由使用者完成。
+CPU / 内存配置也保留原有预算：8 CPU、8 GiB 虚拟机内存、6 GiB 显存预算，尚不能视为所有 Mac 的通用设置。
 
-设置写到 `~/Library/Application Support/Helldivers2FXLauncher/`。选择记住密码才写入 macOS Keychain。不要上传这个用户目录，也不要把 Steam 用户目录、FX Guest 映像、FlClash 配置或 SSH 文件加入仓库。
+### 个人信息保存在哪里
 
-当前脚本固定的资源预算与网络方案应由发布维护者在更多机器验证后再泛化。本次只整理发布副本，没有替换组件、修改原始启动链或执行真实启动。
+SSH 设置保存在 `~/Library/Application Support/Helldivers2FXLauncher/`。只有选择记住密码时，才会使用 macOS 钥匙串。不要分享这个用户目录、Steam 登录文件、虚拟机磁盘、SSH 密钥、代理配置或订阅。
+
+## English
+
+This page is for users who already have a compatible environment. **The full setup package is still being prepared; this repository alone cannot set up a fresh Mac.**
+
+### Required components
+
+- A Mac with Apple silicon (M-series chip). The minimum macOS version is unverified.
+- Python 3.9 or newer, and Node.js with global `fetch` and `WebSocket`. The shortcut checks these locally.
+- A matching FX application and virtual-machine network component. Compatibility checks use exact file hashes.
+- Matching FEX and Proton/Wine components inside the virtual machine, plus your own Steam account and game.
+
+The version baseline is FX 1.9.4 and Proton-JE `11.0-20261014-3`, with additional local patches. **Matching version numbers alone do not satisfy the component checks.** The [official FX 1.9.4 release page](https://github.com/fxgl/steamac/releases/tag/v1.9.4) identifies the baseline; the ordinary release does not replace the missing full compatibility package.
+
+### Why local checks stop
+
+| Required file or component | Current status |
+| --- | --- |
+| `performance-stutter-20261027/FX HUD隔离诊断.app` | Excluded from this download; automatic discovery of normal installation locations is unfinished. |
+| `goal-fx-multiplayer-20261026/gvproxy-eim` | Binary excluded; only its wrapper is included. |
+| Guest Proton-JE / FEX / Wine | Matching patches are required; automatic download and installation are unavailable. |
+
+Advanced users can inspect the current checks in [`runtime-requirements.json`](../runtime-requirements.json). Do not remove hash checks to bypass missing components. A matching hash does not verify the game or multiplayer.
+
+### Current network and resource limitations
+
+The intended release will use each player’s own network. The current code still assumes local proxy port `7890` and a Guest-to-Host proxy at `192.168.127.254:7890`, with TUN / FlClash branches. General support for direct connections, other proxy applications and custom ports is unfinished.
+
+The existing resource budget is 8 CPUs, 8 GiB guest RAM and a 6 GiB advertised GPU budget. Its suitability across Mac models is unverified.
+
+### Your personal information
+
+SSH settings are stored under `~/Library/Application Support/Helldivers2FXLauncher/`. Password storage uses macOS Keychain only when you opt in. Do not share that user directory, Steam login files, virtual-machine disks, SSH keys or proxy configurations and subscriptions.

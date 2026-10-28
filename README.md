@@ -1,49 +1,147 @@
-# HELLDIVERS 2 · FX 启动助手（源码分享包）
+# HELLDIVERS 2 · Mac 启动助手 / Mac Launcher
 
-**最终发布目标：使用者安装指定版本的 FX 后，运行脚本准备兼容组件并启动游戏；网络使用自己的连接，不要求复刻作者的代理、节点、TUN 或有线方案。当前副本尚未完成这项通用化。** 具体阻碍和验收标准见 [通用发布审计与方案](docs/PORTABLE_RELEASE_PLAN.md)。
+[简体中文](#简体中文) · [English](#english)
 
-供已有兼容 FX 环境的 Apple Silicon Mac 用户研究、复现与测试。**本仓库不含完整运行环境，下载源码后不能直接保证启动游戏。** 当前公开副本尚未在其他 Mac 或干净环境验证。
+**预览版：首次安装流程尚未完成。 / Preview: full setup for new players is not ready yet.**
 
-## 包含什么
+## 简体中文
 
-- 终端启动器、原有后端、SSH / 可选 Keychain 支持。
-- 十种语言、终端图案、网络诊断和性能配置代码。
-- 离线回归测试、合成测试夹具、依赖清单和本地发布扫描工具。
+### 先看这里：现在能直接玩吗？
 
-不包含游戏文件、Steam 账号、登录数据、密码、SSH 密钥、代理订阅、个人节点、真实运行日志、备份、网络快照、FX 应用或兼容层二进制。
+**当前下载包还不能让一台全新的 Mac 直接运行游戏。** 它需要匹配的 FX 虚拟机和兼容组件，而完整组件包及自动安装流程还在准备中。只下载普通 FX 并不够。
 
-## 开始前
+如果你是第一次安装，可以先下载并打开启动入口查看缺少什么；遇到“完整兼容组件包目前尚未提供下载”，请停在这里，等待完整安装版本。这不是你的操作错误，也不需要反复重装或更改网络。
 
-1. 阅读 [依赖与安装边界](docs/DEPENDENCIES.md)。目前还缺少能公开复现的完整组件下载／构建流程，因此此版本是源码分享包。
-2. 在终端进入本仓库，运行 `/usr/bin/python3 tools/check_dependencies.py`。它只检查本地文件和工具，不连接 SSH、不启动应用、不访问网络；缺失运行组件时以状态码 2 退出。
-3. 仅在已自行准备兼容环境后，才双击 `启动绝地潜兵2.command`；首次配置填写自己的 SSH 信息。玩家自行通过 Steam 获取游戏。
-4. 菜单 8 管理 SSH 设置；默认不保存密码，只有主动选择时才使用 macOS Keychain。
+已有相同兼容环境的玩家，可以继续下面的步骤。这里不包含游戏，需使用自己的 Steam 账号与游戏。
 
-Python 启动器仅使用标准库；Steam 控制桥还需要提供全局 `fetch` 和 `WebSocket` 的 Node.js。系统 Python 不可用时需先安装 Python 并相应调整 `.command` 入口。不要假定所有 macOS 都预装可用的 Python。
+### 第 1 步：下载完整文件夹
 
-## 操作影响
+1. 在本页上方点击绿色的 **Code** 按钮。
+2. 选择 **Download ZIP**，下载完成后双击 ZIP 解压。
+3. 把解压后的整个文件夹放到你方便找到的位置，例如“文稿”。
 
-正常启动／环境配置会连接本地 FX 的 SSH，可能启动 FX / FlClash、设置 Guest IPv4、重启 Guest Steam、写入 Steam 游戏启动项和启动游戏。菜单 2 会写入 FX 的 CPU、内存及显示偏好；网络菜单内应用单有线方案可关闭 Wi-Fi。运行这些动作前请先阅读界面说明并确认适合自己的机器。
+请保留整个文件夹；启动文件需要用到旁边的其他文件。
 
-菜单 3 / 4 是运行环境检查／报告，但可能建立 SSH 认证。网络探测会访问配置的公开服务；HTTPS / STUN 成功不等于游戏 UDP、NAT、匹配或 EAC 成功。缺少证据时应以 `unknown` / `unverified` 为准。
+### 第 2 步：双击启动入口
 
-当前脚本继承专用代理和性能假设：Host 网关 `192.168.127.254:7890`、本机代理端口 `7890`、8 CPU、8 GiB Guest 内存、6 GiB 显存预算。这些是兼容方案参数，不是所有 Mac 的推荐值。没有自动验证其适用于其他硬件／网络。
+打开刚解压的文件夹，双击 **`启动绝地潜兵2.command`**。
 
-## 开发验证
+英文名 **`Start.command`** 也可以，两者打开同一个启动器，只需选一个。你不需要打开 `.py` 文件，也不需要运行测试。
 
-```sh
-/usr/bin/python3 tools/scan_release.py
-/usr/bin/python3 tools/run_offline_tests.py
-```
+会弹出一个“终端”窗口，先检查这台 Mac 上是否有需要的程序和文件：
 
-离线测试的结果见 [验证记录](docs/VALIDATION.md)。测试使用临时用户目录和进程内模拟，不能代替真实安装、游戏启动、EAC 或联机验证。
+| 提示 | 怎么做 |
+| --- | --- |
+| `OK / 已就绪` | 这项本地检查通过，继续看下一项。 |
+| `NEEDED / 需要准备`，提到 Python | 到 [Python 官方 macOS 下载页](https://www.python.org/downloads/macos/)下载并安装 Python 3.9 或更新版本，然后再次双击入口。 |
+| `NEEDED / 需要准备`，提到 Node.js | 到 [Node.js 官方下载页](https://nodejs.org/en/download)，选择 macOS 安装程序，安装当前 LTS 版本后再次打开入口。 |
+| 提到 FX 或虚拟机网络组件 | 当前包缺少完整兼容组件。新玩家请等待完整安装版本；高级用户可查看[详细依赖](docs/DEPENDENCIES.md)。 |
 
-## 隐私与发布
+检查失败会停在这里，**不会连接虚拟机或启动游戏**。窗口会保留提示，按回车即可关闭。
 
-详见 [脱敏报告](docs/SANITIZATION.md)。运行后产生的日志、备份和个人设置不要添加到 Git；`.gitignore` 已排除常见路径，但不能替代复查。
+这套方案面向搭载 Apple 芯片（M 系列）的 Mac；Intel Mac 与不同 macOS 版本的适配尚未验证。通过本地检查也不代表游戏已能运行。
 
-本仓库发布的是经过脱敏的实验性源码快照，尚未实现通用安装流程。第三方来源与许可边界见 [第三方说明](THIRD_PARTY_NOTICES.md)。此副本尚未指定项目源码的开源许可证；不要将其描述为已完成开源授权。
+### 第 3 步：第一次进入菜单
+
+只有本地检查通过，才会进入启动器菜单。
+
+1. 选择界面语言。
+2. 按提示填写虚拟机的 **SSH 连接信息**。SSH 是让脚本连接到虚拟机的方式，账号信息应来自你安装的 FX 环境。
+3. 默认显示 `127.0.0.1`、端口 `2222`、用户名 `steamos`。请以自己的 FX 设置为准。密码输入时不显示字符，输入完按回车即可。
+4. 是否记住密码由你选择。选择记住时使用 macOS 钥匙串保存。
+5. 在 FX 的 Steam 窗口中用自己的账号登录，并确认已安装 HELLDIVERS 2。
+6. 回到脚本菜单，选择 **1「启动游戏」**，根据提示在 FX 窗口继续操作。
+
+菜单常用项：**1 启动游戏、3 检查运行环境、7 切换语言、8 修改 SSH、0 退出菜单**。选择 0 退出菜单不会关闭正在运行的游戏。
+
+启动或配置环境时，脚本可能打开 FX、调整虚拟机网络、重启虚拟机里的 Steam、更新游戏启动项。菜单 2 会调整 FX 性能设置；网络菜单中的有线方案可能关闭 Wi-Fi，请先看清具体提示。
+
+### 网络需要怎么设置？
+
+**每位玩家使用自己的网络、代理和节点，不需要复制作者的网络配置。**
+
+不过，当前预览版代码仍依赖代理端口 `7890`，还没有完成直连和自定义代理的通用适配。遇到相关提示时，请先查看[当前限制](docs/DEPENDENCIES.md)，不要为了通过检查而随意关闭 Wi-Fi、IPv6 或切换节点。
+
+游戏成功打开和多人联机成功是两项不同的结果；“未确认”表示脚本还没有取得足够证据。
+
+### 遇到问题怎么办？
+
+- **提示缺少文件：**重新下载并解压整个 ZIP，再从新文件夹打开入口。
+- **提示兼容组件缺失：**当前安装包尚不完整，请等待后续版本。
+- **双击提示没有执行权限：**打开“终端”，输入 `zsh` 后留一个空格，把 `Start.command` 拖进窗口，再按回车。
+- **SSH 连接失败：**确认 FX 虚拟机已启动，在菜单 8 核对自己的连接信息。
+- **游戏已启动但无法联机：**先检查自己的 Steam 连接与网络；启动成功不代表联机已经验证。
+- **需要求助：**到本仓库上方的 [Issues](https://github.com/LSJOP/helldivers2-fx-launcher/issues) 页面，点击 **New issue**。说明 Mac 型号、macOS 版本、停在哪一步和错误文字，遮住密码、账号和代理订阅。
 
 ## English
 
-Source-sharing snapshot of an experimental terminal launcher for an existing FX / Steam environment on Apple Silicon Macs. Runtime binaries and all personal data are excluded. This is not a complete installer; fresh-machine compatibility and multiplayer operation are unverified. Read `docs/DEPENDENCIES.md` before use. Launch and setup actions can modify local FX preferences, guest networking and Steam settings. Every player supplies their own account and game installation.
+### Can I play with this download right now?
+
+**A complete setup for a fresh Mac is not available yet.** This launcher needs a matching FX virtual machine and compatibility components. The full component package and automatic setup are still being prepared. Installing ordinary FX alone is not enough.
+
+If this is your first installation, you can open the shortcut to see what is missing. If it says “The full compatibility package is not available in this download yet,” stop there and wait for the complete setup release. Reinstalling everything or changing your network will not supply those missing files.
+
+Players who already have the matching environment can follow the steps below. You need your own Steam account and game installation.
+
+### Step 1: Download the whole folder
+
+1. Click the green **Code** button near the top of this page.
+2. Choose **Download ZIP**. When it finishes, double-click the ZIP to extract it.
+3. Move the entire extracted folder somewhere easy to find, such as Documents.
+
+Keep the folder together. The shortcut needs the other files beside it.
+
+### Step 2: Open the shortcut
+
+Open the extracted folder and double-click **`Start.command`**.
+
+The Chinese shortcut, **`启动绝地潜兵2.command`**, opens the same launcher. Use either one. You do not need to open any `.py` files or run tests.
+
+A Terminal window opens and checks the programs and files needed on this Mac:
+
+| Message | What to do |
+| --- | --- |
+| `OK / 已就绪` | This local check passed. Read the next line. |
+| Python is needed | Download Python 3.9 or newer from the [official Python macOS page](https://www.python.org/downloads/macos/), install it, and open the shortcut again. |
+| Node.js is needed | Visit the [official Node.js download page](https://nodejs.org/en/download), select the macOS installer for the current LTS version, install it, and reopen the shortcut. |
+| FX or the virtual-machine network component is needed | The complete compatibility package is missing. New players should wait for the full setup release. Advanced users can read the [dependency details](docs/DEPENDENCIES.md#english). |
+
+If a check fails, the shortcut stops **before connecting to the virtual machine or starting the game**. The window keeps the message visible; press Return to close it.
+
+This project targets Macs with Apple silicon (M-series chips). Intel Macs and compatibility across macOS versions are unverified. Passing local checks does not verify game compatibility.
+
+### Step 3: Use the launcher for the first time
+
+The menu opens after local checks pass.
+
+1. Choose your interface language.
+2. Enter your virtual machine’s **SSH connection details** when asked. SSH lets the script communicate with the virtual machine; use the details supplied by your FX environment.
+3. The initial values are `127.0.0.1`, port `2222`, and username `steamos`. Check these against your own FX setup. Password characters are hidden while typing; press Return when finished.
+4. Choose whether to remember the password. Opting in stores it in macOS Keychain.
+5. Sign in to Steam inside FX with your own account and make sure HELLDIVERS 2 is installed.
+6. Return to the launcher and choose **1: Start game**. Follow any further prompts in the FX window.
+
+Common menu items: **1 Start game, 3 Check environment, 7 Language, 8 SSH settings, 0 Exit menu**. Exiting the menu with 0 leaves a running game open.
+
+Launching or preparing the environment can open FX, adjust guest networking, restart Steam inside the virtual machine and update game launch options. Menu 2 changes FX performance settings. The wired-network action in the network menu can turn off Wi-Fi; read its prompts before using it.
+
+### What about my network?
+
+**Use your own network, proxy and node selection. You do not need the author’s personal network configuration.**
+
+The preview code still requires proxy port `7890`; support for direct connections and custom proxy settings is unfinished. Read the [current limitations](docs/DEPENDENCIES.md#english) if this blocks you. Changing Wi-Fi, IPv6 or proxy nodes just to pass a check is not part of the beginner setup.
+
+Starting the game and successfully joining multiplayer are separate outcomes. “Unverified” means the launcher has not obtained enough evidence.
+
+### Troubleshooting
+
+- **Missing project files:** download and extract the whole ZIP again, then use the shortcut in the new folder.
+- **Missing compatibility components:** wait for the complete setup release.
+- **No execution permission:** open Terminal, type `zsh` followed by a space, drag `Start.command` into the window, and press Return.
+- **SSH connection failed:** make sure FX is running and check your connection details in menu 8.
+- **Game opens but multiplayer fails:** check your Steam connection and network. Game startup does not verify multiplayer.
+- **Need help:** open [Issues](https://github.com/LSJOP/helldivers2-fx-launcher/issues), click **New issue**, and include your Mac model, macOS version, the step you reached and the error text. Hide passwords, account details and proxy subscriptions.
+
+---
+
+[第三方说明 / Third-party notices](THIRD_PARTY_NOTICES.md) · No project-wide open-source license has been selected yet. / 项目源码的开源许可证尚未确定。
