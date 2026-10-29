@@ -5,6 +5,7 @@ import math
 from functools import lru_cache
 from pathlib import Path
 import queue
+import re
 import select
 import shutil
 import sys
@@ -29,9 +30,10 @@ COLORS = {
 COLOR_INDEX = {'background':233,'yellow':220,'muted':243,'green':78,'red':203,'warning':203,'text':253,'line':238}
 ANSI_FG = {'background':30,'yellow':93,'muted':90,'green':92,'red':91,'warning':91,'text':37,'line':90}
 ASSETS = Path(__file__).resolve().parent/'assets'
-ORDER = ['1','2','3','4','10','8','9','7','6','5','11','0']
+INTERFACE_VERSION = '2.1'
+ORDER = ['1','2','3','4','10','5','6','7','8','9','11','0']
 LEFT = ['1','2','3','4','10']
-RIGHT = ['8','9','7','6','5','11']
+RIGHT = ['5','6','7','8','9','11']
 
 
 @lru_cache(maxsize=5)
@@ -78,7 +80,8 @@ class Frame:
     def put(self,row,column,text,fg='text',bg='background',bold=False,limit=None):
         if not 0<=row<self.rows:return
         edge=self.columns if limit is None else min(self.columns,column+limit)
-        text=truncate(text,max(0,edge-column))
+        if fg=='red':fg='warning'  # Presentation alias; do not change supplied status data.
+        text=truncate(plain_text(text),max(0,edge-column))
         for char in text:
             width=cell_width(char)
             if not width:continue
@@ -90,14 +93,14 @@ class Frame:
     def fill(self,row,column,width,fg='text',bg='background'):
         self.put(row,column,' '*width,fg,bg)
 
-    def rule(self,row,start=2,end=None,fg='yellow'):
+    def rule(self,row,start=2,end=None,fg='line'):
         self.put(row,start,'─'*max(0,(end or self.columns-2)-start),fg)
 
     def plain(self):
         return '\n'.join(''.join(cell[0] for cell in line).rstrip() for line in self.cells)
 
-    def ansi(self,colors=True,truecolor=True,colors256=True):
-        output=['\033[?7l\033[H']
+    def ansi(self,colors=True,truecolor=True,colors256=True,clear=False):
+        output=['\033[?7l\033[H'+('\033[2J' if clear else '')]
         for y,line in enumerate(self.cells):
             output.append('\033['+str(y+1)+';1H')
             previous=None
@@ -203,14 +206,15 @@ def build_home(columns,rows,language,appearance,labels,status,selected='1'):
         title_x=max(29,int(c*.30),margin+max(map(len,art),default=0)+2)
         for i,line in enumerate(wordmark(c-title_x-margin-4)):f.put(1+i,title_x,line,'yellow',bold=True)
         for row in range(1,7):f.put(row,title_x-2,'│','yellow')
-        f.put(4,title_x,'F X  L A U N C H E R  /  U I  2 . 0','text')
+        f.put(4,title_x,'F X  L A U N C H E R  /  U I  2 . 1','text')
         f.put(6,title_x,'FOR SUPER EARTH / FOR DEMOCRACY','muted')
         # The emblem occupies rows 1–7; keep its final row intact.
         f.rule(8,margin,c-margin)
         split=int(c*.59)
         last_menu=min(19,r-7)
-        left_rows=[11+(i*(last_menu-11)+2)//4 for i in range(5)]
+        # Aligned rows make horizontal navigation predictable in both columns.
         right_rows=[11+(i*(last_menu-11)+2)//(len(RIGHT)-1) for i in range(len(RIGHT))]
+        left_rows=right_rows[:len(LEFT)]
     f.environment_row=3 if compact and r>=16 else (1 if compact else 9)
     if status.get('runtime_limited'):
         missing=status.get('runtime_missing_count',0)
@@ -227,9 +231,10 @@ def build_home(columns,rows,language,appearance,labels,status,selected='1'):
     status_y=r-6
     if split is not None:
         left_x=margin;left_w=split-margin-2;right_x=split+2;right_w=c-right_x-margin
-        if not compact:
-            f.put(10,right_x,T('ui.tools'),'muted',limit=right_w)
-            for row in range(11,min(21,status_y)):f.put(row,split,'│','yellow')
+        heading=4 if compact else 10
+        f.put(heading,left_x,T('ui21.games'),'muted',limit=left_w)
+        f.put(heading,right_x,T('ui.tools'),'muted',limit=right_w)
+        for row in range(heading+1,min(max(right_rows)+1,status_y)):f.put(row,split,'│','line')
         for keys,positions,x,width in [(LEFT,left_rows,left_x,left_w),(RIGHT,right_rows,right_x,right_w)]:
             for key,row in zip(keys,positions):
                 f.positions[key]=(row,x,width)
@@ -237,8 +242,7 @@ def build_home(columns,rows,language,appearance,labels,status,selected='1'):
                 primary=key=='1'
                 if focused:
                     f.fill(row,x,width,'background','yellow')
-                    if primary and not compact:f.fill(row+1,x,width,'background','yellow')
-                fg='background' if focused else ('yellow' if primary else 'text')
+                fg='background' if focused else 'text'
                 bg='yellow' if focused else 'background'
                 prefix='☠ ' if focused else '  '
                 f.put(row,x+1,prefix+'['+key+'] '+labels[key],fg,bg,bold=focused or primary,limit=width-2)
@@ -332,7 +336,10 @@ def build_home(columns,rows,language,appearance,labels,status,selected='1'):
     f.positions['0']=(r-2,margin,c-margin*2)
     if selected=='0':
         label='☠ [0] '+T('ui.exit')
-        f.put(r-2,max(margin,c-margin-text_width(label)),label,'yellow',bold=True)
+        x=max(margin,c-margin-text_width(label));span=min(c-margin-x,text_width(label))
+        f.fill(r-2,x,span,'background','yellow')
+        f.put(r-2,x,label,'background','yellow',bold=True,limit=span)
+        f.positions['0']=(r-2,x,span)
     return f
 
 
@@ -388,6 +395,7 @@ def move_selection(current,direction,positions):
         return ORDER[(index+step)%len(ORDER)]
     if current=='0':return '1' if direction in ['down','right'] else RIGHT[-1]
     if direction in ['left','right']:
+        if (direction=='left' and current in LEFT) or (direction=='right' and current in RIGHT):return current
         group=RIGHT if current in LEFT else LEFT
         available=[key for key in group if key in positions]
         if not available:return current
@@ -400,42 +408,143 @@ def move_selection(current,direction,positions):
     return group[index+1] if index+1<len(group) else '0'
 
 
-def build_list(columns,rows,title,options,index=0,pending='',language='en',disabled_keys=()):
-    """A scrolling, width-bounded list shared by all ten language menus."""
-    frame=Frame(columns,rows);c=frame.columns;r=frame.rows
-    frame.put(0,2,'HELLDIVERS 2 / FX LAUNCHER','muted',limit=c-4)
-    frame.put(2,2,title,'yellow',bold=True,limit=c-4)
+def plain_text(value):
+    """Terminal text only: never interpret controls from status or file content."""
+    value=re.sub(r'\x1b\][^\x07\x1b]*(?:\x07|\x1b\\|$)', '', str(value))
+    value=re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', value)
+    return ''.join(c for c in value if unicodedata.category(c) not in ('Cc','Cf','Cs'))
+
+
+def normalize_options(options):
+    result=[]
+    for key,label in options:
+        label=plain_text(label)
+        if key.isdigit():label='['+key+'] '+re.sub(r'^\s*(?:\[\d+\]|\d+[.)]|\d+(?=\s))\s*','',label)
+        result.append((key,label))
+    return result
+
+
+def wrap_text(text,width):
+    rows=[]
+    for paragraph in str(text).splitlines():
+        line=''
+        for char in plain_text(paragraph).expandtabs(4):
+            if text_width(line+char)>width:
+                cut=line.rfind(' ')
+                if cut>0 and text_width(line[cut+1:]+char)<=width:
+                    rows.append(line[:cut]);line=line[cut+1:]
+                else:rows.append(line);line=''
+            line+=char
+        rows.append(line)
+    return rows
+
+
+def status_badge(state,language='en'):
+    # Unknown is deliberately neutral; presence alone is not end-to-end health.
+    roles={'unchecked':'muted','checking':'yellow','ready':'green','error':'warning',
+           'unverified':'muted','unknown':'muted','na':'muted'}
+    state=state if state in roles else 'unknown'
+    return i18n.text('ui21.state.'+state,language),roles[state]
+
+
+def page_header(frame,title):
+    frame.put(0,2,'HELLDIVERS 2 / FX LAUNCHER · UI '+INTERFACE_VERSION,'muted',limit=frame.columns-4)
+    frame.put(2,2,plain_text(title),'yellow',bold=True,limit=frame.columns-4)
     frame.rule(3)
-    capacity=max(1,r-8)
-    offset=max(0,min(index-capacity+1,len(options)-capacity))
-    for row,(key,label) in enumerate(options[offset:offset+capacity],4):
-        focused=offset+row-4==index
-        if focused:frame.fill(row,2,c-4,'background','yellow')
-        frame.put(row,3,('☠ ' if focused else '  ')+label,
-                  'background' if focused else ('muted' if key in disabled_keys else ('warning' if key.startswith('warning:') else 'text')),'yellow' if focused else 'background',bold=focused,limit=c-6)
-        frame.positions[key]=(row,3,c-6)
-    frame.rule(r-4)
-    counter=str(offset+1)+'–'+str(min(offset+capacity,len(options)))+'/'+str(len(options))
-    frame.put(r-3,2,counter,'muted',limit=c-4)
+
+
+def show_text(title,text,language='en'):
+    def options():
+        lines=wrap_text(text,max(8,terminal_size().columns-8))
+        def role(line):
+            if '[OK]' in line:return 'success:'
+            if '[!!]' in line:return 'warning:'
+            return 'info:'
+        return [(role(line)+str(i),line) for i,line in enumerate(lines)]+[
+            ('0','[0] '+i18n.text('updates.back',language))]
+    while choose_list(title,options(),language=language,options_factory=options)!='0':pass
+
+
+def status_panel(frame,summary,start=4,limit=None):
+    for row,item in enumerate(summary[:limit] if limit is not None else summary,start):
+        if isinstance(item,dict):
+            cells=item.get('cells',[]);width=max(1,(frame.columns-4)//max(1,len(cells)))
+            for i,(label,value,role) in enumerate(cells):
+                x=2+i*width;prefix=plain_text(label)+': '
+                frame.put(row,x,prefix,'text',limit=width-1)
+                consumed=min(text_width(prefix),width-1)
+                frame.put(row,x+consumed,plain_text(value),role,limit=width-consumed-1)
+        else:
+            label,role=item
+            frame.put(row,2,plain_text(label),role,limit=frame.columns-4)
+
+
+def help_footer(frame,options,offset,visible,language,pending='',refresh_key=None):
+    if frame.rows<13:
+        frame.put(frame.rows-1,1,'↑↓ Enter Esc 0'+(' R' if refresh_key else ''),'muted',limit=frame.columns-2)
+        return
+    frame.rule(frame.rows-4)
+    actions=[key for key,_ in options if key.isdigit() and key!='0']
+    if all(key.isdigit() for key,_ in options):
+        counter=i18n.text('ui21.items',language,count=len(actions))
+    else:
+        counter=i18n.text('ui21.range',language,first=offset+1,last=min(offset+visible,len(options)),total=len(options))
+    frame.put(frame.rows-3,2,counter,'muted',limit=frame.columns-4)
     help_text=i18n.text('list.help',language)
-    if text_width(help_text)>c-4:
-        numeric=[int(key) for key,_ in options if key.isdigit() and int(key)>0]
-        digits=max([len(key) for key,_ in options if key.isdigit()]+[1])
-        span=str(min(numeric)).zfill(digits)+'–'+str(max(numeric)).zfill(digits) if numeric else ''
-        help_text='↑↓  Enter  Esc  '+span+(' [0]' if any(key=='0' for key,_ in options) else '')
-    frame.put(r-2,2,help_text,'muted',limit=c-4)
-    frame.put(r-1,2,i18n.text('list.input',language)+' '+pending,'yellow',limit=c-4)
+    if refresh_key:help_text+=' · R: '+i18n.text('ui21.refresh',language)
+    if text_width(help_text)>frame.columns-4:help_text='↑↓  PgUp/PgDn  Enter  Esc  0'+('  R' if refresh_key else '')
+    frame.put(frame.rows-2,2,help_text,'muted',limit=frame.columns-4)
+    frame.put(frame.rows-1,2,i18n.text('list.input',language)+' '+pending,'yellow',limit=frame.columns-4)
+
+
+def build_list(columns,rows,title,options,index=0,pending='',language='en',disabled_keys=(),
+               summary=(),descriptions=None,refresh_key=None):
+    """Shared MenuList, read-only StatusPanel and ScrollableContent, no probes."""
+    frame=Frame(columns,rows);c=frame.columns;r=frame.rows
+    options=normalize_options(options);index=max(0,min(index,len(options)-1))
+    if r<13:frame.put(0,1,plain_text(title),'yellow',bold=True,limit=c-2)
+    else:page_header(frame,title)
+    # Menus win over supplementary information on small terminals.
+    summary_size=0 if r<13 else min(len(summary),max(0,r-8-min(len(options),max(1,r-8))))
+    status_panel(frame,summary,limit=summary_size)
+    start=1 if r<13 else 4+summary_size
+    capacity=max(1,r-start-(1 if r<13 else 4))
+    offset=max(0,min(index-capacity+1,len(options)-capacity))
+    pane=descriptions and c>=100 and r>=13
+    edge=c//2 if pane else c-2
+    for row,(key,label) in enumerate(options[offset:offset+capacity],start):
+        focused=offset+row-start==index
+        if focused:frame.fill(row,2,edge-2,'background','yellow')
+        role='muted' if key.startswith('i:') else 'text'
+        if key.startswith('warning:'):role='warning'
+        elif key.startswith('success:'):role='green'
+        if key in disabled_keys:role='muted'
+        frame.put(row,3,('☠ ' if focused else '  ')+label,
+                  'background' if focused else role,'yellow' if focused else 'background',bold=focused,limit=edge-4)
+        frame.positions[key]=(row,3,edge-4)
+    if pane and options:
+        text=descriptions.get(options[index][0],'')
+        for row in range(4,r-4):frame.put(row,edge,'│','line')
+        for row,line in enumerate(wrap_text(text,c-edge-5)[:r-8],4):
+            frame.put(row,edge+3,line,'muted',limit=c-edge-5)
+    help_footer(frame,options,offset,capacity,language,pending,refresh_key)
     return frame
 
 
-def choose_list(title,options,default='1',language='en',disabled_keys=()):
+def choose_list(title,options,default='1',language='en',disabled_keys=(),summary=(),descriptions=None,
+                renderer=None,refresh_key=None,options_factory=None):
+    options=normalize_options(options)
     values=[key for key,_ in options]
+    if not values:return '0'
     index=values.index(default) if default in values else 0
     terminal=terminal_size((80,24))
     interactive=sys.stdin.isatty() and sys.stdout.isatty() and os.environ.get('TERM')!='dumb'
     if not interactive:
         # Pipes retain the complete list; screen scrolling is for real terminals.
         print(title)
+        for item in summary:
+            if not isinstance(item,dict):print(item[0])
+            else:print(' · '.join(label+': '+str(value) for label,value,_ in item.get('cells',[])))
         for _,label in options:print(label)
         return input(i18n.text('list.input',language)+' ').strip()
     fd=sys.stdin.fileno();previous=termios.tcgetattr(fd);pending=''
@@ -444,10 +553,19 @@ def choose_list(title,options,default='1',language='en',disabled_keys=()):
     truecolor=os.environ.get('COLORTERM','').lower() in ['truecolor','24bit'] or os.environ.get('HD2FX_TRUECOLOR')=='1'
     def match(value):
         return next((key for key in values if key.isdigit() and value.isdigit() and int(key)==int(value)),value)
+    last_size=None
     def draw():
+        nonlocal options,values,index,last_size
         size=terminal_size((80,24))
-        frame=build_list(size.columns,size.lines,title,options,index,pending,language,disabled_keys=disabled_keys)
-        sys.stdout.write(frame.ansi(colors,truecolor,'256color' in os.environ.get('TERM','').lower()));sys.stdout.flush()
+        if options_factory:
+            key=values[index];options=normalize_options(options_factory());values=[value for value,_ in options]
+            index=values.index(key) if key in values else min(index,len(values)-1)
+        frame=(renderer(size.columns,size.lines,index,pending) if renderer else
+               build_list(size.columns,size.lines,title,options,index,pending,language,disabled_keys,
+                          summary,descriptions,refresh_key))
+        size_key=(size.columns,size.lines)
+        sys.stdout.write(frame.ansi(colors,truecolor,'256color' in os.environ.get('TERM','').lower(),clear=size_key!=last_size));sys.stdout.flush()
+        last_size=size_key
         return frame
     try:
         tty.setcbreak(fd,termios.TCSANOW)
@@ -459,6 +577,8 @@ def choose_list(title,options,default='1',language='en',disabled_keys=()):
                 if (size.columns,size.lines)!=(frame.columns,frame.rows):frame=draw()
                 continue
             key=os.read(fd,1)
+            if key==b'':return '0'
+            if refresh_key and key in (b'r',b'R'):return refresh_key
             if key in [b'\r',b'\n']:return match(pending) if pending else values[index]
             if key in [b'\x03',b'\x04']:raise KeyboardInterrupt
             if key==b'\x1b':
@@ -487,8 +607,9 @@ def choose_list(title,options,default='1',language='en',disabled_keys=()):
             else:continue
             frame=draw()
     finally:
-        termios.tcsetattr(fd,termios.TCSANOW,previous)
-        sys.stdout.write('\033[0m\033[?7h\033[?25h\033[?1049l');sys.stdout.flush()
+        try:termios.tcsetattr(fd,termios.TCSANOW,previous)
+        finally:
+            sys.stdout.write('\033[0m\033[?7h\033[?25h\033[?1049l');sys.stdout.flush()
 
 
 def choose_home(language,appearance,labels,status,toggle_layout,refresh_status=None,refresh_interval=10):
@@ -512,8 +633,9 @@ def choose_home(language,appearance,labels,status,toggle_layout,refresh_status=N
     colors='NO_COLOR' not in os.environ
     truecolor=os.environ.get('COLORTERM','').lower() in ['truecolor','24bit'] or os.environ.get('HD2FX_TRUECOLOR')=='1'
     worker=StatusRefresher(refresh_status,status,refresh_interval,language=language) if refresh_status else None
-    notice='';notice_until=0
+    notice='';notice_until=0;last_size=None
     def draw():
+        nonlocal last_size
         size=terminal_size()
         snapshot=dict(worker.snapshot) if worker else status
         if worker and worker.running:
@@ -522,7 +644,9 @@ def choose_home(language,appearance,labels,status,toggle_layout,refresh_status=N
         if notice:
             frame.fill(frame.rows-1,0,frame.columns)
             frame.put(frame.rows-1,2,notice,'yellow',limit=frame.columns-4)
-        sys.stdout.write(frame.ansi(colors,truecolor,'256color' in os.environ.get('TERM','').lower()));sys.stdout.flush()
+        size_key=(size.columns,size.lines)
+        sys.stdout.write(frame.ansi(colors,truecolor,'256color' in os.environ.get('TERM','').lower(),clear=size_key!=last_size));sys.stdout.flush()
+        last_size=size_key
         return frame
     try:
         tty.setcbreak(fd,termios.TCSANOW)
@@ -572,5 +696,6 @@ def choose_home(language,appearance,labels,status,toggle_layout,refresh_status=N
             frame=draw()
     finally:
         if worker:worker.close()
-        termios.tcsetattr(fd,termios.TCSANOW,previous)
-        sys.stdout.write('\033[0m\033[?7h\033[?25h\033[?1049l');sys.stdout.flush()
+        try:termios.tcsetattr(fd,termios.TCSANOW,previous)
+        finally:
+            sys.stdout.write('\033[0m\033[?7h\033[?25h\033[?1049l');sys.stdout.flush()

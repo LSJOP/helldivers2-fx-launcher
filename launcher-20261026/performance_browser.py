@@ -26,7 +26,7 @@ class Browser:
     def t(self, key, **values):
         return self.c.i18n.text('performance.browser.'+key,self.c.language,**values)
 
-    def choice(self, title, rows, default='0'):
+    def choice(self, title, rows, default='0', summary=()):
         columns = max(12,self.c.ui2.terminal_size((86,29)).columns-7)
         wrapped = []
         for key,label in rows:
@@ -39,7 +39,24 @@ class Browser:
                 part+=char
             parts.append(part)
             wrapped.extend((key+':'+str(i),line) for i,line in enumerate(parts))
+        if summary:return self.c.choose(title,wrapped,default=default,summary=summary)
         return self.c.choose(title,wrapped,default=default)
+
+    def summary(self):
+        T=lambda key,**values:self.c.i18n.text('ui21.'+key,self.c.language,**values)
+        device=self.device or {};unknown=self.t('unknown')
+        memory=device.get('memory_bytes');gpu=device.get('gpu_cores')
+        detail=(device.get('chip') or unknown)+' · '+(format(memory/1024**3,'g')+' GiB' if memory else unknown)
+        detail+=' · GPU '+(str(gpu) if gpu else unknown)
+        values,errors=self.saved();matched=None
+        for profile in catalog.profiles_for(device.get('chip')):
+            if (profile.get('memory_bytes')==memory and not errors and
+                    catalog.parameters(profile,self.c.profile)==values):matched=profile;break
+        name=self.t(matched['name_key'].split('.')[-1]) if matched else T('custom')
+        state=catalog.status(matched,self.c.profile) if matched else None
+        return [(T('device')+': '+detail,'text'),(T('profile')+': '+name,'text'),
+                (T('validation')+': '+(self.t('status.'+state) if state else T('state.unverified')),'green' if state=='verified' else 'muted'),
+                (T('effective')+': '+T('state.unverified'),'muted'),(T('restart_note'),'muted')]
 
     def action(self, key, label):
         return key,'['+key+'] '+label
@@ -53,19 +70,23 @@ class Browser:
         values = {};errors = set()
         for key in self.c.profile.SETTINGS:
             try:values[key] = self.c.profile.read_setting(key)
-            except (self.c.profile.ProfileError,OSError,ValueError,subprocess.SubprocessError):
+            except (self.c.profile.ProfileError,OSError,ValueError,TypeError,subprocess.SubprocessError):
                 values[key] = None;errors.add(key)
         return values,errors
 
     def root_rows(self):
         rows = [self.action(str(i),self.t('series',series=series))
                 for i,series in enumerate(hardware.SERIES,1)]
+        for i,series in enumerate(hardware.SERIES):
+            if (self.device or {}).get('chip') in hardware.SERIES[series]:
+                key,label=rows[i];rows[i]=(key,label+'  '+self.c.i18n.text('ui21.current_chip',self.c.language))
         return rows+[self.action('6',self.t('detect')),self.action('7',self.t('current')),
                      self.action('0',self.t('back_main'))]
 
     def run(self):
+        self.device=hardware.detect()
         while True:
-            key = self.choice(self.c.i18n.text('home.setup',self.c.language),self.root_rows(),'1')
+            key = self.choice(self.c.i18n.text('home.setup',self.c.language),self.root_rows(),'1',self.summary())
             if key == '0':return
             if key in ('1','2','3','4','5'):self.series('M'+key)
             elif key == '6':self.detected()

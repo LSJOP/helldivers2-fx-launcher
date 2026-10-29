@@ -59,13 +59,17 @@ class HelpCenter:
         selected = 'info:version'
         while True:
             rows = self.page_rows(topic)  # Rewrap after terminal resize/redraw.
-            choice = self.c.choose(self.t(topic+'.title'),rows,default=selected)
+            choice = self.c.choose(self.t(topic+'.title'),rows,default=selected,
+                                   options_factory=lambda:self.page_rows(topic))
             if choice == '0':return
             selected = choice if any(key==choice for key,_ in rows) else 'info:version'
 
     def run(self):
         while True:
-            choice = self.c.choose(self.t('title')+' · '+self.c.version.get_version(),self.home_rows(),default=self.selected)
+            descriptions={str(i):self.t(topic+'.body',**self.values()).splitlines()[0]
+                          for i,topic in enumerate(TOPICS,1)}
+            choice = self.c.choose(self.t('title')+' · '+self.c.version.get_version(),self.home_rows(),
+                                   default=self.selected,descriptions=descriptions)
             if choice == '0':return
             if choice in [str(i) for i in range(1,len(TOPICS)+1)]:
                 self.selected = choice

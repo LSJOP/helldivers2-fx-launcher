@@ -467,7 +467,7 @@ def status_lines(current, language):
     def address(value):
         if value is None:return words(language, '未验证', 'UNVERIFIED')
         return words(language, '有地址', 'PRESENT') if value else words(language, '无地址', 'ABSENT')
-    return [current['time'],
+    return [display_time(current['time']) or words(language,'未知','UNKNOWN'),
             'FX: ' + state(current['fx']) + '   GVPROXY: ' + state(current['gvproxy']),
             'STEAM (FX): ' + state(current['steam']) + '   PROXY: ' + state(current['proxy_open'], port=True),
             'UDP CONFIG: ' + current['udp_configuration'].upper(),
@@ -476,84 +476,85 @@ def status_lines(current, language):
             words(language, '进程/端口不代表转发正常；运行时 EIM 未验证。', 'Process/port presence does not verify forwarding or runtime EIM.')]
 
 
-def build_frame(ui, columns, rows, current, language, selected='1'):
-    frame = ui.Frame(columns, rows)
-    frame.put(0, 1, words(language, '多人联机诊断', 'NETWORK DIAGNOSTICS'), 'yellow', bold=True)
-    options = [('1', words(language, '运行网络测试', 'Run network test')),
-               ('2', words(language, '记录匹配结果', 'Record match result')),
-               ('3', words(language, '查看历史统计', 'History statistics')),
-               ('4', words(language, '导出诊断报告', 'Export diagnostic report')),
-               ('5', words(language, '成功网络方案设置', 'Successful network profile')),
-               ('6', words(language, '刷新快照/配置证据', 'Refresh snapshot / evidence')),
-               ('0', words(language, '返回主菜单', 'Back'))]
-    # Short terminals keep every action visible; option 6 shows full evidence.
-    available = max(0, frame.rows - len(options) - 4)
-    lines = status_lines(current, language)
-    for row, line in enumerate(lines[:available], 2):
-        frame.put(row, 1, line, 'muted', limit=frame.columns - 2)
-    start = min(2 + len(lines), frame.rows - len(options) - 2)
-    if frame.rows >= 24 and frame.columns >= 60:
-        for index, line in enumerate(ui.emblem('2', 18, 6)):
-            frame.put(1 + index, frame.columns - 20, line, 'yellow')
-        # Keep status clear of the original skull asset.
-        for row, line in enumerate(lines, 2):
-            frame.fill(row, 0, frame.columns - 21)
-            frame.put(row, 1, line, 'muted', limit=frame.columns - 23)
-    for index, (key, label) in enumerate(options):
-        y = start + index
-        focused = key == selected
-        frame.put(y, 1, '[' + key + '] ' + label, 'background' if focused else 'yellow',
-                  'yellow' if focused else 'background', limit=frame.columns - 2)
-        frame.positions[key] = (y, 1, frame.columns - 2)
-    frame.put(frame.rows - 1, 1, '↑↓ Enter / 0–6 / Esc', 'muted', limit=frame.columns - 2)
-    return frame
-
-
-def choose(ui, current, language):
-    if not (sys.stdin.isatty() and sys.stdout.isatty() and os.environ.get('TERM') != 'dumb'):
-        print('\n'.join(status_lines(current, language)))
-        size = ui.terminal_size()
-        print(build_frame(ui, size.columns, size.lines, current, language).plain())
-        return input('> ').strip()
-    fd = sys.stdin.fileno()
-    previous = termios.tcgetattr(fd)
-    values = ['1', '2', '3', '4', '5', '6', '0']
-    index = 0
-    last_draw = None
+def display_time(value):
+    """UI-only UTC+08 view; persisted/exported timestamps are not changed."""
     try:
-        tty.setcbreak(fd)
-        sys.stdout.write('\033[?1049h\033[?25l')
-        while True:
-            size = ui.terminal_size()
-            signature = (size.columns, size.lines, index)
-            if signature != last_draw:
-                frame = build_frame(ui, size.columns, size.lines, current, language, values[index])
-                sys.stdout.write(frame.ansi('NO_COLOR' not in os.environ))
-                sys.stdout.flush()
-                last_draw = signature
-            if not select.select([fd], [], [], .15)[0]:
-                continue
-            key = os.read(fd, 1)
-            if key in (b'\r', b'\n'):
-                return values[index]
-            if key == b'\x1b':
-                if not select.select([fd], [], [], .08)[0]:
-                    return '0'
-                sequence = os.read(fd, 2)
-                if sequence == b'[A':
-                    index = (index - 1) % len(values)
-                elif sequence == b'[B':
-                    index = (index + 1) % len(values)
-            elif key in (b'\x03', b'\x04', b''):
-                return '0'
-            elif key == b'\t':
-                index = (index + 1) % len(values)
-            elif key.decode(errors='ignore') in values:
-                index = values.index(key.decode())
-    finally:
-        termios.tcsetattr(fd, termios.TCSANOW, previous)
-        sys.stdout.write('\033[0m\033[?7h\033[?25h\033[?1049l')
-        sys.stdout.flush()
+        moment=datetime.fromisoformat(value.replace('Z','+00:00'))
+        if moment.tzinfo is None:return None
+        return moment.astimezone(ZONE).strftime('%Y-%m-%d %H:%M:%S')
+    except (ValueError,TypeError,AttributeError,OverflowError):return None
+
+
+def display_data(store, menu):
+    data={'matches':[], 'ssh':'unchecked', 'history_checked':False}
+    try:
+        data['matches']=[r for r in store.read() if r.get('kind')=='match' and r.get('result') in ('success','timeout','disconnect')]
+        data['history_checked']=True
+    except (OSError,ValueError,TypeError):pass
+    observation=getattr(menu,'ui_observation',None)
+    if observation:
+        try:data['ssh']=observation()
+        except (OSError,ValueError,TypeError):pass
+    return data
+
+
+def menu_options(ui,language):
+    T=lambda key:ui.i18n.text(key,language)
+    return [(str(i),'['+str(i)+'] '+words(language,zh,en)) for i,(zh,en) in enumerate([
+        ('运行网络测试','Run network test'),('记录匹配结果','Record match result'),
+        ('查看历史统计','History statistics'),('导出诊断报告','Export diagnostic report'),
+        ('成功网络方案设置','Successful network profile'),('刷新快照 / 配置证据','Refresh snapshot / evidence')],1)]+[
+        ('0','[0] '+T('help.center.back.main'))]
+
+
+def diagnostic_summary(ui,current,language,presentation=None):
+    T=lambda key,**values:ui.i18n.text('ui21.'+key,language,**values)
+    data=presentation or {};unknown=T('state.unknown')
+    def observed(label,value):
+        if value is None:return (label,T('state.unverified'),'muted')
+        return label,T('observed' if value else 'not_observed'),'green' if value else 'warning'
+    def address(label,value):
+        if value is None:return label,T('state.unverified'),'muted'
+        return label,T('address.present' if value else 'address.absent'),'green' if value else 'muted'
+    ssh,role=ui.status_badge(data.get('ssh','unchecked'),language)
+    runtime={'cells':[observed('FX',current.get('fx')),('SSH',ssh,role),
+                      observed('Steam',current.get('steam')),observed('GVPROXY',current.get('gvproxy'))]}
+    proxy=current.get('proxy_open')
+    port=(T('port.open' if proxy else 'port.closed'),'green' if proxy else 'warning') if proxy is not None else (T('state.unverified'),'muted')
+    network={'cells':[(words(language,'代理','Proxy'),*port),address('IPv4',current.get('ipv4')),address('IPv6',current.get('ipv6'))]}
+    # No extra probes: these fields are not provided by the host snapshot.
+    tests={'cells':[('Steam TLS',T('state.unchecked'),'muted'),('PlayFab',T('state.unverified'),'muted')]}
+    udp=current.get('udp_connectivity','unverified');nat=current.get('nat','unknown')
+    # Neither an unknown NAT nor an unverified UDP result is an error/success.
+    transport={'cells':[('UDP',T('state.'+udp) if udp in ('unverified','unknown','unchecked') else T('state.unverified'),'muted'),
+                        ('NAT',T('state.unknown') if nat=='unknown' else T('state.unverified'),'muted')]}
+    matches=data.get('matches',[])
+    latest=matches[-1] if matches else None
+    success=sum(r.get('result')=='success' for r in matches)
+    failure=sum(r.get('result') in ('timeout','disconnect') for r in matches)
+    checked=data.get('history_checked','matches' in data)
+    latest_text=T('match.'+latest['result']) if latest else T('no_records' if checked else 'state.unchecked')
+    last_time=display_time(latest.get('time')) if latest else None
+    records={'cells':[(T('recent'),latest_text,'text'),(T('record_time'),last_time or T('state.unknown' if latest else ('no_records' if checked else 'state.unchecked')),'muted')]}
+    snapshot_time=display_time(current.get('time')) or unknown
+    return [(T('runtime'),'muted'),runtime,(T('network')+' · '+T('snapshot')+': '+snapshot_time,'muted'),
+            network,tests,transport,(T('matches')+' · '+T('counts',success=success if checked else unknown,failure=failure if checked else unknown),'muted'),
+            records,(T('network_scope'),'muted')]
+
+
+def build_frame(ui, columns, rows, current, language, selected='1', presentation=None, pending=''):
+    options=menu_options(ui,language);keys=[key for key,_ in options]
+    return ui.build_list(columns,rows,words(language,'多人联机诊断','NETWORK DIAGNOSTICS'),options,
+                         keys.index(selected) if selected in keys else 0,pending,language,
+                         summary=diagnostic_summary(ui,current,language,presentation),refresh_key='6')
+
+
+def choose(ui, current, language, presentation=None):
+    options=menu_options(ui,language)
+    def render(columns,rows,index,pending):
+        return build_frame(ui,columns,rows,current,language,options[index][0],presentation,pending)
+    return ui.choose_list(words(language,'多人联机诊断','NETWORK DIAGNOSTICS'),options,language=language,
+                          summary=diagnostic_summary(ui,current,language,presentation),renderer=render,refresh_key='6')
 
 
 def show_details(menu, title, lines):
@@ -575,10 +576,10 @@ def show_details(menu, title, lines):
 
 
 def run_test_ui(menu, snapshot_id):
-    print(words(menu.LANG, '测试 Apple/Cloudflare 公共站点，约 10–15 秒上限；路径可能与游戏不同。',
-                'Testing public Apple/Cloudflare sites, 10–15s maximum; routes may differ from the game.'))
-    print(words(menu.LANG, '直连 TCP 测远端；代理 TCP 仅测本机端口。按 q/Esc/Ctrl-C 取消。',
-                'Direct TCP measures remote connect; proxy TCP measures localhost only. q/Esc/Ctrl-C cancels.'))
+    introduction=words(menu.LANG, '测试 Apple/Cloudflare 公共站点，约 10–15 秒上限；路径可能与游戏不同。',
+                'Testing public Apple/Cloudflare sites, 10–15s maximum; routes may differ from the game.')
+    cancellation=words(menu.LANG, '直连 TCP 测远端；代理 TCP 仅测本机端口。按 q/Esc/Ctrl-C 取消。',
+                'Direct TCP measures remote connect; proxy TCP measures localhost only. q/Esc/Ctrl-C cancels.')
     cancel = threading.Event()
     box = {}
     def work():
@@ -589,13 +590,28 @@ def run_test_ui(menu, snapshot_id):
     worker = threading.Thread(target=work, daemon=True)
     fd = sys.stdin.fileno() if sys.stdin.isatty() else None
     previous = termios.tcgetattr(fd) if fd is not None else None
+    interactive=fd is not None and sys.stdout.isatty() and hasattr(menu,'ui2')
+    if not interactive:print(introduction);print(cancellation)
+    last_size=None
     try:
         if fd is not None:
             tty.setcbreak(fd)
+        if interactive:sys.stdout.write('\033[?1049h\033[?25l');sys.stdout.flush()
         worker.start()
         while worker.is_alive():
+            if interactive:
+                size=menu.ui2.terminal_size();signature=(size.columns,size.lines)
+                if signature!=last_size:
+                    ui=menu.ui2;T=lambda key:ui.i18n.text('ui21.'+key,menu.LANG)
+                    details=[(T('state.checking'),'yellow')]+[(line,'muted') for line in ui.wrap_text(introduction+'\n'+cancellation,max(8,size.columns-6))]
+                    frame=ui.build_list(size.columns,size.lines,words(menu.LANG,'运行网络测试','Run network test'),
+                                        [('0','[0] '+T('cancel'))],language=menu.LANG,summary=details)
+                    colors='NO_COLOR' not in os.environ
+                    truecolor=os.environ.get('COLORTERM','').lower() in ('truecolor','24bit')
+                    sys.stdout.write(frame.ansi(colors,truecolor,'256color' in os.environ.get('TERM',''),clear=True));sys.stdout.flush()
+                    last_size=signature
             if fd is not None and select.select([fd], [], [], .1)[0]:
-                if os.read(fd, 1) in (b'q', b'Q', b'\x1b', b'\x03', b'\x04', b''):
+                if os.read(fd, 1) in (b'0', b'q', b'Q', b'\x1b', b'\x03', b'\x04', b''):
                     cancel.set()
             else:
                 worker.join(.1)
@@ -604,8 +620,10 @@ def run_test_ui(menu, snapshot_id):
     finally:
         cancel.set()
         worker.join(2)
-        if previous is not None:
-            termios.tcsetattr(fd, termios.TCSANOW, previous)
+        try:
+            if previous is not None:termios.tcsetattr(fd, termios.TCSANOW, previous)
+        finally:
+            if interactive:sys.stdout.write('\033[0m\033[?7h\033[?25h\033[?1049l');sys.stdout.flush()
     if 'error' in box or 'result' not in box:
         raise OSError('Diagnostic test unavailable')
     return box['result']
@@ -628,7 +646,7 @@ def run(menu):
     try:
         store.append(current)
         while True:
-            choice = choose(menu.ui2, current, menu.LANG)
+            choice = choose(menu.ui2, current, menu.LANG, presentation=display_data(store,menu))
             if choice == '0':
                 return
             if choice == '5':

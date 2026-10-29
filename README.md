@@ -52,11 +52,11 @@
 
 ### 本地帮助与更新检查
 
-**[6] 使用说明**现为可离线阅读的 UI 2.0 帮助中心，包含启动、性能、环境、SSH、联机、更新及外观说明；长页支持方向键和 Page Up/Down 滚动，Esc 返回。
+**[6] 使用说明**现为可离线阅读的 UI 2.1 帮助中心，包含启动、性能、环境、SSH、联机、更新及外观说明；长页支持方向键和 Page Up/Down 滚动，Esc 返回。
 
 **[2] 应用性能配置**可浏览 M1～M5 芯片目录、自动识别和现有预设；多数型号暂无预设，历史已验证配置范围及固定 FX 启动参数的限制见[性能菜单说明](docs/PERFORMANCE_MENU.md)。
 
-**[11] 检查更新**仅在主动选择时查询官方 Releases，保留当前版本通道。可查看更新日志和打开 Releases；**下载安装尚未开放**，不会覆盖用户配置。详见[更新说明](docs/UPDATES.md)和[用户数据保护](docs/USER_DATA.md)。
+**[11] 检查更新**打开时不联网；选择 [1] 查询官方 Releases，[3] 查看日志，[4] 临时切换 Preview / Stable 后再按 [1]，[5] 打开 Releases。不保存通道设置；**下载安装尚未开放**，不会覆盖用户配置。详见[更新说明](docs/UPDATES.md)和[用户数据保护](docs/USER_DATA.md)。
 
 ### 项目状态与参与方式
 
@@ -74,7 +74,7 @@
 
 **当前下载包还不能让一台全新的 Mac 直接运行游戏。** 它需要匹配的 FX 虚拟机和兼容组件，而完整组件包及自动安装流程还在准备中。只下载普通 FX 并不够。
 
-第一次安装也可以直接打开 UI 2.0 主菜单。缺少 FX、虚拟机网络组件、Node.js 或 SSH 时进入受限模式，语言切换、外观设置、使用说明、本地环境检查和报告导出仍可使用。启动游戏或一键环境配置时会重新检查；完整游戏环境仍需匹配组件。
+第一次安装也可以直接打开 UI 2.1 主菜单。缺少 FX、虚拟机网络组件、Node.js 或 SSH 时进入受限模式，语言切换、外观设置、使用说明、本地环境检查和报告导出仍可使用。启动游戏或一键环境配置时会重新检查；完整游戏环境仍需匹配组件。
 
 已有相同兼容环境的玩家，可以继续下面的步骤。这里不包含游戏，需使用自己的 Steam 账号与游戏。
 
@@ -174,11 +174,11 @@
 
 ### Local help and update checks
 
-**[6] Instructions** opens an offline UI 2.0 help center covering launch, performance, environment, SSH, networking, updates and appearance. Long pages scroll with arrows or Page Up/Down; Esc returns.
+**[6] Instructions** opens an offline UI 2.1 help center covering launch, performance, environment, SSH, networking, updates and appearance. Long pages scroll with arrows or Page Up/Down; Esc returns.
 
 **[2] Apply performance settings** browses M1–M5 models, automatic detection and actual presets. Most models have no preset; see [profile scope and fixed FX launch limitations](docs/PERFORMANCE_MENU.md).
 
-**[11] Check for updates** queries official Releases only on request and retains the current version channel. View notes or open Releases; **download/installation remains unavailable** and user settings are untouched. See [updates](docs/UPDATES.md) and [user data protection](docs/USER_DATA.md).
+**[11] Check for updates** opens offline. Use [1] to check official Releases, [3] for notes, [4] to select Preview / Stable before checking, and [5] to open Releases. Channel choices are not saved; **download/installation remains unavailable** and user settings are untouched. See [updates](docs/UPDATES.md) and [user data protection](docs/USER_DATA.md).
 
 ### Project status and participation
 
@@ -196,7 +196,7 @@ See the full [compatibility matrix](docs/COMPATIBILITY.md#english). Developers c
 
 **A complete setup for a fresh Mac is not available yet.** This launcher needs a matching FX virtual machine and compatibility components. The full component package and automatic setup are still being prepared. Installing ordinary FX alone is not enough.
 
-You can explore UI 2.0 on a first installation. Missing FX, VM networking, Node.js or SSH enables limited mode, keeping language, appearance, help, local checks and report export available. Starting the game or configuring its environment rechecks the requirements. Actual gameplay still needs the matching components.
+You can explore UI 2.1 on a first installation. Missing FX, VM networking, Node.js or SSH enables limited mode, keeping language, appearance, help, local checks and report export available. Starting the game or configuring its environment rechecks the requirements. Actual gameplay still needs the matching components.
 
 Players who already have the matching environment can follow the steps below. You need your own Steam account and game installation.
 

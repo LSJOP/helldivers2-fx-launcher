@@ -1,74 +1,74 @@
 # 在线更新 / Online updates
 
-[README](../README.md) · [版本规则 / Versioning](VERSIONING.md) · [更新日志 / Changelog](../CHANGELOG.md)
+[README](../README.md) · [版本规则 / Versioning](VERSIONING.md) · [更新日志 / Changelog](../CHANGELOG.md) · [用户数据保护](USER_DATA.md) · [阶段 B 安装设计](UPDATE_INSTALL_DESIGN.md)
 
-## 当前可用功能
+## 阶段 A：当前已经可用
 
-主菜单“设置与工具”新增 `[11] 检查更新`，沿用 UI 2.0、Logo、颜色和键盘操作，支持现有十种语言。检查仅由用户主动进入时执行，不在启动／游戏流程中自动联网。
+主菜单 `[11] 检查更新` 打开 UI 2.1 更新中心。**进入页面不联网**，初始显示“尚未检查”；只在用户选择 `[1] 检查最新版本` 或失败页 `[1] 重试` 时请求 API。启动器启动和游戏启动不自动检查。
 
 ```text
-[11] 检查更新
-  当前版本 / 当前通道最新版本 / 发布日期 / 通道 / 状态 / 日志摘要
-  [1] 查看更新日志
-  [2] 下载并安装更新（未开放）
-  [3] 打开 GitHub Releases
-  [0] 返回
+检查更新 / UPDATE CENTER
+  当前版本 / 当前通道 / 最新版本 / 发布时间 / 状态
+  发布附件元数据 / 自动安装状态 / 更新摘要
+
+  [1] 检查最新版本
+  [2] 安装更新（尚未开放）
+  [3] 查看更新日志
+  [4] 切换更新通道
+  [5] 打开 GitHub Releases
+  [0] 返回主菜单
 ```
 
-**本轮开放第一阶段。安装入口始终禁用。** 2026-10-29 检查仓库 Releases 列表为 0 项，尚无可信更新包、安装归属基线及经过验证的独立更新器。未来即使出现附件、下载地址或哈希字段，当前代码也不会自动开启安装。
+只读摘要和操作共用现有 UI 2.1 组件；小窗口优先保留操作。长更新日志可滚动。`[3]` 不联网即可查看本地 CHANGELOG；查询成功后也展示该 Release 的正文。远端正文只作为清理过转义/控制字符的文本，不执行 Markdown、Shell、HTML 或其中的链接。`[5]` 仅打开固定的[官方 Releases 页面](https://github.com/LSJOP/helldivers2-fx-launcher/releases)。
 
-版本唯一来源仍是根目录 [VERSION](../VERSION)。使用官方公开 [List releases API](https://docs.github.com/en/rest/releases/releases#list-releases)，不读取 GitHub Token、不要求 gh 或 Git，不把 main、普通 Git tag 或提交当作 Release。
+### 版本、通道和真实状态
 
-比较遵循 [SemVer](https://semver.org/)，数字预发布编号按数字比较，构建元数据不影响先后顺序。默认通道规则明确如下：
+唯一版本源为根目录 [VERSION](../VERSION)。使用匿名官方 [List releases API](https://docs.github.com/en/rest/releases/releases#list-releases)：`/repos/LSJOP/helldivers2-fx-launcher/releases`。不读取本机 Token，不要求 GitHub 登录、gh 或 Git。main 提交及没有关联 Release 的普通 Tag 不作为发布版本。
 
-| 本地版本 | 默认查询 |
-| --- | --- |
-| 正式版本（无 `-` 标识） | 正式 Release，拒绝 prerelease 标记不一致的数据。 |
-| `-preview.N` | 仅 preview，不自动跨到 beta、rc 或正式版。 |
-| `-beta.N`／`-rc.N` 等 | 保持其首个预发布标识，不自动换通道。 |
+比较保留现有 [SemVer](https://semver.org/) 实现：数字预发布编号按数字比较，构建元数据不改变先后顺序。正式版本默认 Stable，当前预览版本默认 Preview；beta/rc 等保留其原首个预发布标识。Preview 和 Stable 独立，不自动跨通道。`[4]` 只改变当前更新页面的通道并恢复“尚未检查”，之后按 `[1]` 查询；不写设置，不覆盖 VERSION，不自动联网。退出页面后仍从本地版本推导默认通道。
 
-未提供跨通道切换按钮。无 Release 显示“暂无可用发布版本”，只有其他通道时明确说明。草稿、非 SemVer 标签、无发布日期及 tag／prerelease 标记不一致的条目不会被当作候选；有异常数据时不伪称仓库没有发布。版本比本地旧时不建议降级。
+状态区分：发现新版本、已是最新、本地领先、空 Release 列表、当前通道无版本、异常元数据、超时/断网和 HTTP 错误。**查询失败不会显示成没有更新**。草稿、非 SemVer、无有效日期及标签/预发布标记不一致的条目不作为候选。
 
-请求使用默认 TLS 验证，只接受固定官方仓库 API，不携带认证头，拒绝重定向；分页地址自行构造，不追随远端任意 Link URL。单次 socket 超时 8 秒、最多 5 页、每页响应最多 1 MiB。遇到超时、断网、限流、超出边界或无效元数据时返回错误状态，不退出启动器。没有依赖版本安装或网络设置修改。
+查询成功后显示当前/最新版本、通道、UTC 发布时间、正文摘要和附件情况。附件显示“可识别 / 声明”数量：前者只表示官方 URL、ID、名称、大小及 uploaded 状态等展示级格式匹配，不代表已经下载或验证安装包。缺少附件字段显示未知。GitHub 自动生成的源码 ZIP/tarball 不自动视为安装包。
 
-Release body 是在线摘要；完整说明与本地 CHANGELOG.md 可在 `[1]` 查看。远端文本仅作带分隔前缀的终端文本展示，去除控制／终端转义，不执行 Markdown、Shell、HTML 或其中的链接。`[3]` 只打开固定的[官方 Releases 页面](https://github.com/LSJOP/helldivers2-fx-launcher/releases)。
+即使有新版本、附件和 digest，也保持 `[2]` 禁用，并提示“发现新版本，但当前仅支持前往 GitHub 下载”。目前没有已验证的兼容安装包识别/安装能力。
 
-配置存储位置、只读保护检查及尚未启用的迁移／恢复约束见[用户数据保护](USER_DATA.md)。发布资源字段会作为官方 API 元数据解析，但不会下载，也不会凭资源存在而开启安装。
+### HTTP 403 / 429
 
-2026-10-30 使用当前源码匿名复查时收到 API 限流状态；界面可正常显示失败原因并返回。此前 0 项是 2026-10-29 的观测，不视为永久仓库状态。
+遵循 [GitHub 限流建议](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api#handle-rate-limit-errors-appropriately)，但不要求或读取 Token：
 
-## 实际更新范围
+- HTTP 429 或 HTTP 403 且 `X-RateLimit-Remaining: 0`，标记为有证据的限流。
+- 普通 403 显示“API 请求受限或访问被拒绝”，不单凭状态码认定限流。只有 Reset 或剩余额度大于 0，不能证明额度耗尽。
+- 解析 `Retry-After` 秒数/HTTP 日期和 `X-RateLimit-Reset` UTC epoch。合法等待提示在本更新页面内保存在内存，用户提前重试不会发出请求；切换通道也不会绕过等待。
+- 无可靠恢复时间的已确认限流，采用至少一分钟的本地等待，并明确它不是服务器恢复预测。无效、重复、过期或不合理的时间值不用于伪造恢复时间。
+- 失败页提供 `[1] 重试`、`[2] 打开 GitHub Releases`、`[0] 返回`。重试始终由用户选择；没有后台重试、换 IP、改代理或认证绕行。
 
-**第一阶段实际文件替换清单为空：不会下载资源、解压、替换任何文件或改变 VERSION。** 对 ZIP、Git clone、移动后的中文／空格目录同样适用；检查功能不依赖安装路径和 .git。用户设置、SSH 凭据、日志、诊断历史、FX／Steam／游戏进程均不参与检查。
+请求继续使用默认 TLS 验证、固定仓库 API、无认证头及拒绝重定向；分页只接受本地构造的官方地址。每次 socket 超时 8 秒、最多 5 页、每页最多 1 MiB。HTTP 404 不是空 Release。断连、不完整响应、异常 JSON、深度/大小/分页超限均安全返回。错误结果仅保留允许的数值元数据，不输出原始响应正文、Cookie、代理地址或凭据。
 
-[受管理文件草案](update-managed-files.draft.json) 逐项列出当前可考虑由未来更新器管理的源码、UI、语言、工具和随附文档。它是设计稿，不包含可用哈希、不被当前代码当作文件归属证据，也不是可安装 manifest。未来每次发布仍需审查此清单；新增或删除文件不能被目录通配自动接受。
+### 本次真实观测
 
-永远排除 FX.app、FEX、Proton/Wine、gvproxy-eim 二进制、Steam、游戏文件、.git、用户配置、凭据、known_hosts、Keychain、backups、reports、diagnostics、settings.json 及本地历史。现有 gvproxy wrapper 是源码脚本，和 gvproxy 二进制分开处理。
+2026-10-30 04:21:30（Asia/Shanghai）匿名请求返回 HTTP 403：服务器报告限额 60、剩余 0，并给出重置时间 **2026-10-30 04:42:43 +08:00**；响应消息也属于额度耗尽。请求使用正确 Accept、API Version 和 User-Agent；没有 Authorization。系统查询未发现显式 HTTP/HTTPS 代理，响应未见代理拒绝标记。证据指向匿名配额耗尽，不能证明所有中间网络层均不存在。
 
-## 第二阶段设计：受控事务，尚未实现
+该时间是服务器当时报告的重置时间，不保证之后一定恢复；没有等待后自动重试。本次无法确定最新版本/当前 Release 数量。2026-10-29 的 0 项仅为历史观测，不能据此描述当前状态。没有创建 Release 或 Tag。
 
-1. **可信发布元数据。** 固定官方 repository／Release ID／tag／asset ID 和版本，验证 HTTPS。预期包 SHA-256 必须来自官方 API 的独立可信 `asset.digest` 或经固定维护者身份／密钥验证的签名与证明，不接受只与包同源的未认证 SHA256SUMS。API 哈希缺失、不可信、资源归属不清或被重定向到未经允许的位置时停止，不降级为“校验通过”。GitHub 的资产字段见[官方文档](https://docs.github.com/en/rest/releases/assets#get-a-release-asset)。
-2. **现有文件归属。** ZIP 安装需要可信的当前版本发布 manifest；不能现场散列用户当前文件后把它们认定为官方原件。Git clone 也必须匹配官方发布基线，工作区有未提交改动或来源不明则停止。当前 main ZIP 没有这个可信基线，应手动迁移，不能强制认领。没有 git pull/reset/clean 或全目录镜像覆盖。
-3. **确认与下载。** 用户确认精确目标版本、清单和变更后，下载到私有临时目录。包 VERSION 必须与可信 Release 版本一致；只读取文件，不执行包中的任何安装程序。
-4. **压缩包校验。** 拒绝绝对路径、`..`、NUL、符号链接／硬链接逃逸、非普通文件、未列入清单的条目、重复名称、大小写或 Unicode 规范化冲突，以及超出文件数／大小／解压上限的包。校验每项路径、哈希和权限，不跟随目标目录的符号链接。
-5. **退出交接。** 从当前已安装的可信代码启动独立更新程序，而非运行下载包中的程序。更新器与所有启动入口共享基于同一真实项目根目录的生命周期锁，验证父进程身份并等待启动器完全退出。无法确认其他入口是否仍在执行时停止，不靠 PID 存在或单个设置目录锁猜测。不会结束 FX、Steam 或游戏，也不强制终止别的启动器。
-6. **备份和替换。** 备份仅涉及已验证归属的受管理文件；私有目录 0700、备份数据 0600。记录原／新哈希、文件身份和受控权限，重新检查本地修改，使用同文件系统的暂存与逐项原子替换，持久化事务日志。不能宣称多个文件的替换整体天然原子。
-7. **恢复。** 失败或下次发现中断日志时，按日志恢复本次已改变的受管理文件，先验证身份和现值，不覆盖期间发生的新用户改动。断电、磁盘故障、恢复写入失败或身份冲突时保留备份并报告手动处理，不继续破坏。成功后只提示用户重新打开 Start.command，不自动执行新包。
+## 阶段 B：安全安装设计，尚未实现
 
-以上是设计约束，当前没有下载器、解压器、文件替换器、后台更新程序或自动回滚实现，不能把设计写成已经验收。
+**实际文件替换清单为空。** 当前没有下载、解压、独立更新进程、备份替换、配置迁移或回滚执行器。现有 [只读保护](USER_DATA.md) 与 [逐文件候选清单](update-managed-files.draft.json) 保留；候选清单没有可信哈希和安装归属证明，不能拿来直接覆盖。
 
-## 第三阶段启用条件
+完整设计、发布资产/平台与版本绑定、磁盘空间、私有权限保留备份、退出交接、事务日志、配置无损迁移和故障注入矩阵见 [UPDATE_INSTALL_DESIGN.md](UPDATE_INSTALL_DESIGN.md)。只有可信包、精确 manifest、当前安装归属、独立执行器、回滚与全部隔离验收具备后才另行开放安装。
 
-可信发布包及元数据、经过审查的精确 manifest、当前安装归属基线、独立生命周期锁、可恢复日志及完整故障注入测试全部具备后，才另行开放安装。测试需覆盖下载失败、错误哈希、缺文件、路径／链接逃逸、本地修改、中文路径、并发运行、各种中断点、恢复失败，以及正在运行的游戏保持不受影响。当前只验证安装禁用时不会消费危险资源，不能等同于上述安装测试通过。
+永远排除用户设置、SSH/Keychain/私钥、语言/外观偏好、性能/网络配置、诊断历史、未知/新增数据、本地备份和用户改过的脚本，以及 FX/FEX/Proton-JE/gvproxy 二进制、Steam 和游戏。没有全目录覆盖、git pull/reset/clean、删除未知文件或执行远程安装脚本。
+
+本轮 Mock 测试证明阶段 A 的只读行为、限流/取消/失败状态、元数据筛选和既有拒绝替换规则，**不证明已经成功安装、迁移或回滚**。
 
 ## English
 
-`[11] Check for updates` uses the existing UI 2.0 controls and all ten languages. Checking is explicit and read-only. It reuses VERSION and the official public Releases API without a token or Git dependency. Stable stays stable; preview stays preview; beta/rc retain their own prerelease identifier. Main commits and tags without Releases are never treated as releases. Numeric prerelease identifiers follow SemVer ordering; build metadata does not change precedence.
+`[11]` opens the UI 2.1 update center **without a request**. `[1]` explicitly checks, `[2]` stays disabled, `[3]` reads online/local changelogs, `[4]` selects a session-only channel, `[5]` opens official Releases, and `[0]` returns. Switching resets the displayed candidate and requires `[1]`; it never saves settings or VERSION. Checking remains anonymous, manual and read-only.
 
-No releases produces an explicit message. Other-channel-only releases, invalid metadata, an installed version ahead of releases, network/timeouts and rate limits have separate states. Requests use normal TLS verification, fixed repository endpoints, no authentication header or redirects, bounded pages and response sizes. Remote notes are inert sanitized text. Users can view online notes plus the local CHANGELOG and explicitly open the fixed official Releases page.
+VERSION, SemVer, channel isolation, fixed official endpoint, TLS and bounded request rules are retained. Main commits and ordinary tags are not Releases. Empty results, no channel candidate, invalid metadata, older/newer releases, network/timeouts and HTTP errors have distinct states. Failures are not treated as no updates. Notes are inert sanitized text. Attachment counts describe recognizable metadata versus declared entries; they do not establish package compatibility, authenticity or installability. Source archives are not installers. New releases still require manual GitHub download.
 
-**Phase 1 is enabled; installation is always disabled.** The repository had no Releases when checked on 2026-10-29. No assets are downloaded, extracted or executed; no files or VERSION are replaced. ZIP/clone/moved/Chinese/space-containing folders work because checks do not depend on Git or a fixed project path. Runtime components, credentials, user data and running games are untouched.
+403 is a generic access denial unless the remaining quota is zero; 429 establishes rate limiting. Valid Retry-After/Reset hints are honored in memory, including across channel changes in this page. A missing reliable recovery time uses an explicit local minimum wait, not a fabricated server estimate. Duplicate/malformed/past timing headers are not trusted. Retries require user action. No tokens, automatic retries, proxy changes or bypasses are used. Error views offer Retry / Releases / Back.
 
-The [managed-file draft](update-managed-files.draft.json) is an explicit design-only allowlist, not trusted ownership or an install manifest. A future installer must verify an official release/asset and a SHA-256 anchored in trusted API metadata or verified publisher signatures/attestations, not merely an unauthenticated checksum beside the same download. It must prove the current files' ownership, refuse local edits or unknown baselines, validate every archive path/file/link/hash, back up only managed files, and hand off to an independent trusted worker that waits for all launcher entries to exit.
+The live anonymous check on 2026-10-30 04:21:30 +08:00 returned 403 with quota 60, remaining 0 and reported reset 04:42:43 +08:00, corroborated by the response-message category. No Authorization or explicit HTTP/HTTPS proxy was detected. This supports quota exhaustion; reset time does not guarantee availability and release status remains unknown. No automatic retry or Release creation occurred.
 
-No downloaded installer scripts, whole-directory overwrites, git pull/reset/clean, runtime-component replacement, network changes or process termination are allowed. A durable transaction journal and cautious rollback are required; recovery cannot overwrite intervening user edits or promise success after disk/power failures. Only a future separately validated release package and complete fault-injection tests can unlock installation. Download, extraction, handoff and rollback are not implemented or tested in this phase.
+**Installation is not implemented or enabled.** The actual replacement list is empty. The [Stage B design](UPDATE_INSTALL_DESIGN.md) specifies source/asset/platform/version trust, exact ownership manifests, disk space, private permission-preserving backups, an independent worker, durable transactions, separate lossless config migration and fault-tested rollback. The candidate allowlist is not trusted ownership. User data/runtime components and locally edited or unknown files are protected. Current tests establish read-only preservation/refusal, not successful installation or rollback.

@@ -3,12 +3,15 @@
 Repository commits, tags without Releases and remote text are never executed.
 """
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from functools import cmp_to_key
+import http.client
 import importlib.util
 import json
 from pathlib import Path
 import re
 import socket
+import time
 import unicodedata
 import urllib.error
 import urllib.parse
@@ -21,6 +24,7 @@ MAX_PAGES = 5
 MAX_RESPONSE_BYTES = 1024 * 1024
 TIMEOUT = 8
 INSTALL_ENABLED = False  # Phase 1: deliberately no installation implementation.
+CHANNELS = ('preview', 'stable')
 _spec = importlib.util.spec_from_file_location('hd2fx_update_version',Path(__file__).with_name('launcher_version.py'))
 versions = importlib.util.module_from_spec(_spec);_spec.loader.exec_module(versions)
 
@@ -77,7 +81,7 @@ def release_date(value):
         parsed = datetime.fromisoformat(value.replace('Z','+00:00'))
         if parsed.tzinfo is None: return None
         return parsed.astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
-    except ValueError: return None
+    except (ValueError, OverflowError): return None
 
 
 def official_release_url(tag):
@@ -116,15 +120,65 @@ def release_record(row):
     if published is None: return None
     return {'version':value,'tag':tag,'channel':channel(value),'prerelease':pre,
             'published':published,'notes':plain_text(row.get('body')),
-            'url':official_release_url(tag),'assets':asset_records(row.get('assets'),tag)}
+            'url':official_release_url(tag),'assets':asset_records(row.get('assets'),tag),
+            'asset_count':len(row['assets']) if isinstance(row.get('assets'),list) else None}
 
 
-def select_release(rows, current):
-    current_channel = channel(current)
+def selected_channel(current, update_channel=None):
+    """Default to the installed channel; explicit switches are session-only."""
+    default = channel(current)  # Always validate VERSION, even with an override.
+    if update_channel is None: return default
+    if update_channel not in CHANNELS: raise CheckError('channel')
+    return update_channel
+
+
+def initial(current=None, update_channel=None):
+    """Local state only; opening the update center never sends a request."""
+    current=versions.get_version() if current is None else current
+    result={'current':current,'channel':None,'release':None,'status':'unchecked',
+            'install_allowed':False,'error':None,'http_status':None,'http_details':{}}
+    try:result['channel']=selected_channel(current,update_channel)
+    except ValueError:result.update(status='error',error='current_version')
+    except CheckError as error:result.update(status='error',error=error.code)
+    return result
+
+
+def http_details(status, headers, now=None):
+    """Keep only bounded numeric timing metadata, never raw headers/body/proxies.
+
+    Reset alone is not evidence of a limit. A generic 403 remains forbidden.
+    Retry-After is respected even if the reason for denial is not established.
+    """
+    now=time.time() if now is None else now
+    def header(name):
+        matches=[v for k,v in (headers.items() if headers is not None else ()) if isinstance(k,str) and k.lower()==name]
+        value=matches[0].strip() if len(matches)==1 and isinstance(matches[0],str) else None
+        return value if value is not None and len(value)<=128 else None
+    def number(value):
+        return int(value) if isinstance(value,str) and re.fullmatch(r'[0-9]{1,12}',value) else None
+    remaining=number(header('x-ratelimit-remaining'))
+    reset=number(header('x-ratelimit-reset'))
+    reset=reset if reset is not None and now<reset<=now+7*86400 else None
+    retry=header('retry-after');seconds=number(retry)
+    retry_at=now+seconds if seconds is not None and seconds<=7*86400 else None
+    if retry and seconds is None:
+        try:
+            date=parsedate_to_datetime(retry)
+            if date.tzinfo is not None and now<date.timestamp()<=now+7*86400:retry_at=date.timestamp()
+        except (ValueError,TypeError,OverflowError):pass
+    limited=status==429 or (status==403 and remaining==0)
+    wait_until=max([value for value in (retry_at,reset if limited else None) if value is not None],default=None)
+    source='headers' if wait_until is not None else None
+    if limited and wait_until is None:wait_until=now+60;source='minimum_wait'
+    return {'remaining':remaining,'reset_at':reset,'retry_at':wait_until,
+            'retry_source':source,'rate_limited':limited}
+
+
+def select_release(rows, current, update_channel=None):
+    current_channel = selected_channel(current, update_channel)
     records = [record for record in (release_record(row) for row in rows) if record]
     candidates = [record for record in records if record['channel'] == current_channel]
-    result = {'current':current,'channel':current_channel,'release':None,
-              'status':'no_release','install_allowed':False,'error':None}
+    result = initial(current,update_channel);result['status']='no_release'
     if not candidates:
         if records:result['status'] = 'no_channel_release'
         elif rows:result['status'] = 'unusable_metadata'
@@ -144,7 +198,8 @@ def _page(page, opener):
     })
     with opener.open(request,timeout=TIMEOUT) as response:
         if response.geturl() != url: raise CheckError('redirect')
-        if response.status != 200: raise CheckError('http')
+        if response.status != 200:
+            raise urllib.error.HTTPError(url,response.status,'',response.headers,None)
         body = response.read(MAX_RESPONSE_BYTES+1)
         if len(body)>MAX_RESPONSE_BYTES: raise CheckError('response_limit')
         try: rows = json.loads(body.decode('utf-8'))
@@ -155,24 +210,31 @@ def _page(page, opener):
         return rows,more
 
 
-def check(current=None, opener=None):
+def check(current=None, opener=None, update_channel=None):
     current = versions.get_version() if current is None else current
-    result = {'current':current,'channel':None,'release':None,'status':'error',
-              'install_allowed':False,'error':None}
+    result = initial(current,update_channel)
+    if result['error']:return result
+    result['status']='error'
     try:
-        result['channel'] = channel(current)
+        result['channel'] = selected_channel(current, update_channel)
         opener = opener or urllib.request.build_opener(NoRedirect())
         rows = []
         for page in range(1,MAX_PAGES+1):
             batch,more = _page(page,opener);rows.extend(batch)
-            if not more: return select_release(rows,current)
+            if not more: return select_release(rows,current,update_channel)
         raise CheckError('page_limit')
     except ValueError: result['error'] = 'current_version'
     except CheckError as error: result['error'] = error.code
     except urllib.error.HTTPError as error:
-        result['error'] = 'rate_limit' if error.code in (403,429) else 'http'
+        details=http_details(error.code,error.headers)
+        result['error'] = 'rate_limit' if details['rate_limited'] else ('forbidden' if error.code==403 else 'http')
+        result['http_status'] = error.code
+        result['http_details'] = details
+        if error.fp is not None:
+            try: error.close()
+            except OSError: pass  # Cleanup must not mask the original HTTP result.
     except (TimeoutError,socket.timeout): result['error'] = 'timeout'
     except urllib.error.URLError as error:
         result['error'] = 'timeout' if isinstance(error.reason,(TimeoutError,socket.timeout)) else 'network'
-    except (OSError,UnicodeError): result['error'] = 'network'
+    except (OSError,UnicodeError,http.client.HTTPException): result['error'] = 'network'
     return result

@@ -381,9 +381,9 @@ def startup_animation(duration=1.2):
         print('\n\033[?25h',end='',flush=True)
 
 
-def select_option(title, options, default='1', header=None):
+def select_option(title, options, default='1', header=None, **presentation):
     if header:header()
-    return ui2.choose_list(title, options, default, LANG)
+    return ui2.choose_list(title, options, default, LANG, **presentation)
 
 
 MESSAGES = {
@@ -490,8 +490,8 @@ def check_updates():
     from types import SimpleNamespace
     context = SimpleNamespace(
         ui2=ui2,i18n=i18n,language=LANG,notify=output,
-        choose=lambda title,rows,default='0',disabled_keys=():ui2.choose_list(
-            title,rows,default,LANG,disabled_keys=disabled_keys),
+        choose=lambda title,rows,default='0',disabled_keys=(),**presentation:ui2.choose_list(
+            title,rows,default,LANG,disabled_keys=disabled_keys,**presentation),
         read_changelog=lambda:(ROOT/'CHANGELOG.md').read_text(encoding='utf-8'),
         open_releases=lambda url:subprocess.run(['open',url],check=True,timeout=8))
     return update_ui.run(context)
@@ -676,18 +676,30 @@ def manage_saved_password(clear=False):
     print(tr('密码已保存至 macOS 钥匙串。', 'Password saved in macOS Keychain.'))
 
 
+def ssh_summary(data):
+    # Metadata only: enabling storage does not prove a password exists in Keychain.
+    T=lambda key:i18n.text('ui21.'+key,LANG)
+    s=data['ssh'];state='unchecked'
+    if (OBSERVATION.get('endpoint')==json.dumps(s,sort_keys=True) and
+            OBSERVATION.get('ssh_at') is not None and time.monotonic()-OBSERVATION['ssh_at']<=STATUS_TTL):
+        state='ready'
+    return [(T('ssh.address')+': '+s['host'],'text'),(T('ssh.port')+': '+str(s['port']),'text'),
+            (T('ssh.username')+': '+T('configured' if data.get('ssh_configured') and s.get('username') else 'unconfigured'),'muted'),
+            (T('ssh.storage')+': '+T('enabled' if s['remember_password'] else 'disabled'),'muted'),
+            (T('ssh.password')+': '+T('state.na' if s['auth']=='key' else 'state.unchecked'),'muted'),
+            (T('ssh.test')+': '+T('state.'+state),ui2.status_badge(state,LANG)[1])]
+
+
 def ssh_settings_menu():
     while True:
-        s = prefs.load()['ssh']
-        print('\n  '+s['username']+' @ '+s['host']+' : '+str(s['port']))
-        print(tr('  密码保存：', '  Password storage: ')+tr('允许使用钥匙串' if s['remember_password'] else '不保存', 'Keychain enabled' if s['remember_password'] else 'not saved'))
+        data=prefs.load()
         choice = select_option(tr('SSH 连接设置', 'SSH CONNECTION SETTINGS'), [
             ('1', tr('1. 修改 SSH 参数与密码保存选项', '1. Edit SSH parameters and password storage')),
             ('2', tr('2. 测试 SSH 连接', '2. Test SSH connection')),
             ('3', tr('3. 保存 / 更新 SSH 密码', '3. Save / update SSH password')),
             ('4', tr('4. 清除已保存密码', '4. Remove saved password')),
             ('0', tr('0. 返回主菜单', '0. Back to main menu')),
-        ])
+        ],summary=ssh_summary(data))
         if choice == '0':return
         if choice == '1':
             run_action(edit_ssh)
@@ -827,7 +839,14 @@ def print_status(data):
 
 
 def check_environment():
-    print_status(collect_status())
+    data=collect_status()
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        import contextlib
+        import io
+        text=io.StringIO()
+        with contextlib.redirect_stdout(text):print_status(data)
+        ui2.show_text(i18n.text('home.check',LANG),text.getvalue(),LANG)
+    else:print_status(data)
 
 
 def status_json():
@@ -859,7 +878,7 @@ def instructions():
         ui2=ui2,i18n=i18n,language=LANG,version=ui2.launcher_version,
         labels=home_labels,catalog=performance_browser.catalog,performance=performance_profile,
         updates=update_ui.checker,requirements=json.loads((ROOT/'runtime-requirements.json').read_text(encoding='utf-8')),
-        choose=lambda title,rows,default='1':ui2.choose_list(title,rows,default,LANG))
+        choose=lambda title,rows,default='1',**presentation:ui2.choose_list(title,rows,default,LANG,**presentation))
     return help_center.run(context)
 
 
@@ -1012,7 +1031,12 @@ def network_menu():
 
 def _diagnostic_menu_context():
     from types import SimpleNamespace
-    return SimpleNamespace(helper=helper, ui2=ui2, LANG=LANG, select_option=select_option, network_menu=network_menu)
+    def observed_ssh():
+        return ('ready' if OBSERVATION.get('endpoint')==endpoint_key() and
+                OBSERVATION.get('ssh_at') is not None and
+                time.monotonic()-OBSERVATION['ssh_at']<=STATUS_TTL else 'unchecked')
+    return SimpleNamespace(helper=helper, ui2=ui2, LANG=LANG, select_option=select_option,
+                           network_menu=network_menu, ui_observation=observed_ssh)
 
 
 def menu():

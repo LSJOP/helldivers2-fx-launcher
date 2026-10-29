@@ -19,11 +19,21 @@
 
 ### Fixed / 修复
 
+- 更新中心进入时不联网，明确选择 [1] 才查询；[3] 日志、[4] 仅切通道、[5] Releases；展示附件元数据与手动下载限制。 / Update center entry is offline; [1] queries, [3] shows notes, [4] selects a channel and [5] opens Releases, with attachment metadata and manual-download limitations.
+- 普通 HTTP 403 与有证据的限流分开；读取剩余额度、Reset 和 Retry-After，提前重试在内存等待期间不发请求。 / Generic 403 denial is distinguished from evidenced limits; remaining/reset/retry hints drive an in-memory wait with no early request.
+- 补充独立更新器、文件归属、平台/版本、磁盘/备份、单独配置迁移及故障回滚的阶段 B 设计，执行器仍未实现，安装禁用。 / Stage B documents worker, ownership, platform/version, disk/backup, separate config migration and rollback gates; the executor is unimplemented and installation stays disabled.
+
+- 更新页面支持仅本次查询的 Preview／Stable 切换，不保存配置；HTTP 错误显示状态码，响应中断和越界发布日期安全处理。 / Session-only Preview/Stable selection saves no settings; HTTP status codes are shown, and interrupted responses/overflowing dates fail safely.
+
 - Guest IPv6、受管理 Steam 代理和完整 LaunchOptions 变更先展示差异并确认，保留私有备份及有限恢复；未知内容与并发修改不强制覆盖。 / Guest IPv6, managed Steam proxy and full LaunchOptions changes require review/consent, with private backups and bounded recovery; unknown content and concurrent edits are not forcibly replaced.
 - EAC 使用本次请求前的文件身份、偏移及校验点；旧成功日志不作为本次结果。Steam 停止且空闲时最多受控启动一次。 / EAC uses pre-request file identity, offsets and checkpoints instead of historical success; idle stopped Steam can receive one controlled start.
 - UI、CLI、兼容入口和后端共享必要依赖检查及目标互斥；身份无法核实禁止 Guest 写入。八阶段保留真实状态和耗时。 / UI, CLI, compatibility and backend entries share dependency and target-lock guards; unverified identity blocks Guest writes, and eight phases retain real state/timing.
 
 ### Validation / 验证
+
+- 更新中心阶段 A 验收：567 项隔离测试通过，含 106 项更新测试及 8 项阶段 B 只读门禁测试；不代表安装或回滚已实现。 / Update center Stage A passed 567 isolated tests, including 106 update tests and 8 read-only Stage B contract tests; installation/rollback are not implemented.
+
+- 本轮 Releases API 增量检查：隔离套件通过 497 项（在线更新 76 项）；2026-10-30 匿名实查返回 HTTP 403，不能据此判断仓库是否有新 Release。 / Releases API follow-up: 497 isolated tests passed (76 update tests); the anonymous live check on 2026-10-30 returned HTTP 403, so current release availability remains unknown.
 
 - 本地隔离环境完整套件通过 483 项测试，包含 Mock HTTP、临时目录配置保留、失败／中断拒绝写入、版本读取及多语言布局。 / The isolated local suite passed 483 tests, including Mock HTTP, temporary-directory preservation, refusal of writes on failure/interruption, version reads and multilingual layout.
 - 帮助页及菜单按 86×29、88×27、101×30、104×33 验证字符边界与滚动布局。 / Help/menu checks cover character bounds and scrolling at 86×29, 88×27, 101×30 and 104×33.
