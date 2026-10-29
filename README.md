@@ -1,8 +1,9 @@
 # HELLDIVERS 2 · Mac 启动助手 / Mac Launcher
 
-[简体中文](#简体中文) · [English](#english)
+[简体中文](#简体中文) · [English](#english) · [更新日志 / Changelog](CHANGELOG.md)
 
-**🤖 AI 辅助安装 / Install with AI** · [中文指南与完整提示词](docs/AI_INSTALL.md#简体中文) · [English guide & copyable prompt](docs/AI_INSTALL.md#english)
+> [!TIP]
+> **🤖 AI 辅助安装 / Install with AI** · [中文指南与完整提示词](docs/AI_INSTALL.md#简体中文) · [English guide & copyable prompt](docs/AI_INSTALL.md#english)
 
 <!-- launcher-version:start -->
 **当前源码版本 / Current source version: `0.1.0-preview.1`** · [VERSION](VERSION) · [CHANGELOG](CHANGELOG.md)
@@ -35,9 +36,10 @@
 
 *可点击图片查看原图。两图均为当前 UI 代码的离线渲染预览，不是游戏运行或联机成功截图。 / Click either image for its original size. Both are offline previews rendered from the current UI code; no game, EAC or multiplayer success is implied.* [截图来源 / Image provenance](docs/images/README.md)
 
-**源码技术预览 / Source Technical Preview**
-
-兼顾开发者交流与玩家使用，逐步走向普通玩家可安装的启动器。当前完整安装流程尚未完成。 / A project for developer collaboration and players, progressing toward an installable launcher. Full setup for new players is not ready yet.
+> [!WARNING]
+> **源码技术预览：尚未提供完整运行环境或安装包。** 本项目兼顾开发者交流与玩家体验，完整安装流程仍未完成。
+>
+> **Source technical preview: the complete runtime environment and installer are not available.** The project serves developers and players; full setup for new players is unfinished.
 
 | 下载类型 / Download | 当前提供什么 / What it contains | 适用对象 / Audience |
 | --- | --- | --- |
@@ -78,19 +80,28 @@
 
 ### Python / Node.js 一键准备
 
-解压到默认“下载”文件夹后，可复制：
+**先让终端进入你实际保存的项目文件夹。** 无论下载 ZIP、使用 Git Clone，还是把文件夹移动到“文稿”等位置，都按以下方式操作，不必改回默认名称：
 
-```sh
-cd "$HOME/Downloads/helldivers2-fx-launcher-main" && /bin/bash tools/install_dependencies.sh
+1. 打开 macOS 的“终端”。输入 `cd`，再按一次空格，**暂时不要回车**。
+2. 从 Finder 把整个项目文件夹拖到终端中，再按回车。拖入的是包含 `Start.command`、`README.md` 和 `tools` 的文件夹，不是 ZIP、父文件夹或单个脚本；空格、中文名称会由 Finder 处理。
+3. 在**同一个终端窗口**复制下面的安装命令：
+
+```bash
+/bin/bash tools/install_dependencies.sh
 ```
 
-脚本先检查 **Python 3.9+** 和 **Node.js 22.0.0+（fetch / WebSocket）**。已满足的跳过；缺失时优先使用已有原生 Homebrew，经你确认后安装。没有 Homebrew 会让你选择官方安装方式，不自动安装它。若文件夹放在别处，将上方 cd 路径改为实际解压位置。
+> [!IMPORTANT]
+> **Python 3.9+** 与完整启动器文件是进入菜单的基础条件。安装脚本还检查 **Node.js 22.0.0+ 及原生 fetch / WebSocket**；Node 或游戏组件缺失时仍可进入受限模式，本地检查通过不代表游戏可运行。
 
-只检查、安装后复查：
+已满足的依赖会跳过；缺失时优先使用已有原生 Homebrew，**经你确认后安装**。没有 Homebrew 会提供官方安装方式供你选择，不自动安装它。
 
-```sh
-cd "$HOME/Downloads/helldivers2-fx-launcher-main" && /bin/bash tools/install_dependencies.sh --check
+只检查或安装后复查，也在该项目目录执行：
+
+```bash
+/bin/bash tools/install_dependencies.sh --check
 ```
+
+如果出现 `No such file or directory`，先确认拖入的是包含 `tools/install_dependencies.sh` 的项目文件夹。每次新开终端窗口，都需要先进入实际项目目录；已用 Git Clone 下载的用户可跳过 ZIP 下载步骤，直接从自己的仓库目录开始。
 
 安装器和启动入口使用相同的 Python 路径规则，检查结果会显示版本、功能和所选路径。此步骤只处理 Python/Node，不准备游戏组件。[Python 官方安装包](https://www.python.org/downloads/macos/) · [Node.js 官方安装包](https://nodejs.org/en/download)
 
@@ -183,19 +194,28 @@ Keep the folder together. The shortcut needs the other files beside it.
 
 ### Prepare Python and Node.js
 
-After extracting the ZIP into Downloads, copy:
+**First open Terminal in your actual project folder.** These steps work for ZIP downloads, Git clones and folders moved to Documents or any other location. No particular folder name is required:
 
-```sh
-cd "$HOME/Downloads/helldivers2-fx-launcher-main" && /bin/bash tools/install_dependencies.sh
+1. Open macOS Terminal. Type `cd`, followed by one space. **Do not press Return yet.**
+2. Drag the whole project folder from Finder into Terminal, then press Return. Choose the folder containing `Start.command`, `README.md` and `tools`, rather than the ZIP, its parent folder or a single script. Finder handles spaces and Chinese characters in the path.
+3. Copy this command into **the same Terminal window**:
+
+```bash
+/bin/bash tools/install_dependencies.sh
 ```
 
-The script checks **Python 3.9+** and **Node.js 22.0.0+ with fetch / WebSocket** first. Suitable tools are skipped. It uses existing native Homebrew only after your confirmation; without Homebrew it offers official installation choices instead of installing it automatically. Change the cd path if you extracted the folder elsewhere.
+> [!IMPORTANT]
+> **Python 3.9+** and intact launcher files are the basics required to open the menu. The installer also checks **Node.js 22.0.0+ with native fetch / WebSocket**. Missing Node or game components still permits limited mode; passing local checks does not establish gameplay readiness.
 
-Check only, or verify after installation:
+Suitable tools are skipped. Existing native Homebrew installs missing tools **only after your confirmation**; without Homebrew, the script offers official installation choices instead of installing it automatically.
 
-```sh
-cd "$HOME/Downloads/helldivers2-fx-launcher-main" && /bin/bash tools/install_dependencies.sh --check
+Check only, or verify after installation, from that same project directory:
+
+```bash
+/bin/bash tools/install_dependencies.sh --check
 ```
+
+If you see `No such file or directory`, check that you dragged the project folder containing `tools/install_dependencies.sh`. Enter your actual project directory again whenever you open a new Terminal window. Git clone users can skip the ZIP download steps and start from their own repository folder.
 
 The installer and shortcut share Python selection rules. Results show versions, features and selected paths. This prepares only Python/Node. [Official Python installers](https://www.python.org/downloads/macos/) · [Official Node.js installers](https://nodejs.org/en/download)
 

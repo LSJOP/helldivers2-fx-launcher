@@ -342,16 +342,26 @@ def redact_note(note):
     return text
 
 
-def scrub(value):
+def scrub(value, field=None):
     if isinstance(value, dict):
-        return {k: scrub(v) for k, v in value.items()}
+        return {k: scrub(v, k) for k, v in value.items()}
     if isinstance(value, list):
         return [scrub(v) for v in value]
     if isinstance(value, str):
-        if re.search(r'(?:\d{1,3}\.){3}\d{1,3}|/Users/|/Volumes/|https?://|[a-fA-F0-9]*:[a-fA-F0-9:]+', value) and not re.match(r'^\d{4}-\d\d-\d\dT', value):
-            return '[REDACTED]'
-        username = Path.home().name
-        return value.replace(username, '[USER]') if username else value
+        # Generated UUID links are structural, not free-text notes. Preserve
+        # them so exports retain the correct match-to-snapshot association.
+        if field in ('id', 'snapshot_id') and re.fullmatch(r'[0-9a-f]{32}', value):
+            return value
+        # Colons in a complete ISO timestamp are safe. A timestamp prefix must
+        # not let appended credentials/addresses bypass the text filter.
+        if re.fullmatch(r'\d{4}-\d\d-\d\dT[\d:.+Z-]+', value):
+            try:
+                datetime.fromisoformat(value)
+                return value
+            except ValueError:
+                pass
+        # Imported history can contain sensitive text even in known fields.
+        return redact_note(value)
     return value
 
 
@@ -454,12 +464,15 @@ def status_lines(current, language):
         if port:
             return words(language, '开放', 'OPEN') if value else words(language, '不可连接', 'UNREACHABLE')
         return words(language, '运行中', 'RUNNING') if value else words(language, '未运行', 'STOPPED')
+    def address(value):
+        if value is None:return words(language, '未验证', 'UNVERIFIED')
+        return words(language, '有地址', 'PRESENT') if value else words(language, '无地址', 'ABSENT')
     return [current['time'],
             'FX: ' + state(current['fx']) + '   GVPROXY: ' + state(current['gvproxy']),
             'STEAM (FX): ' + state(current['steam']) + '   PROXY: ' + state(current['proxy_open'], port=True),
             'UDP CONFIG: ' + current['udp_configuration'].upper(),
             'UDP: UNVERIFIED   NAT: UNKNOWN',
-            'IPv4: ' + str(current['ipv4']) + '   IPv6: ' + str(current['ipv6']) + '   IF: ' + (current['interface'] or '?'),
+            'IPv4: ' + address(current['ipv4']) + '   IPv6: ' + address(current['ipv6']) + '   IF: ' + (current['interface'] or words(language, '未验证', 'UNVERIFIED')),
             words(language, '进程/端口不代表转发正常；运行时 EIM 未验证。', 'Process/port presence does not verify forwarding or runtime EIM.')]
 
 
@@ -631,7 +644,7 @@ def run(menu):
                              [words(menu.LANG, '已取消: ', 'Cancelled: ') + str(result['cancelled']),
                               'Host DNS: ' + result['host_dns']] + [
                                  s['target'] + ' / ' + s['route'] + ' / DNS=' + s['dns'] +
-                                 ' / TCP=' + str(s['tcp_ms']) + 'ms / HTTPS=' + str(s['https']) +
+                                 ' / TCP=' + (str(s['tcp_ms']) + 'ms' if s['tcp_ms'] is not None else words(menu.LANG, '未知', 'UNKNOWN')) + ' / HTTPS=' + str(s['https']) +
                                  ' / ' + str(s['failure']) for s in result['samples']] + [
                                  words(menu.LANG, '代理 TCP 仅本机端口；HTTPS 含 TLS/HTTP；非游戏 UDP 延迟。',
                                        'Proxy TCP = localhost; HTTPS includes TLS/HTTP; not game UDP latency.'),
@@ -659,19 +672,20 @@ def run(menu):
                     input(words(menu.LANG, '回车继续', 'Return to continue'))
                 else:
                     lines = []
+                    display = lambda value: words(menu.LANG, '未知', 'UNKNOWN') if value is None else str(value)
                     for item in summarize(records, windows):
                         lines.append('{} {}:00–{}:00'.format(item['window'], *item['hours']))
                         lines.append(words(menu.LANG, '尝试/成功/超时/中断/成功率: ', 'Attempts/success/timeout/disconnect/rate: ') +
-                            '/'.join(str(item[k]) for k in ('attempts', 'successes', 'timeouts', 'disconnects', 'success_rate')))
+                            '/'.join(display(item[k]) for k in ('attempts', 'successes', 'timeouts', 'disconnects', 'success_rate')))
                         if item['small_sample']:
                             lines.append(words(menu.LANG, '样本不足 10 次，仅供参考；无记录时成功率未知。',
                                                'Fewer than 10 matches: reference only; no records means unknown rate.'))
                         lines.append(words(menu.LANG, '记录失败结果时观测到 FX/gvproxy/代理端口: ', 'Failure records with observed FX/gvproxy/proxy port: ') +
                             '/'.join(str(item[k]) for k in ('failures_with_fx_observed', 'failures_with_gvproxy_observed', 'failures_with_proxy_open')))
                         for route, data in item['quality'].items():
-                            lines.append(route + ' samples/fail/mean TCP ms/stdev ms: ' + '/'.join(str(data[k]) for k in
+                            lines.append(route + ' samples/fail/mean TCP ms/stdev ms: ' + '/'.join(display(data[k]) for k in
                                 ('samples', 'failures', 'tcp_mean_ms', 'tcp_stdev_ms')))
-                            lines.append(route + ' HTTPS mean/stdev ms: ' + str(data['https_mean_ms']) + '/' + str(data['https_stdev_ms']))
+                            lines.append(route + ' HTTPS mean/stdev ms: ' + display(data['https_mean_ms']) + '/' + display(data['https_stdev_ms']))
                     lines.append(words(menu.LANG, '相关性不能证明原因；UDP/NAT/匹配服务仍未验证。',
                                        'Correlation does not establish cause; UDP/NAT/matchmaking remain unverified.'))
                     show_details(menu, words(menu.LANG, '历史统计', 'HISTORY'), lines)
