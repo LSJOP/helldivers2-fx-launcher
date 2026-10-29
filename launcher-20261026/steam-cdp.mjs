@@ -3,8 +3,13 @@ if (!Number.isInteger(localPort) || localPort < 1 || localPort > 65535) throw Er
 const pages = await (await fetch(`http://127.0.0.1:${localPort}/json/list`)).json();
 const page = pages.find(p => p.title === 'SharedJSContext');
 if (!page) throw Error('Steam SharedJSContext is not ready');
-const socket = new WebSocket(page.webSocketDebuggerUrl.replace(':8080/', `:${localPort}/`));
-const timer = setTimeout(() => { socket.close(); process.exitCode = 1; }, 10000);
+const endpoint = new URL(page.webSocketDebuggerUrl);
+if (endpoint.protocol !== 'ws:' || !['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname)
+    || !['8080', String(localPort)].includes(endpoint.port)) throw Error('Unexpected Steam CDP endpoint');
+endpoint.hostname = '127.0.0.1';
+endpoint.port = String(localPort);
+const socket = new WebSocket(endpoint);
+const timer = setTimeout(() => { socket.close(); process.exitCode = 1; }, 15000);
 socket.onopen = () => socket.send(JSON.stringify({
   id: 1, method: 'Runtime.evaluate',
   params: { expression: process.argv[2], returnByValue: true, awaitPromise: true }

@@ -6,7 +6,7 @@
 > **🤖 AI 辅助安装 / Install with AI** · [中文指南与完整提示词](docs/AI_INSTALL.md#简体中文) · [English guide & copyable prompt](docs/AI_INSTALL.md#english)
 
 <!-- launcher-version:start -->
-**当前源码版本 / Current source version: `0.1.0-preview.1`** · [VERSION](VERSION) · [CHANGELOG](CHANGELOG.md)
+**当前源码版本 / Current source version: `0.1.0-preview.2`** · [VERSION](VERSION) · [CHANGELOG](CHANGELOG.md)
 源码技术预览；尚无完整安装包，版本号不代表已创建 GitHub Release。 / Source technical preview; no complete installer or GitHub Release is implied.
 <!-- launcher-version:end -->
 
@@ -34,7 +34,7 @@
 
 </details>
 
-*可点击图片查看原图。两图均为当前 UI 代码的离线渲染预览，不是游戏运行或联机成功截图。 / Click either image for its original size. Both are offline previews rendered from the current UI code; no game, EAC or multiplayer success is implied.* [截图来源 / Image provenance](docs/images/README.md)
+*可点击图片查看原图。两图为此前源码版本的离线渲染预览，新增菜单项以当前代码为准，不是游戏运行或联机成功截图。 / Click either image for its original size. Both are offline previews from the earlier source version; consult current code for newly added menu items; no game, EAC or multiplayer success is implied.* [截图来源 / Image provenance](docs/images/README.md)
 
 > [!WARNING]
 > **源码技术预览：尚未提供完整运行环境或安装包。** 本项目兼顾开发者交流与玩家体验，完整安装流程仍未完成。
@@ -49,6 +49,14 @@
 [依赖 / Dependencies](docs/DEPENDENCIES.md) · [已测试环境 / Compatibility](docs/COMPATIBILITY.md) · [架构 / Architecture](docs/ARCHITECTURE.md) · [贡献 / Contributing](CONTRIBUTING.md) · [发布计划 / Roadmap](docs/ROADMAP.md) · [第三方与许可证 / Third-party review](THIRD_PARTY_NOTICES.md)
 
 ## 简体中文
+
+### 本地帮助与更新检查
+
+**[6] 使用说明**现为可离线阅读的 UI 2.0 帮助中心，包含启动、性能、环境、SSH、联机、更新及外观说明；长页支持方向键和 Page Up/Down 滚动，Esc 返回。
+
+**[2] 应用性能配置**可浏览 M1～M5 芯片目录、自动识别和现有预设；多数型号暂无预设，历史已验证配置范围及固定 FX 启动参数的限制见[性能菜单说明](docs/PERFORMANCE_MENU.md)。
+
+**[11] 检查更新**仅在主动选择时查询官方 Releases，保留当前版本通道。可查看更新日志和打开 Releases；**下载安装尚未开放**，不会覆盖用户配置。详见[更新说明](docs/UPDATES.md)和[用户数据保护](docs/USER_DATA.md)。
 
 ### 项目状态与参与方式
 
@@ -163,6 +171,14 @@
 - **需要求助：**到本仓库上方的 [Issues](https://github.com/LSJOP/helldivers2-fx-launcher/issues) 页面，点击 **New issue**。说明 Mac 型号、macOS 版本、停在哪一步和错误文字，遮住密码、账号和代理订阅。
 
 ## English
+
+### Local help and update checks
+
+**[6] Instructions** opens an offline UI 2.0 help center covering launch, performance, environment, SSH, networking, updates and appearance. Long pages scroll with arrows or Page Up/Down; Esc returns.
+
+**[2] Apply performance settings** browses M1–M5 models, automatic detection and actual presets. Most models have no preset; see [profile scope and fixed FX launch limitations](docs/PERFORMANCE_MENU.md).
+
+**[11] Check for updates** queries official Releases only on request and retains the current version channel. View notes or open Releases; **download/installation remains unavailable** and user settings are untouched. See [updates](docs/UPDATES.md) and [user data protection](docs/USER_DATA.md).
 
 ### Project status and participation
 

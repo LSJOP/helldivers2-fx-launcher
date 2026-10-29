@@ -45,6 +45,15 @@ _instance_spec.loader.exec_module(launcher_instance)
 _deps_spec = importlib.util.spec_from_file_location('hd2fx_dependencies', Path(__file__).with_name('dependencies.py'))
 dependencies = importlib.util.module_from_spec(_deps_spec)
 _deps_spec.loader.exec_module(dependencies)
+_browser_spec = importlib.util.spec_from_file_location('hd2fx_performance_browser', Path(__file__).with_name('performance_browser.py'))
+performance_browser = importlib.util.module_from_spec(_browser_spec)
+_browser_spec.loader.exec_module(performance_browser)
+_update_spec = importlib.util.spec_from_file_location('hd2fx_update_ui', Path(__file__).with_name('update_ui.py'))
+update_ui = importlib.util.module_from_spec(_update_spec)
+_update_spec.loader.exec_module(update_ui)
+_help_spec = importlib.util.spec_from_file_location('hd2fx_help_center', Path(__file__).with_name('help_center.py'))
+help_center = importlib.util.module_from_spec(_help_spec)
+_help_spec.loader.exec_module(help_center)
 LANG = 'zh'
 ANSI = re.compile(r'\x1b\[[0-9;]*[A-Za-z]')
 OBSERVATION = {'endpoint': None, 'ssh_at': None, 'guest_at': None, 'guest': None}
@@ -162,6 +171,7 @@ class LaunchProgress:
     def __init__(self, configure=False):
         self.steps = list(self.NAMES)[:4] if configure else list(self.NAMES)
         self.active = None
+        self.states = {key:{'status':'waiting','started':None,'elapsed':0.0} for key in self.steps}
         self.dynamic = sys.stdout.isatty() and os.environ.get('TERM') != 'dumb'
         self.lock = threading.RLock()
         self.stop = threading.Event()
@@ -204,11 +214,31 @@ class LaunchProgress:
     def close(self):
         self.stop.set()
         if self.thread:self.thread.join(timeout=1)
-        with self.lock:self.clear_line()
+        with self.lock:
+            self.clear_line()
+            for key, value in self.states.items():
+                if value['status'] == 'waiting':value['status'] = 'skipped'
+                if value['status'] == 'running':
+                    value['elapsed'] = time.monotonic()-value['started']
+                    value['status'] = 'unverified'
+                label = tr(*self.NAMES[key])
+                print('  '+label+' | '+self.status_text(value['status'])+' | '+format(value['elapsed'],'.1f')+'s')
+
+    @staticmethod
+    def status_text(status):
+        return tr(*{'waiting':('等待中','waiting'),'running':('正在执行','running'),
+                    'done':('已通过','passed'),'skipped':('已跳过','skipped'),
+                    'unverified':('未验证','unverified'),'failed':('失败','failed')}[status])
 
     def update(self, stage, status='running', detail=None):
         if stage not in self.steps:return
+        status = 'done' if status == 'passed' else status
+        if status not in ('waiting','running','done','skipped','unverified','failed'):status='unverified'
         with self.lock:
+            value = self.states[stage]
+            if value['started'] is None and status != 'waiting':value['started']=time.monotonic()
+            if value['started'] is not None:value['elapsed']=time.monotonic()-value['started']
+            value['status']=status
             self.clear_line()
             self.active = stage
             self.waiting = status == 'running'
@@ -217,12 +247,7 @@ class LaunchProgress:
                 self.thread = threading.Thread(target=self.animate,daemon=True)
                 self.thread.start()
         label = tr(*self.NAMES[stage])
-        if status == 'running':
-            text = tr('进行中','working')
-        elif status == 'done':
-            text = tr('通过','passed')
-        else:
-            text = tr('未确认','unverified')
+        text = self.status_text(status)
         marker = '✓' if status == 'done' else ('…' if status == 'running' else '?')
         with self.lock:
             self.clear_line()
@@ -239,6 +264,7 @@ class LaunchProgress:
     def failed(self):
         self.pause()
         if self.active:
+            self.update(self.active,'failed')
             print(tr('停在阶段：','Stopped at: ')+tr(*self.NAMES[self.active]))
 
 
@@ -452,6 +478,53 @@ def show_performance_profile():
     panel(title,lines)
 
 
+def browse_performance_profiles():
+    from types import SimpleNamespace
+    context = SimpleNamespace(ui2=ui2,i18n=i18n,language=LANG,choose=select_option,
+                              profile=performance_profile,apply=lambda:launch_game(configure=True),
+                              pause=lambda:input(i18n.text('network.continue',LANG)))
+    return performance_browser.run(context)
+
+
+def check_updates():
+    from types import SimpleNamespace
+    context = SimpleNamespace(
+        ui2=ui2,i18n=i18n,language=LANG,notify=output,
+        choose=lambda title,rows,default='0',disabled_keys=():ui2.choose_list(
+            title,rows,default,LANG,disabled_keys=disabled_keys),
+        read_changelog=lambda:(ROOT/'CHANGELOG.md').read_text(encoding='utf-8'),
+        open_releases=lambda url:subprocess.run(['open',url],check=True,timeout=8))
+    return update_ui.run(context)
+
+
+def confirm_launch_change(kind, before, after):
+    if ACTIVE_PROGRESS:ACTIVE_PROGRESS.pause()
+    titles = {'ipv6':tr('Guest IPv6 修改（Guest sudo，非 macOS）','Guest IPv6 change (Guest sudo, not macOS)'),
+              'proxy':tr('Steam 代理配置及服务变更','Steam proxy and service change'),
+              'launch_options':tr('Steam 启动参数：保留并取消，或使用完整已验证配置','Steam launch options: keep and cancel, or use the full verified configuration')}
+    print('\n'+titles[kind])
+    if kind == 'ipv6':
+        print(tr('all 开关可能影响所有 Guest 接口；下方包含原值及预计变化。','The all switch can affect every Guest interface; the snapshot and expected changes follow.'))
+    if kind == 'launch_options':
+        print(tr('无法可靠合并自定义参数，不自动合并；确认将替换整段。','Custom arguments cannot be merged reliably; confirmation replaces the entire string.'))
+    columns = max(20,shutil.get_terminal_size((86,29)).columns-2)
+    for label, value in ((tr('修改前','Before'),before),(tr('修改后','After'),after)):
+        print(label+':')
+        # JSON escapes control characters but preserves the complete values.
+        for line in json.dumps(value,ensure_ascii=False,indent=2).splitlines():
+            part = ''
+            for char in line:
+                if width(part+char)>columns:
+                    print('  '+part);part=''
+                part+=char
+            print('  '+part)
+    try:
+        answer = input(tr('输入 APPLY 确认；直接回车保留并取消启动：','Type APPLY to confirm; Return keeps settings and cancels launch: '))
+        return answer.strip() == 'APPLY'
+    finally:
+        if ACTIVE_PROGRESS:ACTIVE_PROGRESS.resume()
+
+
 def launch_game(configure=False):
     global ACTIVE_PROGRESS
     if not require_runtime():return False
@@ -462,6 +535,8 @@ def launch_game(configure=False):
         network_launch_notice()
     progress = LaunchProgress(configure)
     old_hook = helper.PROGRESS_HOOK
+    old_confirm = helper.CONFIRM_HOOK
+    helper.CONFIRM_HOOK = confirm_launch_change
     ACTIVE_PROGRESS = progress
     helper.PROGRESS_HOOK = progress.update
     try:
@@ -474,10 +549,12 @@ def launch_game(configure=False):
             helper.main(configure_only=False)
     except (RuntimeError,OSError,ValueError,subprocess.SubprocessError):
         progress.failed()
+        print(tr('返回主菜单后可选择 [3] 环境检查或 [4] 导出报告。不会自动重试。','Return to the menu for [3] environment checks or [4] report export. No automatic retry.'))
         raise
     finally:
         progress.close()
         helper.PROGRESS_HOOK = old_hook
+        helper.CONFIRM_HOOK = old_confirm
         ACTIVE_PROGRESS = None
     if configure:
         print(i18n.text('performance.restart' if result['restart_required'] else 'performance.applied',LANG))
@@ -777,13 +854,13 @@ def export_report():
 
 
 def instructions():
-    print('\n'+i18n.text('home.help',LANG))
-    print('HELLDIVERS 2 FX Launcher · v'+ui2.launcher_version.get_version())
-    for number,label in home_labels().items():print(number+'. '+label)
-    for key in ['setup','components','language','password','keys']:
-        print('\n'+i18n.text('help.'+key,LANG))
-    print('\n'+i18n.text('network.scope',LANG))
-    print('\nlauncher-20261026/backups · launcher-20261026/reports')
+    from types import SimpleNamespace
+    context = SimpleNamespace(
+        ui2=ui2,i18n=i18n,language=LANG,version=ui2.launcher_version,
+        labels=home_labels,catalog=performance_browser.catalog,performance=performance_profile,
+        updates=update_ui.checker,requirements=json.loads((ROOT/'runtime-requirements.json').read_text(encoding='utf-8')),
+        choose=lambda title,rows,default='1':ui2.choose_list(title,rows,default,LANG))
+    return help_center.run(context)
 
 
 def choose_language():
@@ -814,7 +891,7 @@ def toggle_layout():
 
 
 def home_labels():
-    keys=['start','setup','check','report','folder','help','language','ssh','appearance','network']
+    keys=['start','setup','check','report','folder','help','language','ssh','appearance','network','updates']
     return {str(index):i18n.text('home.'+key,LANG) for index,key in enumerate(keys,1)}
 
 
@@ -949,7 +1026,7 @@ def menu():
             continue
         actions = {
             '1': launch_game,
-            '2': lambda: launch_game(configure=True),
+            '2': browse_performance_profiles,
             '3': check_environment,
             '4': export_report,
             '5': lambda: subprocess.run(['open', str(ROOT)], check=True),
@@ -957,12 +1034,11 @@ def menu():
             '8': ssh_settings_menu,
             '9': select_emblem,
             '10': lambda: network_diagnostics.run(_diagnostic_menu_context()),
+            '11': check_updates,
         }
         if choice not in actions:
             print(i18n.text('home.invalid', LANG))
             continue
-        if choice == '2':
-            print(i18n.text('performance.intro',LANG))
         run_action(actions[choice])
         input(tr('\n按回车返回菜单……', '\nPress Return to go back to the menu...'))
 

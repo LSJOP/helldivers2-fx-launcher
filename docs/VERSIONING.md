@@ -4,7 +4,7 @@
 
 ## 简体中文
 
-[`VERSION`](../VERSION) 是唯一版本值来源，当前已确认使用 `0.1.0-preview.1`。采用主版本.次版本.修复版本，可加 `-preview.N`、`-beta.N` 或 `-rc.N` 等预发布标识。当前处于 0.x 技术预览阶段；不把界面设计名称 UI 2.0 当作 v2.0.0。
+[`VERSION`](../VERSION) 是唯一版本值来源，当前值请读取该文件。采用主版本.次版本.修复版本，可加 `-preview.N`、`-beta.N` 或 `-rc.N` 等预发布标识。当前处于 0.x 技术预览阶段；不把界面设计名称 UI 2.0 当作 v2.0.0。
 
 `launcher_version.py` 读取并验证 VERSION；主界面、使用说明和各类导出报告均调用它。报告使用新增的 `launcher_version` 字段，原有 `version: 1` 格式字段保持原意。文件损坏或缺失显示 `unknown`，不伪造版本或阻止 UI。
 
@@ -21,7 +21,7 @@ python3 tools/update_version.py --check
 
 ## English
 
-[`VERSION`](../VERSION) is the single authoritative version value. The approved initial source-preview identity is `0.1.0-preview.1`, using MAJOR.MINOR.PATCH plus optional prerelease identifiers. UI 2.0 is a design name, not release v2.0.0.
+[`VERSION`](../VERSION) is the single authoritative version value. The current approved identity is read from that file, using MAJOR.MINOR.PATCH plus optional prerelease identifiers. UI 2.0 is a design name, not release v2.0.0.
 
 The version module supplies UI, help and exported `launcher_version` metadata while preserving existing report-schema versions. Invalid/missing metadata becomes `unknown`, not a fabricated version or a startup blocker.
 

@@ -29,9 +29,9 @@ COLORS = {
 COLOR_INDEX = {'background':233,'yellow':220,'muted':243,'green':78,'red':203,'warning':203,'text':253,'line':238}
 ANSI_FG = {'background':30,'yellow':93,'muted':90,'green':92,'red':91,'warning':91,'text':37,'line':90}
 ASSETS = Path(__file__).resolve().parent/'assets'
-ORDER = ['1','2','3','4','10','8','9','7','6','5','0']
+ORDER = ['1','2','3','4','10','8','9','7','6','5','11','0']
 LEFT = ['1','2','3','4','10']
-RIGHT = ['8','9','7','6','5']
+RIGHT = ['8','9','7','6','5','11']
 
 
 @lru_cache(maxsize=5)
@@ -191,9 +191,9 @@ def build_home(columns,rows,language,appearance,labels,status,selected='1'):
             f.rule(3,margin,c-margin)
         else:f.rule(1,margin,c-margin)
         start=5
-        if c>=72 and r>=16:
+        if c>=72 and r>=17:
             split=int(c*.58)
-            left_rows=[start+i for i in range(5)];right_rows=[start+i for i in range(5)]
+            left_rows=[start+i for i in range(len(LEFT))];right_rows=[start+i for i in range(len(RIGHT))]
         else:
             split=None
             left_rows=[];right_rows=[]
@@ -210,7 +210,7 @@ def build_home(columns,rows,language,appearance,labels,status,selected='1'):
         split=int(c*.59)
         last_menu=min(19,r-7)
         left_rows=[11+(i*(last_menu-11)+2)//4 for i in range(5)]
-        right_rows=list(left_rows)
+        right_rows=[11+(i*(last_menu-11)+2)//(len(RIGHT)-1) for i in range(len(RIGHT))]
     f.environment_row=3 if compact and r>=16 else (1 if compact else 9)
     if status.get('runtime_limited'):
         missing=status.get('runtime_missing_count',0)
@@ -386,7 +386,7 @@ def move_selection(current,direction,positions):
         index=ORDER.index(current)
         step=-1 if direction in ['up','left'] else 1
         return ORDER[(index+step)%len(ORDER)]
-    if current=='0':return '1' if direction in ['down','right'] else '5'
+    if current=='0':return '1' if direction in ['down','right'] else RIGHT[-1]
     if direction in ['left','right']:
         group=RIGHT if current in LEFT else LEFT
         available=[key for key in group if key in positions]
@@ -400,7 +400,7 @@ def move_selection(current,direction,positions):
     return group[index+1] if index+1<len(group) else '0'
 
 
-def build_list(columns,rows,title,options,index=0,pending='',language='en'):
+def build_list(columns,rows,title,options,index=0,pending='',language='en',disabled_keys=()):
     """A scrolling, width-bounded list shared by all ten language menus."""
     frame=Frame(columns,rows);c=frame.columns;r=frame.rows
     frame.put(0,2,'HELLDIVERS 2 / FX LAUNCHER','muted',limit=c-4)
@@ -412,7 +412,7 @@ def build_list(columns,rows,title,options,index=0,pending='',language='en'):
         focused=offset+row-4==index
         if focused:frame.fill(row,2,c-4,'background','yellow')
         frame.put(row,3,('☠ ' if focused else '  ')+label,
-                  'background' if focused else 'text','yellow' if focused else 'background',bold=focused,limit=c-6)
+                  'background' if focused else ('muted' if key in disabled_keys else ('warning' if key.startswith('warning:') else 'text')),'yellow' if focused else 'background',bold=focused,limit=c-6)
         frame.positions[key]=(row,3,c-6)
     frame.rule(r-4)
     counter=str(offset+1)+'–'+str(min(offset+capacity,len(options)))+'/'+str(len(options))
@@ -428,7 +428,7 @@ def build_list(columns,rows,title,options,index=0,pending='',language='en'):
     return frame
 
 
-def choose_list(title,options,default='1',language='en'):
+def choose_list(title,options,default='1',language='en',disabled_keys=()):
     values=[key for key,_ in options]
     index=values.index(default) if default in values else 0
     terminal=terminal_size((80,24))
@@ -446,7 +446,7 @@ def choose_list(title,options,default='1',language='en'):
         return next((key for key in values if key.isdigit() and value.isdigit() and int(key)==int(value)),value)
     def draw():
         size=terminal_size((80,24))
-        frame=build_list(size.columns,size.lines,title,options,index,pending,language)
+        frame=build_list(size.columns,size.lines,title,options,index,pending,language,disabled_keys=disabled_keys)
         sys.stdout.write(frame.ansi(colors,truecolor,'256color' in os.environ.get('TERM','').lower()));sys.stdout.flush()
         return frame
     try:

@@ -1,4 +1,6 @@
-"""Bilingual terminal menu for the existing, verified FX launch helper."""
+"""Compatibility entry delegates launch and CLI actions to the maintained UI.
+
+Bilingual terminal menu for the existing, verified FX launch helper."""
 import argparse
 import importlib.util
 import json
@@ -433,22 +435,14 @@ def refresh_connection():
     helper.CLIENT.notify = output
 
 
+def _current_menu():
+    spec = importlib.util.spec_from_file_location('hd2_current_menu',Path(__file__).with_name('menu.py'))
+    current = importlib.util.module_from_spec(spec);spec.loader.exec_module(current)
+    return current
+
+
 def launch_game(configure=False):
-    global ACTIVE_PROGRESS
-    progress = LaunchProgress(configure)
-    old_hook = helper.PROGRESS_HOOK
-    ACTIVE_PROGRESS = progress
-    helper.PROGRESS_HOOK = progress.update
-    try:
-        refresh_connection()
-        helper.main(configure_only=configure)
-    except (RuntimeError,OSError,ValueError,subprocess.SubprocessError):
-        progress.failed()
-        raise
-    finally:
-        progress.close()
-        helper.PROGRESS_HOOK = old_hook
-        ACTIVE_PROGRESS = None
+    return _current_menu().launch_game(configure=configure)
 
 
 def test_ssh_connection():
@@ -777,33 +771,7 @@ def menu():
 
 
 def main():
-    global LANG
-    parser = argparse.ArgumentParser(description='Helldivers 2 FX launcher / 绝地潜兵 2 FX 启动助手')
-    parser.add_argument('--lang', choices=['zh', 'en'])
-    group = parser.add_mutually_exclusive_group()
-    for option in ['launch', 'configure', 'check', 'report', 'status']:
-        group.add_argument('--'+option, action='store_true')
-    args = parser.parse_args()
-    LANG = args.lang or 'zh'
-    if any(getattr(args, name) for name in ['launch', 'configure', 'check', 'report', 'status']) and not prefs.load()['ssh_configured']:
-        print(tr('首次使用请先不带参数运行脚本，完成 SSH 配置。', 'First run: open the launcher without action flags to set up SSH.'))
-        return 1
-    direct = {
-        'launch': launch_game,
-        'configure': lambda: launch_game(configure=True),
-        'check': check_environment,
-        'report': export_report,
-        'status': helper.main,
-    }
-    for name, action in direct.items():
-        if getattr(args, name):
-            return 0 if run_action(action) else 1
-    startup_animation()
-    if args.lang or choose_language():
-        if not prefs.load()['ssh_configured']:
-            if not edit_ssh(first_run=True):return 0
-        menu()
-    return 0
+    return _current_menu().main()
 
 
 if __name__ == '__main__':

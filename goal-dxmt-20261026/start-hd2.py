@@ -16,6 +16,22 @@ _prefs_spec.loader.exec_module(prefs)
 _diagnostic_spec = importlib.util.spec_from_file_location('hd2_network_diagnostics', ROOT/'launcher-20261026/network_diagnostics.py')
 diagnostics = importlib.util.module_from_spec(_diagnostic_spec)
 _diagnostic_spec.loader.exec_module(diagnostics)
+_safety_spec = importlib.util.spec_from_file_location('hd2_launch_safety', ROOT/'launcher-20261026/launch_safety.py')
+safety = importlib.util.module_from_spec(_safety_spec)
+_safety_spec.loader.exec_module(safety)
+_deps_spec = importlib.util.spec_from_file_location('hd2_launch_dependencies', ROOT/'launcher-20261026/dependencies.py')
+dependencies = importlib.util.module_from_spec(_deps_spec)
+_deps_spec.loader.exec_module(dependencies)
+CONFIRM_HOOK = None
+SAFETY_SESSION = None
+
+
+def session():
+    if SAFETY_SESSION is None:
+        raise RuntimeError('Guest writes require the guarded launch entry')
+    return SAFETY_SESSION
+
+
 CLIENT = prefs.SSHClient(prefs.DEFAULTS)
 SSH = CLIENT.command()
 SOCK = CLIENT.socket
@@ -29,6 +45,9 @@ def report_progress(stage, status='running', detail=None):
 def refresh_settings():
     global CLIENT, SSH, SOCK, SETTINGS
     settings = prefs.load()
+    frozen = getattr(SAFETY_SESSION,'endpoint',None)
+    if isinstance(frozen,dict) and settings['ssh'] != frozen:
+        raise RuntimeError('SSH settings changed during launch; cancel and recheck the target')
     if settings['ssh'] != CLIENT.settings:
         CLIENT = prefs.SSHClient(settings)
     SETTINGS = settings
@@ -111,35 +130,34 @@ def wait_for_game():
         time.sleep(2)
     raise RuntimeError('Steam 已收到请求，但尚未检测到游戏进程。请查看 FX 中是否有登录、更新或启动错误提示，保留此窗口回到聊天检查。')
 
-EAC_STATUS = r'''
-import pathlib,re,json
-base=pathlib.Path.home()/'.local/share/Steam/steamapps/compatdata/553850/pfx/drive_c/users'
-logs=[p for p in base.glob('*/AppData/Roaming/EasyAntiCheat/**/anticheatlauncher.log') if p.stat().st_mtime>=SINCE]
-result={'result':'pending'}
-if logs:
- p=max(logs,key=lambda p:p.stat().st_mtime)
- text=p.read_text(errors='replace')[-32768:]
- exits=re.findall(r'Terminating with:\s*(\d+)',text)
- if exits and int(exits[-1])!=0:result={'result':'failed','exit_code':int(exits[-1])}
- elif exits and int(exits[-1])==0 and 'Launcher finished with: 301' in text and 'Successfully initialized the Easy Anti-Cheat module' in text:result={'result':'passed'}
-print(json.dumps(result))
-'''
+def capture_eac_baseline():
+    try:
+        return safety.request(sys.modules[__name__] if __name__ in sys.modules else session().h,
+                              {'action':'eac_baseline'})
+    except (RuntimeError, ValueError, OSError, subprocess.SubprocessError):
+        return None
 
-def check_eac(since, attempts=15):
-    if since is None:
+
+def check_eac(baseline, attempts=15):
+    if not baseline or not isinstance(baseline,dict) or not baseline.get('valid'):
         report_progress('eac','unverified')
         return
     report_progress('eac')
     for _ in range(attempts):
         try:
-            result=json.loads(remote(EAC_STATUS.replace('SINCE',repr(float(since)))))
-        except (RuntimeError,ValueError,OSError,subprocess.TimeoutExpired):
+            result = json.loads(remote(safety.guest_code({'action':'eac_poll','baseline':baseline})))
+            if not isinstance(result,dict) or result.get('result') not in ('passed','failed','pending','unverified'):
+                report_progress('eac','unverified')
+                return
+            baseline = result.get('baseline',baseline)
+        except (RuntimeError,ValueError,OSError,subprocess.SubprocessError):
             report_progress('eac','unverified')
             return
-        if result['result']=='passed':
+        if result['result'] == 'passed':
             report_progress('eac','done')
             return
-        if result['result']=='failed':
+        if result['result'] == 'failed':
+            report_progress('eac','failed')
             raise RuntimeError('EAC initialization failed (exit '+str(result['exit_code'])+'). The game was left running; inspect its error message.')
         time.sleep(2)
     report_progress('eac','unverified')
@@ -382,17 +400,7 @@ def state():
     return result
 
 def ensure_ipv4():
-    code = "from pathlib import Path\nfor name in ['all','default','eth0','lo']:\n (Path('/proc/sys/net/ipv6/conf')/name/'disable_ipv6').write_text('1')\nprint('虚拟机 IPv4 网络已准备。')\n"
-    command = 'python3 -c '+shlex.quote(code)
-    result = subprocess.run(SSH+['sudo -n '+command],capture_output=True,text=True,timeout=20)
-    if result.returncode:
-        password = CLIENT.password
-        if password is None:
-            password = CLIENT.prompt_secret('Guest sudo password: ')
-        result = subprocess.run(SSH+['sudo -S -p "" '+command],input=password+'\n',capture_output=True,text=True,timeout=20)
-    if result.returncode:
-        raise RuntimeError('Guest IPv4 setup failed. Check sudo permission and password.')
-    say(result.stdout.strip())
+    session().ipv4()
 
 def find_node():
     candidates = [shutil.which('node'), '/opt/homebrew/bin/node', '/usr/local/bin/node',
@@ -402,59 +410,83 @@ def find_node():
     raise RuntimeError('Node.js is required to configure Steam launch options. Install Node.js or set the options in Steam manually.')
 
 
-def configure_launch_options(before, target=None):
-    target = target or WORKING_LAUNCH
-    node = find_node()
-    backup_dir = ROOT/'launcher-20261026/backups'
-    backup_dir.mkdir(parents=True,exist_ok=True)
-    backup = backup_dir/('launch-options-'+time.strftime('%Y%m%d-%H%M%S')+'-'+str(time.time_ns())+'.json')
-    fd = os.open(backup,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
-    with os.fdopen(fd,'w') as stream:
-        json.dump({'launch':before['launch'],'tool':before['tool']},stream,ensure_ascii=False,indent=2)
-    expression = '''(async()=>{
-      const expected=EXPECTED;
-      SteamClient.Apps.SetAppLaunchOptions(553850,expected);
+def set_launch_options(previous, target):
+    session().verify()
+    if not safety.request(session().h,{'action':'idle','boot':session().boot}).get('ok'):
+        raise RuntimeError('Cannot verify that Steam is idle; no launch options written')
+    # Subscribe before changing anything, compare the actual API value with the
+    # consented snapshot, and never guess a merge of Steam's command syntax.
+    expression = r'''(async()=>{
+      const {previous,expected}=PAYLOAD;
       let observed=null;
-      const sub=appDetailsStore.RegisterForAppData(553850,d=>{if(d) observed=d.strLaunchOptions;});
+      const sub=appDetailsStore.RegisterForAppData(553850,d=>{if(d && typeof d.strLaunchOptions==="string") observed=d.strLaunchOptions;});
       try {
+        for(let i=0;i<30 && observed===null;i++) await new Promise(r=>setTimeout(r,200));
+        if(observed===expected) return JSON.stringify({saved:true,changed:false});
+        if(observed!==previous) throw Error('Launch options changed; no overwrite');
+        SteamClient.Apps.SetAppLaunchOptions(553850,expected);
         for(let i=0;i<30;i++) {
-          if(observed===expected) return JSON.stringify({saved:true});
+          if(observed===expected) return JSON.stringify({saved:true,changed:true});
           await new Promise(r=>setTimeout(r,200));
         }
         throw Error('Steam did not confirm the launch options');
       } finally { sub.unregister(); }
-    })()'''.replace('EXPECTED',json.dumps(target))
-    result = subprocess.run([str(node),str(ROOT/'launcher-20261026/steam-cdp.mjs'),expression,str(SETTINGS['ssh']['cdp_local_port'])],capture_output=True,text=True,timeout=20)
-    if result.returncode:
-        raise RuntimeError('Steam 启动项配置未完成，原设置已备份。')
+    })()'''.replace('PAYLOAD',json.dumps({'previous':previous,'expected':target}))
+    result = subprocess.run([find_node(),str(ROOT/'launcher-20261026/steam-cdp.mjs'),expression,
+                             str(SETTINGS['ssh']['cdp_local_port'])],capture_output=True,text=True,timeout=20)
+    if result.returncode: raise RuntimeError('Steam launch options were not confirmed')
     response = json.loads(result.stdout)['result']
     if 'exceptionDetails' in response or not json.loads(response['result'].get('value','{}')).get('saved'):
-        raise RuntimeError('Steam 未确认新的启动项，原设置已备份。')
-    say('已保存经过验证的游戏启动项，原设置已备份。')
+        raise RuntimeError('Steam launch options were not confirmed')
+    return json.loads(response['result']['value']).get('changed',True)
+
+
+def read_launch_options():
+    session().verify()
+    expression = r'''(async()=>{
+      let value=null;
+      const sub=appDetailsStore.RegisterForAppData(553850,d=>{if(d && typeof d.strLaunchOptions==="string") value=d.strLaunchOptions;});
+      try {
+        for(let i=0;i<30;i++) {
+          if(value!==null) return JSON.stringify({launch:value});
+          await new Promise(r=>setTimeout(r,200));
+        }
+        throw Error('Cannot read current Steam launch options');
+      } finally {sub.unregister();}
+    })()'''
+    result = subprocess.run([find_node(),str(ROOT/'launcher-20261026/steam-cdp.mjs'),expression,
+                             str(SETTINGS['ssh']['cdp_local_port'])],capture_output=True,text=True,timeout=20)
+    if result.returncode: raise RuntimeError('Cannot read complete Steam launch options')
+    response = json.loads(result.stdout)['result']
+    if 'exceptionDetails' in response: raise RuntimeError('Cannot read complete Steam launch options')
+    value = json.loads(response['result']['value'])['launch']
+    if not isinstance(value,str): raise RuntimeError('Invalid Steam launch options')
+    return value
+
+
+def configure_launch_options(before, target=None):
+    target = target or WORKING_LAUNCH
+    # VDF status regexes can truncate escaped quotes. Consent/backup use the API.
+    before = dict(before,launch=read_launch_options())
+    if before['launch'] == target:
+        say('LaunchOptions: 一致，无需修改 / matching; unchanged')
+        return
+    required = ('FEX_DISKCACHE=0','FEX_NEEDSSECCOMP=1')
+    session().confirm('launch_options',
+        {'LaunchOptions':before['launch'], 'required tokens present':all(v in before['launch'] for v in required),
+         'custom/unclassified':before['launch'] != target}, {'LaunchOptions':target})
+    session().verify()
+    backup = safety.backup(session().h,'launch-options',{'launch':before['launch'],'tool':before['tool']})
+    undo = ({'action':'options','before':before['launch'],'after':target},backup)
+    session().undo.append(undo)
+    session().events.append('LaunchOptions: write attempted / 已尝试写入; backup: '+str(backup))
+    if set_launch_options(before['launch'],target) is False:
+        session().undo.remove(undo)
+    say('已确认保存启动项，原设置已备份 / Launch options confirmed; original backed up.')
+
 
 def configure_steam_proxy(enabled):
-    """Add or remove only the launcher-owned Steam HTTP proxy drop-in."""
-    say('正在准备 Steam 的游戏网络连接……' if enabled else '正在关闭 Steam 的游戏级 HTTP 代理……')
-    say(remote(r'''
-import pathlib,subprocess,time,re,os
-ENABLED = ENABLED_VALUE
-r=subprocess.run(['pgrep','-a','-x','reaper'],capture_output=True,text=True).stdout
-assert not re.search(r'SteamLaunch AppId=',r),'已有游戏运行，未停止 Steam'
-p=pathlib.Path('/run/user')/str(os.getuid())/'systemd/user/steam.service.d/90-hd2-proxy.conf'
-text='# HD2 helper: runtime only\n[Service]\nEnvironment="https_proxy=http://192.168.127.254:7890" "http_proxy=http://192.168.127.254:7890"\n'
-legacy=text.replace('192.168.127.254:7890','127.0.0.1:17890')
-assert not p.exists() or p.read_text() in [text,legacy],'运行时配置已有其他内容，未覆盖'
-subprocess.run(['systemctl','--user','stop','steam.service'],check=True);time.sleep(7)
-assert subprocess.run(['pgrep','-x','steam'],capture_output=True).returncode==1,'存在独立 Steam 实例，请先正常退出'
-if ENABLED:
- p.parent.mkdir(parents=True,exist_ok=True);p.write_text(text)
-elif p.exists():
- p.unlink()
-subprocess.run(['systemctl','--user','daemon-reload'],check=True)
-subprocess.run(['systemctl','--user','reset-failed','steam.service'],check=True)
-subprocess.run(['systemctl','--user','start','steam.service'],check=True)
-print('Steam 网络已准备。' if ENABLED else 'Steam 游戏级 HTTP 代理已关闭。')
-'''.replace('ENABLED_VALUE',repr(bool(enabled)))))
+    session().proxy(enabled)
 
 
 def start_proxy():
@@ -467,16 +499,20 @@ def start_proxy():
             if reachable(7890):return
             time.sleep(1)
 
-def main(configure_only=False):
+def _main(configure_only=False):
     configure_only = configure_only or '--configure' in sys.argv
     status_only='--status' in sys.argv
     refresh_settings()
     if not status_only and not prefs.local_host(SETTINGS['ssh']['host']):
         raise RuntimeError('Automatic launch and setup require a local FX host. Remote hosts can use SSH connection testing.')
-    if not status_only:report_progress('fx')
+    if not status_only:
+        say('HELLDIVERS 2 · 启动准备 / Launch preparation')
+        say('FX / SSH / Steam / Guest IPv6 / Steam proxy / LaunchOptions: 待检查 / pending')
+        report_progress('fx')
     if not vm_reachable():
         if status_only: raise RuntimeError('FX 虚拟机尚未运行。')
         running=subprocess.run(['pgrep','-f',APP+'/Contents/MacOS/'],capture_output=True).returncode==0
+        say('FX: '+('已运行 / running' if running else '需要启动 / start required'))
         if not running:
             verify_fx_profile()
             if not GVPROXY.is_file() or not GVPROXY_WRAPPER.is_file() or hashlib.sha256(GVPROXY.read_bytes()).hexdigest()!=GVPROXY_SHA256:
@@ -499,6 +535,10 @@ def main(configure_only=False):
         raise RuntimeError('当前 FX 没有使用本轮联机测试设置。请正常退出 FX 后，再双击此启动入口。')
     if configure_only and (s['game_pids'] or s['apps']):
         raise RuntimeError('游戏或安装准备步骤正在运行，请正常退出后再使用一键环境配置。当前游戏未被中断。')
+    plan = session().bind()
+    say('FX / SSH: 已确认目标 / target verified')
+    say('Steam: '+plan['service']+' | Guest IPv6: '+('无需修改 / unchanged' if all(v=='1' for k,v in plan['ipv6'].items() if k in safety.guest.IPV6_KEYS) else '需要修改 / change required'))
+    say('LaunchOptions: API 待检查 / API check pending')
     activate_fx()
     if s['game_pids']:
         say('绝地潜兵 2 已在运行，请切换到 FX 窗口继续。')
@@ -530,17 +570,17 @@ def main(configure_only=False):
         raise RuntimeError('兼容组件与已验证版本不同，请回到此聊天继续检查。原文件没有被自动覆盖。')
     if s['wine_core']!=WINE_CORE_SHA256:
         raise RuntimeError('Wine 系统组件与已验证版本不一致，请回到此聊天修复兼容工具。')
-    if not configure_only and ('FEX_DISKCACHE=0' not in s['launch'] or 'FEX_NEEDSSECCOMP=1' not in s['launch']):
-        raise RuntimeError('游戏启动设置与已验证配置不同，请回到此聊天继续检查。')
-    if not s['ipv4_only']:
-        ensure_ipv4()
+    ensure_ipv4()  # Re-read actual switches; no-op when already correct.
     proxy_wanted=mode=='proxy'
     proxy_mismatch=(proxy_wanted and not s['steam_proxy']) or (not proxy_wanted and (s['steam_proxy'] or s['steam_proxy_config']))
+    say('Steam proxy: '+('需要调整 / change required' if proxy_mismatch else '无需修改 / unchanged'))
     if proxy_mismatch:
         configure_steam_proxy(proxy_wanted)
         s=state()
     report_progress('environment','done')
     report_progress('steam')
+    steam_result = session().steam()
+    say('Steam: '+('已受控启动一次 / started once' if steam_result['started'] else '已运行，未重复启动 / already running'))
     opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
     stable=None;since=time.monotonic();ready=False
     say('正在等待 Steam 完成初始化和网络登录……')
@@ -564,8 +604,7 @@ def main(configure_only=False):
     else:raise RuntimeError('Steam 尚未完成网络登录。请在 FX 中检查 Steam 的连接状态，再重新双击启动入口。')
     # Steam's API may not exist until SharedJSContext and login are ready.
     # Use the latest state and write at most once, only when options differ.
-    if s['launch'].strip()!=target_launch:
-        configure_launch_options(s,target_launch)
+    configure_launch_options(s,target_launch)
     if configure_only:
         report_progress('steam','done',s)
         say('一键环境配置完成。可以返回菜单启动游戏。')
@@ -573,20 +612,62 @@ def main(configure_only=False):
     report_progress('steam','done',s)
     report_progress('game')
     say('正在启动绝地潜兵 2……')
-    say(remote(r'''
+    session().verify()
+    latest = state()
+    if latest['game_pids'] or latest['apps']:
+        raise RuntimeError('A game/launch appeared during preparation; no duplicate request sent')
+    baseline = capture_eac_baseline()
+    guarded = (safety.HERE/'guest_safety.py').read_text(encoding='utf-8')
+    guarded += '\nguard(NativeGuest(), '+repr(session().boot)+')\nNativeGuest().idle()\n'
+    say(remote(guarded+r'''
 import subprocess,os
 r=subprocess.run(['steam','-applaunch','553850'],env=dict(os.environ,DISPLAY=':0',XDG_RUNTIME_DIR='/run/user/'+str(os.getuid())),capture_output=True,text=True,timeout=15)
-assert r.returncode==0,r.stderr
+if r.returncode: raise RuntimeError(r.stderr or 'Steam rejected launch request')
 print('启动请求已交给 Steam。')
 '''))
     wait_for_game()
     report_progress('game','done')
-    check_eac(s.get('guest_time'))
+    check_eac(baseline)
     run_post_launch_checks()
 
+def main(configure_only=False):
+    global SAFETY_SESSION
+    if '--status' in sys.argv:
+        return _main(configure_only=configure_only)
+    # Both UI callers and direct Python callers recheck the same dependencies.
+    problems = dependencies.launcher_problems()
+    report = dependencies.inspect_runtime(sys.modules.get(__name__) or _helper_namespace())
+    if problems or not report['ready']:
+        missing = [row['id']+': '+row['state'] for row in report['items'] if row['state'] not in ('ready','unverified')]
+        raise RuntimeError('依赖未就绪 / Dependencies not ready: '+', '.join(problems+missing)+'; docs/DEPENDENCIES.md')
+    refresh_settings()
+    if not prefs.local_host(SETTINGS['ssh']['host']):
+        raise RuntimeError('Automatic launch requires a local FX host')
+    with safety.target_lock(SETTINGS):
+        current = safety.Session(sys.modules.get(__name__) or _helper_namespace())
+        SAFETY_SESSION = current
+        try:
+            return _main(configure_only=configure_only)
+        except BaseException:
+            current.rollback()
+            current.failure_summary()
+            raise
+        finally:
+            SAFETY_SESSION = None
+
+
+def _helper_namespace():
+    # importlib callers in the existing menu do not register the module in
+    # sys.modules. Functions still share these globals; proxy reads stay current.
+    class Namespace:
+        def __getattr__(self,key): return globals()[key]
+    return Namespace()
+
+
 if __name__=='__main__':
-    try:main()
-    except subprocess.CalledProcessError as e:
-        say('启动步骤未完成（退出码 '+str(e.returncode)+'）。请保留此窗口中的提示，回到聊天继续检查。');sys.exit(1)
-    except (RuntimeError,subprocess.TimeoutExpired,OSError,ValueError) as e:
-        say(str(e));sys.exit(1)
+    # Historical no-argument backend invocation still launches, through the UI's
+    # dependency checks, prompts and per-launcher lock. No separate unsafe CLI.
+    import runpy
+    if not any(arg in sys.argv for arg in ('--launch','--configure','--status','--check','--report','-h','--help')):
+        sys.argv.append('--launch')
+    runpy.run_path(str(ROOT/'launcher-20261026/menu.py'),run_name='__main__')

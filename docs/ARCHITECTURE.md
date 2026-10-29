@@ -36,6 +36,8 @@ flowchart TD
 | [`performance_profile.py`](../launcher-20261026/performance_profile.py) | 带备份和运行中保护的 FX 性能配置。 |
 | [`steam-cdp.mjs`](../launcher-20261026/steam-cdp.mjs) / [`gvproxy wrapper`](../goal-fx-multiplayer-20261026/gvproxy-eim-wrapper) | Steam 控制桥与网络程序启动封装；不包含 gvproxy 二进制。 |
 
+启动入口共用依赖检查、目标锁和配置确认／恢复，详见[启动配置安全](LAUNCH_SAFETY.md)。`launch_safety.py` 管理宿主侧会话，`guest_safety.py` 提供通过现有 SSH 执行的受控事务；不会安装 Guest 后台服务。
+
 ### 数据与副作用
 
 用户设置存放在 `~/Library/Application Support/Helldivers2FXLauncher/`；选择保存的密码进入 macOS Keychain。运行生成的备份／报告和诊断记录应留在用户机器，不进入仓库。SSH socket 是临时运行数据。
@@ -59,3 +61,11 @@ Local dependency checks and offline UI rendering do not establish live compatibi
 版本由 [VERSION](../VERSION) 经 launcher_version.py 提供；UI 2.0 仍是界面名称。Python/Node 安装脚本与入口共用 tools/runtime_paths.sh，Node 版本／功能由 tools/check_node.cjs 探测。这些辅助工具不执行游戏准备流程。
 
 Release identity comes from [VERSION](../VERSION). Setup and Start.command share runtime path selection; the Node probe is local-only. These utilities do not replace the game backend.
+
+Shared launch guards, target locking, confirmation and recovery are documented in [Launch configuration safety](LAUNCH_SAFETY.md). The new helpers reuse SSH and do not install a Guest service.
+
+## 本地帮助与只读更新 / Local help and read-only updates
+
+`menu.instructions` 委托 `help_center.py` 使用 `ui2.choose_list`；正文在 locales，版本、预设和更新状态由既有模块提供。帮助不调用环境探测、不联网、不访问凭据或写设置。 / Help reuses the scrolling list and locale resources, with capabilities supplied by existing modules; it performs no probes, networking, credential access or settings writes.
+
+`update_checker.py` 查询固定官方 Releases API，`update_ui.py` 展示结果，`update_protection.py` 仅提供只读预检。安装始终关闭，白名单是设计草案，不是可信 manifest。存储与迁移边界见 [USER_DATA](USER_DATA.md)。 / Update checks use the fixed official API; the view and read-only preflight are separate. Installation stays disabled and the allowlist remains a design draft.

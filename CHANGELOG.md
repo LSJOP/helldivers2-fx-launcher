@@ -6,6 +6,36 @@
 
 [`VERSION`](VERSION) is the sole release identity. Versions are listed newest first; unreleased entries have no release date. UI 2.0 names the interface, and `version: 1` in settings identifies the data schema. Neither is the launcher version.
 
+## 0.1.0-preview.2 — 未发布 / Unreleased
+
+维护者确认的下一版源码预览；此记录没有发布日期，不表示已创建 Git Tag、GitHub Release 或完整安装包。 / The next approved source preview. No release date, Git tag, GitHub Release or complete installer is implied.
+
+### Added / 新增
+
+- `[2] 应用性能配置`：M1～M5 芯片分类、原生设备识别、现有配置状态与参数差异确认；未测试型号不分配虚构预设。 / `[2] Apply performance settings`: M1–M5 browsing, native hardware detection, real profile status and confirmed parameter diffs; no invented presets for untested models.
+- `[6]` UI 2.0 离线帮助中心：九类主题、长页滚动、保留分类选择，简体中文与 English 正文，其他语言回退英文。内容读取实际版本、配置目录及更新能力。 / An offline UI 2.0 help center with nine topics, scrolling, retained selection, Chinese/English content and English fallback; version, profile catalogue and update capability come from existing modules.
+- `[11]` 主动查询 GitHub 官方 Releases，无需 Token；SemVer 比较、保留 Preview／Stable 通道、版本／日期／日志摘要、在线及本地日志和 Releases 跳转。无 Release、异常元数据、超时及限流均有独立状态。 / Explicit anonymous official Releases checks with SemVer, retained Preview/Stable channels, version/date/notes, local and online changelogs and Releases navigation; missing releases, invalid metadata, timeouts and rate limits have explicit states.
+- 用户数据存储清单、只读更新候选及本地修改检查、受保护路径拒绝与不落盘的默认字段合并辅助函数。 / User-data inventory, read-only candidate/local-edit checks, protected-path rejection and a non-persisting default-field merge helper.
+
+### Fixed / 修复
+
+- Guest IPv6、受管理 Steam 代理和完整 LaunchOptions 变更先展示差异并确认，保留私有备份及有限恢复；未知内容与并发修改不强制覆盖。 / Guest IPv6, managed Steam proxy and full LaunchOptions changes require review/consent, with private backups and bounded recovery; unknown content and concurrent edits are not forcibly replaced.
+- EAC 使用本次请求前的文件身份、偏移及校验点；旧成功日志不作为本次结果。Steam 停止且空闲时最多受控启动一次。 / EAC uses pre-request file identity, offsets and checkpoints instead of historical success; idle stopped Steam can receive one controlled start.
+- UI、CLI、兼容入口和后端共享必要依赖检查及目标互斥；身份无法核实禁止 Guest 写入。八阶段保留真实状态和耗时。 / UI, CLI, compatibility and backend entries share dependency and target-lock guards; unverified identity blocks Guest writes, and eight phases retain real state/timing.
+
+### Validation / 验证
+
+- 本地隔离环境完整套件通过 483 项测试，包含 Mock HTTP、临时目录配置保留、失败／中断拒绝写入、版本读取及多语言布局。 / The isolated local suite passed 483 tests, including Mock HTTP, temporary-directory preservation, refusal of writes on failure/interruption, version reads and multilingual layout.
+- 帮助页及菜单按 86×29、88×27、101×30、104×33 验证字符边界与滚动布局。 / Help/menu checks cover character bounds and scrolling at 86×29, 88×27, 101×30 and 104×33.
+- 未进行干净 Mac 安装、真实 FX／SSH／Guest sudo／Steam／游戏／联机验收。 / No fresh-Mac install, real FX/SSH/Guest sudo/Steam/game or multiplayer acceptance was performed.
+
+### Known limitations / 已知限制
+
+- 安装更新保持禁用：尚无可信发布包、安装归属基线、独立替换程序及经过故障验证的自动回滚；实际文件替换清单为空。配置迁移也未启用。 / Update installation remains disabled: trusted packages, installed ownership, an independent replacement worker and fault-tested rollback are absent; the actual replacement list is empty, and migrations are not enabled.
+- FX 实例关联仅 Mock 验证，真实进程拓扑仍需实机只读采样；无法确认时阻止写入，有限恢复不保证所有副作用可逆。 / FX association is Mock-tested only; real process topologies need read-only device validation. Unknown identity blocks writes; bounded recovery does not undo every side effect.
+- 性能配置仍只有原有范围记录，未动态接入固定 FX CPU／RAM／GPU 启动参数。 / Only the historical scoped performance profile exists; it does not dynamically replace fixed FX CPU/RAM/GPU launch arguments.
+- 原有普通设置验证器筛选已知字段，不能用于未来无损迁移；当前更新检查和帮助不写配置。 / Existing normal settings validation filters known fields and is unsuitable for future lossless migration; the current checker and help do not write settings.
+
 ## 0.1.0-preview.1 — 未发布 / Unreleased
 
 此版本号已获维护者确认，用于源码技术预览。尚未创建 GitHub Tag、Release 或完整安装包。

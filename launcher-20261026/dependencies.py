@@ -17,7 +17,7 @@ from types import SimpleNamespace
 ROOT=Path(__file__).resolve().parent.parent
 BASE_MODULES=('menu','ui2','i18n','preferences','keychain_store','launcher_instance',
               'status_monitor','network_profile','network_diagnostics','network_records',
-              'performance_profile','dependencies','launcher_version')
+              'performance_profile','apple_silicon','performance_catalog','performance_browser','update_checker','update_ui','help_center','update_protection','dependencies','launcher_version','launch_safety','guest_safety')
 
 
 def launcher_problems(root=None):
