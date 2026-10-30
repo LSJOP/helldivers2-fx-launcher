@@ -54,6 +54,9 @@ _update_spec.loader.exec_module(update_ui)
 _help_spec = importlib.util.spec_from_file_location('hd2fx_help_center', Path(__file__).with_name('help_center.py'))
 help_center = importlib.util.module_from_spec(_help_spec)
 _help_spec.loader.exec_module(help_center)
+_setup_spec = importlib.util.spec_from_file_location('hd2fx_setup_guide', Path(__file__).with_name('setup_guide.py'))
+setup_guide = importlib.util.module_from_spec(_setup_spec)
+_setup_spec.loader.exec_module(setup_guide)
 LANG = 'zh'
 ANSI = re.compile(r'\x1b\[[0-9;]*[A-Za-z]')
 OBSERVATION = {'endpoint': None, 'ssh_at': None, 'guest_at': None, 'guest': None}
@@ -849,6 +852,13 @@ def check_environment():
     else:print_status(data)
 
 
+def installation_center():
+    from types import SimpleNamespace
+    return setup_guide.run(SimpleNamespace(root=ROOT,settings_file=prefs.path(),report_directory=None,
+        ui2=ui2,i18n=i18n,language=LANG,ssh_settings=ssh_settings_menu,runtime_check=check_environment,
+        choose=lambda title,rows,default='1',**options:ui2.choose_list(title,rows,default,LANG,**options)))
+
+
 def status_json():
     # Preserve the established --status payload for configured, ready systems.
     if runtime_dependencies()['ready'] and prefs.load()['ssh_configured']:
@@ -1051,7 +1061,7 @@ def menu():
         actions = {
             '1': launch_game,
             '2': browse_performance_profiles,
-            '3': check_environment,
+            '3': installation_center,
             '4': export_report,
             '5': lambda: subprocess.run(['open', str(ROOT)], check=True),
             '6': instructions,

@@ -58,6 +58,12 @@
 
 **[11] 检查更新**打开时不联网；选择 [1] 查询官方 Releases，[3] 查看日志，[4] 临时切换 Preview / Stable 后再按 [1]，[5] 打开 Releases。不保存通道设置；**下载安装尚未开放**，不会覆盖用户配置。详见[更新说明](docs/UPDATES.md)和[用户数据保护](docs/USER_DATA.md)。
 
+### 安装与部署检查
+
+**新设备先打开 [3] 运行环境检查**：默认是只读本机检查，可查看九项安装指引、重新检测及导出脱敏安装报告。FEX／Proton／Steam 等 Guest 项目保持未验证；原有可能连接 SSH 的检查需另外主动确认。引导无状态，不写入设置或完成标记。
+
+Python 缺失时入口会在 Shell 显示安装说明；Node 缺失仍可进菜单。**已有组件跳过，不重装可用环境。** 详见[安装流程与验证分级](docs/SETUP.md)和[完整依赖清单](docs/DEPENDENCIES.md)。完整游戏组件自动安装仍未提供。
+
 ### 项目状态与参与方式
 
 现有源码包括终端菜单、十种界面语言、SSH 连接与可选钥匙串密码存储、本地依赖检查、运行状态和网络诊断。自动安装兼容组件、通用 FX 路径识别、直连／自定义代理适配尚未实现。
@@ -179,6 +185,12 @@
 **[2] Apply performance settings** browses M1–M5 models, automatic detection and actual presets. Most models have no preset; see [profile scope and fixed FX launch limitations](docs/PERFORMANCE_MENU.md).
 
 **[11] Check for updates** opens offline. Use [1] to check official Releases, [3] for notes, [4] to select Preview / Stable before checking, and [5] to open Releases. Channel choices are not saved; **download/installation remains unavailable** and user settings are untouched. See [updates](docs/UPDATES.md) and [user data protection](docs/USER_DATA.md).
+
+### Setup and deployment checks
+
+**Start with [3] Environment check on a new device**: local read-only checks, nine guide topics, refresh and sanitized report export. Guest FEX/Proton/Steam remain unverified. The existing SSH-capable runtime check needs a separate explicit confirmation. Guidance is stateless and never saves settings or a completion flag.
+
+Missing Python shows Shell instructions; missing Node still permits the menu. **Existing components are skipped; keep a working environment intact.** See the [setup workflow and verification levels](docs/SETUP.md#english) and [full dependency inventory](docs/DEPENDENCIES.md). Automatic installation of the complete game environment remains unavailable.
 
 ### Project status and participation
 

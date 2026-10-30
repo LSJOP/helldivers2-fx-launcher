@@ -53,3 +53,9 @@ The current update system only checks versions, displays notes and opens Release
 The pure default-merging helper preserves existing and unknown values without saving anything. Existing normal settings validation filters known fields and must not be reused as a lossless migration. Future migrations need separate confirmation, private backups, schema verification and cautious rollback. Code updates must preserve configuration, selected/custom presets, network state and every historical/new record. Keychain service/account references must remain stable without exporting passwords.
 
 Before installation can be enabled, a trusted installed-file baseline, exact manifest, private permission-preserving backups, independent worker, durable transaction log, conflict-aware rollback and post-update configuration checks must be implemented and fault-tested. Disk failures cannot guarantee recovery. Current Mock tests demonstrate read-only preservation and rejection, not successful installation or rollback.
+
+## 安装引导与报告 / Setup guide and reports
+
+安装引导不保存完成标记，也不通过 preferences.save 重写 settings.json。设置中未知字段不受影响。只读检查仅验证 SSH 设置结构，不读取密码或 Keychain，不复制现有网络或诊断记录。主动导出的新报告位于实际设置路径同目录 `reports/installation/`，0600，默认目录新建时 0700；不覆盖旧报告。不会进入 Git 发布内容。
+
+The stateless setup guide never saves completion flags or reserializes settings. Unknown fields remain unchanged. Explicit report export creates a new 0600 allowlisted JSON in `reports/installation/` alongside the actual settings file; a new leaf directory uses 0700. It excludes credentials, user paths, raw configuration/history and is not release content.

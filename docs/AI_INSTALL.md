@@ -24,6 +24,7 @@
 6. 如需配置语言、外观或 SSH，请通过现有菜单 7、9、8 引导我操作，写入个人设置或保存密码前逐项确认。真实 SSH、FX 环境配置、Steam 和游戏启动需要另外获得我的明确授权。
 7. 当前没有完整游戏环境安装包。不要猜测 FX、FEX、Proton 或 gvproxy 的下载地址和兼容版本，不安装来源不明的二进制，不关闭 SIP、Gatekeeper 或其他 macOS 安全保护，不改 DNS、IPv6、防火墙或代理节点。
 8. 最后汇报：安装了什么、跳过了什么、验证了什么、仍缺少什么，以及我下一步可以做什么。明确区分“基础依赖就绪”“可打开受限模式菜单”和“游戏运行或联机已验证”。
+请优先使用 [3] 的只读安装检测和 docs/SETUP.md；也可运行 /bin/zsh Start.command --setup-check。Guest 未运行或未连接时，FEX/Proton/Steam/游戏必须标为未验证而不是缺失。不要为了保存引导进度改写 settings.json 或丢弃未知字段。已有组件与未知版本均跳过安装，不重装当前可用环境。只有我明确要求导出时才运行 --setup-report；Level 2 连接检查需另行确认。
 ```
 
 ### 可执行范围与确认边界
@@ -57,7 +58,7 @@
 
 在项目根目录运行：
 
-```sh
+```bash
 uname -s
 uname -m
 /bin/bash tools/install_dependencies.sh --check
@@ -71,7 +72,7 @@ uname -m
 
 报告 Python 和 Node 的路径、版本、功能检查结果及将要安装的内容，先询问用户是否同意。获得同意后运行：
 
-```sh
+```bash
 /bin/bash tools/install_dependencies.sh
 ```
 
@@ -84,7 +85,7 @@ uname -m
 
 ### 4. 安装后验证
 
-```sh
+```bash
 /bin/bash tools/install_dependencies.sh --check
 /bin/zsh Start.command --check-local
 ```
@@ -134,6 +135,7 @@ Repository: https://github.com/LSJOP/helldivers2-fx-launcher
 6. Guide any language, appearance or SSH setup through existing menus 7, 9 and 8. Obtain approval for each personal-setting write or password-storage action. Real SSH, FX environment configuration, Steam and game startup require separate explicit authorization.
 7. A complete game environment installer is not available. Do not guess FX, FEX, Proton or gvproxy download URLs or compatible versions, install unknown binaries, disable SIP, Gatekeeper or other macOS protections, or change DNS, IPv6, firewall or proxy nodes.
 8. Summarize what was installed, skipped and verified, what remains missing, and my next steps. Distinguish basic dependencies being ready, limited-mode menus being available, and verified gameplay or multiplayer.
+Prefer the read-only setup center in [3] and docs/SETUP.md, or /bin/zsh Start.command --setup-check. Uninspected Guest FEX/Proton/Steam/game must remain unverified, never missing. Do not rewrite settings.json or discard unknown fields to remember setup progress. Skip existing components and unknown versions; preserve a working environment. Export --setup-report only on my explicit request. Level 2 connections require separate confirmation.
 ```
 
 ### Permissions
@@ -157,3 +159,11 @@ Fallbacks: [Homebrew](https://brew.sh/), [Homebrew installation](https://docs.br
 For Python selection issues, compare the reported path with the shared runtime-path script; do not overwrite `/usr/bin/python3`. For Node, distinguish an old selected executable from feature-disabling NODE_OPTIONS and request consent before changing user settings. For Homebrew failures, stop repeated installation and offer official packages; do not change proxies, mirrors or system networking. Let the user handle passwords and security prompts without bypasses.
 
 FX discovery, patched FEX/Proton, gvproxy-eim distribution and general networking remain unfinished. Use [dependency documentation](DEPENDENCIES.md#english), never guessed URLs or arbitrary matching names. The installer branches are validated with mocked Homebrew and local probes; a full real installation on a fresh Mac and gameplay/multiplayer are unverified. Successful Python/Node setup is not game installation success.
+
+## 安装检查中心 / Setup center
+
+[完整安装与部署流程 / Full setup and verification workflow](SETUP.md) · [依赖及来源 / Inventory and sources](DEPENDENCIES.md)
+
+默认 [3] 只读检查不会连接 Guest；原有运行检查需要单独选择与确认。无状态引导不调用配置保存器。CLI --setup-check 仅静态检查，--setup-report 明确新建私有脱敏报告。旧 --check/--report 不是纯静态工具。
+
+Default [3] is local-only; the existing runtime check is a separate confirmed choice. Stateless guidance never saves configuration. --setup-check is static; --setup-report explicitly creates a new sanitized private report. Old --check/--report are not purely static.

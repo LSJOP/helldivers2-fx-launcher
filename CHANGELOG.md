@@ -12,6 +12,8 @@
 
 ### Added / 新增
 
+- `[3]` 本机只读安装检测、九项部署指引及主动脱敏报告导出；Shell 缺 Python／Node 引导；无状态、不改写用户设置。完整游戏组件安装仍待确认。 / `[3]` local read-only setup checks, nine guide topics and explicit sanitized reports; Shell tool guidance; stateless and configuration-preserving. Complete game-component installation remains unavailable.
+
 - `[2] 应用性能配置`：M1～M5 芯片分类、原生设备识别、现有配置状态与参数差异确认；未测试型号不分配虚构预设。 / `[2] Apply performance settings`: M1–M5 browsing, native hardware detection, real profile status and confirmed parameter diffs; no invented presets for untested models.
 - `[6]` UI 2.0 离线帮助中心：九类主题、长页滚动、保留分类选择，简体中文与 English 正文，其他语言回退英文。内容读取实际版本、配置目录及更新能力。 / An offline UI 2.0 help center with nine topics, scrolling, retained selection, Chinese/English content and English fallback; version, profile catalogue and update capability come from existing modules.
 - `[11]` 主动查询 GitHub 官方 Releases，无需 Token；SemVer 比较、保留 Preview／Stable 通道、版本／日期／日志摘要、在线及本地日志和 Releases 跳转。无 Release、异常元数据、超时及限流均有独立状态。 / Explicit anonymous official Releases checks with SemVer, retained Preview/Stable channels, version/date/notes, local and online changelogs and Releases navigation; missing releases, invalid metadata, timeouts and rate limits have explicit states.

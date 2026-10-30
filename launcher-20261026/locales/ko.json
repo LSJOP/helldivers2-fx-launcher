@@ -314,7 +314,8 @@
     "updates.retry_minimum": "No reliable recovery time; wait at least until {time}.",
     "updates.retry_wait": "Wait until {time}, then retry manually. No request was sent.",
     "updates.retry": "Retry",
-    "updates.error.forbidden": "API access is restricted or denied. HTTP 403 alone does not establish rate limiting."
+    "updates.error.forbidden": "API access is restricted or denied. HTTP 403 alone does not establish rate limiting.",
+    "ui.home_keys": "↑↓←→ 선택 · Enter 확인 · Esc 뒤로 · R 새로고침"
   },
   "messages": {
     "Helldivers 2 · FX Launcher": "HELLDIVERS 2 · FX 실행기",

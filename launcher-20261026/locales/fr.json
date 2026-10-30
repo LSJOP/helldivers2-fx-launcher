@@ -5,9 +5,9 @@
   "strings": {
     "app.title": "HELLDIVERS 2 · FX Launcher",
     "home.start": "Lancer le jeu",
-    "home.setup": "Appliquer les réglages de performances",
+    "home.setup": "Appliquer profil de performance",
     "home.check": "Vérifier l’environnement",
-    "home.report": "Exporter le rapport d’environnement",
+    "home.report": "Exporter rapport d’environnement",
     "home.folder": "Dossier du launcher",
     "home.help": "Instructions",
     "home.language": "Langue / Language",
@@ -314,7 +314,8 @@
     "updates.retry_minimum": "No reliable recovery time; wait at least until {time}.",
     "updates.retry_wait": "Wait until {time}, then retry manually. No request was sent.",
     "updates.retry": "Retry",
-    "updates.error.forbidden": "API access is restricted or denied. HTTP 403 alone does not establish rate limiting."
+    "updates.error.forbidden": "API access is restricted or denied. HTTP 403 alone does not establish rate limiting.",
+    "ui.home_keys": "↑↓←→ Choisir · Entrée OK · Esc Retour · R Actualiser"
   },
   "messages": {
     "Helldivers 2 · FX Launcher": "HELLDIVERS 2 · FX Launcher",

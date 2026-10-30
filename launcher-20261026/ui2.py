@@ -34,6 +34,7 @@ INTERFACE_VERSION = '2.1'
 ORDER = ['1','2','3','4','10','5','6','7','8','9','11','0']
 LEFT = ['1','2','3','4','10']
 RIGHT = ['5','6','7','8','9','11']
+_HOME_FOCUS = '1'  # In-memory return focus only; never stored in user settings.
 
 
 @lru_cache(maxsize=5)
@@ -194,7 +195,7 @@ def build_home(columns,rows,language,appearance,labels,status,selected='1'):
             f.rule(3,margin,c-margin)
         else:f.rule(1,margin,c-margin)
         start=5
-        if c>=72 and r>=17:
+        if c>=78 and r>=17:
             split=int(c*.58)
             left_rows=[start+i for i in range(len(LEFT))];right_rows=[start+i for i in range(len(RIGHT))]
         else:
@@ -211,10 +212,7 @@ def build_home(columns,rows,language,appearance,labels,status,selected='1'):
         # The emblem occupies rows 1–7; keep its final row intact.
         f.rule(8,margin,c-margin)
         split=int(c*.59)
-        last_menu=min(19,r-7)
-        # Aligned rows make horizontal navigation predictable in both columns.
-        right_rows=[11+(i*(last_menu-11)+2)//(len(RIGHT)-1) for i in range(len(RIGHT))]
-        left_rows=right_rows[:len(LEFT)]
+        left_rows=[];right_rows=[]
     f.environment_row=3 if compact and r>=16 else (1 if compact else 9)
     if status.get('runtime_limited'):
         missing=status.get('runtime_missing_count',0)
@@ -228,54 +226,6 @@ def build_home(columns,rows,language,appearance,labels,status,selected='1'):
         notice='[--] '+T('runtime.unchecked');role='muted'
     f.fill(f.environment_row,margin,c-margin*2)
     f.put(f.environment_row,margin,notice,role,limit=c-margin*2)
-    status_y=r-6
-    if split is not None:
-        left_x=margin;left_w=split-margin-2;right_x=split+2;right_w=c-right_x-margin
-        heading=4 if compact else 10
-        f.put(heading,left_x,T('ui21.games'),'muted',limit=left_w)
-        f.put(heading,right_x,T('ui.tools'),'muted',limit=right_w)
-        for row in range(heading+1,min(max(right_rows)+1,status_y)):f.put(row,split,'│','line')
-        for keys,positions,x,width in [(LEFT,left_rows,left_x,left_w),(RIGHT,right_rows,right_x,right_w)]:
-            for key,row in zip(keys,positions):
-                f.positions[key]=(row,x,width)
-                focused=key==selected
-                primary=key=='1'
-                if focused:
-                    f.fill(row,x,width,'background','yellow')
-                fg='background' if focused else 'text'
-                bg='yellow' if focused else 'background'
-                prefix='☠ ' if focused else '  '
-                f.put(row,x+1,prefix+'['+key+'] '+labels[key],fg,bg,bold=focused or primary,limit=width-2)
-                if width>28:f.put(row,x+width-2,'›',fg if focused else 'muted',bg)
-    else:
-        # A short, single-column layout is used only when a two-column grid cannot fit.
-        start=4 if r>=16 else 2
-        capacity=max(1,status_y-start)
-        focus=ORDER.index(selected) if selected!='0' else 0
-        offset=max(0,min(focus-capacity+1,len(ORDER)-1-capacity))
-        for index,key in enumerate(ORDER[:-1]):
-            row=start+index-offset
-            f.positions[key]=(row,margin,c-margin*2)
-            if not start<=row<status_y:continue
-            focused=key==selected
-            if focused:f.fill(row,margin,c-margin*2,'background','yellow')
-            f.put(row,margin+1,('☠ ' if focused else '  ')+'['+key+'] '+labels[key],
-                  'background' if focused else 'text','yellow' if focused else 'background',bold=focused,limit=c-margin*2-2)
-    f.rule(status_y,margin,c-margin)
-    keys=['fx','ssh','steam','proxy','game']
-    names=['FX','SSH','Steam',T('ui.proxy'),T('ui.game')]
-    if c>=65:
-        cell=(c-margin*2)//5
-        for i,(key,name) in enumerate(zip(keys,names)):
-            x=margin+i*cell
-            value,role=status.get(key,(T('status.unchecked'),'muted'))
-            f.put(status_y+1,x,name,'text',limit=cell-1)
-            f.put(status_y+2,x,'● '+value,role,limit=cell-1)
-            if i:f.put(status_y+1,x-2,'│','line');f.put(status_y+2,x-2,'│','line')
-    else:
-        for row,indices in [(status_y+1,range(3)),(status_y+2,range(3,5))]:
-            text='  '.join(names[i]+': '+status.get(keys[i],(T('status.unchecked'),'muted'))[0] for i in indices)
-            f.put(row,margin,text,'muted',limit=c-margin*2)
     def latency(name):
         value=status.get('latency_'+name+'_ms')
         state=status.get('latency_'+name+'_state','unchecked')
@@ -318,28 +268,119 @@ def build_home(columns,rows,language,appearance,labels,status,selected='1'):
     if type(age) is int and age>=0:
         age_text=str(age)+'s' if age<60 else (str(age//60)+'m' if age<3600 else str(age//3600)+'h')
         segments += [(' · ','muted'),(('PF/UDP ' if full else 'P/U ')+age_text,'muted')]
-    x=margin
-    for segment,role in segments:
-        if x>=c-margin:break
-        f.put(r-3,x,segment,role,limit=c-margin-x)
-        x+=text_width(segment)
-    footer=T('ui.footer')
-    if text_width(footer)>c-margin*2:
-        footer=T('ui.footer_short')
-    if text_width(footer)>c-margin*2:footer='↑↓  ↵  Esc  [R]  [0]'
-    if text_width(footer)>c-margin*2:footer='↑↓ ↵ Esc R 0'
-    f.put(r-2,margin,footer,'muted',limit=c-margin*2)
+    # Keep every secondary metric; wrap at metric boundaries rather than clip UDP.
+    def pack_readouts(values,divider=' · '):
+        lines=[[]];used=0;limit=c-margin*2
+        for segment,role in values:
+            if segment==' · ':continue
+            segment=truncate(segment,limit)
+            extra=text_width(divider) if lines[-1] else 0
+            if used+extra+text_width(segment)>limit and lines[-1]:
+                lines.append([]);used=0;extra=0
+            if extra:lines[-1].append((divider,'muted'));used+=extra
+            lines[-1].append((segment,role));used+=text_width(segment)
+        return lines
+    network_lines=pack_readouts(segments)
+    if len(network_lines)>2:
+        # Pathologically long values still retain all metric labels and explicit ellipses.
+        network_lines=pack_readouts([(truncate(text,max(12,(c-margin*2-6)//3)),role)
+                                    for text,role in segments if text!=' · '])
     note=T('ui.snapshot')+status.get('note',T('ui.remote_unchecked'))
-    if forced_compact and appearance.get('layout','immersive')=='immersive':
+    if status.get('runtime_limited'):
+        note=T('ui.snapshot')+T('runtime.menu_available')
+    elif forced_compact and appearance.get('layout','immersive')=='immersive':
         note=T('ui.small_window',columns=c,rows=r)
-    f.put(r-1,margin,note,'muted',limit=c-margin*2)
-    f.positions['0']=(r-2,margin,c-margin*2)
-    if selected=='0':
-        label='☠ [0] '+T('ui.exit')
-        x=max(margin,c-margin-text_width(label));span=min(c-margin-x,text_width(label))
-        f.fill(r-2,x,span,'background','yellow')
-        f.put(r-2,x,label,'background','yellow',bold=True,limit=span)
-        f.positions['0']=(r-2,x,span)
+    roomy=r>=24
+    note_capacity=2 if roomy else 1
+    note_lines=wrap_text(note,c-margin*2)
+    if len(note_lines)>note_capacity:
+        note_lines=note_lines[:note_capacity-1]+[truncate(' '.join(note_lines[note_capacity-1:]),c-margin*2)]
+    network_capacity=2 if roomy and r!=25 else 1
+    if roomy and network_capacity==1 and len(network_lines)>1:
+        # Preserve the existing 80×25 immersive boundary with compact readouts.
+        values=[(text,role) for text,role in segments if text!=' · ']
+        network_lines=pack_readouts(values,divider=' ')
+        if len(network_lines)>1:
+            values=[(text.replace('Steam TLS ','TLS ').replace('PlayFab ','PF ').replace('PF/UDP ','P/U '),role) for text,role in values]
+            width=max(1,(c-margin*2-(len(values)-1))//len(values))
+            network_lines=pack_readouts([(truncate(text,width),role) for text,role in values],divider=' ')
+    # Reserve the second readout row so refreshes cannot move menus or core states.
+    status_y=r-(7+network_capacity) if roomy else r-6
+    if not compact:
+        step=2 if 11+2*(len(RIGHT)-1)<status_y else 1
+        right_rows=[11+i*step for i in range(len(RIGHT))]
+        left_rows=right_rows[:len(LEFT)]
+    f.status_row=status_y
+    f.network_rows=tuple(range(status_y+3,status_y+3+network_capacity)) if roomy else (r-3,)
+    f.footer_row=r-4 if roomy else r-2
+    f.note_rows=(r-3,r-2) if roomy else (r-1,)
+    f.note_count=len(note_lines)
+    if split is not None:
+        left_x=margin;left_w=split-margin-2;right_x=split+2;right_w=c-right_x-margin
+        heading=4 if compact else 10
+        f.put(heading,left_x,T('ui21.games'),'muted',limit=left_w)
+        f.put(heading,right_x,T('ui.tools'),'muted',limit=right_w)
+        for row in range(heading+1,min(max(right_rows)+1,status_y)):f.put(row,split,'│','line')
+        for keys,positions,x,width in [(LEFT,left_rows,left_x,left_w),(RIGHT,right_rows,right_x,right_w)]:
+            for key,row in zip(keys,positions):
+                f.positions[key]=(row,x,width)
+                focused=key==selected
+                primary=key=='1'
+                if focused:
+                    f.fill(row,x,width,'background','yellow')
+                fg='background' if focused else 'text'
+                bg='yellow' if focused else 'background'
+                prefix='☠ ' if focused else '  '
+                text=prefix+('['+key+']').ljust(5)+labels[key]
+                f.put(row,x+1,text,fg,bg,bold=focused or primary,limit=width-2)
+                if width>28:f.put(row,x+width-1,'›',fg if focused else 'muted',bg)
+    else:
+        # A short, single-column layout is used only when a two-column grid cannot fit.
+        start=4 if r>=16 else 2
+        capacity=max(1,status_y-start)
+        focus=ORDER.index(selected) if selected!='0' else 0
+        offset=max(0,min(focus-capacity+1,len(ORDER)-1-capacity))
+        for index,key in enumerate(ORDER[:-1]):
+            row=start+index-offset
+            f.positions[key]=(row,margin,c-margin*2)
+            if not start<=row<status_y:continue
+            focused=key==selected
+            if focused:f.fill(row,margin,c-margin*2,'background','yellow')
+            f.put(row,margin+1,('☠ ' if focused else '  ')+('['+key+']').ljust(5)+labels[key],
+                  'background' if focused else 'text','yellow' if focused else 'background',bold=focused,limit=c-margin*2-2)
+    f.rule(status_y,margin,c-margin)
+    keys=['fx','ssh','steam','proxy','game']
+    names=['FX','SSH','Steam',T('ui.proxy'),T('ui.game')]
+    if c>=65:
+        cell=(c-margin*2)//5
+        for i,(key,name) in enumerate(zip(keys,names)):
+            x=margin+i*cell
+            value,role=status.get(key,(T('status.unchecked'),'muted'))
+            f.put(status_y+1,x,name,'text',limit=cell-1)
+            f.put(status_y+2,x,'● '+value,role,limit=cell-1)
+            if i:f.put(status_y+1,x-2,'│','line');f.put(status_y+2,x-2,'│','line')
+    else:
+        for row,indices in [(status_y+1,range(3)),(status_y+2,range(3,5))]:
+            text='  '.join(names[i]+': '+status.get(keys[i],(T('status.unchecked'),'muted'))[0] for i in indices)
+            f.put(row,margin,text,'muted',limit=c-margin*2)
+    for row,line in zip(f.network_rows,network_lines if roomy else [segments]):
+        x=margin
+        for segment,role in line:
+            if x>=c-margin:break
+            f.put(row,x,segment,role,limit=c-margin-x);x+=text_width(segment)
+    # Exit is a separate, subdued control; it never overwrites keyboard hints.
+    label=('☠ ' if selected=='0' else '  ')+'[0] '+T('ui.exit')
+    exit_width=min(c-margin*2,text_width(label));exit_x=c-margin-exit_width
+    key_width=max(0,exit_x-margin-2)
+    footer=T('ui.home_keys')
+    if text_width(footer)>key_width:footer='↑↓←→  Enter  Esc  R'
+    f.put(f.footer_row,margin,footer,'muted',limit=key_width)
+    f.positions['0']=(f.footer_row,exit_x,exit_width)
+    if selected=='0':f.fill(f.footer_row,exit_x,exit_width,'background','yellow')
+    f.put(f.footer_row,exit_x,label,'background' if selected=='0' else 'muted',
+          'yellow' if selected=='0' else 'background',bold=selected=='0',limit=exit_width)
+    for row,line in zip(f.note_rows,note_lines):
+        f.put(row,margin,line,'muted',limit=c-margin*2)
     return f
 
 
@@ -615,7 +656,11 @@ def choose_list(title,options,default='1',language='en',disabled_keys=(),summary
 def choose_home(language,appearance,labels,status,toggle_layout,refresh_status=None,refresh_interval=10):
     """Return the same numeric actions consumed by the existing menu dispatcher."""
     terminal=terminal_size()
-    selected='1';pending=''
+    selected=_HOME_FOCUS if _HOME_FOCUS in ORDER and _HOME_FOCUS!='0' else '1';pending=''
+    def finish(choice):
+        global _HOME_FOCUS
+        if choice in ORDER and choice!='0':_HOME_FOCUS=choice
+        return choice
     interactive=sys.stdin.isatty() and sys.stdout.isatty() and os.environ.get('TERM')!='dumb'
     if not interactive:
         while True:
@@ -628,7 +673,7 @@ def choose_home(language,appearance,labels,status,toggle_layout,refresh_status=N
                 continue
             if choice.lower()=='r' and refresh_status:
                 status=refresh_status();continue
-            return choice
+            return finish(choice)
     fd=sys.stdin.fileno();previous=termios.tcgetattr(fd)
     colors='NO_COLOR' not in os.environ
     truecolor=os.environ.get('COLORTERM','').lower() in ['truecolor','24bit'] or os.environ.get('HD2FX_TRUECOLOR')=='1'
@@ -642,8 +687,12 @@ def choose_home(language,appearance,labels,status,toggle_layout,refresh_status=N
             snapshot['note']=i18n.text('ui.checking',language)
         frame=build_home(size.columns,size.lines,language,appearance,labels,snapshot,selected)
         if notice:
-            frame.fill(frame.rows-1,0,frame.columns)
-            frame.put(frame.rows-1,2,notice,'yellow',limit=frame.columns-4)
+            # Never replace a wrapped limited-mode explanation or the bottom margin.
+            free=[row for row in frame.note_rows if row>=frame.note_rows[0]+frame.note_count]
+            row=free[0] if free else (frame.note_rows[-1] if not snapshot.get('runtime_limited') else None)
+            if row is not None:
+                frame.fill(row,0,frame.columns)
+                frame.put(row,2,notice,'yellow',limit=frame.columns-4)
         size_key=(size.columns,size.lines)
         sys.stdout.write(frame.ansi(colors,truecolor,'256color' in os.environ.get('TERM','').lower(),clear=size_key!=last_size));sys.stdout.flush()
         last_size=size_key
@@ -662,11 +711,12 @@ def choose_home(language,appearance,labels,status,toggle_layout,refresh_status=N
                 if (size.columns,size.lines)!=(frame.columns,frame.rows):frame=draw()
                 continue
             key=os.read(fd,1)
-            if key in [b'\r',b'\n']:return pending or selected
+            if key==b'':return finish('0')
+            if key in [b'\r',b'\n']:return finish(pending if pending in ORDER else selected)
             if key in [b'\x03',b'\x04']:raise KeyboardInterrupt
             if key in [b'r',b'R']:
                 if worker:worker.request();frame=draw();continue
-                return '3'
+                return finish('3')
             if key in [b'm',b'M']:
                 appearance=toggle_layout();pending=''
                 size=terminal_size()
