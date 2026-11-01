@@ -12,6 +12,8 @@
 
 ### Added / 新增
 
+- `[3] → [5]` 有限依赖发现与会话手动定位；Node 离线能力、FX/gvproxy 只读哈希及运行路径一致性证据，脱敏报告不含路径；不接管或保存路径。 / Bounded dependency discovery, session-only manual location, offline Node checks and FX/gvproxy hash/runtime-path evidence; path-free reports and no runtime adoption.
+
 - `[3]` 本机只读安装检测、九项部署指引及主动脱敏报告导出；Shell 缺 Python／Node 引导；无状态、不改写用户设置。完整游戏组件安装仍待确认。 / `[3]` local read-only setup checks, nine guide topics and explicit sanitized reports; Shell tool guidance; stateless and configuration-preserving. Complete game-component installation remains unavailable.
 
 - `[2] 应用性能配置`：M1～M5 芯片分类、原生设备识别、现有配置状态与参数差异确认；未测试型号不分配虚构预设。 / `[2] Apply performance settings`: M1–M5 browsing, native hardware detection, real profile status and confirmed parameter diffs; no invented presets for untested models.

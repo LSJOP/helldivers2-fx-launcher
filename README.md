@@ -64,9 +64,11 @@
 
 Python 缺失时入口会在 Shell 显示安装说明；Node 缺失仍可进菜单。**已有组件跳过，不重装可用环境。** 详见[安装流程与验证分级](docs/SETUP.md)和[完整依赖清单](docs/DEPENDENCIES.md)。完整游戏组件自动安装仍未提供。
 
+**已有组件却仍提示缺失？** 打开 `[3] 运行环境检查 → [5] 定位已有依赖`，自动发现或手动定位 Node／FX／gvproxy，并比较发现路径与实际启动路径。**找到组件不会自动更改启动路径**，手动定位仅在本次会话有效。详见[依赖发现与路径说明](docs/DEPENDENCY_DISCOVERY.md)。
+
 ### 项目状态与参与方式
 
-现有源码包括终端菜单、十种界面语言、SSH 连接与可选钥匙串密码存储、本地依赖检查、运行状态和网络诊断。自动安装兼容组件、通用 FX 路径识别、直连／自定义代理适配尚未实现。
+现有源码包括终端菜单、十种界面语言、SSH 连接与可选钥匙串密码存储、本地依赖检查、运行状态和网络诊断。自动安装兼容组件、自动 FX 运行路径接管、直连／自定义代理适配尚未实现。
 
 | 项目 | 证据与状态 |
 | --- | --- |
@@ -192,9 +194,11 @@ Python 缺失时入口会在 Shell 显示安装说明；Node 缺失仍可进菜�
 
 Missing Python shows Shell instructions; missing Node still permits the menu. **Existing components are skipped; keep a working environment intact.** See the [setup workflow and verification levels](docs/SETUP.md#english) and [full dependency inventory](docs/DEPENDENCIES.md). Automatic installation of the complete game environment remains unavailable.
 
+**Already installed a component that is reported missing?** Open `[3] Environment check → [5] Locate existing dependencies` to discover or manually locate Node/FX/gvproxy and compare candidate paths with runtime paths. **Finding a component does not change the launch path**; manual locations last only for this session. See [dependency discovery and path rules](docs/DEPENDENCY_DISCOVERY.md#english).
+
 ### Project status and participation
 
-The existing source includes the terminal menu, ten interface languages, SSH and optional Keychain storage, local dependency checks, status reporting and network diagnostics. Automatic compatibility-component installation, general FX location discovery and direct/custom-proxy setup are unfinished.
+The existing source includes the terminal menu, ten interface languages, SSH and optional Keychain storage, local dependency checks, status reporting and network diagnostics. Automatic compatibility-component installation, automatic FX runtime-path adoption and direct/custom-proxy setup are unfinished.
 
 | Area | Evidence and status |
 | --- | --- |

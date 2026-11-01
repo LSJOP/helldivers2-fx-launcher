@@ -64,3 +64,9 @@ The existing 8 CPU / 8192 MiB RAM / 6144 MiB GPU launch budget and proxy/TUN ass
 See [user data inventory](USER_DATA.md) for actual paths and overrides. The guide never saves settings or reads credentials/history. Reports are new private files under `reports/installation/` alongside the settings file, created only on request. Native AppleLanguages detection needs no Node, SSH or network; saved manual language choices retain priority.
 
 Node 路径检查保留现有 PATH、Homebrew、`/usr/local` 和可选 Codex 缓存回退；普通玩家不需要安装 Codex 或复制作者目录。 / Node lookup retains the existing PATH/Homebrew/usr-local and optional Codex-cache fallback. Players do not need Codex or the author’s directories.
+
+## 优先定位已有依赖 / Locate existing dependencies first
+
+新增 `[3] → [5]`：有限范围查找 Node、FX、gvproxy，支持手动路径及只读校验；发现路径与实际运行路径分开，不修改 PATH、manifest 或设置。匹配文件也不自动接管。[发现范围、状态、报告隐私与当前 M4 Pro 定位说明](DEPENDENCY_DISCOVERY.md)。
+
+New [3] → [5] offers bounded discovery and manual read-only validation. Found paths do not become runtime paths; no PATH/manifest/settings writes. See [scope, evidence and privacy](DEPENDENCY_DISCOVERY.md#english).

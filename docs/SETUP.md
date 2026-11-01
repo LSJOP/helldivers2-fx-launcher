@@ -50,11 +50,13 @@ Node 是运行操作工具，**不是 UI 基础依赖**；需要 22+ 和全局 `
 
 ### 3. 阅读九项安装指引
 
+`[3] → [5] 定位已有依赖` 可先查找 Node、FX、gvproxy 的已有文件；不改变实际启动路径。详见[有限范围与校验规则](DEPENDENCY_DISCOVERY.md)。
+
 `[3] → [1] 查看安装指引` 提供：基础依赖、FX、FEX、Proton-JE、网络组件、Steam 与游戏、SSH 设置、本机验证、报告导出。
 
 各页显示最近一次本机检测证据、用途、已知版本边界、来源文档、可执行的下一步及当前阻塞项。长页用方向键、Page Up/Down 滚动，Esc／0 返回。**这些页面不执行安装**，也不读取密码。SSH 页仅在用户另选“打开现有 SSH 设置”时委托原有菜单。
 
-精确位置、哈希、上游来源与安装状态统一查看[依赖表](DEPENDENCIES.md)和 manifest。对 FX/FEX/Proton-JE/gvproxy，缺少来源或匹配构建流程时停止，不猜下载地址，不用上游 latest 替代。当前未自动发现其他 FX 安装位置；“要求位置未找到”不是全局缺失结论。
+精确位置、哈希、上游来源与安装状态统一查看[依赖表](DEPENDENCIES.md)和 manifest。对 FX/FEX/Proton-JE/gvproxy，缺少来源或匹配构建流程时停止，不猜下载地址，不用上游 latest 替代。当前仅进行有限范围发现，可手动定位；不会把发现的 FX 自动用于启动。“要求位置未找到”不是全局缺失结论。
 
 ### 4. 理解验证分级
 
@@ -83,7 +85,7 @@ Node 是运行操作工具，**不是 UI 基础依赖**；需要 22+ 和全局 `
 
 ### 当前未闭合的验收
 
-全新 Apple Silicon Mac 的真实安装、精确补丁包／Guest 映像来源与可再分发审查、最低 macOS 与更多硬件、通用 FX 路径、独立 Guest 工具能力探针和通用网络适配。当前只能使这些阻塞可见，不能宣称已支持完整独立部署。在线更新仍仅查询，不开放安装。
+全新 Apple Silicon Mac 的真实安装、精确补丁包／Guest 映像来源与可再分发审查、最低 macOS 与更多硬件、完整 FX 发现与安全路径接管、独立 Guest 工具能力探针和通用网络适配。当前只能使这些阻塞可见，不能宣称已支持完整独立部署。在线更新仍仅查询，不开放安装。
 
 ## English
 
@@ -117,6 +119,8 @@ Node >=22 with native fetch/WebSocket is a host runtime tool, not a menu prerequ
 
 ### Setup center and verification levels
 
+**[3] → [5]** locates existing Node/FX/gvproxy files without adopting their paths; see [discovery rules](DEPENDENCY_DISCOVERY.md#english).
+
 **[3] → [1]** contains nine local guide topics: basics, FX, FEX, Proton-JE, networking, Steam/game, SSH, validation and report export. Pages show current evidence, purpose, version limits, source references, blockers and next steps; arrows/Page Up/Down scroll, Esc/0 returns. Pages do not install software. SSH settings open only after another explicit menu choice.
 
 The [inventory](DEPENDENCIES.md) and manifest identify exact paths/hashes, official references and incomplete recipes. Do not invent download URLs or substitute upstream latest builds. Missing at the required path does not prove an FX installation elsewhere is absent.
@@ -144,4 +148,4 @@ The guide never calls settings save, changes performance/network/Guest configura
 
 ### Remaining deployment blockers
 
-Real fresh-Mac installation, exact patched-package/Guest provenance and redistribution review, minimum macOS/more hardware, general FX discovery, independent Guest tool probes and portable networking are unfinished. This guide exposes those gaps; it does not claim a reproducible turnkey game installation. Automatic launcher update installation also remains disabled.
+Real fresh-Mac installation, exact patched-package/Guest provenance and redistribution review, minimum macOS/more hardware, exhaustive FX discovery / safe runtime-path adoption, independent Guest tool probes and portable networking are unfinished. This guide exposes those gaps; it does not claim a reproducible turnkey game installation. Automatic launcher update installation also remains disabled.

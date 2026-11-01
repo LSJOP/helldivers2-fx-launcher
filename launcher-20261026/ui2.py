@@ -24,11 +24,11 @@ _version_spec.loader.exec_module(launcher_version)
 
 COLORS = {
     'background': '#101114', 'yellow': '#FFD600', 'muted': '#737780',
-    'green': '#55D68A', 'red': '#FF5757', 'warning': '#FF6B4A',
+    'green': '#55D68A', 'red': '#FF5757', 'critical': '#FF5757', 'warning': '#FF6B4A',
     'text': '#DFE2E8', 'line': '#41454D',
 }
-COLOR_INDEX = {'background':233,'yellow':220,'muted':243,'green':78,'red':203,'warning':203,'text':253,'line':238}
-ANSI_FG = {'background':30,'yellow':93,'muted':90,'green':92,'red':91,'warning':91,'text':37,'line':90}
+COLOR_INDEX = {'background':233,'yellow':220,'muted':243,'green':78,'red':203,'critical':203,'warning':203,'text':253,'line':238}
+ANSI_FG = {'background':30,'yellow':93,'muted':90,'green':92,'red':91,'critical':91,'warning':91,'text':37,'line':90}
 ASSETS = Path(__file__).resolve().parent/'assets'
 INTERFACE_VERSION = '2.1'
 ORDER = ['1','2','3','4','10','5','6','7','8','9','11','0']
@@ -558,6 +558,8 @@ def build_list(columns,rows,title,options,index=0,pending='',language='en',disab
         if focused:frame.fill(row,2,edge-2,'background','yellow')
         role='muted' if key.startswith('i:') else 'text'
         if key.startswith('warning:'):role='warning'
+        elif key.startswith('pending:'):role='yellow'
+        elif key.startswith('error:'):role='critical'
         elif key.startswith('success:'):role='green'
         if key in disabled_keys:role='muted'
         frame.put(row,3,('☠ ' if focused else '  ')+label,

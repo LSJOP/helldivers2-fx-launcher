@@ -29,6 +29,7 @@ dependencies = _module('dependencies')
 hardware = _module('apple_silicon')
 version = _module('launcher_version')
 i18n = _module('i18n')
+discovery = _module('dependency_discovery')
 IDS = ('platform','python','source','node','ssh','ssh_config','fx','gvproxy',
        'fex','proton','guest_tools','steam','game')
 STATES = ('ready','installed_unverified','missing','version_mismatch','detection_failed','not_applicable','unverified')
@@ -37,12 +38,12 @@ TOPICS = ('base','fx','fex','proton','network','steam','ssh','verify','report')
 METHODS = dict(platform='native macOS/platform and sysctl',python='current Python version',
     source='required source readability and syntax',node='local check_node.cjs (no requests)',
     ssh='executable lookup only',ssh_config='settings schema only; no credentials',
-    fx='configured executable permission and SHA-256',gvproxy='configured executable SHA-256 and wrapper permission',
+    fx='bounded file/version/hash discovery; runtime path unchanged',gvproxy='bounded file/hash/wrapper discovery; runtime path unchanged',
     **{key:'not inspected: requires Guest' for key in GUEST_IDS})
 REASONS = ('supported_host','host_unverified','python_version','source_complete','source_incomplete',
     'node_capabilities','node_version','node_probe_failed','tool_absent','tool_present','permission',
     'settings_valid','settings_unconfigured','settings_invalid','expected_path_missing',
-    'hash_or_permission_mismatch','file_check_failed','hash_matches_runtime_unverified','needs_guest')
+    'hash_or_permission_mismatch','file_check_failed','hash_matches_runtime_unverified','needs_guest','candidate_found')
 
 
 def settings_path():
@@ -53,35 +54,22 @@ def _version(value):
     return value if isinstance(value,str) and re.fullmatch(r'[0-9]+(?:\.[0-9]+){1,3}(?:[-+][0-9A-Za-z.-]+)?',value) else None
 
 
-def node_details(root):
-    # Same first-existing-file rule as the launch backend and runtime_paths.sh.
-    candidates = (shutil.which('node'),'/opt/homebrew/bin/node','/usr/local/bin/node',
-                  str(Path.home()/'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node'))
-    for candidate in candidates:
-        if not candidate:continue
-        try:
-            if not Path(candidate).is_file():continue
-            if not os.access(candidate,os.X_OK):return 'installed_unverified',None,'permission'
-            result = subprocess.run([str(candidate),str(Path(root)/'tools/check_node.cjs')],
-                                    capture_output=True,text=True,timeout=5)
-            data = json.loads(result.stdout)
-            observed = _version(data.get('version'))
-            if (observed is None or result.returncode not in (0,1) or
-                    any(type(data.get(key)) is not bool for key in ('ok','version_ok','fetch','WebSocket'))):
-                raise ValueError('Invalid local capability response')
-            if result.returncode == 0 and all(data.get(key) is True for key in ('ok','version_ok','fetch','WebSocket')):
-                return 'ready',observed,'node_capabilities'
-            return 'version_mismatch',observed,'node_version'
-        except (OSError,ValueError,AttributeError,TypeError,subprocess.SubprocessError,UnicodeError):
-            return 'detection_failed',None,'node_probe_failed'
-    return 'missing',None,'tool_absent'
+def node_details(root, session=None):
+    selected=(session or discovery.Session(root)).scan('node')['selected']
+    state=selected['state']
+    mapping={'ready':('ready','node_capabilities'),'path_missing':('missing','tool_absent'),
+             'version_mismatch':('version_mismatch','node_version'),'probe_failed':('detection_failed','node_probe_failed'),
+             'unusable':('installed_unverified','permission'),'found_unverified':('installed_unverified','candidate_found')}
+    result,reason=mapping.get(state,('detection_failed','node_probe_failed'))
+    return result,selected.get('version'),reason
 
 
-def collect(root=None, settings_file=None):
+def collect(root=None, settings_file=None, discovery_session=None):
     """No network/SSH/process startup. Installed files do not imply runtime success."""
     root = Path(root) if root is not None else ROOT
     setting = Path(settings_file) if settings_file is not None else settings_path()
     device = hardware.detect()
+    session = discovery_session or discovery.Session(root)
     rows = []
     def add(key,state,reason,observed=None):
         rows.append(dict(id=key,state=state,reason=reason,version=observed,method=METHODS[key]))
@@ -95,7 +83,11 @@ def collect(root=None, settings_file=None):
             if not content.strip() or (name=='VERSION' and not version.valid_version(content.strip())):raise ValueError('Invalid source file')
         except (OSError,ValueError,UnicodeError):problems.append(name)
     add('source','missing' if problems else 'ready','source_incomplete' if problems else 'source_complete')
-    state,observed,reason = node_details(root)
+    state,observed,reason = node_details(root,session)
+    if 'node' not in session.results:
+        # Preserve the row when a caller supplies a capability adapter.
+        summary_state={'ready':'ready','missing':'path_missing','version_mismatch':'version_mismatch','installed_unverified':'found_unverified'}.get(state,'probe_failed')
+        session.results['node']={'items':[],'selected':{'state':summary_state}}
     add('node',state,reason,observed)
     ssh = shutil.which('ssh')
     add('ssh','installed_unverified' if ssh else 'missing','tool_present' if ssh else 'tool_absent')
@@ -109,20 +101,13 @@ def collect(root=None, settings_file=None):
             add('ssh_config','installed_unverified' if configured else 'unverified',
                 'settings_valid' if configured else 'settings_unconfigured')
     except (OSError,ValueError,KeyError,TypeError,UnicodeError):add('ssh_config','detection_failed','settings_invalid')
-    try:
-        helper = dependencies._manifest_helper(root)
-        if any(not isinstance(value,str) or not re.fullmatch(r'[0-9a-f]{64}',value)
-               for value in (helper.APP_EXECUTABLE_SHA256,helper.GVPROXY_SHA256)):
-            raise ValueError('Invalid component checksum metadata')
-        fx = dependencies.file_state(Path(helper.APP)/'Contents/MacOS/steamac-vm',helper.APP_EXECUTABLE_SHA256,True)
-        parts = [dependencies.file_state(helper.GVPROXY,helper.GVPROXY_SHA256,True),
-                 dependencies.file_state(helper.GVPROXY_WRAPPER,executable=True)]
-        network = next((s for s in ('missing','invalid','unknown') if s in parts),'ready')
-        for key,state in (('fx',fx),('gvproxy',network)):
-            add(key,dict(ready='installed_unverified',missing='missing',invalid='installed_unverified',unknown='detection_failed')[state],
-                dict(ready='hash_matches_runtime_unverified',missing='expected_path_missing',invalid='hash_or_permission_mismatch',unknown='file_check_failed')[state])
-    except (OSError,ValueError,KeyError,TypeError,AttributeError,UnicodeError):
-        for key in ('fx','gvproxy'):add(key,'detection_failed','file_check_failed')
+    for key in ('fx','gvproxy'):
+        selected=session.scan(key)['selected'];state=selected['state']
+        if state=='ready':add(key,'installed_unverified','hash_matches_runtime_unverified',selected.get('version'))
+        elif state=='path_missing':add(key,'missing','expected_path_missing')
+        elif state=='probe_failed':add(key,'detection_failed','file_check_failed')
+        elif state in ('hash_mismatch','version_mismatch','unusable'):add(key,'installed_unverified','hash_or_permission_mismatch',selected.get('version'))
+        else:add(key,'installed_unverified','candidate_found',selected.get('version'))
     for key in GUEST_IDS:add(key,'unverified','needs_guest')
     try:
         release = (root/'VERSION').read_text(encoding='utf-8').strip()
@@ -130,11 +115,13 @@ def collect(root=None, settings_file=None):
     except (OSError,UnicodeError):release = None
     data = dict(schema=1,level=1,launcher_version=release,
                 checked_at=time.strftime('%Y-%m-%d %H:%M:%S %z'),
-                device=dict(macos=platform.mac_ver()[0],architecture=platform.machine(),**device),items=rows)
+                device=dict(macos=platform.mac_ver()[0],architecture=platform.machine(),**device),items=rows,
+                discovery=discovery.public_summary(session.results))
     return safe_report(data)
 
 
 REPORT_STEPS = {
+    'candidate_found':'Locate and inspect existing candidates. Discovery never changes the runtime path; do not reinstall or replace a working environment.',
     'supported_host':'Continue local checks; macOS minimum remains unverified.',
     'host_unverified':'Use native Apple Silicon macOS; do not change the existing OS for a check.',
     'python_version':'Use the shared Python 3.9+ tool helper/path rules if this interpreter is unsuitable.',
@@ -177,6 +164,7 @@ def safe_report(data):
         device=dict(macos=_version(device.get('macos')),architecture=device.get('architecture') if device.get('architecture') in ('arm64','aarch64','x86_64') else None,
             chip=hardware.chip_name(device.get('chip')),memory_bytes=integer('memory_bytes'),gpu_cores=integer('gpu_cores')),
         items=rows)
+    if isinstance(data.get('discovery'),dict):result['discovery']=discovery.public_summary(data['discovery'])
     result['missing']=[r['id'] for r in rows if r['state']=='missing']
     result['pending']=[r['id'] for r in rows if r['state'] in ('installed_unverified','unverified','detection_failed','version_mismatch','not_applicable')]
     return result
@@ -198,7 +186,8 @@ def export_report(data, directory=None):
 class SetupCenter:
     def __init__(self,context):
         self.c=context
-        self.data=collect(context.root,context.settings_file)
+        self.session=discovery.Session(context.root)
+        self.data=collect(context.root,context.settings_file,self.session)
         self.selected='1'
 
     def t(self,key,**values):return self.c.i18n.text('setup.'+key,self.c.language,**values)
@@ -210,15 +199,22 @@ class SetupCenter:
             os=device['macos'] or self.t('unknown'),memory=(str(round(device['memory_bytes']/1024**3,1))+' GiB') if device['memory_bytes'] else self.t('unknown'))))
         result.append(('info:stateless',self.t('stateless')))
         # Keep all five actions visible even at 80x24; full evidence is in Verify.
-        for section,keys in (('launcher',('python','source')),('tools',('node',)),('runtime',('fx','gvproxy'))):
+        for section,keys in (('launcher',('python',)),('tools',('node',)),('runtime',('fx','gvproxy'))):
             result.append(('i:'+section,self.t(section)))
             for item in self.data['items']:
                 if item['id'] in keys:
-                    role = ('success:' if item['state']=='ready' else
-                            'warning:' if item['state'] in ('missing','version_mismatch','detection_failed') else 'i:')
-                    result.append((role+item['id'],self.t('name.'+item['id'])+': '+self.t('state.'+item['state'])+(' · '+item['version'] if item['version'] else '')))
+                    entry=self.data.get('discovery',{}).get(item['id'])
+                    if entry:
+                        state=entry['state'];role=self.discovery_role(state)
+                        label=self.t('discovery.state.'+state)
+                        selected=self.session.results.get(item['id'],{}).get('selected',{})
+                        if selected.get('reason')=='runtime_differs':label=self.t('discovery.runtime_mismatch')
+                    else:
+                        role=('success:' if item['state']=='ready' else 'warning:' if item['state'] in ('missing','version_mismatch','detection_failed') else 'i:')
+                        label=self.t('state.'+item['state'])
+                    result.append((role+item['id'],self.t('name.'+item['id'])+': '+label+(' · '+item['version'] if item['version'] else '')))
         result.append(('i:guest',self.t('guest.pending')))
-        return result+[(str(i),'['+str(i)+'] '+self.t('action.'+str(i))) for i in range(1,5)]+[('0','[0] '+self.t('back'))]
+        return result+[(str(i),'['+str(i)+'] '+self.t('action.'+str(i))) for i in range(1,6)]+[('0','[0] '+self.t('back'))]
 
     def verify(self):
         parts=[self.t('level1'),self.t('stateless')]
@@ -235,7 +231,7 @@ class SetupCenter:
             if choice=='0':return
             if choice not in [str(i) for i in range(1,10)]:continue
             selected=choice;topic=TOPICS[int(choice)-1]
-            if topic=='verify':self.data=collect(self.c.root,self.c.settings_file);self.verify()
+            if topic=='verify':self.data=collect(self.c.root,self.c.settings_file,self.session);self.verify()
             elif topic=='report':self.report()
             else:
                 evidence=[]
@@ -249,6 +245,80 @@ class SetupCenter:
                     choice=self.c.choose(self.t('ssh.title'),[('1','[1] '+self.t('ssh.open')),('0','[0] '+self.t('back'))],default='0')
                     if choice=='1':self.c.ssh_settings()
 
+    @staticmethod
+    def discovery_role(state):
+        return {'ready':'success:','found_unverified':'pending:','path_missing':'pending:',
+                'version_mismatch':'warning:','hash_mismatch':'warning:','unusable':'error:','probe_failed':'i:'}.get(state,'i:')
+
+    def discovery_text(self,key,row=None):
+        result=self.session.results.get(key) or self.session.scan(key)
+        public=self.data['discovery'].get(key,{})
+        lines=[self.t('discovery.readonly'),self.t('discovery.count',count=public.get('candidate_count',0),found=public.get('found_count',0)),
+               self.t('discovery.required',path=self.session.display_path(self.session.manifest.get(key)) if key!='node' else self.t('discovery.node_requirement')),
+               self.t('discovery.runtime',path=self.session.display_path(self.session.runtime.get(key)))]
+        if public.get('scan_incomplete') or public.get('scope_limited'):lines.append(self.t('discovery.limited'))
+        if row:
+            lines += [self.t('discovery.candidate',path=self.session.display_path(row.get('candidate_path',row.get('path')))),
+                      self.t('discovery.verified_path',path=self.session.display_path(row.get('resolved'))),
+                      self.t('discovery.sources',sources=', '.join(self.t('discovery.source.'+name) for name in row.get('sources',[]) if name in discovery.SOURCES)),
+                      self.t('discovery.state.'+row['state']),self.t('discovery.reason.'+row['reason']),
+                      self.t('discovery.version',version=row.get('version') or self.t('unknown'))]
+            for name in ('manifest_match','runtime_hash_match','runtime_match','wrapper_verified','wrapper_runtime_match','version_match','fetch','websocket','symlink'):
+                value=row.get(name)
+                lines.append(self.t('discovery.field.'+name)+': '+self.t('discovery.yes' if value is True else 'discovery.no' if value is False else 'unknown'))
+        return '\n'.join(lines)
+
+    def candidate_list(self,component=None):
+        selected='1'
+        while True:
+            entries=[(key,row) for key in ((component,) if component else discovery.COMPONENTS)
+                     for row in self.session.results.get(key,{}).get('items',[])]
+            options=[]
+            for i,(key,row) in enumerate(entries,1):
+                label='['+str(i)+'] '+self.t('name.'+key)+' · '+self.t('discovery.state.'+row['state'])
+                options.append((str(i),label))
+            options.append(('0','[0] '+self.t('back')))
+            choice=self.c.choose(self.t('discovery.candidates'),options,default=selected)
+            if choice=='0':return
+            if choice not in [str(i) for i in range(1,len(entries)+1)]:continue
+            selected=choice;key,row=entries[int(choice)-1]
+            self.c.ui2.show_text(self.t('name.'+key),self.discovery_text(key,row),self.c.language)
+
+    def locate_component(self,key):
+        selected='1'
+        while True:
+            options=[('i:notice',self.t('discovery.readonly'))]+[
+                (str(i),'['+str(i)+'] '+self.t('discovery.action.'+str(i))) for i in range(1,4)]+[('0','[0] '+self.t('back'))]
+            choice=self.c.choose(self.t('name.'+key),options,default=selected)
+            if choice=='0':return
+            if choice not in ('1','2','3'):continue
+            selected=choice
+            if choice=='1':
+                self.session.scan(key);self.data=collect(self.c.root,self.c.settings_file,self.session)
+                self.c.ui2.show_text(self.t('name.'+key),self.discovery_text(key,self.session.results[key]['selected']),self.c.language)
+            elif choice=='2':
+                try:
+                    value=input(self.t('discovery.prompt')+' ')
+                    if value.strip()=='0':continue
+                    if not self.session.add_manual(key,value):continue
+                    self.data=collect(self.c.root,self.c.settings_file,self.session)
+                    self.c.ui2.show_text(self.t('name.'+key),self.discovery_text(key),self.c.language)
+                    self.candidate_list(key)
+                except (ValueError,OSError):self.c.ui2.show_text(self.t('discovery.title'),self.t('discovery.invalid_path'),self.c.language)
+            else:self.candidate_list(key)
+
+    def locate(self):
+        selected='1'
+        while True:
+            options=[(str(i),'['+str(i)+'] '+self.t('name.'+key)) for i,key in enumerate(discovery.COMPONENTS,1)]
+            options += [('4','[4] '+self.t('discovery.candidates')),('0','[0] '+self.t('back'))]
+            choice=self.c.choose(self.t('discovery.title'),options,default=selected)
+            if choice=='0':return
+            if choice not in ('1','2','3','4'):continue
+            selected=choice
+            if choice=='4':self.candidate_list()
+            else:self.locate_component(discovery.COMPONENTS[int(choice)-1])
+
     def report(self):
         try:
             directory = self.c.report_directory if self.c.report_directory is not None else Path(self.c.settings_file).parent/'reports'/'installation'
@@ -261,11 +331,12 @@ class SetupCenter:
         while True:
             choice=self.c.choose(self.t('title')+' · '+str(self.data['launcher_version'] or self.t('unknown')),self.rows(),default=self.selected)
             if choice=='0':return
-            if choice not in ('1','2','3','4'):continue
+            if choice not in ('1','2','3','4','5'):continue
             self.selected=choice
             if choice=='1':self.guide()
-            elif choice=='2':self.data=collect(self.c.root,self.c.settings_file);self.verify()
+            elif choice=='2':self.data=collect(self.c.root,self.c.settings_file,self.session);self.verify()
             elif choice=='3':self.report()
+            elif choice=='5':self.locate()
             elif choice=='4':
                 choice=self.c.choose(self.t('level2.title'),[('warning:notice',self.t('level2.notice')),('1','[1] '+self.t('level2.confirm')),('0','[0] '+self.t('back'))],default='0')
                 if choice=='1':self.c.runtime_check()
