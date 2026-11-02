@@ -33,7 +33,7 @@ struct SidebarView: View {
             .onMoveCommand { direction in
                 guard direction == .up || direction == .down else { return }
                 let current = index(focusedPage ?? state.selection ?? .dashboard)
-                let next = Page.allCases[(current + (direction == .up ? 4 : 1)) % Page.allCases.count]
+                let next = Page.allCases[(current + (direction == .up ? Page.allCases.count - 1 : 1)) % Page.allCases.count]
                 focusedPage = next; state.selection = next
             }
                 }

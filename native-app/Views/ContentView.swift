@@ -26,6 +26,7 @@ struct ContentView: View {
                         case .dashboard: DashboardView(state: state, tasks: tasks)
                         case .environment: EnvironmentView(state: state)
                         case .fx: FXManagerView(state: state)
+                        case .performance: GamePerformanceView(state: state)
                         case .logs: LogsView(state: state)
                         case .settings: SettingsView(state: state)
                         }

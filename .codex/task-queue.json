@@ -22,7 +22,7 @@
       "name": "正式 App 图标集成",
       "priority": "P1",
       "status": "COMPLETED",
-      "commit": null,
+      "commit": "36e9cfa",
       "evidence": [
         "Debug build PASS",
         "Debug and Release target both reference AppIcon",
@@ -41,15 +41,23 @@
       "id": "TASK-003",
       "name": "游戏性能配置",
       "priority": "P1",
-      "status": "IN_PROGRESS",
+      "status": "COMPLETED",
       "commit": null,
-      "evidence": []
+      "evidence": [
+        "Read-only fallback authorized by task: no validated inference/write/restore bounds",
+        "Actual M4 Pro, CPU 12, GPU 16, 24 GiB, macOS detected",
+        "9 deterministic inference checks and 35 migration checks PASS",
+        "Debug build and six-page/hardware smoke PASS",
+        "Four actual screenshots captured; English minimum-width pages rendered",
+        "No FX/Guest/EAC/launch/authentication changes"
+      ],
+      "commit_subject": "feat(native-app): add inferred game performance profiles"
     },
     {
       "id": "TASK-004",
       "name": "README 视觉重设计",
       "priority": "P2",
-      "status": "PENDING",
+      "status": "IN_PROGRESS",
       "commit": null,
       "evidence": []
     }

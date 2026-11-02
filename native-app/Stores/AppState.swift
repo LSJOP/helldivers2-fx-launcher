@@ -21,6 +21,7 @@ final class AppState: ObservableObject {
     @Published var runtimeRoot = UserDefaults.standard.string(forKey: "NativeRememberedRuntimeRoot") ?? "" {
         didSet { if oldValue != runtimeRoot { credentials.clear(); guiSnapshots = [:] } }
     }
+    @Published private(set) var performanceSnapshot: [String: JSONValue] = [:]
     @Published private(set) var guiRecords: [String: GUIOperationRecord] = [:]
     @Published private(set) var guiSnapshots: [String: [String: JSONValue]] = [:]
     @Published private(set) var operationResult: [String: JSONValue] = [:]
@@ -104,6 +105,7 @@ final class AppState: ObservableObject {
                 if let action = GUIAction(rawValue: method), !action.accepts(reply.result) { throw ErrorState("PROTOCOL_ERROR", method: method) }
                 if reply.result["fx_host_running"]?.boolean == false { self.guiSnapshots = [:] }
                 self.operationResult = reply.result
+                if method == "read_performance" { self.performanceSnapshot = reply.result }
                 if GUIAction(rawValue: method) != nil, self.runtimeRoot == selectedRoot { self.guiSnapshots[method] = reply.result }
                 self.guiRecords[method]?.finish()
                 self.recordGUIOperation(method)

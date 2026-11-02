@@ -20,6 +20,22 @@ class MigrationChecks(unittest.TestCase):
         self.config=self.directory/'settings.json'
         self.events=[]
         self.ops=m.Operations(APP/'CoreSnapshot',settings_file=self.config,data_dir=self.directory/'data',emit=self.events.append)
+    def test_performance_read_reuses_hardware_and_settings_without_guest_or_writes(self):
+        from unittest.mock import Mock
+        values={'cpus':8,'memMiB':8192,'vulkanDriver':'kosmickrisp','metalHUD':False,'superResolution':False}
+        profile=types.SimpleNamespace(SETTINGS=values,DOMAIN='fixture.domain',read_setting=Mock(side_effect=lambda k:values[k]))
+        hardware=types.SimpleNamespace(detect=Mock(return_value={'chip':'Apple M4 Pro','memory_bytes':24*1024**3,'gpu_cores':16}),positive_integer=int,_read=Mock(return_value='12'))
+        with patch.object(self.ops,'module',side_effect=lambda name:{'performance_profile':profile,'apple_silicon':hardware}[name]),patch.object(self.ops,'runtime',side_effect=AssertionError('Guest forbidden')):
+            result=self.ops.run('read_performance',{})
+        self.assertEqual(result['hardware']['cpu_cores'],12);self.assertEqual(result['reference'],values)
+        self.assertFalse(result['can_apply']);self.assertFalse(result['can_restore']);self.assertEqual(result['effective'],'unverified')
+        hardware.detect.assert_called_once();hardware._read.assert_called_once_with(['/usr/sbin/sysctl','-n','hw.physicalcpu'])
+    def test_performance_read_errors_remain_unknown(self):
+        class ProfileError(RuntimeError):pass
+        profile=types.SimpleNamespace(SETTINGS={'cpus':8},DOMAIN='fixture.domain',read_setting=lambda k:(_ for _ in ()).throw(ProfileError()),ProfileError=ProfileError)
+        hardware=types.SimpleNamespace(detect=lambda:{'chip':None},positive_integer=lambda n:None,_read=lambda args:None)
+        with patch.object(self.ops,'module',side_effect=lambda name:{'performance_profile':profile,'apple_silicon':hardware}[name]):result=self.ops.run('read_performance',{})
+        self.assertIsNone(result['current']['cpus']);self.assertEqual(result['read_errors'],['cpus'])
     def gui_fixture(self, running=True):
         from unittest.mock import Mock
         from contextlib import nullcontext

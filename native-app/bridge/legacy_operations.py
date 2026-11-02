@@ -73,7 +73,7 @@ OPERATIONS = {
     'preflight_launch': ('dashboard', False, True),
     'observe_launch': ('dashboard', True, True),
     'apply_performance': ('settings', True, True),
-    'read_performance': ('settings', False, False),
+    'read_performance': ('performance', False, False),
     'apply_network_profile': ('environment', True, True),
     'restore_network_profile': ('environment', True, True),
     'toggle_network_check': ('environment', True, False),
@@ -324,8 +324,19 @@ class Operations:
             if channel not in ('preview','stable'):raise OperationError('INVALID_ARGUMENT')
             return self.module('update_checker').check(update_channel=channel)
         if method=='read_performance':
-            profile=self.module('performance_profile');catalog=self.module('performance_catalog')
-            return {'current':{k:profile.read_setting(k) for k in profile.SETTINGS},'profiles':getattr(catalog,'PROFILES',[]),'effective':'unverified'}
+            profile=self.module('performance_profile');hardware=self.module('apple_silicon')
+            device=hardware.detect()
+            device['cpu_cores']=hardware.positive_integer(hardware._read(['/usr/sbin/sysctl','-n','hw.physicalcpu']))
+            device['os_version']=__import__('platform').mac_ver()[0] or 'unknown'
+            current={};issues=[]
+            for key in profile.SETTINGS:
+                try:current[key]=profile.read_setting(key)
+                except (OSError,subprocess.SubprocessError,profile.ProfileError):
+                    current[key]=None;issues.append(key)
+            return {'hardware':device,'current':current,'reference':dict(profile.SETTINGS),
+                    'source':'performance_profile.SETTINGS','preference_domain':profile.DOMAIN,
+                    'read_errors':issues,'effective':'unverified','can_apply':False,'can_restore':False,
+                    'reason':'no_validated_inference_ranges_or_scoped_restore_backend'}
         if method in ('read_network_history','record_match','export_network_report'):
             diag=self.module('network_diagnostics');store=diag.Store(self.data/'diagnostics')
             history=store.directory/'history.jsonl'

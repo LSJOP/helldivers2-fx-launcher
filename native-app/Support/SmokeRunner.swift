@@ -8,6 +8,11 @@ import ApplicationServices
     private static var started = false
     static func runIfRequested(state: AppState) async {
         let args = ProcessInfo.processInfo.arguments
+        if !started, let i = args.firstIndex(of: "--task-queue-smoke"), args.count > i + 1 {
+            started = true
+            await queueReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
+            return
+        }
         if !started, let i = args.firstIndex(of: "--phase2-live"), args.count > i + 2 {
             started = true
             await phase2Live(state, directory: URL(fileURLWithPath: args[i + 1]), root: args[i + 2])
@@ -225,6 +230,40 @@ import ApplicationServices
         }
         NSApp.terminate(nil)
     }
+    private static func queueReview(_ state: AppState, directory: URL) async {
+        var result: [String: Any] = [:]
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try await waitForTask(state)
+            guard state.hasLoaded, state.error == nil, Page.allCases.count == 6 else { throw ErrorState("SNAPSHOT_FAILED") }
+            state.runtimeRoot = "" // Never start/connect a real target during UI acceptance.
+            state.chinese = true; state.appearance = .dark
+            state.runOperation("read_performance"); try await waitForTask(state)
+            guard state.operationError == nil, state.performanceSnapshot["hardware"]?.object["chip"]?.text != nil,
+                  state.performanceSnapshot["can_apply"]?.boolean == false else { throw ErrorState("PERFORMANCE_READ_FAILED") }
+            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
+            var files: [String] = []
+            for page in [Page.dashboard, .environment, .fx, .performance] {
+                state.selection = page
+                // FX capture intentionally contains the action cards, without personal installation paths below.
+                window.setContentSize(NSSize(width: 1180, height: page == .fx ? 620 : 850))
+                try await Task.sleep(nanoseconds: 400_000_000)
+                let name = page.rawValue + ".png"
+                guard try await capture(window, name: name, directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
+                files.append(name)
+            }
+            for page in [Page.environment, .fx, .performance] {
+                state.chinese = false; state.selection = page
+                window.setContentSize(NSSize(width: 850, height: 600))
+                try await Task.sleep(nanoseconds: 150_000_000)
+                window.contentView?.layoutSubtreeIfNeeded()
+            }
+            state.selection = .dashboard; state.chinese = true
+            result = ["result":"PASS", "files":files, "navigation_pages":6, "hardware":"real_read_only", "apply_restore":"disabled", "guest_writes":"not_performed", "english_minimum_pages":"rendered"]
+        } catch { result = ["result":"FAIL", "code":(error as? ErrorState)?.code ?? "QUEUE_SMOKE_FAILED"] }
+        if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted,.sortedKeys]) { try? data.write(to: directory.appendingPathComponent("queue-review.json")) }
+        NSApp.terminate(nil)
+    }
     private static func migrationReview(_ state: AppState, directory: URL) async {
         var result: [String: Any] = [:]
         do {
@@ -366,7 +405,7 @@ import ApplicationServices
                 files.append(file)
             }
             result["files"] = files
-            result["native_menu_pages"] = heroOnly ? 1 : 5
+            result["native_menu_pages"] = heroOnly ? 1 : Page.allCases.count
             result["snapshot_preserved"] = state.observedAt == snapshot
             result["runtime_evidence"] = state.results["get_environment_status"]?["status"]?.text ?? "unknown"
             result["soldier_asset"] = "HelldiverHero asset catalog image loaded"
