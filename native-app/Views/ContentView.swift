@@ -50,6 +50,9 @@ struct ContentView: View {
                 if tasks.busy { Button(state.t("取消", "Cancel")) { tasks.cancel() } }
             }
         }
+        .sheet(item: $state.operationSelection) { item in
+            LegacyOperationSheet(state: state, operation: item.method)
+        }
     }
 }
 

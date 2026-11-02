@@ -4,7 +4,7 @@ struct FXManagerView: View {
     @ObservedObject var state: AppState
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            TacticalPageHeader(number: "03", title: state.t("FX 版本管理", "FX version management"), section: Page.fx.title(state.chinese))
+            TacticalPageHeader(number: "03", title: state.t("FX 版本管理", "FX version management"), section: state.pageTitle(.fx))
             if state.results["list_fx_versions"]?["scan_incomplete"]?.boolean == true {
                 TacticalWarningBanner(text: scanWarning)
             }
@@ -18,13 +18,14 @@ struct FXManagerView: View {
                         TacticalStatusBadge(text: state.t("已发现 · 元数据", "Discovered · Metadata"))
                         TacticalInfoRow(title: state.t("版本", "Version"), value: version(row))
                         TacticalInfoRow(title: state.t("扫描位置", "Discovery scope"), value: row["location"]?.text ?? state.t("未知", "Unknown"))
-                        TacticalInfoRow(title: state.t("完整安装路径", "Full installation path"), value: state.t("接口未提供", "Not provided by the bridge"))
+                        TacticalInfoRow(title: state.t("完整安装路径", "Full installation path"), value: row["path"]?.text ?? state.t("未知", "Unknown"))
                         TacticalInfoRow(title: state.t("结构检测", "Structure check"), value: row["structure"]?.text == "metadata_valid" ? state.t("匹配 Core 结构规则", "Matches Core structure rules") : state.t("未验证", "Unverified"))
                         TacticalInfoRow(title: state.t("运行状态", "Runtime"), value: state.t("未验证", "Unverified"))
                         TacticalInfoRow(title: state.t("EAC / 联机", "EAC / Multiplayer"), value: state.t("均未验证", "All unverified"))
                     }
                 }
             }
+            LegacyOperationsView(state: state, scope: "fx")
             TacticalPanel(number: "i", title: state.t("检测说明", "Inspection notes"), symbol: "info.circle") {
                 Text(state.t("仅读取 /Applications 与 ~/Applications 的浅层元数据，不识别活动实例、不选择或切换版本。结构匹配不表示运行就绪。", "Reads shallow metadata in /Applications and ~/Applications. Does not identify active instances, select or switch versions. Matching structure does not establish runtime readiness."))
                     .font(TacticalTypography.body)

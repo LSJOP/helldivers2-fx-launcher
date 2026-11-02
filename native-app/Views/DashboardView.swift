@@ -7,7 +7,7 @@ struct DashboardView: View {
     private var c: TacticalColors { TacticalColors(scheme: scheme) }
     private var unverified: String { state.t("未验证", "Unverified") }
     private var launchReason: String {
-        state.t("当前阶段仅支持只读环境检查，游戏启动功能尚未开放。", "This phase supports read-only environment checks. Game launch is not available yet.")
+        state.t("默认只读。启动需主动操作、指定既有运行目录，并确认实际变更；兼容性与联机仍未验证。", "Read-only by default. Launch requires an explicit action, an existing runtime directory and approval of actual changes. Compatibility and multiplayer remain unverified.")
     }
     var body: some View {
         VStack(alignment: .leading, spacing: TacticalSpacing.panel) {
@@ -39,11 +39,11 @@ struct DashboardView: View {
             HStack {
                 TacticalEyebrow(text: state.t("超级地球 / 指挥界面", "SUPER EARTH / COMMAND INTERFACE"))
                 Spacer(minLength: 12)
-                TacticalStatusBadge(text: state.t("第一阶段 · 只读", "PHASE 1 · READ ONLY"))
+                TacticalStatusBadge(text: state.t("迁移预览 · 默认只读", "MIGRATION PREVIEW · READ-ONLY DEFAULT"))
             }
             VStack(alignment: .leading, spacing: 8) {
                 TacticalEyebrow(text: state.t("超级地球 / 指挥界面", "SUPER EARTH / COMMAND INTERFACE"))
-                TacticalStatusBadge(text: state.t("第一阶段 · 只读", "PHASE 1 · READ ONLY"))
+                TacticalStatusBadge(text: state.t("迁移预览 · 默认只读", "MIGRATION PREVIEW · READ-ONLY DEFAULT"))
             }
         }
     }
@@ -53,7 +53,7 @@ struct DashboardView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
                         Text("01").foregroundStyle(c.accent)
-                        Text(Page.dashboard.title(state.chinese)).foregroundStyle(c.muted)
+                        Text(state.pageTitle(.dashboard)).foregroundStyle(c.muted)
                             .accessibilityIdentifier("page.title")
                         Text("/ " + state.value("get_launcher_version", "version")).foregroundStyle(c.muted)
                     }.font(TacticalTypography.log)
@@ -83,8 +83,8 @@ struct DashboardView: View {
         .overlay(alignment: .top) { Rectangle().fill(c.yellow).frame(height: 3) }
     }
     private var launchButton: some View {
-        TacticalButton(title: state.t("启动 HELLDIVERS 2", "Launch HELLDIVERS 2"), symbol: "lock.fill", primary: true, disabledReason: launchReason) {}
-            .accessibilityIdentifier("dashboard.launch.disabled")
+        TacticalButton(title: state.t("启动 HELLDIVERS 2", "Launch HELLDIVERS 2"), symbol: "play.fill", primary: true, loading: tasks.busy) { state.operationSelection = NativeOperation(method: "launch_game") }
+            .accessibilityIdentifier("dashboard.launch")
     }
     private var inspectButton: some View {
         TacticalButton(title: tasks.busy ? state.t("正在检查环境…", "Checking environment…") : state.t("检查环境", "Check environment"),

@@ -14,8 +14,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NativeLifecycle.cancel?()
         // AppKit runs a nested termination loop. A queued main-dispatch reply can
         // be blocked by the caller's MainActor task; use that loop's timer instead.
-        let timer = Timer(timeInterval: 0.6, repeats: false) { _ in
+        let timer = Timer(timeInterval: 0.1, repeats: true) { timer in
             MainActor.assumeIsolated {
+                guard !BridgeWorkerStatus.isActive else { return }
+                timer.invalidate()
                 #if DEBUG
                 NativeLifecycle.event?("replyToApplicationShouldTerminate")
                 #endif
@@ -68,13 +70,13 @@ struct NavigationCommands: Commands {
         CommandGroup(replacing: .newItem) {}
         CommandMenu(state.t("导航", "Navigate")) {
             ForEach(Array(Page.allCases.enumerated()), id: \.element.id) { index, page in
-                Button(page.title(state.chinese)) { state.selection = page }
+                Button(state.pageTitle(page)) { state.selection = page }
                     .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: .command)
             }
-            .id(state.chinese)
+            .id(state.languageCode)
             Divider()
             Button(state.t("刷新", "Refresh")) { state.refresh() }.keyboardShortcut("r", modifiers: .command)
-                .id(state.chinese)
+                .id(state.languageCode)
         }
     }
 }

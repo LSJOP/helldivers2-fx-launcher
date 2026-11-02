@@ -27,7 +27,10 @@ struct LogsView: View {
             let severity = ["INFO", "SUCCESS", "WARNING", "ERROR", "DEBUG"].contains(raw) ? raw : "UNCLASSIFIED"
             return SessionLogLine(id: "bridge-\(index)", time: row["at"]?.text ?? "—", source: "Bridge", message: row["message"]?.text ?? "", level: severity)
         }
-        return swift + bridge
+        let runtime = state.runtimeLogs.enumerated().map { index, row in
+            SessionLogLine(id: "runtime-\(index)", time: row["at"]?.text ?? "—", source: row["source"]?.text ?? "Core", message: (row["message"]?.text ?? "") + " " + (row["status"]?.text ?? ""), level: row["level"]?.text ?? "UNCLASSIFIED")
+        }
+        return swift + bridge + runtime
     }
     private var filtered: [SessionLogLine] {
         lines.filter { (level == "ALL" || $0.level == level) && (search.isEmpty || ($0.time + $0.source + $0.message).localizedCaseInsensitiveContains(search)) }
@@ -35,8 +38,9 @@ struct LogsView: View {
     var body: some View {
         let c = TacticalColors(scheme: scheme)
         VStack(alignment: .leading, spacing: 18) {
-            TacticalPageHeader(number: "04", title: state.t("运行日志", "Session logs"), section: Page.logs.title(state.chinese))
+            TacticalPageHeader(number: "04", title: state.t("运行日志", "Session logs"), section: state.pageTitle(.logs))
             TacticalWarningBanner(text: state.t("仅本次会话 App 与 Bridge 日志。原始日志没有等级字段时显示“未标级”，不会推断成功等级。", "App and bridge logs from this session only. Entries without an explicit severity remain unclassified; success is not inferred."))
+            LegacyOperationsView(state: state, scope: "logs")
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) { filters; searchField; copyButton }
                 VStack(alignment: .leading, spacing: 12) { filters; HStack { searchField; copyButton } }

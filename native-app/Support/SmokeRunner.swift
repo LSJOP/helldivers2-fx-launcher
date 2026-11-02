@@ -8,6 +8,11 @@ import ApplicationServices
     private static var started = false
     static func runIfRequested(state: AppState) async {
         let args = ProcessInfo.processInfo.arguments
+        if !started, let i = args.firstIndex(of: "--migration-smoke"), args.count > i + 1 {
+            started = true
+            await migrationReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
+            return
+        }
         if !started, let i = args.firstIndex(of: "--ui-refinement-smoke"), args.count > i + 1 {
             started = true
             await refinementReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
@@ -131,6 +136,40 @@ import ApplicationServices
         }
     }
     // One focused check after the user's menu-label feedback; no five-page sweep.
+    private static func migrationReview(_ state: AppState, directory: URL) async {
+        var result: [String: Any] = [:]
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try await waitForTask(state)
+            guard state.hasLoaded, state.error == nil else { throw ErrorState("BRIDGE_UNAVAILABLE") }
+            guard state.rows("get_legacy_catalog", "languages").count == 10,
+                  state.rows("get_legacy_catalog", "operations").count == 20 else { throw ErrorState("CATALOG_MISSING") }
+            guard let base = Bundle.main.resourceURL else { throw ErrorState("CORE_UNAVAILABLE") }
+            for (code, _) in NativeLocalization.languages {
+                guard FileManager.default.fileExists(atPath: base.appendingPathComponent("locales/" + code + ".json").path) else { throw ErrorState("LOCALE_MISSING") }
+                state.languageCode = code
+                guard !state.pageTitle(.dashboard).isEmpty else { throw ErrorState("LOCALE_MISSING") }
+            }
+            state.languageCode = "zh-CN"
+            state.runOperation("read_configuration"); try await waitForTask(state)
+            guard state.operationError == nil, state.operationResult["revision"]?.text != nil else { throw ErrorState("CONFIG_READ_FAILED") }
+            state.runOperation("launch_game"); try await waitForTask(state)
+            guard state.operationError?.code == "CONFIRMATION_REQUIRED" else { throw ErrorState("CONSENT_FAILED") }
+            state.runOperation("launch_game", params: ["confirmed": .bool(true)]); try await waitForTask(state)
+            guard state.operationError?.code == "RUNTIME_ROOT_REQUIRED" else { throw ErrorState("ROOT_GUARD_FAILED") }
+            state.operationSelection = NativeOperation(method: "launch_game")
+            try await Task.sleep(nanoseconds: 300_000_000)
+            guard NSApp.windows.contains(where: { $0.isVisible }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
+            state.operationSelection = nil
+            result = ["result":"PASS", "catalog_operations":20, "bundled_original_locales":10,
+                      "configuration":"read_only", "launch_guards":"consent_and_root_rejected",
+                      "live_game_network_writes":"not_performed", "native_translation":"partial"]
+        } catch { result = ["result":"FAIL", "code":(error as? ErrorState)?.code ?? "SMOKE_FAILED"] }
+        if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]) {
+            try? data.write(to: directory.appendingPathComponent("migration.json"), options: .atomic)
+        }
+        NSApp.terminate(nil)
+    }
     private static func menuReview(_ state: AppState, directory: URL) async {
         var result: [String: Any] = ["kind": "ui_v2_menu_labels", "initial_appearance": state.appearance.rawValue]
         do {

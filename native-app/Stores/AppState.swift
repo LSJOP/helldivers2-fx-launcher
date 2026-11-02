@@ -3,7 +3,17 @@ import SwiftUI
 @MainActor
 final class AppState: ObservableObject {
     @Published var selection: Page? = .dashboard
-    @Published var chinese = Locale.preferredLanguages.first?.hasPrefix("zh") == true
+    @Published var languageCode = NativeLocalization.initialLanguage
+    var chinese: Bool {
+        get { languageCode.hasPrefix("zh") }
+        set { languageCode = newValue ? "zh-CN" : "en" }
+    }
+    @Published var operationSelection: NativeOperation?
+    @Published var runtimeRoot = ""
+    @Published private(set) var operationResult: [String: JSONValue] = [:]
+    @Published private(set) var operationError: ErrorState?
+    @Published private(set) var operationEvents: [[String: JSONValue]] = []
+    @Published private(set) var runtimeLogs: [[String: JSONValue]] = []
     @Published var appearance: Appearance = .dark
     @Published var pythonURL = URL(fileURLWithPath: "/usr/bin/python3")
     @Published private(set) var results: [String: [String: JSONValue]] = [:]
@@ -15,7 +25,34 @@ final class AppState: ObservableObject {
     let tasks = TaskManager()
     private let bridge = BridgeService()
 
-    func t(_ zh: String, _ en: String) -> String { chinese ? zh : en }
+    func t(_ zh: String, _ en: String) -> String { NativeLocalization.text(zh, en, language: languageCode) }
+    func pageTitle(_ page: Page) -> String { t(page.title(true), page.title(false)) }
+    func runOperation(_ method: String, params: [String: JSONValue] = [:]) {
+        guard !tasks.busy else { return }
+        operationError = nil; operationResult = [:]; operationEvents = []
+        tasks.start { [weak self] in
+            guard let self else { return }
+            do {
+                let config = try BridgeConfiguration.bundled(python: self.pythonURL)
+                var input = params
+                if !self.runtimeRoot.isEmpty { input["runtime_root"] = .string(self.runtimeRoot) }
+                let reply = try await self.bridge.request(method, configuration: config, timeout: method == "launch_game" || method == "apply_performance" ? 900 : 90, params: input) { [weak self] event in
+                    Task { @MainActor in
+                        guard let self else { return }
+                        self.operationEvents.append(event)
+                        self.runtimeLogs.append(event)
+                        if self.runtimeLogs.count > 500 { self.runtimeLogs.removeFirst(self.runtimeLogs.count - 500) }
+                        if self.operationEvents.count > 200 { self.operationEvents.removeFirst(self.operationEvents.count - 200) }
+                    }
+                }
+                self.operationResult = reply.result
+                self.appendLog(method + ": COMPLETED")
+            } catch {
+                self.operationError = error as? ErrorState ?? ErrorState("PROTOCOL_ERROR", method: method)
+                self.appendLog(method + ": " + (self.operationError?.code ?? "UNKNOWN"))
+            }
+        }
+    }
     func value(_ method: String, _ key: String) -> String { results[method]?[key]?.text ?? t("未知", "Unknown") }
     func rows(_ method: String, _ key: String) -> [[String: JSONValue]] { results[method]?[key]?.array.map(\.object) ?? [] }
     func refresh() {
@@ -28,7 +65,7 @@ final class AppState: ObservableObject {
             let config = try BridgeConfiguration.bundled(python: pythonURL)
             var snapshot: [String: [String: JSONValue]] = [:]
             var snapshotTime: String?
-            for method in ["handshake", "get_launcher_version", "get_system_info", "get_environment_status", "get_dependencies", "list_fx_versions", "get_logs"] {
+            for method in ["handshake", "get_launcher_version", "get_system_info", "get_environment_status", "get_dependencies", "list_fx_versions", "get_logs", "get_legacy_catalog"] {
                 try Task.checkCancellation()
                 let reply = try await bridge.request(method, configuration: config)
                 try validate(method, result: reply.result)

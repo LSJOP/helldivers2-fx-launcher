@@ -5,7 +5,7 @@ struct EnvironmentView: View {
     private var unknown: String { state.t("未验证", "Unverified") }
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            TacticalPageHeader(number: "02", title: state.t("运行环境检测", "Environment inspection"), section: Page.environment.title(state.chinese))
+            TacticalPageHeader(number: "02", title: state.t("运行环境检测", "Environment inspection"), section: state.pageTitle(.environment))
             TacticalAdaptiveLayout(minimumWidth: 140, maximumColumns: 4) {
                 TacticalMetric(title: "macOS", value: state.value("get_system_info", "os_version"), symbol: "apple.logo")
                 TacticalMetric(title: state.t("架构", "Architecture"), value: state.value("get_system_info", "arch"), symbol: "cpu")
@@ -25,6 +25,7 @@ struct EnvironmentView: View {
                     TacticalWarningBanner(text: state.t("文件存在不代表运行就绪；本阶段不连接 Guest。", "File presence does not establish runtime readiness. This phase does not connect to Guest."))
                 }
             }
+            LegacyOperationsView(state: state, scope: "environment")
             TacticalPanel(number: "C", title: state.t("游戏运行链路 · 检测范围", "Game runtime chain · inspection scope"), symbol: "point.3.connected.trianglepath.dotted") {
                 TacticalAdaptiveLayout(minimumWidth: 95, maximumColumns: 6) {
                     ForEach(["FX", "SSH", "Guest", "Steam", "EAC", "Multiplayer"], id: \.self) { name in
