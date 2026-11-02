@@ -16,6 +16,7 @@ final class AppState: ObservableObject {
         set { languageCode = newValue ? "zh-CN" : "en" }
     }
     @Published var operationSelection: NativeOperation?
+    @Published var pendingAction: GUIAction?
     let credentials = SessionCredentialManager()
     @Published var runtimeRoot = UserDefaults.standard.string(forKey: "NativeRememberedRuntimeRoot") ?? "" {
         didSet { if oldValue != runtimeRoot { credentials.clear(); guiSnapshots = [:] } }
@@ -120,7 +121,7 @@ final class AppState: ObservableObject {
                 }
                 self.guiRecords[method]?.finish(self.operationError)
                 self.recordGUIOperation(method)
-                if GUIAction(rawValue: method) != nil, ["AUTH_REQUIRED","SSH_AUTH_FAILED","SUDO_AUTH_FAILED"].contains(failure.code), self.operationSelection == nil {
+                if GUIAction(rawValue: method) != nil, ["AUTH_REQUIRED","SSH_AUTH_FAILED","SUDO_AUTH_FAILED","CHANGE_CONFIRMATION_REQUIRED","RUNTIME_ROOT_REQUIRED"].contains(failure.code), self.operationSelection == nil {
                     self.operationSelection = NativeOperation(method: method)
                 }
                 self.appendLog(method + ": " + (self.operationError?.code ?? "UNKNOWN"))
@@ -129,8 +130,17 @@ final class AppState: ObservableObject {
     }
     func perform(_ action: GUIAction) {
         guard !tasks.busy else { return }
-        if runtimeRoot.isEmpty || action.needsReview { operationSelection = NativeOperation(method: action.rawValue) }
+        if runtimeRoot.isEmpty { operationSelection = NativeOperation(method: action.rawValue) }
+        else if action.needsReview { pendingAction = action }
         else { runOperation(action.rawValue, params: ["confirmed": .bool(true)]) }
+    }
+    var latestGUIEvidence: [String: JSONValue] {
+        guiRecords.values.filter { $0.target == runtimeRoot && $0.status == .succeeded && guiSnapshots[$0.method] != nil }
+            .max { $0.startedAt < $1.startedAt }.flatMap { guiSnapshots[$0.method] } ?? [:]
+    }
+    func confirmPendingAction(_ action: GUIAction) {
+        pendingAction = nil
+        runOperation(action.rawValue, params: ["confirmed": .bool(true)])
     }
     private func recordGUIOperation(_ method: String) {
         guard let record = guiRecords[method] else { return }

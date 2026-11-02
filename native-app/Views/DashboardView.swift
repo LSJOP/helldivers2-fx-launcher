@@ -12,6 +12,7 @@ struct DashboardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: TacticalSpacing.panel) {
             hero
+            GUIActionFeedback(state: state, methods: [GUIAction.game.rawValue])
             if state.launchSession.current != .idle { LaunchProgressView(state: state, tasks: tasks) }
             if let error = state.error {
                 TacticalWarningBanner(text: error.message(state.chinese) + " · " + error.code, isError: true)
@@ -21,9 +22,9 @@ struct DashboardView: View {
                 TacticalWarningBanner(text: state.t("以下是上次读取的数据；本次尚未完成。", "Showing the previous snapshot; this refresh has not completed."))
             }
             TacticalAdaptiveLayout(minimumWidth: 120, maximumColumns: 5) {
-                TacticalMetric(title: "FX", value: unverified, symbol: "shippingbox")
-                TacticalMetric(title: state.t("运行环境", "Environment"), value: state.hasLoaded ? state.t("本机元数据", "Host metadata") : unverified, symbol: "desktopcomputer")
-                TacticalMetric(title: state.t("网络", "Network"), value: unverified, symbol: "network")
+                TacticalMetric(title: "FX", value: observed("fx_host_running"), symbol: "shippingbox")
+                TacticalMetric(title: state.t("虚拟机连接", "Guest connection"), value: observed("ssh_connected"), symbol: "link")
+                TacticalMetric(title: "Steam", value: observed("steam_running"), symbol: "play.circle")
                 TacticalMetric(title: "EAC", value: unverified, symbol: "shield.lefthalf.filled")
                 TacticalMetric(title: state.t("联机", "Multiplayer"), value: unverified, symbol: "person.2")
             }
@@ -33,6 +34,11 @@ struct DashboardView: View {
                 report
             }
         }.foregroundStyle(c.text).font(TacticalTypography.body)
+    }
+    private func observed(_ key: String) -> String {
+        if let value = state.latestGUIEvidence[key]?.boolean { return value ? state.t("已观察到", "Observed") : state.t("未运行／未连接", "Not running / connected") }
+        if key == "steam_running", let count = state.latestGUIEvidence["steam_process_count"]?.integer { return count > 0 ? state.t("进程已观察到", "Process observed") : state.t("未发现进程", "No process found") }
+        return unverified
     }
     private var hero: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -62,7 +68,7 @@ struct DashboardView: View {
         .overlay(alignment: .top) { Rectangle().fill(c.yellow).frame(height: 3) }
     }
     private var launchButton: some View {
-        TacticalButton(title: state.t("启动 HELLDIVERS 2", "Launch HELLDIVERS 2"), symbol: "play.fill", primary: true, loading: tasks.busy) { state.operationSelection = NativeOperation(method: "launch_game") }
+        TacticalButton(title: state.t("启动 HELLDIVERS 2", "Launch HELLDIVERS 2"), symbol: "play.fill", primary: true, loading: tasks.busy) { state.perform(.game) }
             .accessibilityIdentifier("dashboard.launch")
             .disabled(tasks.busy)
     }

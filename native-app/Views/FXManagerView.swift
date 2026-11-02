@@ -30,7 +30,7 @@ struct FXManagerView: View {
                     }
                 }
             }
-            LegacyOperationsView(state: state, scope: "fx")
+            DisclosureGroup(state.t("诊断详情", "Diagnostic details")) { LegacyOperationsView(state: state, scope: "fx") }
             TacticalPanel(number: "i", title: state.t("检测说明", "Inspection notes"), symbol: "info.circle") {
                 Text(state.t("仅读取 /Applications 与 ~/Applications 的浅层元数据，不识别活动实例、不选择或切换版本。结构匹配不表示运行就绪。", "Reads shallow metadata in /Applications and ~/Applications. Does not identify active instances, select or switch versions. Matching structure does not establish runtime readiness."))
                     .font(TacticalTypography.body)

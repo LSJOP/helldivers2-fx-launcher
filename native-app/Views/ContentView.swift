@@ -54,6 +54,14 @@ struct ContentView: View {
             .tint(TacticalColors(scheme: scheme).accent)
 
         }
+        .confirmationDialog(state.t("确认启动操作", "Confirm start action"), isPresented: Binding(get: { state.pendingAction != nil }, set: { if !$0 { state.pendingAction = nil } }), titleVisibility: .visible) {
+            if let action = state.pendingAction {
+                Button(state.t(action.labels.0, action.labels.1)) { state.confirmPendingAction(action) }
+            }
+            Button(state.t("取消", "Cancel"), role: .cancel) { state.pendingAction = nil }
+        } message: {
+            Text(state.t("将在所选环境执行此启动操作。游戏启动会自动执行原有必要检查；具体配置变更仍需单独核对确认，不会强制停止已运行的 FX 或游戏。", "This starts the selected action in your chosen environment. Game launch runs the original required checks automatically. Exact configuration changes still need separate approval; running FX or games are never forcibly stopped."))
+        }
         .sheet(item: $state.operationSelection) { item in
             LegacyOperationSheet(state: state, operation: item.method)
         }

@@ -107,8 +107,8 @@ enum GUIAction: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var labels: (String, String) {
         switch self {
-        case .connect: return ("连接 FX", "Connect FX")
-        case .inspect: return ("检测环境", "Inspect environment")
+        case .connect: return ("连接虚拟机", "Connect virtual machine")
+        case .inspect: return ("一键检测", "Inspect environment")
         case .fxState: return ("检查 FX 状态", "Check FX status")
         case .startFX: return ("启动 FX", "Start FX")
         case .steam: return ("启动 Steam", "Start Steam")

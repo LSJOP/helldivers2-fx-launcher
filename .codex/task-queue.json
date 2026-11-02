@@ -1,0 +1,45 @@
+{
+  "instruction": "HD2_NATIVE_APP_UNIFIED_TASK_QUEUE",
+  "version": "1.0.0",
+  "branch": "feature/macos-native-app",
+  "updated": "2026-11-03",
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "name": "GUI 交互简化",
+      "priority": "P0",
+      "status": "COMPLETED",
+      "commit": null,
+      "evidence": [
+        "Debug build PASS",
+        "Bundled App GUI entry/root guards and Environment/FX zh/en rendering PASS",
+        "Existing authentication, Core launch and unsupported stop/restart preserved"
+      ],
+      "commit_subject": "refactor(native-ui): simplify navigation and operation workflows"
+    },
+    {
+      "id": "TASK-002",
+      "name": "正式 App 图标集成",
+      "priority": "P1",
+      "status": "IN_PROGRESS",
+      "commit": null,
+      "evidence": []
+    },
+    {
+      "id": "TASK-003",
+      "name": "游戏性能配置",
+      "priority": "P1",
+      "status": "PENDING",
+      "commit": null,
+      "evidence": []
+    },
+    {
+      "id": "TASK-004",
+      "name": "README 视觉重设计",
+      "priority": "P2",
+      "status": "PENDING",
+      "commit": null,
+      "evidence": []
+    }
+  ]
+}

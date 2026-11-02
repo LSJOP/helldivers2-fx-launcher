@@ -56,7 +56,9 @@ struct EnvironmentView: View {
                     TacticalWarningBanner(text: state.t("刷新不会启动 FX 或连接 Guest。使用网络与连接工具主动检查；启动记录不等于当前实时状态。", "Refresh does not start FX or connect to Guest. Use the connection tools for explicit checks; launch history is not current live state."))
                 }
             }
-            LegacyOperationsView(state: state, scope: "environment")
+            DisclosureGroup(state.t("高级检测与维护", "Advanced inspection and maintenance")) {
+                LegacyOperationsView(state: state, scope: "environment")
+            }
             TacticalPanel(number: "C", title: state.t("游戏运行链路 · 检测范围", "Game runtime chain · inspection scope"), symbol: "point.3.connected.trianglepath.dotted") {
                 TacticalAdaptiveLayout(minimumWidth: 95, maximumColumns: 6) {
                     ForEach(["FX", "SSH", "Guest", "Steam", "EAC", "Multiplayer"], id: \.self) { name in

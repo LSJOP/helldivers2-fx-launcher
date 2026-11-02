@@ -356,79 +356,76 @@ struct GUIOperationsPanel: View {
     @ObservedObject var state: AppState
     @ObservedObject var tasks: TaskManager
     var environment = true
-    private var methods: [GUIAction] { environment ? [.connect, .inspect] : [.startFX, .fxState, .connect, .steam, .game] }
-    private var last: GUIOperationRecord? {
-        state.guiRecords.values.filter { $0.target == state.runtimeRoot && methods.map(\.rawValue).contains($0.method) }.max { $0.startedAt < $1.startedAt }
-    }
-    private var inspection: [String: JSONValue] { state.guiSnapshots[GUIAction.inspect.rawValue] ?? [:] }
-    private var connection: [String: JSONValue] {
-        [GUIAction.connect, .inspect, .steam].compactMap { action -> (Date, [String: JSONValue])? in
-            guard let row = state.guiRecords[action.rawValue], row.target == state.runtimeRoot,
-                  let data = state.guiSnapshots[action.rawValue] else { return nil }
-            return (row.endedAt ?? row.startedAt, data)
-        }.max { $0.0 < $1.0 }?.1 ?? [:]
-    }
+    private var methods: [GUIAction] { environment ? [.inspect, .connect] : [.startFX, .steam, .fxState, .connect] }
+    private var facts: [String: JSONValue] { state.latestGUIEvidence }
     var body: some View {
-        TacticalPanel(number: "↗", title: state.t(environment ? "FX 连接与环境" : "FX 操作", environment ? "FX connection and environment" : "FX actions"), symbol: "point.3.connected.trianglepath.dotted") {
-            TacticalInfoRow(title: state.t("当前目标", "Selected target"), value: state.runtimeRoot.isEmpty ? state.t("尚未选择；点击操作后选择已有启动目录", "Not selected; choose the existing launcher directory when opening an action") : state.runtimeRoot)
-            TacticalAdaptiveLayout(minimumWidth: 170, maximumColumns: 3) {
-                ForEach(methods) { action in
-                    TacticalButton(title: state.t(action.labels.0, action.labels.1), symbol: symbol(action), primary: action == .connect || action == .startFX,
-                                   loading: state.guiRecords[action.rawValue]?.status == .running,
-                                   disabledReason: tasks.busy ? state.t("已有操作执行中，请等待或取消当前操作", "An operation is running; wait or cancel it") : nil) { state.perform(action) }
+        VStack(alignment: .leading, spacing: 16) {
+            if environment {
+                HStack {
+                    TacticalButton(title: state.t("一键检测", "Inspect environment"), symbol: "checklist", primary: true,
+                        loading: state.guiRecords[GUIAction.inspect.rawValue]?.status == .running, disabledReason: tasks.busy ? state.t("操作执行中", "Operation in progress") : nil) { state.perform(.inspect) }
+                    Spacer()
                 }
-                if environment {
-                    TacticalButton(title: state.t("重新检测", "Inspect again"), symbol: "arrow.clockwise", disabledReason: tasks.busy ? state.t("操作执行中", "Operation in progress") : nil) { state.perform(.inspect) }
-                } else {
-                    TacticalButton(title: state.t("停止 FX", "Stop FX"), symbol: "stop.fill", disabledReason: state.t("暂不可用：尚无经验证的正常退出接口，请在 FX 中正常退出", "Unavailable: no verified graceful-quit backend; quit normally in FX")) {}
-                    TacticalButton(title: state.t("重启 FX", "Restart FX"), symbol: "restart", disabledReason: state.t("暂不可用：需先接入安全退出与重启验证", "Unavailable: requires a verified safe stop/restart workflow")) {}
+                Text(state.t("自动验证所选虚拟机身份与连接，并只读检查运行环境；不会启动虚拟机或修改配置。", "Verify the selected Guest identity and connection, then inspect its environment read-only. Does not start the VM or change configuration."))
+                    .font(TacticalTypography.caption).foregroundStyle(.secondary)
+                TacticalAdaptiveLayout(minimumWidth: 145, maximumColumns: 4) {
+                    TacticalMetric(title: "FX Runtime", value: booleanFact("fx_host_running"), symbol: "shippingbox")
+                    TacticalMetric(title: state.t("虚拟机连接", "Guest connection"), value: booleanFact("ssh_connected"), symbol: "link")
+                    TacticalMetric(title: "Steam", value: processFact("steam_process_count"), symbol: "play.circle")
+                    TacticalMetric(title: state.t("游戏文件", "Game files"), value: fileFact("game_executable"), symbol: "folder")
+                }
+            } else {
+                TacticalAdaptiveLayout(minimumWidth: 245, maximumColumns: 2) {
+                    actionCard(.startFX, description: state.t("使用已验证的原入口；已运行则检查并复用。", "Use the original verified entry; check and reuse a running instance."))
+                    unavailableCard(state.t("停止 FX", "Stop FX"), symbol: "stop.fill")
+                    unavailableCard(state.t("重启 FX", "Restart FX"), symbol: "arrow.clockwise")
+                    actionCard(.steam, description: state.t("后台连接并受控启动 Steam，不请求游戏启动。", "Connect in the background and start Steam through the controlled backend, without launching the game."))
                 }
             }
-            if !environment {
-                Text(state.t("停止／重启暂不可用：尚未接入可验证的安全退出流程。", "Stop/restart unavailable: a verified graceful-exit workflow is not integrated."))
+            GUIActionFeedback(state: state, methods: methods.map(\.rawValue))
+            DisclosureGroup(state.t("连接与检测详情", "Connection and inspection details")) {
+                TacticalInfoRow(title: state.t("所选环境", "Selected environment"), value: state.runtimeRoot.isEmpty ? state.t("尚未选择，首次操作时选择", "Choose on first action") : URL(fileURLWithPath: state.runtimeRoot).lastPathComponent)
+                HStack {
+                    Button(state.t("连接虚拟机", "Connect virtual machine")) { state.perform(.connect) }
+                    Button(state.t("检查 FX 状态", "Check FX status")) { state.perform(.fxState) }
+                }.disabled(tasks.busy)
+                if !environment { Button(state.t("前往游戏启动", "Go to game launch")) { state.selection = .dashboard } }
+                if let os = facts["guest_os"]?.text { TacticalInfoRow(title: state.t("Guest 系统", "Guest system"), value: os) }
+                ForEach(["steam_files","game_manifest","game_directory","game_executable","proton_files","fex_files"], id: \.self) { key in
+                    TacticalInfoRow(title: component(key), value: fileFact(key))
+                }
+                Text(state.t("仅表示最近一次检查。文件存在不等于可运行；进程存在不等于进入游戏。", "Last inspection only. File presence does not establish readiness; a process does not prove gameplay."))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
             }
-            if connection["ssh_connected"]?.boolean == true {
-                TacticalStatusBadge(text: state.t("已连接 · 最近检查", "Connected · Last check"), tone: .success)
-            } else { TacticalStatusBadge(text: state.t("连接尚未验证", "Connection not verified")) }
-            if let record = last {
-                TacticalInfoRow(title: state.t("操作", "Action"), value: title(record.method))
-                TacticalStatusBadge(text: status(record.status), tone: tone(record.status))
-                TacticalInfoRow(title: state.t("开始时间", "Started"), value: record.startedAt.formatted(date: .omitted, time: .standard))
-                if let end = record.endedAt { TacticalInfoRow(title: state.t("结束时间", "Finished"), value: end.formatted(date: .omitted, time: .standard)) }
-                if let error = record.error {
-                    TacticalWarningBanner(text: error.message(state.chinese), isError: true)
-                    Button(state.t("查看详情／处理", "Details / Resolve")) { state.operationSelection = NativeOperation(method: record.method) }
-                } else if record.status == .succeeded { Text(summary(record.method)).font(TacticalTypography.body) }
-                if record.status == .running { Button(state.t("取消当前操作", "Cancel current operation")) { tasks.cancel() } }
-            } else { TacticalStatusBadge(text: state.t("未开始", "Not started")) }
-            if !inspection.isEmpty {
-                TacticalDivider()
-                TacticalInfoRow(title: state.t("Guest 系统", "Guest system"), value: inspection["guest_os"]?.text ?? "—")
-                TacticalInfoRow(title: state.t("Guest 架构", "Guest architecture"), value: inspection["guest_arch"]?.text ?? "—")
-                let components = inspection["components"]?.object ?? [:]
-                ForEach(["steam_files","game_manifest","game_directory","game_executable","proton_files","fex_files"], id: \.self) { name in
-                    TacticalInfoRow(title: component(name), value: components[name]?.boolean == true ? state.t("已发现 · 文件证据", "Found · File evidence") : state.t("限定位置未发现", "Not found in checked locations"))
-                }
-                TacticalInfoRow(title: state.t("Steam 进程 · 上次检测", "Steam processes · Last inspection"), value: String(inspection["steam_process_count"]?.integer ?? 0))
-                TacticalInfoRow(title: state.t("游戏进程 · 上次检测", "Game processes · Last inspection"), value: String(inspection["game_process_count"]?.integer ?? 0))
-            }
-            Text(state.t("显示最近一次检查结果，并非常驻连接监控。文件存在不代表可运行；游戏进程不代表进入主菜单。检查操作不修改 Guest，启动和变更需另行确认。", "Results describe the last check, not continuous monitoring. File presence does not establish readiness; a process does not prove the game menu. Inspection does not change Guest configuration. Starts and changes require separate confirmation."))
+        }
+    }
+    private func booleanFact(_ key: String) -> String {
+        guard let value = facts[key]?.boolean else { return state.t("未检查", "Not checked") }
+        return value ? state.t("已验证 · 最近检查", "Verified · Last check") : state.t("未运行／未连接", "Not running / connected")
+    }
+    private func processFact(_ key: String) -> String {
+        guard let n = facts[key]?.integer else { return state.t("未检查", "Not checked") }
+        return n > 0 ? state.t("进程已观察到", "Process observed") : state.t("未发现进程", "No process found")
+    }
+    private func fileFact(_ key: String) -> String {
+        guard let value = facts["components"]?.object[key]?.boolean else { return state.t("未检查", "Not checked") }
+        return value ? state.t("已发现 · 文件证据", "Found · File evidence") : state.t("限定位置未发现", "Not found in checked locations")
+    }
+    private func actionCard(_ action: GUIAction, description: String) -> some View {
+        TacticalPanel(number: "", title: state.t(action.labels.0, action.labels.1), symbol: "play.circle") {
+            Text(description).font(TacticalTypography.caption)
+            Text(state.guiRecords[action.rawValue].map { $0.status.title(state) } ?? state.t("未开始", "Not started")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+            TacticalButton(title: state.t("启动", "Start"), symbol: "play.fill", primary: true, loading: state.guiRecords[action.rawValue]?.status == .running,
+                disabledReason: tasks.busy ? state.t("操作执行中", "Operation in progress") : nil) { state.perform(action) }
+        }
+    }
+    private func unavailableCard(_ title: String, symbol: String) -> some View {
+        TacticalPanel(number: "", title: title, symbol: symbol) {
+            Text(state.t("暂不可用：尚无经验证的正常退出接口。请在 FX 中正常退出。", "Unavailable: a graceful-exit backend is not verified. Quit normally in FX."))
                 .font(TacticalTypography.caption).foregroundStyle(.secondary)
+            TacticalButton(title: state.t("不可用", "Unavailable"), symbol: symbol, disabledReason: state.t("等待安全退出后端", "Awaiting a graceful-exit backend")) {}
         }
     }
-    private func title(_ method: String) -> String { guard let a = GUIAction(rawValue: method) else { return method }; return state.t(a.labels.0, a.labels.1) }
-    private func summary(_ method: String) -> String {
-        switch GUIAction(rawValue: method) {
-        case .connect: return state.t("目标实例、Guest 身份和连接已验证。", "Target instance, Guest identity and connection verified.")
-        case .inspect: return state.t("已读取 Guest 环境；文件与进程结果见下方。", "Guest inspected; file and process evidence is shown below.")
-        case .startFX: return state.t("已观察到 FX 宿主；请点击连接以检查 Guest 就绪状态。", "FX host observed. Connect to check Guest readiness.")
-        case .steam: return state.t("Steam 已运行；未请求启动游戏。", "Steam is running; no game launch was requested.")
-        case .fxState: return state.guiSnapshots[method]?["fx_host_running"]?.boolean == true ? state.t("已观察到所选 FX 宿主进程，Guest 需单独检查。", "Selected FX host observed; Guest requires a separate check.") : state.t("所选 FX 当前未运行。", "The selected FX is not running.")
-        default: return state.t("已返回真实执行结果；游戏内状态见总览。", "Execution result received; see Dashboard for gameplay evidence.")
-        }
-    }
-    private func symbol(_ a: GUIAction) -> String { switch a { case .connect: return "link"; case .inspect, .fxState: return "checklist"; default: return "play.fill" } }
     private func component(_ key: String) -> String {
         switch key {
         case "steam_files": return state.t("Steam 安装目录", "Steam installation directory")
@@ -439,8 +436,51 @@ struct GUIOperationsPanel: View {
         default: return state.t("FEX 组件文件", "FEX component files")
         }
     }
-    private func status(_ s: GUIOperationStatus) -> String {
-        switch s { case .idle: return state.t("未开始", "Not started"); case .running: return state.t("正在执行", "Running"); case .succeeded: return state.t("执行成功", "Succeeded"); case .failed: return state.t("执行失败", "Failed"); case .cancelled: return state.t("已取消", "Cancelled"); case .timedOut: return state.t("已超时", "Timed out") }
+}
+
+struct GUIActionFeedback: View {
+    @ObservedObject var state: AppState
+    let methods: [String]
+    private var record: GUIOperationRecord? { state.guiRecords.values.filter { $0.target == state.runtimeRoot && methods.contains($0.method) }.max { $0.startedAt < $1.startedAt } }
+    var body: some View {
+        if let record {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    if record.status == .running { ProgressView().controlSize(.small) }
+                    Text(GUIAction(rawValue: record.method).map { state.t($0.labels.0, $0.labels.1) } ?? record.method).font(TacticalTypography.body.weight(.semibold))
+                    TacticalStatusBadge(text: record.status.title(state), tone: record.status == .succeeded ? .success : record.error == nil ? .neutral : .error)
+                    Spacer()
+                    if record.status == .running { Button(state.t("取消", "Cancel")) { state.tasks.cancel() } }
+                }
+                if let error = record.error {
+                    Text(error.message(state.chinese)).font(TacticalTypography.body)
+                    DisclosureGroup(state.t("查看原因", "View reason")) {
+                        Text(error.code + " · " + (error.details["summary"]?.text ?? "")).font(TacticalTypography.log).textSelection(.enabled)
+                        Button(state.t("处理此问题", "Resolve this issue")) { state.operationSelection = NativeOperation(method: record.method) }
+                    }
+                } else if record.status == .succeeded {
+                    Text(state.t("操作已完成；请查看对应状态证据。", "Action completed; review the corresponding evidence."))
+                        .font(TacticalTypography.caption)
+                }
+                DisclosureGroup(state.t("操作详情", "Action details")) {
+                    TacticalInfoRow(title: state.t("开始", "Started"), value: record.startedAt.formatted(date: .omitted, time: .standard))
+                    if let end = record.endedAt { TacticalInfoRow(title: state.t("结束", "Finished"), value: end.formatted(date: .omitted, time: .standard)) }
+                    Button(state.t("查看高级日志", "View advanced logs")) { state.selection = .logs }
+                }
+            }.padding(14).background(.primary.opacity(0.035))
+        }
     }
-    private func tone(_ s: GUIOperationStatus) -> TacticalTone { switch s { case .succeeded: return .success; case .failed, .timedOut: return .error; case .running: return .checking; default: return .neutral } }
+}
+
+extension GUIOperationStatus {
+    @MainActor func title(_ state: AppState) -> String {
+        switch self {
+        case .idle: return state.t("未开始", "Not started")
+        case .running: return state.t("正在执行", "Running")
+        case .succeeded: return state.t("执行成功", "Succeeded")
+        case .failed: return state.t("执行失败", "Failed")
+        case .cancelled: return state.t("已取消", "Cancelled")
+        case .timedOut: return state.t("已超时", "Timed out")
+        }
+    }
 }
