@@ -40,3 +40,23 @@ struct GamePerformanceInferenceService {
         return render(current) != render(reference)
     }
 }
+
+/// Shared editor state. Disk persistence and runtime adoption remain separate facts.
+struct PerformanceConfigurationState {
+    private(set) var snapshot: [String: JSONValue] = [:]
+    var edited: [String: JSONValue] = [:]
+    var preview: [String: JSONValue] = [:]
+    var current: [String: JSONValue] { snapshot["current"]?.object ?? [:] }
+    var lastApplied: [String: JSONValue] { snapshot["last_applied"]?.object ?? [:] }
+    var backup: [String: JSONValue] { snapshot["backup"]?.object ?? [:] }
+    var effectiveVerified: Bool { false } // No live Guest adoption probe in this editor.
+    mutating func acceptSnapshot(_ result: [String: JSONValue]) {
+        snapshot = result; edited = current; preview = [:]
+    }
+    mutating func acceptPreview(_ result: [String: JSONValue]) {
+        guard let plan = result["plan"]?.object,
+              plan["revision"]?.text == snapshot["revision"]?.text,
+              result["token"]?.text != nil else { preview = [:]; return }
+        preview = result
+    }
+}

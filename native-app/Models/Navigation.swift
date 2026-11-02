@@ -75,6 +75,9 @@ struct NativeOperation: Identifiable {
         }
         return result
     }()
+    static func localized(_ english: String, language: String) -> String {
+        language == "en" ? english : catalogs[language]?[english] ?? english
+    }
     static func text(_ zh: String, _ en: String, language: String) -> String {
         if language == "zh-CN" { return zh }
         if language == "en" { return en }

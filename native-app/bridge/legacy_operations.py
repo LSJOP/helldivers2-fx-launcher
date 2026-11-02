@@ -20,6 +20,9 @@ import uuid
 _security_spec=importlib.util.spec_from_file_location('native_credential_security',Path(__file__).with_name('credential_security.py'))
 security=importlib.util.module_from_spec(_security_spec);_security_spec.loader.exec_module(security)
 
+_perf_spec=importlib.util.spec_from_file_location('native_performance_configuration',Path(__file__).with_name('performance_configuration.py'))
+performance_configuration=importlib.util.module_from_spec(_perf_spec);_perf_spec.loader.exec_module(performance_configuration)
+
 class OperationError(Exception):
     def __init__(self, code, details=None):
         self.code, self.details = code, details or {}
@@ -56,6 +59,11 @@ print(json.dumps({'guest_os':platform.system()+' '+platform.release(),'guest_arc
 """
 
 OPERATIONS = {
+    'performance_read': ('performance', False, False),
+    'performance_preview': ('performance', False, False),
+    'performance_restore_preview': ('performance', False, False),
+    'performance_apply': ('performance', True, False),
+    'performance_restore': ('performance', True, False),
     'read_configuration': ('settings', False, False),
     'save_configuration': ('settings', True, False),
     'inspect_legacy_runtime': ('fx', False, True),
@@ -299,13 +307,26 @@ class Operations:
     def run(self, method, params):
         if method not in OPERATIONS or not isinstance(params,dict):raise OperationError('INVALID_ARGUMENT')
         self.secret_values=[params.get('password',''),params.get('passphrase',''),params.get('sudo_password','')]
-        allowed={'confirmed','runtime_root','password','passphrase','sudo_password','credential_revision','approved_changes','configuration','expected_revision','channel','match_result','note'}
+        allowed={'confirmed','runtime_root','password','passphrase','sudo_password','credential_revision','approved_changes','configuration','expected_revision','channel','match_result','note','values','preview_token'}
         if set(params)-allowed:raise OperationError('INVALID_ARGUMENT')
         if OPERATIONS[method][1] and params.get('confirmed') is not True:raise OperationError('CONFIRMATION_REQUIRED')
         for key in ['password','passphrase','sudo_password','note','runtime_root']:
             if key in params and (not isinstance(params[key],str) or len(params[key])>4096 or '\x00' in params[key]):raise OperationError('INVALID_ARGUMENT')
         if any(self.secret_values) and params.get('credential_revision')!=self.read_config()[2]:raise OperationError('CREDENTIAL_SCOPE_CHANGED')
         self.event('INFO',method+' started')
+        if method.startswith('performance_'):
+            try:
+                helper=self.runtime(params)
+                rules=performance_configuration.capabilities(helper.APP)
+                manager=performance_configuration.Manager(performance_configuration.Preferences(),self.data/'performance-v2',performance_configuration.stopped,rules)
+                if method=='performance_read':return manager.snapshot()
+                restore=method in ('performance_restore','performance_restore_preview')
+                if method in ('performance_preview','performance_restore_preview'):
+                    return manager.preview(params.get('values'),params.get('expected_revision'),restore)
+                return manager.commit(params.get('values'),params.get('expected_revision'),params.get('preview_token'),restore,
+                                      emit=lambda status:self.event('INFO','Performance configuration',performance_status=status))
+            except performance_configuration.ConfigurationError as error:
+                raise OperationError(error.code)
         if method in ('connect_fx','inspect_guest_environment','check_fx_state','start_fx','start_steam'):
             return self.gui_operation(method,params)
         if method in ('launch_game','preflight_launch','observe_launch'):

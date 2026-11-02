@@ -52,12 +52,12 @@ Four actual Debug App window captures, taken on 2026-11-03 with real host metada
 | 🟢 Implemented | Six-page native interface, Cmd+1…6 navigation, dark/light/system appearance, bundled official project icon |
 | 🟢 Implemented | Bounded host/FX discovery; validated configuration editing with revision checks, backup and atomic replacement |
 | 🟢 Implemented | Searchable, filtered, bounded and redacted logs; diagnostic reports |
-| 🟢 Implemented · Read-only | Real chip/CPU/GPU/memory detection, current FX preferences and baseline differences in Game Performance |
+| 🟢 Implemented · Guarded writes | Hardware/current FX preferences and reference differences; scoped performance editing/backup/restore for the pinned FX 1.9.4 build |
 | 🟠 In development | One-click environment inspection and background SSH operations; original-entry FX/Steam starts, independent SSH/sudo credential reuse; fresh live acceptance remains pending |
 | 🟠 In development | Ten original locale catalogs retained; new Native translations are partial, with English fallback |
-| ⚪ Planned / unavailable | Safe FX stop/restart, writable inferred performance profiles with scoped restore, signed/notarized installer |
+| ⚪ Planned / unavailable | Safe FX stop/restart, verified performance recommendations, signed/notarized installer |
 
-Performance rules are local and reproducible. The recorded **M4 Pro / 24 GiB** settings are a candidate baseline, not comprehensive performance validation. Other hardware has no inferred writable profile. Apply/restore are disabled with visible reasons. [Parameter sources and limits](docs/GAME_PERFORMANCE.md).
+Performance rules are local and reproducible. The recorded **M4 Pro / 24 GiB** settings are a candidate baseline, not comprehensive performance validation. Other hardware has no inferred writable profile. FX 1.9.4 with the pinned build supports a conservative CPU/memory/Vulkan/Metal HUD editor with preview, consent, verified backups and conflict-guarded restore. FX must be stopped; saved preferences need a fresh FX/Guest start and remain unverified. The original launch path overrides values and may reject custom settings: restore before using it. Super resolution and the 6144 MiB GPU budget remain read-only. Existing screenshots await a real updated capture. [Parameter sources and limits](docs/GAME_PERFORMANCE.md).
 
 <a id="en-requirements"></a>
 <a id="en-installation"></a>
@@ -97,14 +97,14 @@ Existing clones need the intended branch and `git submodule update --init --recu
 | Main menu / controllable ship | Explicitly confirmed by the user on 2026-11-03 in that recorded environment |
 | Current GUI SSH / Guest read | Real backends wired; latest host check rejected a different running FX copy before connecting. Fresh success through the new actions remains pending |
 | Single-player mission / independent EAC / multiplayer | **Unverified**, separately |
-| Performance | Read-only candidate comparison; no measured performance guarantee or automatic tuning |
+| Performance | Guarded saved-preference editing with backup/restore; no measured performance guarantee or automatic tuning |
 
 > [!WARNING]
 > Installation found ≠ runtime ready ≠ game process started ≠ main menu reached ≠ EAC accepted ≠ multiplayer working. No anti-cheat bypass is provided.
 
 ## FAQ
 
-- **Why are stop/restart or Apply disabled?** A verified graceful-exit backend and safe inferred-profile write/restore bounds are not available. The App does not force-stop or silently reconfigure FX.
+- **Why are stop/restart or some Apply actions disabled?** Graceful exit is unverified. Performance editing requires the pinned FX 1.9.4 build, valid preferences, stopped FX and explicit preview/consent. Invalid backups or external changes block restore. The App does not force-stop FX.
 - **Must I retype passwords?** Session reuse is the default. Optional remembering stores independently verified SSH/sudo credentials in a new App-owned macOS Keychain namespace; automatic reads suppress authorization dialogs. Locked/access-restricted storage falls back to secure input. Explicit access or App identity/signature changes may still require system authorization. Old script items are untouched.
 - **Are automatic updates ready?** Sparkle 2 is integrated, but a signed feed/release service is not configured. Update checks remain disabled; installation is unverified.
 

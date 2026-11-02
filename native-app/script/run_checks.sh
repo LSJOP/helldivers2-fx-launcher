@@ -3,6 +3,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 mkdir -p build evidence
+/usr/bin/python3 -I -B checks/performance_configuration_checks.py >evidence/performance-configuration-checks.txt 2>&1
 /usr/bin/python3 -I -B checks/bridge_checks.py >evidence/python-checks.txt 2>&1
 /usr/bin/python3 -I -B checks/migration_checks.py >evidence/migration-checks.txt 2>&1
 /usr/bin/python3 -I -B checks/credential_checks.py >evidence/credential-python-checks.txt 2>&1
