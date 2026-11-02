@@ -1,7 +1,7 @@
 # Native App development
 
-Instruction version: **v1.0.1** · Updated: **2026-11-02**.
-Change: adopt GitHub migration, minimal testing and prompt versioning rules.
+Instruction version: **v1.0.2** · Updated: **2026-11-02**.
+Change: require synchronized English/Chinese README maintenance; retain existing development and minimal-testing rules.
 
 - Architecture: SwiftUI + narrowly scoped AppKit; one AppState and existing Service Layer. Phase 1 is read-only. Unknown/unverified is never success. Do not start games or alter FX, Guest, SSH, Keychain, Steam, FEX, Proton or real user settings without explicit task authorization.
 - Work on `feature/macos-native-app`; batch related changes, verify the affected behavior, commit and push the feature branch. Merge substantial completed stages into main only after appropriate checks. Never force-push, rewrite unknown history, delete releases/tags, or overwrite another developer's changes.
@@ -19,3 +19,5 @@ Change: adopt GitHub migration, minimal testing and prompt versioning rules.
 - Completion reports: completed work, GitHub branch state, necessary verification, real remaining issues, next direction. Keep them brief.
 
 UI instruction: **HD2_NATIVE_APP_UI_REFINEMENT_v1.0.1** · 2026-11-02. Five-page tactical visual system; a large standalone licensed soldier asset is Dashboard-only. Environment, FX, Logs and Settings share one small upper-right wireframe globe. Never use a whole UI preview as artwork or copy its example health states. Keep absent metadata explicit.
+
+- README maintenance: `README.md` is English; `README.zh-CN.md` is Simplified Chinese. Always update both together with equivalent feature information, software versions, installation instructions and development status. Keep reciprocal relative language links. Never update only one language or create redundant README copies. README-only work uses document/link checks, no App compilation/launch or unrelated tests. Instruction: README bilingual maintenance v1.0.2 · 2026-11-02.
