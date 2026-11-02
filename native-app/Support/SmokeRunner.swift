@@ -283,7 +283,9 @@ import ApplicationServices
                   state.targetInspection["fx_executable_present"]?.boolean == false else { throw ErrorState("TARGET_GUARD_FAILED") }
             state.runtimeRoot = ""
             state.perform(.game)
-            guard state.operationSelection?.method == "launch_game", state.pendingAction == nil else { throw ErrorState("LAUNCH_PRESENTATION_FAILED") }
+            try await waitForTask(state)
+            guard state.pendingAction == nil,
+                  (state.fxSelection.selected != nil ? state.operationSelection?.method == "launch_game" : state.selection == .fx) else { throw ErrorState("LAUNCH_PRESENTATION_FAILED") }
             try await Task.sleep(nanoseconds: 150_000_000)
             state.operationSelection = nil
             var renders = 0

@@ -210,6 +210,17 @@ class Operations:
         helper=importlib.util.module_from_spec(spec);sys.modules[spec.name]=helper;spec.loader.exec_module(helper)
         helper.ROOT=root
         helper.APP=str(root/'performance-stutter-20261027/FX HUD隔离诊断.app')
+        if params.get('fx_path'):
+            spec=importlib.util.spec_from_file_location('native_fx_identity',Path(__file__).with_name('core_adapter.py'))
+            adapter_module=importlib.util.module_from_spec(spec);spec.loader.exec_module(adapter_module)
+            metadata_root=Path(__file__).parent.parent/'core'
+            if not metadata_root.is_dir():metadata_root=Path(__file__).parent.parent/'CoreSnapshot/native-app-core-snapshot'
+            adapter=adapter_module.CoreAdapter(metadata_root)
+            selected=adapter.validated_fx(params['fx_path'])
+            if not selected or not selected['identity_valid']:
+                raise OperationError('FX_UNAVAILABLE')
+            helper.APP=selected['path']
+        # Original verify_fx_profile() still enforces the pinned executable hash.
         helper.GVPROXY=root/'goal-fx-multiplayer-20261026/gvproxy-eim'
         helper.GVPROXY_WRAPPER=root/'goal-fx-multiplayer-20261026/gvproxy-eim-wrapper'
         helper.NETWORK_DIR=helper.GVPROXY.parent
@@ -299,10 +310,10 @@ class Operations:
     def run(self, method, params):
         if method not in OPERATIONS or not isinstance(params,dict):raise OperationError('INVALID_ARGUMENT')
         self.secret_values=[params.get('password',''),params.get('passphrase',''),params.get('sudo_password','')]
-        allowed={'confirmed','runtime_root','password','passphrase','sudo_password','credential_revision','approved_changes','configuration','expected_revision','channel','match_result','note'}
+        allowed={'fx_path','confirmed','runtime_root','password','passphrase','sudo_password','credential_revision','approved_changes','configuration','expected_revision','channel','match_result','note'}
         if set(params)-allowed:raise OperationError('INVALID_ARGUMENT')
         if OPERATIONS[method][1] and params.get('confirmed') is not True:raise OperationError('CONFIRMATION_REQUIRED')
-        for key in ['password','passphrase','sudo_password','note','runtime_root']:
+        for key in ['password','passphrase','sudo_password','note','runtime_root','fx_path']:
             if key in params and (not isinstance(params[key],str) or len(params[key])>4096 or '\x00' in params[key]):raise OperationError('INVALID_ARGUMENT')
         if any(self.secret_values) and params.get('credential_revision')!=self.read_config()[2]:raise OperationError('CREDENTIAL_SCOPE_CHANGED')
         self.event('INFO',method+' started')

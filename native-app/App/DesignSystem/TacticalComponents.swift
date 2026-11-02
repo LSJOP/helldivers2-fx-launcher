@@ -17,12 +17,17 @@ struct RuntimeTargetPanel: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
+            if let path = state.fxSelection.selectedPath {
+                Text(state.fxVersion + " · " + state.fxStatus).font(TacticalTypography.body)
+                Text(path).font(TacticalTypography.caption).textSelection(.enabled)
+            }
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 10) { summary; Spacer(minLength: 4); controls }
-                VStack(alignment: .leading, spacing: 8) { summary; controls }
+                HStack(spacing: 10) { summary; Spacer(minLength: 4); if state.runtimeRoot.isEmpty { controls } }
+                VStack(alignment: .leading, spacing: 8) { summary; if state.runtimeRoot.isEmpty { controls } }
             }
             DisclosureGroup(state.t("ui.ux.details")) {
-                Text(state.t("ui.110")).font(TacticalTypography.caption)
+                Text(state.t("ui.fx.resourceHelp")).font(TacticalTypography.caption)
+                if !state.runtimeRoot.isEmpty { controls }
                 Text(state.runtimeRoot.isEmpty ? state.t("ui.062") : state.runtimeRoot).textSelection(.enabled)
                 if let path = state.targetInspection["fx_path"]?.text { Text(path).textSelection(.enabled) }
                 if let error = state.targetInspectionError { Text(error.message(state.languageCode)) }
@@ -33,19 +38,19 @@ struct RuntimeTargetPanel: View {
         .padding(10).background(.primary.opacity(0.035))
         .accessibilityIdentifier("runtime.target")
         .fileImporter(isPresented: $choosing, allowedContentTypes: [.folder]) { result in
-            if case .success(let url) = result { state.runtimeRoot = url.path }
+            if case .success(let url) = result { state.runtimeRoot = url.path; state.scanFX() }
         }
     }
     private var summary: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(state.t("ui.ux.target")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+            Text(state.t("ui.fx.resources")).font(TacticalTypography.caption).foregroundStyle(.secondary)
             Text(state.runtimeRoot.isEmpty ? state.t("ui.062") : URL(fileURLWithPath: state.runtimeRoot).lastPathComponent)
                 .font(TacticalTypography.body).lineLimit(1).truncationMode(.middle)
             Text(status).font(TacticalTypography.caption)
         }
     }
     private var controls: some View {
-        Button(state.t("ui.060"), systemImage: "folder") { choosing = true }
+        Button(state.t("ui.fx.locateResources"), systemImage: "folder") { choosing = true }
             .disabled(tasks.busy).accessibilityIdentifier("runtime.choose")
     }
 }

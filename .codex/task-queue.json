@@ -68,6 +68,27 @@
         "No App build/start during README task"
       ],
       "commit_subject": "docs: redesign README with visual product showcase"
+    },
+    {
+      "id": "TASK-006",
+      "instruction": "HD2_NATIVE_APP_FX_AUTO_SELECTION_V2.1 + HD2_NATIVE_APP_FX_SELECTION_AND_LAUNCH_V2",
+      "status": "COMPLETED",
+      "branch": "feature/native-fx-selection-v21",
+      "baseline": "b787e9e",
+      "evidence": {
+        "debug": "PASS",
+        "selection_checks": 14,
+        "bridge_checks": 27,
+        "migration_checks": 36,
+        "total_checks": 183,
+        "page_language_renders": 60,
+        "languages": 10,
+        "screenshots": "Four real final Debug windows refreshed; fixture-free host scan, no selected runtime in isolated smoke",
+        "source_fingerprint": "44d24e254336adad8731e66ad7d16ecf9f25cbd78bed79a09471af127773ac91",
+        "live_game_guest_eac_multiplayer": "NOT_TESTED"
+      },
+      "limits": "Bounded scan: two Applications directories (2048 entries each), remembered/manual FX and known runtime dedicated bundle; no full-disk search. Original pinned FX hash still required by launch backend. Human clicks/translation naturalness not tested.",
+      "git": "Implementation commit containing this record; development branch only, no main merge."
     }
   ],
   "status": "COMPLETED",

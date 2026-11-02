@@ -152,6 +152,7 @@ struct LegacyOperationSheet: View {
     }
     private var disabledReason: String? {
         if tasks.busy { return state.t("ui.014") }
+        if operation == "launch_game" && state.fxSelection.selected == nil { return state.t("ui.fx.choose") }
         if needsRoot && state.runtimeRoot.isEmpty { return state.t("ui.059") }
         if needsConsent && !confirmed { return state.t("ui.276") }
         return nil

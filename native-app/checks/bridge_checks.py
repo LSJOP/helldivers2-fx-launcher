@@ -197,6 +197,7 @@ class CoreChecks(unittest.TestCase):
         app = self.directory / name
         (app / 'Contents/MacOS').mkdir(parents=True)
         (app / 'Contents/MacOS/steamac-vm').write_bytes(b'not-executed')
+        (app / 'Contents/MacOS/steamac-vm').chmod(0o700)
         with (app / 'Contents/Info.plist').open('wb') as stream:
             plistlib.dump({'CFBundleShortVersionString': version, 'CFBundleExecutable': 'steamac-vm',
                           'CFBundleIdentifier': 'es.fxgam.steamac'}, stream)
@@ -210,11 +211,51 @@ class CoreChecks(unittest.TestCase):
         self.assertEqual(row['version'], '1.9.6')
         self.assertEqual(row['structure'], 'metadata_valid')
         self.assertTrue(all(row[key] == 'unverified' for key in ('launch', 'eac', 'multiplayer')))
-        self.assertEqual(result['candidates'][0]['path'], str(self.directory/'renamed.app'))
+        self.assertEqual(result['candidates'][0]['path'], str((self.directory/'renamed.app').resolve()))
         self.assertEqual(result['runtime_selection'], 'not_read')
 
+    def test_remembered_and_manual_paths_are_revalidated_after_move_update_delete(self):
+        app = self.fake_app()
+        self.adapter.app_dirs = [self.directory / 'empty']
+        rows = self.adapter.fx_versions([str(app)])['candidates']
+        self.assertEqual(len(rows), 1)
+        self.assertTrue(rows[0]['identity_valid'])
+        metadata = app / 'Contents/Info.plist'
+        value = plistlib.loads(metadata.read_bytes())
+        value['CFBundleShortVersionString'] = '2.0.0'
+        metadata.write_bytes(plistlib.dumps(value))
+        self.assertEqual(self.adapter.fx_versions([str(app)])['candidates'][0]['version'], '2.0.0')
+        moved = app.with_name('moved.app')
+        app.rename(moved)
+        self.assertEqual(self.adapter.fx_versions([str(app)])['candidates'], [])
+        self.assertEqual(len(self.adapter.fx_versions([str(moved)])['candidates']), 1)
+        value['CFBundleIdentifier'] = 'invalid.identity'
+        (moved / 'Contents/Info.plist').write_bytes(plistlib.dumps(value))
+        self.assertFalse(self.adapter.fx_versions([str(moved)])['candidates'][0]['identity_valid'])
+
+    def test_fx_scan_paths_have_bounded_protocol_validation(self):
+        server = bridge.Bridge(self.adapter)
+        for params in [{'selected_paths': 'bad'}, {'selected_paths': ['x'] * 9}, {'runtime_root': 1}, {'command': 'id'}]:
+            self.assertEqual(server.reply(dict(req('list_fx_versions'), params=params))['error']['code'], 'INVALID_ARGUMENT')
+        app = self.fake_app()
+        response = server.reply(dict(req('list_fx_versions'), params={'selected_paths': [str(app)]}))
+        self.assertTrue(response['ok'])
+
+    def test_fx_resource_directory_resolution_is_metadata_only(self):
+        app = self.fake_app()
+        archive = ROOT.parent
+        runtime = self.directory / 'runtime'
+        for relative in ['launcher-20261026/steam-cdp.mjs', 'tools/check_node.cjs', 'goal-fx-multiplayer-20261026/gvproxy-eim-wrapper']:
+            path = runtime / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes((archive / relative).read_bytes())
+        with patch.object(subprocess, 'run', side_effect=AssertionError('No processes')):
+            row = self.adapter.fx_versions([str(app)], str(runtime))['candidates'][0]
+        self.assertEqual(row['runtime_root'], str(runtime.resolve()))
+        self.assertEqual(row['launch'], 'unverified')
+
     def test_incomplete_enumeration_is_explicit(self):
-        for i in range(70): (self.directory / str(i)).touch()
+        for i in range(2050): (self.directory / str(i)).touch()
         self.assertTrue(self.adapter.fx_versions()['scan_incomplete'])
 
     def test_symlink_candidate_not_followed(self):

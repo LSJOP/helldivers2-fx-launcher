@@ -237,6 +237,31 @@ class MigrationChecks(unittest.TestCase):
         with patch.object(self.ops,'runtime',return_value=helper),self.assertRaises(m.OperationError) as error:self.ops.run('launch_game',{'confirmed':True})
         self.assertEqual(error.exception.code,'SSH_CONNECTION_FAILED');self.assertEqual(error.exception.details['stage'],'WaitingForGuest')
         self.assertNotIn('fixture-secret',json.dumps(error.exception.details))
+    def test_selected_fx_path_reaches_pinned_backend_and_rejects_other_build(self):
+        import plistlib
+        import subprocess
+        runtime = self.directory / 'runtime'
+        for relative in ['launcher-20261026/steam-cdp.mjs','tools/check_node.cjs','goal-fx-multiplayer-20261026/gvproxy-eim-wrapper']:
+            path = runtime / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes((APP / 'CoreSnapshot' / relative).read_bytes())
+        app = self.directory / 'Selected.app'
+        executable = app / 'Contents/MacOS/steamac-vm'
+        executable.parent.mkdir(parents=True)
+        executable.write_bytes(b'not executable code; wrong pinned hash')
+        executable.chmod(0o700)
+        (app / 'Contents/Info.plist').write_bytes(plistlib.dumps({'CFBundleIdentifier':'es.fxgam.steamac','CFBundleExecutable':'steamac-vm','CFBundleShortVersionString':'1.9.8'}))
+        with patch.object(subprocess, 'run', side_effect=AssertionError('No processes')), patch.object(subprocess, 'Popen', side_effect=AssertionError('No processes')):
+            helper = self.ops.runtime({'runtime_root':str(runtime),'fx_path':str(app)})
+            self.assertEqual(helper.APP, str(app.resolve()))
+            with self.assertRaisesRegex(RuntimeError, 'verified FX performance copy'):
+                helper.verify_fx_profile()
+        # The read-only preflight must stop on this exact hash failure before any launch.
+        with patch.object(self.ops, 'runtime', return_value=helper), patch.object(self.ops, 'check_fx_entry'), patch.object(helper.dependencies, 'inspect_runtime', return_value={'ready':True,'items':[]}), patch.object(helper.dependencies, 'launcher_problems', return_value=[]), patch.object(helper, 'main', side_effect=AssertionError('Game launch forbidden')):
+            with self.assertRaises(m.OperationError) as error:
+                self.ops.run('preflight_launch', {'runtime_root':str(runtime),'fx_path':str(app)})
+        self.assertEqual(error.exception.code, 'FX_PROFILE_MISMATCH')
+
     def test_launch_preflight_rejects_changed_fx_without_starting(self):
         helper=self.fake_launch_helper(invalid_fx=True)
         with patch.object(self.ops,'runtime',return_value=helper),patch.object(helper,'main',side_effect=AssertionError('must not launch')):

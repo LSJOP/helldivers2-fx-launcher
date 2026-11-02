@@ -79,8 +79,8 @@ struct DashboardView: View {
     }
     private var runtimeCard: some View {
         TacticalPanel(number: "02", title: state.t("ui.118"), symbol: "shippingbox") {
-            TacticalInfoRow(title: state.t("ui.100"), value: versions)
-            TacticalInfoRow(title: state.t("ui.285"), value: state.t("ui.212"))
+            TacticalInfoRow(title: state.t("ui.100"), value: state.fxVersion)
+            TacticalInfoRow(title: state.t("ui.285"), value: state.fxStatus)
             Text(state.t("ui.018"))
                 .font(TacticalTypography.caption).foregroundStyle(c.muted)
             if state.results["list_fx_versions"]?["scan_incomplete"]?.boolean == true {
