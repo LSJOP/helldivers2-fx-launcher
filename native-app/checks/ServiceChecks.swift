@@ -45,6 +45,7 @@ import Foundation
         _ = try await BridgeService().request("launch_game", configuration: streaming, params: ["confirmed": .bool(true)]) { progress.record($0) }
         try check(progress.count == 1, "progress frames delivered before final result")
         try await expect("PROTOCOL_ERROR", config: fixture("foreign_progress", prefix + "print(json.dumps(dict(protocol=1,request_id='foreign',event={})))\nprint(json.dumps(" + good + "))\n"))
+        try await expect("FX_IDENTITY_UNVERIFIED", config: fixture("launch_identity_error", prefix + "print(json.dumps(dict(protocol=1,request_id=r['request_id'],ok=False,error=dict(code='FX_IDENTITY_UNVERIFIED',message='blocked',details=dict(stage='CheckingCompatibility')))))\n"), method: "launch_game")
         try await expect("OUTPUT_LIMIT", config: fixture("stdout_flood", "import sys\nsys.stdout.write('x'*100000)\nsys.stdout.flush()\n"))
         try await expect("OUTPUT_LIMIT", config: fixture("stderr_flood", "import sys\nsys.stderr.write('x'*100000)\nsys.stderr.flush()\n"))
         try await expect("CONFIRMATION_REQUIRED", config: real, method: "launch_game")
