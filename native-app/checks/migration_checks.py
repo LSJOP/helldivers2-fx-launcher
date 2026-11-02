@@ -20,6 +20,15 @@ class MigrationChecks(unittest.TestCase):
         self.config=self.directory/'settings.json'
         self.events=[]
         self.ops=m.Operations(APP/'CoreSnapshot',settings_file=self.config,data_dir=self.directory/'data',emit=self.events.append)
+    def test_guest_sudo_refusal_is_not_component_incompatibility(self):
+        from types import SimpleNamespace
+        class NotWrittenError(RuntimeError): pass
+        helper=SimpleNamespace(APP=str(self.directory/'FX.app'),safety=SimpleNamespace(NotWrittenError=NotWrittenError))
+        with patch.object(self.ops,'runtime',return_value=helper),patch.object(self.ops,'check_fx_entry',side_effect=NotWrittenError('Guest sudo authorization failed; no configuration was written')):
+            with self.assertRaises(m.OperationError) as failure:self.ops.run('launch_game',{'confirmed':True})
+        self.assertEqual(failure.exception.code,'SUDO_AUTH_FAILED')
+        self.assertIn('no configuration was written',failure.exception.details['summary'])
+        self.assertFalse(self.config.exists())
     def test_catalog_and_ten_exact_languages_no_effects(self):
         with patch('subprocess.run',side_effect=AssertionError('process forbidden')),patch('socket.create_connection',side_effect=AssertionError('network forbidden')):
             value=self.ops.run('get_legacy_catalog',{})

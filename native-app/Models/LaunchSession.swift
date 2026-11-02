@@ -27,6 +27,9 @@ enum LaunchStage: String, CaseIterable, Identifiable {
 
 struct LaunchSession {
     var root = ""
+    var startedAt: String?
+    var fxPath: String?
+    var fxVersion: String?
     var current: LaunchStage = .idle
     var evidence: [LaunchStage: String] = [:]
     var stageSequences: [LaunchStage: Int] = [:]
@@ -37,8 +40,11 @@ struct LaunchSession {
     var mainMenuConfirmedAt: String?
     var singlePlayerConfirmedAt: String?
     var processDetected: Bool { evidence[.gameProcessDetected] == "done" || evidence[.gameProcessDetected] == "passed" }
-    mutating func begin(root: String) { self = LaunchSession(); self.root = root; current = .checkingEnvironment; running = true }
+    mutating func begin(root: String) { self = LaunchSession(); self.root = root; startedAt = ISO8601DateFormatter().string(from: Date()); current = .checkingEnvironment; running = true }
     mutating func consume(_ event: [String: JSONValue]) {
+        if event["kind"]?.text == "launch_context" {
+            fxPath = event["fx_path"]?.text; fxVersion = event["fx_version"]?.text
+        }
         guard let raw = event["stage"]?.text, let stage = LaunchStage(rawValue: raw),
               let order = event["sequence"]?.integer, order > (stageSequences[stage] ?? 0) else { return }
         stageSequences[stage] = order
@@ -62,6 +68,18 @@ struct LaunchSession {
             evidence[.gameProcessDetected] = "unverified"; stageSequences[.gameProcessDetected] = Int.max
             mainMenuConfirmedAt = nil; singlePlayerConfirmedAt = nil
         }
+    }
+    // A structured record, never evidence of a menu/window merely from process presence.
+    func diagnostic(appVersion: String) -> [String: JSONValue] {
+        ["started_at": .string(startedAt ?? "unknown"), "app_version": .string(appVersion),
+         "runtime_root": .string(root), "fx_path": .string(fxPath ?? "unverified"),
+         "fx_version": .string(fxVersion ?? "unverified"), "stage": .string(current.rawValue),
+         "stages": .object(evidence.reduce(into: [:]) { $0[$1.key.rawValue] = .string($1.value) }),
+         "error_code": .string(failure?.code ?? "none"),
+         "error_summary": .string(failure?.details["summary"]?.text ?? failure?.message(false) ?? ""),
+         "game_process_detected": .bool(processDetected), "game_window": .string("unverified"),
+         "main_menu": .string(mainMenuConfirmedAt == nil ? "unverified" : "user_confirmed"),
+         "main_menu_confirmed_at": .string(mainMenuConfirmedAt ?? "unverified")]
     }
     mutating func confirmMainMenu() {
         guard !running, processDetected else { return }

@@ -375,6 +375,9 @@ class Operations:
             progress('CheckingEnvironment')
             helper=self.runtime(params)
             self.read_config()  # Reject malformed settings instead of legacy fallback to defaults.
+            info=Path(helper.APP)/'Contents/Info.plist'
+            version=plistlib.loads(info.read_bytes()).get('CFBundleShortVersionString') if info.is_file() else None
+            self.event('INFO','Selected FX launch target',kind='launch_context',fx_path=helper.APP,fx_version=version or 'unknown')
             progress('CheckingFXEntry')
             self.check_fx_entry(helper)
             progress('CheckingFXEntry','done')
@@ -399,9 +402,7 @@ class Operations:
             except RuntimeError as error:raise OperationError('FX_PROFILE_MISMATCH',{'summary':self.scrub(str(error))}) from None
             progress('CheckingEnvironment','done')
             if method=='preflight_launch':
-                info=Path(helper.APP)/'Contents/Info.plist'
-                version=plistlib.loads(info.read_bytes()).get('CFBundleShortVersionString') if info.is_file() else None
-                return {'host_ready':True,'items':report['items'],'fx_version':version,
+                return {'host_ready':True,'items':report['items'],'fx_version':version,'fx_path':helper.APP,
                         'guest':'unverified','main_menu':'unverified','single_player':'unverified','eac':'unverified','multiplayer':'unverified'}
             helper.PROGRESS_HOOK=progress
             original_state=helper.state
@@ -438,6 +439,10 @@ class Operations:
                   'WaitingForGuest':'SSH_CONNECTION_FAILED','CheckingCompatibility':'COMPATIBILITY_CHECK_FAILED',
                   'StartingSteam':'STEAM_START_FAILED','LaunchingGame':'GAME_START_FAILED',
                   'WaitingForGame':'GAME_START_FAILED','GameProcessDetected':'GAME_EXITED','CheckingEAC':'EAC_CHECK_FAILED'}.get(self.launch_stage,'LAUNCH_FAILED')
+            # The preserved Core distinguishes refusal before any Guest mutation.
+            # Do not misreport a rejected sudo credential as component incompatibility.
+            if isinstance(error,getattr(getattr(locals().get('helper'),'safety',None),'NotWrittenError',())):
+                code='SUDO_AUTH_FAILED'
             if type(error).__name__=='Deadline' or isinstance(error,subprocess.TimeoutExpired):code='TIMEOUT'
             details={'stage':self.launch_stage,'summary':self.scrub(str(error))}
             if isinstance(error,subprocess.CalledProcessError):

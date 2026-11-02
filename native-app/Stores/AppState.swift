@@ -53,7 +53,7 @@ final class AppState: ObservableObject {
         let generation = UUID(); operationGeneration = generation
         let selectedRoot = runtimeRoot
         let redactor = credentials.redactor
-        if method == "launch_game" { launchSession.begin(root: selectedRoot) }
+        if method == "launch_game" { launchSession.begin(root: selectedRoot); recordLaunch() }
         if method == "observe_launch", selectedRoot != launchSession.root { launchSession.begin(root: selectedRoot) }
         operationError = nil; operationResult = [:]; operationEvents = []
         tasks.start { [weak self] in
@@ -82,7 +82,7 @@ final class AppState: ObservableObject {
                     }
                 }
                 self.operationResult = reply.result
-                if method == "launch_game" || method == "observe_launch" { self.launchSession.complete(reply.result, at: reply.observedAt) }
+                if method == "launch_game" || method == "observe_launch" { self.launchSession.complete(reply.result, at: reply.observedAt); self.recordLaunch() }
                 self.appendLog(method + ": COMPLETED")
             } catch {
                 let failure = error as? ErrorState ?? ErrorState("PROTOCOL_ERROR", method: method)
@@ -90,13 +90,25 @@ final class AppState: ObservableObject {
                 if method == "launch_game" || method == "observe_launch", let failure = self.operationError {
                     if method == "observe_launch" { self.launchSession = LaunchSession() }
                     self.launchSession.fail(failure)
+                    self.recordLaunch()
                 }
                 self.appendLog(method + ": " + (self.operationError?.code ?? "UNKNOWN"))
             }
         }
     }
-    func confirmMainMenu() { launchSession.confirmMainMenu() }
-    func confirmSinglePlayer() { launchSession.confirmSinglePlayer() }
+    private func recordLaunch() {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+        let record = launchSession.diagnostic(appVersion: version + " (" + build + ")")
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        guard let bytes = try? encoder.encode(JSONValue.object(record)), let text = String(data: bytes, encoding: .utf8) else { return }
+        runtimeLogs.append(["at": .string(ISO8601DateFormatter().string(from: Date())), "source": .string("Native launch"),
+                            "level": .string(launchSession.failure == nil ? "INFO" : "ERROR"),
+                            "message": .string(credentials.redactor.text(text))])
+        if runtimeLogs.count > 500 { runtimeLogs.removeFirst(runtimeLogs.count - 500) }
+    }
+    func confirmMainMenu() { launchSession.confirmMainMenu(); recordLaunch() }
+    func confirmSinglePlayer() { launchSession.confirmSinglePlayer(); recordLaunch() }
     func endSession() { tasks.cancel(); credentials.clear() }
     func value(_ method: String, _ key: String) -> String { results[method]?[key]?.text ?? t("未知", "Unknown") }
     func rows(_ method: String, _ key: String) -> [[String: JSONValue]] { results[method]?[key]?.array.map(\.object) ?? [] }
