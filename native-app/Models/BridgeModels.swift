@@ -54,7 +54,7 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
     init(_ code: String, method: String = "bridge", details: [String: JSONValue] = [:]) { self.code = code; self.method = method; self.details = details }
     func message(_ zh: Bool) -> String {
         switch code {
-        case "TIMEOUT": return zh ? "读取超时。请重试。" : "The read timed out. Please retry."
+        case "TIMEOUT": return zh ? "操作超时；请先核对实际运行状态。" : "The operation timed out; recheck actual state first."
         case "CANCELLED": return zh ? "操作已取消或中断；请重新检查实际状态。" : "The operation was cancelled or interrupted; recheck actual state."
         case "PYTHON_UNAVAILABLE": return zh ? "Python 不可用。请在设置中选择已有的 Python 3.9 或更新版本。" : "Python is unavailable. Select an existing Python 3.9 or newer in Settings."
         case "BRIDGE_EXITED": return zh ? "读取进程异常退出。请刷新重试。" : "The bridge exited unexpectedly. Refresh to retry."
@@ -63,6 +63,23 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
         case "OUTPUT_LIMIT": return zh ? "响应超过大小限制。" : "The response exceeded the size limit."
         case "NOT_IMPLEMENTED": return zh ? "此接口尚未实现。" : "This interface is not implemented."
         case "BUSY": return zh ? "读取正在进行中。" : "A read is already in progress."
+        case "RUNTIME_ROOT_REQUIRED": return zh ? "请先选择已有完整旧启动器目录。" : "Select the existing complete legacy launcher directory."
+        case "SOURCE_MISMATCH", "LAUNCHER_FILES_MISSING": return zh ? "启动文件缺失或与归档不匹配；没有执行替代文件。" : "Launch files are missing or differ from the archive; no replacement code was executed."
+        case "FX_UNAVAILABLE": return zh ? "指定 FX 缺失、不可执行或哈希不匹配。" : "The selected FX is missing, not executable, or has a different hash."
+        case "GVPROXY_UNAVAILABLE": return zh ? "原 gvproxy 或 wrapper 缺失或不匹配。" : "The original gvproxy or wrapper is missing or incompatible."
+        case "NODE_UNAVAILABLE": return zh ? "需要已有可验证的 Node 运行环境。" : "An existing validated Node runtime is required."
+        case "SSH_UNAVAILABLE": return zh ? "找不到可用 SSH 客户端。" : "An SSH client is unavailable."
+        case "FX_PROFILE_MISMATCH": return zh ? "FX 当前配置与原验证组合不符；未自动修改。" : "The FX profile differs from the verified combination; nothing was changed automatically."
+        case "FX_START_FAILED": return zh ? "FX 启动或虚拟机等待阶段失败。" : "FX startup or VM readiness failed."
+        case "SSH_CONNECTION_FAILED", "AUTH_REQUIRED": return zh ? "Guest / SSH 连接需要处理；可在启动面板输入本次认证信息。" : "Guest / SSH needs attention; enter session credentials in the launch panel if required."
+        case "COMPATIBILITY_CHECK_FAILED": return zh ? "兼容组件或目标身份检查未通过；现有环境未被重置。" : "Compatibility or target identity checks failed; the existing environment was not reset."
+        case "STEAM_START_FAILED": return zh ? "Steam 启动或登录等待失败。" : "Steam startup or login readiness failed."
+        case "GAME_START_FAILED": return zh ? "游戏请求失败或未在期限内检测到游戏进程。" : "The game request failed or no game process appeared before the deadline."
+        case "GAME_EXITED": return zh ? "最终检查已无游戏进程；不能判定进入游戏。" : "No game process remained at final observation; gameplay is not established."
+        case "EAC_CHECK_FAILED": return zh ? "EAC 本次检查未通过；不绕过反作弊。" : "The fresh EAC check failed; anti-cheat is not bypassed."
+        case "CHANGE_CONFIRMATION_REQUIRED": return zh ? "需要确认下方具体变更，尚未获准的配置不会写入。" : "Review the exact change below; unapproved configuration is not written."
+        case "CONFIRMATION_REQUIRED": return zh ? "需要明确授权本次操作。" : "Explicit consent is required for this action."
+        case "ENVIRONMENT_CHECK_FAILED", "LAUNCH_FAILED": return zh ? "启动检查失败，请查看具体阶段和错误详情。" : "Launch checks failed; see the stage and error details."
         default: return zh ? "读取失败。请重试或检查 App 文件。" : "The read failed. Retry or check the app files."
         }
     }

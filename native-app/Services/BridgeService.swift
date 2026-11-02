@@ -110,7 +110,7 @@ actor BridgeService {
             Thread.sleep(forTimeInterval: 0.01)
         }
         try consumeEvents()
-        guard process.terminationStatus == 0 else { throw ErrorState("BRIDGE_EXITED", method: method) }
+        guard process.terminationStatus == 0 else { throw ErrorState("BRIDGE_EXITED", method: method, details: ["exit_code": .number(Double(process.terminationStatus))]) }
         // One request per supervised process: require exactly one complete UTF-8 frame.
         guard stdout.last == 10, let string = String(data: stdout, encoding: .utf8),
               string.dropLast().contains("\n") == false,
@@ -121,7 +121,8 @@ actor BridgeService {
             guard response.result == nil, let failure = response.error else { throw ErrorState("PROTOCOL_ERROR", method: method) }
             let codes = ["TIMEOUT", "CORE_UNAVAILABLE", "NOT_IMPLEMENTED", "PROTOCOL_ERROR", "PROTOCOL_MISMATCH", "INVALID_ARGUMENT", "OUTPUT_LIMIT"]
             let operationCodes = ["CONFIRMATION_REQUIRED", "CHANGE_CONFIRMATION_REQUIRED", "CONFIG_CHANGED", "AUTH_REQUIRED", "SOURCE_MISMATCH", "RUNTIME_ROOT_REQUIRED", "UNSAFE_PATH", "CANCELLED", "UNSUPPORTED_CONFIGURATION", "PROFILE_NOT_APPLICABLE"]
-            throw ErrorState((codes + operationCodes).contains(failure.code) ? failure.code : "PROTOCOL_ERROR", method: method, details: failure.details ?? [:])
+            let launchCodes = ["LAUNCHER_FILES_MISSING", "FX_UNAVAILABLE", "GVPROXY_UNAVAILABLE", "NODE_UNAVAILABLE", "SSH_UNAVAILABLE", "FX_PROFILE_MISMATCH", "ENVIRONMENT_CHECK_FAILED", "FX_START_FAILED", "SSH_CONNECTION_FAILED", "COMPATIBILITY_CHECK_FAILED", "STEAM_START_FAILED", "GAME_START_FAILED", "GAME_EXITED", "EAC_CHECK_FAILED", "LAUNCH_FAILED"]
+            throw ErrorState((codes + operationCodes + launchCodes).contains(failure.code) ? failure.code : "PROTOCOL_ERROR", method: method, details: failure.details ?? [:])
         }
         guard let result = response.result, response.error == nil,
               let observed = response.observed_at, !observed.isEmpty else { throw ErrorState("PROTOCOL_ERROR", method: method) }

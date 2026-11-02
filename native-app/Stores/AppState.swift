@@ -21,6 +21,8 @@ final class AppState: ObservableObject {
     @Published private(set) var operationError: ErrorState?
     @Published private(set) var operationEvents: [[String: JSONValue]] = []
     @Published private(set) var runtimeLogs: [[String: JSONValue]] = []
+    @Published private(set) var launchSession = LaunchSession()
+    private var operationGeneration = UUID()
     @Published var appearance: Appearance = .dark
     @Published var pythonURL = AppState.savedPythonURL {
         didSet { UserDefaults.standard.set(pythonURL.path, forKey: "NativePythonPath") }
@@ -44,16 +46,21 @@ final class AppState: ObservableObject {
     func pageTitle(_ page: Page) -> String { t(page.title(true), page.title(false)) }
     func runOperation(_ method: String, params: [String: JSONValue] = [:]) {
         guard !tasks.busy else { return }
+        let generation = UUID(); operationGeneration = generation
+        let selectedRoot = runtimeRoot
+        if method == "launch_game" { launchSession.begin(root: selectedRoot) }
+        if method == "observe_launch", selectedRoot != launchSession.root { launchSession.begin(root: selectedRoot) }
         operationError = nil; operationResult = [:]; operationEvents = []
         tasks.start { [weak self] in
             guard let self else { return }
             do {
                 let config = try BridgeConfiguration.bundled(python: self.pythonURL)
                 var input = params
-                if !self.runtimeRoot.isEmpty { input["runtime_root"] = .string(self.runtimeRoot) }
+                if !selectedRoot.isEmpty { input["runtime_root"] = .string(selectedRoot) }
                 let reply = try await self.bridge.request(method, configuration: config, timeout: method == "launch_game" || method == "apply_performance" ? 900 : 90, params: input) { [weak self] event in
                     Task { @MainActor in
-                        guard let self else { return }
+                        guard let self, self.operationGeneration == generation else { return }
+                        if method == "launch_game" { self.launchSession.consume(event) }
                         self.operationEvents.append(event)
                         self.runtimeLogs.append(event)
                         if self.runtimeLogs.count > 500 { self.runtimeLogs.removeFirst(self.runtimeLogs.count - 500) }
@@ -61,13 +68,20 @@ final class AppState: ObservableObject {
                     }
                 }
                 self.operationResult = reply.result
+                if method == "launch_game" || method == "observe_launch" { self.launchSession.complete(reply.result, at: reply.observedAt) }
                 self.appendLog(method + ": COMPLETED")
             } catch {
                 self.operationError = error as? ErrorState ?? ErrorState("PROTOCOL_ERROR", method: method)
+                if method == "launch_game" || method == "observe_launch", let failure = self.operationError {
+                    if method == "observe_launch" { self.launchSession = LaunchSession() }
+                    self.launchSession.fail(failure)
+                }
                 self.appendLog(method + ": " + (self.operationError?.code ?? "UNKNOWN"))
             }
         }
     }
+    func confirmMainMenu() { launchSession.confirmMainMenu() }
+    func confirmSinglePlayer() { launchSession.confirmSinglePlayer() }
     func value(_ method: String, _ key: String) -> String { results[method]?[key]?.text ?? t("未知", "Unknown") }
     func rows(_ method: String, _ key: String) -> [[String: JSONValue]] { results[method]?[key]?.array.map(\.object) ?? [] }
     func refresh() {

@@ -120,5 +120,56 @@ class MigrationChecks(unittest.TestCase):
         self.assertEqual(helper.ROOT,root.resolve())
         self.assertEqual(helper.diagnostics.Store().directory,self.directory/'data/diagnostics')
         self.assertFalse(self.config.exists())
+    def fake_launch_helper(self, fail=None, game=True, invalid_fx=False):
+        rows=[{'id':'fx','state':'invalid' if invalid_fx else 'ready'}]
+        helper=types.SimpleNamespace(APP=str(self.directory/'FX.app'))
+        helper.dependencies=types.SimpleNamespace(inspect_runtime=lambda h:{'items':rows,'ready':not invalid_fx},launcher_problems=lambda:[])
+        helper.verify_fx_profile=lambda:None
+        helper.wait_for_game=lambda:None
+        helper.state=lambda:{'game_pids':[123] if game else [],'steam_pids':[456]}
+        helper.safety=types.SimpleNamespace(Session=lambda h:types.SimpleNamespace(bind=lambda:None))
+        def main():
+            helper.PROGRESS_HOOK('fx','done');helper.PROGRESS_HOOK('ssh','running')
+            if fail:raise fail
+            helper.PROGRESS_HOOK('ssh','done');helper.PROGRESS_HOOK('steam','done')
+            helper.PROGRESS_HOOK('game','running');helper.wait_for_game();helper.PROGRESS_HOOK('game','done')
+            helper.PROGRESS_HOOK('eac','unverified');helper.run_post_launch_checks()
+        helper.main=main
+        return helper
+    def test_launch_reuses_main_and_streams_real_callback_states_without_gameplay_inference(self):
+        helper=self.fake_launch_helper()
+        with patch.object(self.ops,'runtime',return_value=helper):result=self.ops.run('launch_game',{'confirmed':True})
+        self.assertTrue(result['game_process_detected']);self.assertEqual(result['main_menu'],'unverified');self.assertEqual(result['single_player'],'unverified')
+        stages=[x.get('stage') for x in self.events]
+        self.assertIn('WaitingForGame',stages);self.assertIn('GameProcessDetected',stages)
+        self.assertEqual(result['multiplayer'],'not_requested')
+    def test_launch_classifies_ssh_failure_and_redacts_detail(self):
+        helper=self.fake_launch_helper(fail=RuntimeError('password=fixture-secret'))
+        with patch.object(self.ops,'runtime',return_value=helper),self.assertRaises(m.OperationError) as error:self.ops.run('launch_game',{'confirmed':True})
+        self.assertEqual(error.exception.code,'SSH_CONNECTION_FAILED');self.assertEqual(error.exception.details['stage'],'WaitingForGuest')
+        self.assertNotIn('fixture-secret',json.dumps(error.exception.details))
+    def test_launch_preflight_rejects_changed_fx_without_starting(self):
+        helper=self.fake_launch_helper(invalid_fx=True)
+        with patch.object(self.ops,'runtime',return_value=helper),patch.object(helper,'main',side_effect=AssertionError('must not launch')):
+            with self.assertRaises(m.OperationError) as error:self.ops.run('launch_game',{'confirmed':True})
+        self.assertEqual(error.exception.code,'FX_UNAVAILABLE')
+    def test_preflight_never_starts_guest_or_claims_guest_ready(self):
+        helper=self.fake_launch_helper()
+        with patch.object(self.ops,'runtime',return_value=helper),patch.object(helper,'main',side_effect=AssertionError('must not launch')):
+            result=self.ops.run('preflight_launch',{})
+        self.assertTrue(result['host_ready']);self.assertEqual(result['guest'],'unverified')
+    def test_game_exit_at_final_observation_is_not_success(self):
+        helper=self.fake_launch_helper(game=False)
+        with patch.object(self.ops,'runtime',return_value=helper),self.assertRaises(m.OperationError) as error:self.ops.run('launch_game',{'confirmed':True})
+        self.assertEqual(error.exception.code,'GAME_EXITED')
+    def test_configuration_confirmation_preserved(self):
+        helper=self.fake_launch_helper(fail=m.OperationError('CHANGE_CONFIRMATION_REQUIRED',{'change':{'kind':'fixture'}}))
+        with patch.object(self.ops,'runtime',return_value=helper),self.assertRaises(m.OperationError) as error:self.ops.run('launch_game',{'confirmed':True})
+        self.assertEqual(error.exception.details['change'],{'kind':'fixture'})
+    def test_observation_requires_target_identity_and_never_invokes_launcher(self):
+        helper=self.fake_launch_helper()
+        with patch.object(self.ops,'runtime',return_value=helper),patch.object(helper,'main',side_effect=AssertionError('must not launch')):
+            value=self.ops.run('observe_launch',{'confirmed':True})
+        self.assertTrue(value['game_process_detected']);self.assertEqual(value['main_menu'],'unverified')
 
 if __name__=='__main__':unittest.main(verbosity=2)

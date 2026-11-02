@@ -13,6 +13,7 @@ struct DashboardView: View {
         VStack(alignment: .leading, spacing: TacticalSpacing.panel) {
             commandBar
             hero
+            if state.launchSession.current != .idle { LaunchProgressView(state: state, tasks: tasks) }
             if let error = state.error {
                 TacticalWarningBanner(text: error.message(state.chinese) + " · " + error.code, isError: true)
                     .accessibilityIdentifier("bridge.error")
@@ -87,6 +88,7 @@ struct DashboardView: View {
     private var launchButton: some View {
         TacticalButton(title: state.t("启动 HELLDIVERS 2", "Launch HELLDIVERS 2"), symbol: "play.fill", primary: true, loading: tasks.busy) { state.operationSelection = NativeOperation(method: "launch_game") }
             .accessibilityIdentifier("dashboard.launch")
+            .disabled(tasks.busy)
     }
     private var inspectButton: some View {
         TacticalButton(title: tasks.busy ? state.t("正在检查环境…", "Checking environment…") : state.t("检查环境", "Check environment"),

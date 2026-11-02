@@ -6,10 +6,12 @@ import hashlib
 import importlib.util
 import json
 import os
+import plistlib
 from pathlib import Path
 import re
 import signal
 import stat
+import subprocess
 import sys
 import tempfile
 import time
@@ -29,6 +31,8 @@ OPERATIONS = {
     'test_ssh': ('environment', True, True),
     'inspect_guest': ('environment', True, True),
     'launch_game': ('dashboard', True, True),
+    'preflight_launch': ('dashboard', False, True),
+    'observe_launch': ('dashboard', True, True),
     'apply_performance': ('settings', True, True),
     'read_performance': ('settings', False, False),
     'apply_network_profile': ('environment', True, True),
@@ -51,6 +55,7 @@ class Operations:
         self.data = Path(data_dir) if data_dir else Path.home()/'Library/Application Support/Helldivers2FXLauncher/native'
         self.modules = {}
         self.secret_values = []
+        self.launch_stage = None
 
     def module(self, name):
         if name not in ('preferences','dependencies','network_profile','network_diagnostics','network_records','performance_profile','performance_catalog','update_checker','i18n','launcher_version','apple_silicon'):
@@ -211,6 +216,8 @@ class Operations:
         for key in ['password','passphrase','sudo_password','note','runtime_root']:
             if key in params and (not isinstance(params[key],str) or len(params[key])>4096 or '\x00' in params[key]):raise OperationError('INVALID_ARGUMENT')
         self.event('INFO',method+' started')
+        if method in ('launch_game','preflight_launch','observe_launch'):
+            return self.launch_operation(method,params)
         if method=='read_configuration':
             _,config,revision=self.read_config()
             return {'configuration':config,'revision':revision,'target':str(self.settings)}
@@ -292,8 +299,6 @@ class Operations:
             if method=='inspect_guest':return self.scrub(records.guest_snapshot(helper))
             value=records.capture(helper,self.module('network_profile'));path=records.save(value,self.settings)
             return {'saved':str(path),'snapshot':self.scrub(value)}
-        if method=='launch_game':
-            helper.main();return {'operation':'completed','game':'see_stage_evidence','eac':'see_stage_evidence','multiplayer':'unverified'}
         if method=='apply_performance':
             profile=self.module('performance_profile');catalog=self.module('performance_catalog')
             device=self.module('apple_silicon').detect()
@@ -303,6 +308,81 @@ class Operations:
             if plan not in params.get('approved_changes',[]):raise OperationError('CHANGE_CONFIRMATION_REQUIRED',{'change':plan})
             return self.scrub(self.apply_performance(profile,helper,before))
         raise OperationError('NOT_IMPLEMENTED')
+
+    def launch_operation(self, method, params):
+        stages={'fx':'StartingFX','ssh':'WaitingForGuest','environment':'CheckingCompatibility',
+                'steam':'StartingSteam','game':'LaunchingGame','eac':'CheckingEAC'}
+        self.launch_stage='CheckingEnvironment'
+        sequence=[0]
+        def progress(stage,status='running',detail=None):
+            mapped=stages.get(stage,stage)
+            if stage=='game' and status in ('done','passed'):mapped='GameProcessDetected'
+            self.launch_stage=mapped
+            sequence[0]+=1
+            self.event('ERROR' if status=='failed' else 'INFO',mapped,stage=mapped,status=status,sequence=sequence[0])
+        try:
+            progress('CheckingEnvironment')
+            helper=self.runtime(params)
+            self.read_config()  # Reject malformed settings instead of legacy fallback to defaults.
+            if method=='observe_launch':
+                helper.safety.Session(helper).bind()  # Read-only target identity, not merely a reachable port.
+                current=helper.state()  # BatchMode only; never starts a new master or writes Guest configuration.
+                detected=bool(current.get('game_pids'))
+                progress('GameProcessDetected' if detected else 'WaitingForGame','done' if detected else 'unverified')
+                return {'game_process_detected':detected,'game_process_count':len(current.get('game_pids',[])),
+                        'steam_process_count':len(current.get('steam_pids',[])),
+                        'main_menu':'unverified','single_player':'unverified','eac':'unverified','multiplayer':'unverified'}
+            report=helper.dependencies.inspect_runtime(helper)
+            problems=helper.dependencies.launcher_problems()
+            if problems:raise OperationError('LAUNCHER_FILES_MISSING',{'files':problems})
+            for row in report['items']:
+                if row['state'] in ('ready','unverified'):continue
+                code={'fx':'FX_UNAVAILABLE','gvproxy':'GVPROXY_UNAVAILABLE','node':'NODE_UNAVAILABLE','ssh':'SSH_UNAVAILABLE','bridge':'SOURCE_MISMATCH'}.get(row['id'],'ENVIRONMENT_CHECK_FAILED')
+                raise OperationError(code,{'component':row['id'],'state':row['state']})
+            if not report['ready']:raise OperationError('ENVIRONMENT_CHECK_FAILED')
+            try:helper.verify_fx_profile()
+            except RuntimeError as error:raise OperationError('FX_PROFILE_MISMATCH',{'summary':self.scrub(str(error))}) from None
+            progress('CheckingEnvironment','done')
+            if method=='preflight_launch':
+                info=Path(helper.APP)/'Contents/Info.plist'
+                version=plistlib.loads(info.read_bytes()).get('CFBundleShortVersionString') if info.is_file() else None
+                return {'host_ready':True,'items':report['items'],'fx_version':version,
+                        'guest':'unverified','main_menu':'unverified','single_player':'unverified','eac':'unverified','multiplayer':'unverified'}
+            helper.PROGRESS_HOOK=progress
+            original_wait=helper.wait_for_game
+            def wait_for_game():
+                progress('WaitingForGame')
+                original_wait()
+                progress('GameProcessDetected','done')
+            helper.wait_for_game=wait_for_game
+            # Multiplayer probes are outside Phase 2. Keep original EAC requirements intact.
+            helper.run_post_launch_checks=lambda:self.event('INFO','Optional multiplayer probes not requested',stage='Multiplayer',status='not_requested')
+            helper.main()
+            current=helper.state()
+            if not current.get('game_pids'):raise OperationError('GAME_EXITED',{'summary':'No game process remains at final observation'})
+            progress('GameProcessDetected','done')
+            return {'game_process_detected':True,'game_process_count':len(current['game_pids']),
+                    'steam_process_count':len(current.get('steam_pids',[])),
+                    'main_menu':'unverified','single_player':'unverified','multiplayer':'not_requested',
+                    'eac':'see_separate_stage_evidence'}
+        except OperationError as error:
+            error.details.setdefault('stage',self.launch_stage)
+            self.event('ERROR',error.code,stage=self.launch_stage,status='failed')
+            raise
+        except Exception as error:
+            code={'CheckingEnvironment':'ENVIRONMENT_CHECK_FAILED','StartingFX':'FX_START_FAILED',
+                  'WaitingForGuest':'SSH_CONNECTION_FAILED','CheckingCompatibility':'COMPATIBILITY_CHECK_FAILED',
+                  'StartingSteam':'STEAM_START_FAILED','LaunchingGame':'GAME_START_FAILED',
+                  'WaitingForGame':'GAME_START_FAILED','GameProcessDetected':'GAME_EXITED','CheckingEAC':'EAC_CHECK_FAILED'}.get(self.launch_stage,'LAUNCH_FAILED')
+            if type(error).__name__=='Deadline' or isinstance(error,subprocess.TimeoutExpired):code='TIMEOUT'
+            details={'stage':self.launch_stage,'summary':self.scrub(str(error))}
+            if isinstance(error,subprocess.CalledProcessError):
+                details['exit_code']=error.returncode
+                if error.stderr:
+                    text=error.stderr.decode('utf-8',errors='replace') if isinstance(error.stderr,bytes) else error.stderr
+                    details['stderr']=self.scrub(text)
+            self.event('ERROR',code,stage=self.launch_stage,status='failed')
+            raise OperationError(code,details) from None
 
     def apply_performance(self, profile, helper, before):
         # The archive handles ordinary preference failures. Extend recovery to

@@ -85,6 +85,8 @@ private extension Dictionary where Key == String, Value == JSONValue {
         "test_ssh": ("测试 SSH 连接", "Test SSH connection"),
         "inspect_guest": ("读取 Guest / Steam", "Inspect Guest / Steam"),
         "launch_game": ("启动 HELLDIVERS 2", "Launch HELLDIVERS 2"),
+        "preflight_launch": ("启动前只读检查", "Read-only launch preflight"),
+        "observe_launch": ("只读复查游戏进程", "Recheck game process"),
         "apply_performance": ("应用原性能配置", "Apply legacy performance profile"),
         "read_performance": ("查看性能配置", "Read performance configuration"),
         "apply_network_profile": ("应用有线网络方案", "Apply wired network profile"),
@@ -117,7 +119,7 @@ struct LegacyOperationSheet: View {
     @State private var note = ""
     @State private var channel = "preview"
     @State private var inputError = false
-    private var needsRoot: Bool { ["inspect_legacy_runtime","test_ssh","inspect_guest","launch_game","apply_performance","save_network_snapshot"].contains(operation) }
+    private var needsRoot: Bool { ["inspect_legacy_runtime","test_ssh","inspect_guest","launch_game","preflight_launch","observe_launch","apply_performance","save_network_snapshot"].contains(operation) }
     private var needsConsent: Bool {
         state.rows("get_legacy_catalog", "operations").first { $0["method"]?.text == operation }?["confirmation"]?.boolean ?? true
     }
@@ -132,9 +134,14 @@ struct LegacyOperationSheet: View {
                 }
                 if needsRoot {
                     TextField(state.t("已有旧启动器完整目录", "Existing full legacy launcher directory"), text: $state.runtimeRoot)
-                    TacticalButton(title: state.t("选择目录…", "Choose directory…"), symbol: "folder") { choosingRoot = true }
+                        .disabled(state.tasks.busy)
+                    TacticalButton(title: state.t("选择目录…", "Choose directory…"), symbol: "folder") { choosingRoot = true }.disabled(state.tasks.busy)
                     Text(state.t("不会下载或移动 FX。目录内 JS 和 wrapper 必须与归档一致，原 Core 的二进制哈希与目标检查仍然生效。", "No FX download or relocation. JS and wrapper must match the archive; original Core binary-hash and target checks remain active."))
                         .font(TacticalTypography.caption)
+                }
+                if operation == "launch_game" {
+                    TacticalButton(title: state.t("先做只读预检", "Run read-only preflight"), symbol: "checklist") { state.runOperation("preflight_launch") }
+                        .disabled(state.tasks.busy || state.runtimeRoot.isEmpty)
                 }
                 if ["test_ssh","inspect_guest","launch_game","apply_performance","save_network_snapshot"].contains(operation) {
                     SecureField(state.t("本次 SSH 密码（可留空使用已有认证）", "Session SSH password (optional with existing authentication)"), text: $password)

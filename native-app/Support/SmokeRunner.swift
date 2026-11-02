@@ -8,6 +8,11 @@ import ApplicationServices
     private static var started = false
     static func runIfRequested(state: AppState) async {
         let args = ProcessInfo.processInfo.arguments
+        if !started, let i = args.firstIndex(of: "--phase2-live"), args.count > i + 2 {
+            started = true
+            await phase2Live(state, directory: URL(fileURLWithPath: args[i + 1]), root: args[i + 2])
+            return
+        }
         if !started, let i = args.firstIndex(of: "--update-menu-smoke"), args.count > i + 1 {
             started = true
             await updateMenuReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
@@ -141,6 +146,42 @@ import ApplicationServices
         }
     }
     // One focused check after the user's menu-label feedback; no five-page sweep.
+    private static func phase2Live(_ state: AppState, directory: URL, root: String) async {
+        var result: [String: Any] = ["entry":"Native AppState -> supervised Bridge -> pinned legacy Core", "kind":"explicit_live_launch", "main_menu":"unverified", "single_player":"unverified", "multiplayer":"not_requested"]
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try await waitForTask(state)
+            state.runtimeRoot = root
+            state.runOperation("preflight_launch")
+            try await waitForTask(state)
+            if let error = state.operationError { throw error }
+            guard state.operationResult["host_ready"]?.boolean == true else { throw ErrorState("ENVIRONMENT_CHECK_FAILED") }
+            state.selection = .dashboard
+            state.operationSelection = NativeOperation(method:"launch_game")
+            // This mode is opt-in only, for an explicitly authorized live acceptance.
+            // Never supplies approved_changes; any real configuration change still stops.
+            state.runOperation("launch_game", params:["confirmed":.bool(true)])
+            let deadline = ProcessInfo.processInfo.systemUptime + 940
+            while state.tasks.busy {
+                guard ProcessInfo.processInfo.systemUptime < deadline else { state.tasks.cancel(); throw ErrorState("TIMEOUT") }
+                try await Task.sleep(nanoseconds:100_000_000)
+            }
+            result["state"] = state.launchSession.current.rawValue
+            result["game_process_detected"] = state.launchSession.processDetected
+            result["stages"] = Dictionary(uniqueKeysWithValues: state.launchSession.evidence.map { ($0.key.rawValue,$0.value) })
+            if let error = state.operationError { throw error }
+            result["result"] = "PROCESS_ONLY_GAMEPLAY_PENDING"
+        } catch {
+            result["result"] = "NEEDS_ATTENTION"
+            result["code"] = (error as? ErrorState)?.code ?? "LIVE_CHECK_FAILED"
+            result["stage"] = (error as? ErrorState)?.details["stage"]?.text
+            result["summary"] = (error as? ErrorState)?.details["summary"]?.text
+        }
+        if let data = try? JSONSerialization.data(withJSONObject: result, options:[.prettyPrinted,.sortedKeys]) {
+            try? data.write(to: directory.appendingPathComponent("phase2-live.json"),options:.atomic)
+        }
+        // Leave the real App visible for exact-change consent or game-internal confirmation.
+    }
     private static func updateMenuReview(_ state: AppState, directory: URL) async {
         var result: [String: Any] = [:]
         do {
@@ -191,7 +232,7 @@ import ApplicationServices
             try await waitForTask(state)
             guard state.hasLoaded, state.error == nil else { throw ErrorState("BRIDGE_UNAVAILABLE") }
             guard state.rows("get_legacy_catalog", "languages").count == 10,
-                  state.rows("get_legacy_catalog", "operations").count == 20 else { throw ErrorState("CATALOG_MISSING") }
+                  state.rows("get_legacy_catalog", "operations").count == 22 else { throw ErrorState("CATALOG_MISSING") }
             guard let base = Bundle.main.resourceURL else { throw ErrorState("CORE_UNAVAILABLE") }
             for (code, _) in NativeLocalization.languages {
                 guard FileManager.default.fileExists(atPath: base.appendingPathComponent("locales/" + code + ".json").path) else { throw ErrorState("LOCALE_MISSING") }
@@ -209,7 +250,7 @@ import ApplicationServices
             try await Task.sleep(nanoseconds: 300_000_000)
             guard NSApp.windows.contains(where: { $0.isVisible }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
             state.operationSelection = nil
-            result = ["result":"PASS", "catalog_operations":20, "bundled_original_locales":10,
+            result = ["result":"PASS", "catalog_operations":22, "bundled_original_locales":10,
                       "configuration":"read_only", "launch_guards":"consent_and_root_rejected",
                       "live_game_network_writes":"not_performed", "native_translation":"partial"]
         } catch { result = ["result":"FAIL", "code":(error as? ErrorState)?.code ?? "SMOKE_FAILED"] }
