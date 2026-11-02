@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""JSONL v1 read-only bridge. No arbitrary commands, settings, network or Guest."""
+"""JSONL v1 bridge: read-only refresh and allowlisted, explicit Core actions."""
 import contextlib
+import os
 from datetime import datetime, timezone
 import importlib.util
 import json
@@ -27,9 +28,9 @@ def stamp():
     return datetime.now(timezone.utc).isoformat()
 
 
-def error(rid, code, message):
+def error(rid, code, message, details=None):
     return {'protocol': PROTOCOL, 'request_id': rid, 'ok': False,
-            'error': {'code': code, 'message': message}}
+            'error': {'code': code, 'message': message, 'details': details or {}}}
 
 
 def unique_pairs(pairs):
@@ -44,7 +45,20 @@ def unique_pairs(pairs):
 class Bridge:
     def __init__(self, adapter):
         self.adapter = adapter
+        here=Path(__file__).resolve().parent
+        spec=importlib.util.spec_from_file_location('native_operations',here/'legacy_operations.py')
+        self.operations_module=importlib.util.module_from_spec(spec);spec.loader.exec_module(self.operations_module)
+        root=here.parent/'legacy' if (here.parent/'legacy').is_dir() else here.parent/'CoreSnapshot'
+        self.operations=self.operations_module.Operations(root)
+        self.active_rid=None
+        self.event_sink=lambda row: None
+        self.operations.emit=self.emit_event
         self.logs = [{'at': stamp(), 'message': 'Read-only bridge started'}]
+
+    def emit_event(self, row):
+        row=dict(at=stamp(),source='core',**row)
+        self.logs.append(row);self.logs=self.logs[-100:]
+        self.event_sink({'protocol':1,'request_id':self.active_rid,'event':row})
 
     def reply(self, request):
         rid = request.get('request_id')
@@ -57,17 +71,23 @@ class Bridge:
         params = request.get('params', {})
         method = request.get('method')
         timeout = request.get('timeout_ms', 3000)
-        if not isinstance(method, str) or not isinstance(params, dict) or params or type(timeout) is not int or not 1 <= timeout <= 5000:
+        operation = isinstance(method,str) and method in self.operations_module.OPERATIONS
+        if not isinstance(method, str) or not isinstance(params, dict) or (params and not operation) or type(timeout) is not int or not 1 <= timeout <= (900000 if operation else 5000):
             return error(rid, 'INVALID_ARGUMENT', 'Invalid method, parameters or timeout')
-        if method not in METHODS:
-            return error(rid, 'NOT_IMPLEMENTED', 'Method is unavailable in read-only Phase 1')
+        if method not in METHODS and not operation:
+            return error(rid, 'NOT_IMPLEMENTED', 'Method is unavailable')
+        self.active_rid=rid
         try:
             signal.signal(signal.SIGALRM, alarm_handler)
             signal.setitimer(signal.ITIMER_REAL, timeout / 1000)
             # Audited legacy imports/prints may never contaminate protocol stdout.
             with contextlib.redirect_stdout(sys.stderr):
                 if method == 'handshake':
-                    result = {'protocol_min': 1, 'protocol_max': 1, 'capabilities': list(METHODS), 'read_only': True}
+                    result = {'protocol_min': 1, 'protocol_max': 1, 'capabilities': list(METHODS)+list(self.operations_module.OPERATIONS), 'read_only': False, 'permission_model':'explicit_actions', 'read_only_default':True}
+                elif operation:
+                    result=self.operations.run(method,params)
+                    # Normalize Path results without publishing raw exception messages.
+                    result=json.loads(json.dumps(result,default=lambda value: str(value) if isinstance(value,Path) else None))
                 elif method == 'get_logs':
                     result = {'entries': self.logs[-100:], 'source': 'bridge_process_session',
                               'game_logs': 'NOT_IMPLEMENTED', 'next_cursor': None}
@@ -80,12 +100,14 @@ class Bridge:
                     result = getattr(self.adapter, name)()
             response = {'protocol': PROTOCOL, 'request_id': rid, 'ok': True, 'result': result,
                         'observed_at': stamp()}
+        except self.operations_module.OperationError as failure:
+            response=error(rid,failure.code,'Core operation requires attention',failure.details)
         except Deadline:
-            response = error(rid, 'TIMEOUT', 'Read-only operation timed out')
-        except (OSError, ValueError, RuntimeError, AttributeError, TypeError):
+            response = error(rid, 'TIMEOUT', 'Operation timed out; recheck actual state')
+        except (OSError, ValueError, RuntimeError, AttributeError, TypeError, KeyError) as failure:
             # Never serialize raw paths, configuration contents or exception strings.
             print('Read-only Core operation unavailable', file=sys.stderr, flush=True)
-            response = error(rid, 'CORE_UNAVAILABLE', 'Read-only Core data is unavailable')
+            response = error(rid, 'CORE_UNAVAILABLE', 'Core data is unavailable', {'summary':self.operations.scrub(str(failure))} if operation else {})
         finally:
             signal.setitimer(signal.ITIMER_REAL, 0)
         self.logs.append({'at': stamp(), 'message': method + ': ' + ('OK' if response['ok'] else response['error']['code'])})
@@ -95,6 +117,12 @@ class Bridge:
 
 def serve(adapter, input_stream, output_stream):
     bridge = Bridge(adapter)
+    def emit(row):
+        output_stream.write(json.dumps(row,ensure_ascii=False,default=str)+'\n');output_stream.flush()
+    bridge.event_sink=emit
+    def cancelled(signum,frame):
+        raise bridge.operations_module.OperationError('CANCELLED')
+    signal.signal(signal.SIGTERM,cancelled)
     while True:
         line = input_stream.readline(MAX_LINE + 1)
         if not line:
@@ -118,6 +146,9 @@ def serve(adapter, input_stream, output_stream):
 
 
 def main():
+    if hasattr(os,'setsid'):
+        try:os.setsid()
+        except OSError:pass
     here = Path(__file__).resolve().parent
     # Dev layout is native-app/bridge; bundled layout is Resources/bridge + Resources/core.
     root = here.parent / 'core' if (here.parent / 'core').is_dir() else here.parent / 'CoreSnapshot/native-app-core-snapshot'

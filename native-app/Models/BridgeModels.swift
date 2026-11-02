@@ -30,7 +30,7 @@ indirect enum JSONValue: Codable, Sendable {
 }
 
 struct BridgeResponse: Decodable, Sendable {
-    struct Failure: Decodable, Sendable { let code: String; let message: String }
+    struct Failure: Decodable, Sendable { let code: String; let message: String; let details: [String: JSONValue]? }
     let `protocol`: Int
     let request_id: String
     let ok: Bool
@@ -48,13 +48,14 @@ struct BridgeReply: Sendable {
 struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
     let code: String
     let method: String
+    let details: [String: JSONValue]
     var id: String { code + method }
     var errorDescription: String? { code }
-    init(_ code: String, method: String = "bridge") { self.code = code; self.method = method }
+    init(_ code: String, method: String = "bridge", details: [String: JSONValue] = [:]) { self.code = code; self.method = method; self.details = details }
     func message(_ zh: Bool) -> String {
         switch code {
         case "TIMEOUT": return zh ? "读取超时。请重试。" : "The read timed out. Please retry."
-        case "CANCELLED": return zh ? "读取已取消。" : "The read was cancelled."
+        case "CANCELLED": return zh ? "操作已取消或中断；请重新检查实际状态。" : "The operation was cancelled or interrupted; recheck actual state."
         case "PYTHON_UNAVAILABLE": return zh ? "Python 不可用。请在设置中选择已有的 Python 3.9 或更新版本。" : "Python is unavailable. Select an existing Python 3.9 or newer in Settings."
         case "BRIDGE_EXITED": return zh ? "读取进程异常退出。请刷新重试。" : "The bridge exited unexpectedly. Refresh to retry."
         case "PROTOCOL_ERROR", "PROTOCOL_MISMATCH": return zh ? "通信协议不匹配或响应损坏。" : "The protocol is incompatible or the response is invalid."
