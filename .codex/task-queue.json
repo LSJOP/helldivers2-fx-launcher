@@ -94,5 +94,20 @@
       "baseline": "Fetch latest origin/main before worktree creation; do not use a stale fixed hash",
       "requirements": "Read original UX v2.1.0 instructions when the future task starts; not implemented or rewritten by this merge"
     }
+  ],
+  "recovery_runs": [
+    {
+      "triggered_at": "2026-11-03T05:37:06.221362+08:00",
+      "task": "HD2_PROJECT_LOCALIZATION_AND_DOCUMENTATION_POLICY",
+      "previous_status": "PAUSED_QUOTA",
+      "previous_status_evidence": "Prior thread 01a198e0-76dc-7700-9850-85858b8cf179 ended with explicit usage-limit error; 18 tracked modifications uncommitted.",
+      "status": "RUNNING",
+      "branch": "feature/native-localization-recovery-20261103",
+      "baseline": "ed9d89357e51ca1d4958517f51ae37c221d5dce8",
+      "current_scheduled_task_started": false,
+      "stage": "Implementation and verification complete; awaiting commit/push",
+      "tests": "Debug build PASS; 151 existing checks PASS; 8 localization negative checks PASS; bundled 10 languages x 386 keys and 10 lproj directories PASS",
+      "next": "Commit/push recovered localization; record completion; start TASK-005 from latest main plus recovered changes."
+    }
   ]
 }

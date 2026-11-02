@@ -1,0 +1,14 @@
+"updates.section" = "Atualização de software";
+"updates.currentVersion" = "Versão atual do app";
+"updates.automaticChecks" = "Verificar atualizações automaticamente";
+"updates.checkNow" = "Verificar atualizações…";
+"updates.unconfigured" = "Serviço de atualização não configurado. Nenhuma verificação executada.";
+"updates.ready" = "Serviço de atualização pronto.";
+"updates.checking" = "Verificando atualizações…";
+"updates.available" = "Há uma atualização. Siga a janela do Sparkle.";
+"updates.finished" = "Verificação de atualização concluída. Isso não confirma instalação.";
+"updates.failed" = "Falha ao verificar atualizações. Veja detalhes no Sparkle.";
+"updates.scope" = "Atualiza somente este inicializador; não FX Runtime, SteamOS, arquivos do jogo ou EAC.";
+"updates.languageRestart" = "Idioma e Python são salvos para este app. Reinicie para os menus macOS/Sparkle. Aparência só na sessão; pasta mantida apenas ao optar por salvar credenciais verificadas. Textos Native usam recursos unificados de dez idiomas.";
+"updates.automaticOff" = "Verificação automática desativada. O Sparkle gerencia o consentimento inicial após configurar o serviço.";
+"updates.automaticOn" = "Verificação automática ativada (preferência do Sparkle).";

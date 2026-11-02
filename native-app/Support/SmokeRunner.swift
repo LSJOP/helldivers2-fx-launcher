@@ -84,8 +84,8 @@ import ApplicationServices
                         evidence["menu_items"] = NSApp.mainMenu?.items.map { item in
                             ["title": item.title, "children": item.submenu?.items.map(\.title) ?? []] as [String: Any]
                         }
-                        guard let menu = NSApp.mainMenu?.items.compactMap(\.submenu).first(where: { $0.items.contains(where: { $0.title == page.title(state.chinese) }) }),
-                              let menuIndex = menu.items.firstIndex(where: { $0.title == page.title(state.chinese) }) else { throw ErrorState("MENU_UNAVAILABLE") }
+                        guard let menu = NSApp.mainMenu?.items.compactMap(\.submenu).first(where: { $0.items.contains(where: { $0.title == page.title(state.languageCode) }) }),
+                              let menuIndex = menu.items.firstIndex(where: { $0.title == page.title(state.languageCode) }) else { throw ErrorState("MENU_UNAVAILABLE") }
                         menu.performActionForItem(at: menuIndex)
                         try await Task.sleep(nanoseconds: 1_000_000_000)
                         guard state.selection == page else { throw ErrorState("NAVIGATION_FAILED") }
@@ -93,7 +93,7 @@ import ApplicationServices
                         view.layoutSubtreeIfNeeded()
                         let name = "\(zh ? "zh" : "en")-\(appearance.rawValue)-\(page.rawValue).png"
                         let captured = try await capture(window, name: name, directory: directory, external: externalCapture)
-                        captures.append(["page": page.rawValue, "title": page.title(zh), "language": zh ? "zh" : "en",
+                        captures.append(["page": page.rawValue, "title": page.title(zh ? "zh-CN" : "en"), "language": zh ? "zh" : "en",
                                          "appearance": appearance.rawValue, "captured": captured, "file": name])
                     }
                 }
@@ -109,7 +109,7 @@ import ApplicationServices
                     try await Task.sleep(nanoseconds: 1_000_000_000)
                     let name = "\(zh ? "zh" : "en")-\(appearance.rawValue)-minimum-dashboard.png"
                     let captured = try await capture(window, name: name, directory: directory, external: externalCapture)
-                    captures.append(["page": "dashboard", "title": Page.dashboard.title(zh), "language": zh ? "zh" : "en",
+                    captures.append(["page": "dashboard", "title": Page.dashboard.title(zh ? "zh-CN" : "en"), "language": zh ? "zh" : "en",
                                      "appearance": appearance.rawValue, "captured": captured, "file": name])
                 }
             }
@@ -205,7 +205,7 @@ import ApplicationServices
             result["top_menus"] = titles
             result["app_menu"] = appItems.map(\.title)
             result["bundle_name"] = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
-            guard titles.contains(zh ? "编辑" : "Edit"), titles.contains(zh ? "窗口" : "Window"),
+            guard titles.contains(NativeStrings.text("ui.105", language: state.languageCode)), titles.contains(NativeStrings.text("ui.386", language: state.languageCode)),
                   !zh || !titles.contains("Help"),
                   Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String == "HELLDIVERS 2 FX Launcher",
                   let check = appItems.first(where: { $0.title == UpdateString.checkNow.text(state.languageCode) }),
@@ -330,7 +330,7 @@ import ApplicationServices
                 state.chinese = zh
                 try await Task.sleep(nanoseconds: 500_000_000)
                 NSApp.mainMenu?.update()
-                let name = state.t("导航", "Navigate")
+                let name = state.t("ui.193")
                 guard let menu = NSApp.mainMenu?.items.first(where: { $0.title == name })?.submenu else {
                     throw ErrorState("MENU_UNAVAILABLE")
                 }
@@ -339,7 +339,7 @@ import ApplicationServices
                 menu.delegate?.menuWillOpen?(menu)
                 menu.update()
                 let titles = menu.items.filter { !$0.isSeparatorItem && !$0.title.isEmpty }.map(\.title)
-                let expected = Page.allCases.map { $0.title(zh) } + [state.t("刷新", "Refresh")]
+                let expected = Page.allCases.map { $0.title(zh) } + [state.t("ui.262")]
                 result[zh ? "chinese_menu" : "english_menu"] = titles
                 result[zh ? "chinese_expected" : "english_expected"] = expected
                 guard titles == expected else { throw ErrorState("MENU_LABELS_MISMATCH") }
@@ -385,7 +385,7 @@ import ApplicationServices
                 NSApp.mainMenu?.update()
                 guard let menu = NSApp.mainMenu?.items.compactMap(\.submenu).first(where: { $0.title == "导航" }) else { throw ErrorState("MENU_UNAVAILABLE") }
                 menu.delegate?.menuNeedsUpdate?(menu); menu.delegate?.menuWillOpen?(menu); menu.update()
-                guard let index = menu.items.firstIndex(where: { $0.title == page.title(true) }) else { throw ErrorState("MENU_UNAVAILABLE") }
+                guard let index = menu.items.firstIndex(where: { $0.title == page.title("zh-CN") }) else { throw ErrorState("MENU_UNAVAILABLE") }
                 menu.performActionForItem(at: index)
                 try await Task.sleep(nanoseconds: 500_000_000)
                 guard state.selection == page else { throw ErrorState("NAVIGATION_FAILED") }

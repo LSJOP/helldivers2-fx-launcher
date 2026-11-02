@@ -12,11 +12,11 @@ struct SidebarView: View {
             VStack(alignment: .leading, spacing: 7) {
                 HStack(spacing: 7) {
                     Image(systemName: "globe.americas.fill").foregroundStyle(c.accent)
-                    Text(state.t("超级地球 / 指挥部", "SE / COMMAND")).font(TacticalTypography.log).tracking(1.4).foregroundStyle(c.muted)
+                    Text(state.t("ui.286")).font(TacticalTypography.log).tracking(1.4).foregroundStyle(c.muted)
                 }
                 Text("HELLDIVERS 2").font(.system(size: 23, weight: .black).width(.condensed)).foregroundStyle(c.text)
                 Text("FX LAUNCHER").font(TacticalTypography.module).tracking(2).foregroundStyle(c.accent)
-                Text(state.t("超级地球指挥终端", "SUPER EARTH TERMINAL")).font(TacticalTypography.caption).foregroundStyle(c.muted)
+                Text(state.t("ui.291")).font(TacticalTypography.caption).foregroundStyle(c.muted)
             }.padding(16)
             TacticalDivider()
             VStack(spacing: 5) {
@@ -40,10 +40,10 @@ struct SidebarView: View {
             }.scrollIndicators(.hidden)
             TacticalDivider()
             VStack(alignment: .leading, spacing: 10) {
-                TacticalEyebrow(text: state.t("系统状态", "SYSTEM STATUS"))
-                Text(state.t("按操作授权 / 默认只读", "ACTION CONSENT / READ-ONLY DEFAULT"))
+                TacticalEyebrow(text: state.t("ui.293"))
+                Text(state.t("ui.003"))
                     .font(TacticalTypography.log).foregroundStyle(c.accent)
-                Text(state.t("为了超级地球 · 为了民主", "FOR SUPER EARTH\nFOR DEMOCRACY"))
+                Text(state.t("ui.116"))
                     .font(TacticalTypography.caption).foregroundStyle(c.muted)
             }.padding(16)
         }

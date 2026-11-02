@@ -6,7 +6,7 @@ final class AppState: ObservableObject {
     @Published var languageCode = NativeLocalization.initialLanguage {
         didSet {
             UserDefaults.standard.set(languageCode, forKey: "NativeLanguage")
-            let systemLanguage = languageCode.hasPrefix("zh") ? "zh-Hans" : languageCode
+            let systemLanguage = languageCode == "zh-CN" ? "zh-Hans" : languageCode == "zh-TW" ? "zh-Hant" : languageCode
             UserDefaults.standard.set([systemLanguage, "en"], forKey: "AppleLanguages")
         }
     }
@@ -50,8 +50,8 @@ final class AppState: ObservableObject {
     let tasks = TaskManager()
     private let bridge = BridgeService()
 
-    func t(_ zh: String, _ en: String) -> String { NativeLocalization.text(zh, en, language: languageCode) }
-    func pageTitle(_ page: Page) -> String { t(page.title(true), page.title(false)) }
+    func t(_ key: String) -> String { NativeStrings.text(key, language: languageCode) }
+    func pageTitle(_ page: Page) -> String { page.title(languageCode) }
     func runOperation(_ method: String, params: [String: JSONValue] = [:]) {
         guard !tasks.busy else { return }
         let generation = UUID(); operationGeneration = generation
@@ -176,7 +176,7 @@ final class AppState: ObservableObject {
     func confirmMainMenu() { launchSession.confirmMainMenu(); recordLaunch() }
     func confirmSinglePlayer() { launchSession.confirmSinglePlayer(); recordLaunch() }
     func endSession() { tasks.cancel(); credentials.clear() }
-    func value(_ method: String, _ key: String) -> String { results[method]?[key]?.text ?? t("未知", "Unknown") }
+    func value(_ method: String, _ key: String) -> String { results[method]?[key]?.text ?? t("ui.366") }
     func rows(_ method: String, _ key: String) -> [[String: JSONValue]] { results[method]?[key]?.array.map(\.object) ?? [] }
     func refresh() {
         tasks.start { [weak self] in await self?.load() }

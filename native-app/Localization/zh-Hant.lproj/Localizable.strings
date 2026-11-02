@@ -1,0 +1,14 @@
+"updates.section" = "軟件更新";
+"updates.currentVersion" = "當前 App 版本";
+"updates.automaticChecks" = "自動檢查更新";
+"updates.checkNow" = "檢查更新…";
+"updates.unconfigured" = "更新服務尚未配置，未執行更新檢查。";
+"updates.ready" = "更新服務已就緒。";
+"updates.checking" = "正在檢查更新…";
+"updates.available" = "發現可用更新，請在 Sparkle 更新窗口中繼續。";
+"updates.finished" = "更新檢查週期已結束，不代表安裝成功。";
+"updates.failed" = "更新檢查失敗，詳情見 Sparkle 提示。";
+"updates.scope" = "僅更新啓動器本身，不更新 FX Runtime、SteamOS、遊戲文件或 EAC。";
+"updates.languageRestart" = "語言和 Python 選擇儲存在本 App。重新啟動後套用到 macOS 和 Sparkle 選單／對話框。外觀僅限本次工作階段；僅在主動儲存已驗證憑證後保留執行目錄。Native 文案統一維護十種語言。";
+"updates.automaticOff" = "自動檢查：關閉。服務配置完成後，由 Sparkle 管理首次運行授權。";
+"updates.automaticOn" = "自動檢查：開啓（Sparkle 偏好）。";

@@ -12,25 +12,25 @@ struct SettingsView: View {
     @StateObject private var presentation = SettingsPresentation()
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            TacticalPageHeader(title: state.t("设置", "Settings"))
-            TacticalPanel(number: "A", title: state.t("界面设置", "Interface"), symbol: "slider.horizontal.3") {
-                Picker(state.t("语言", "Language"), selection: $state.languageCode) {
+            TacticalPageHeader(title: state.t("ui.308"))
+            TacticalPanel(number: "A", title: state.t("ui.166"), symbol: "slider.horizontal.3") {
+                Picker(state.t("ui.170"), selection: $state.languageCode) {
                     ForEach(NativeLocalization.languages, id: \.0) { code, title in Text(title).tag(code) }
                 }.accessibilityIdentifier("settings.language")
-                Picker(state.t("外观", "Appearance"), selection: $state.appearance) {
-                    ForEach(Appearance.allCases, id: \.self) { item in Text(item.title(state.chinese)).tag(item) }
+                Picker(state.t("ui.020"), selection: $state.appearance) {
+                    ForEach(Appearance.allCases, id: \.self) { item in Text(item.title(state.languageCode)).tag(item) }
                 }.accessibilityIdentifier("settings.appearance")
                 Text(UpdateString.languageRestart.text(state.languageCode))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
             }
-            TacticalPanel(number: "B", title: state.t("运行环境", "Runtime environment"), symbol: "cpu") {
-                TacticalInfoRow(title: state.t("Python 解释器", "Python interpreter"), value: state.pythonURL.lastPathComponent)
-                TacticalInfoRow(title: state.t("Bridge 状态", "Bridge status"), value: state.error != nil ? state.t("读取失败", "Read failed") : state.hasLoaded ? state.t("已读取 · 只读快照", "Read completed · Read-only snapshot") : state.t("尚未读取", "Not yet inspected"))
-                TacticalButton(title: state.t("选择已有 Python…", "Choose existing Python…"), symbol: "folder") { presentation.choosingPython = true }
-                Text(state.t("需要 Python 3.9 或更新版本；选择后按 ⌘R 读取全部只读快照。", "Requires Python 3.9 or newer. Press ⌘R after selecting to reload all read-only snapshots."))
+            TacticalPanel(number: "B", title: state.t("ui.284"), symbol: "cpu") {
+                TacticalInfoRow(title: state.t("ui.239"), value: state.pythonURL.lastPathComponent)
+                TacticalInfoRow(title: state.t("ui.035"), value: state.error != nil ? state.t("ui.242") : state.hasLoaded ? state.t("ui.241") : state.t("ui.217"))
+                TacticalButton(title: state.t("ui.061"), symbol: "folder") { presentation.choosingPython = true }
+                Text(state.t("ui.270"))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
                 if presentation.invalidPython {
-                    TacticalWarningBanner(text: state.t("请选择可执行的 python3 或 python3.x 文件。", "Select an executable python3 or python3.x file."), isError: true)
+                    TacticalWarningBanner(text: state.t("ui.300"), isError: true)
                 }
             }
             CredentialManagementView(state: state, credentials: state.credentials, tasks: state.tasks)
@@ -58,32 +58,32 @@ struct LegacyOperationsView: View {
     }
     private var title: String {
         switch scope {
-        case "environment": return state.t("网络与连接工具", "Network and connection tools")
-        case "fx": return state.t("FX 诊断工具", "FX diagnostics")
-        case "logs": return state.t("诊断报告", "Diagnostic reports")
-        default: return state.t("高级配置", "Advanced configuration")
+        case "environment": return state.t("ui.194")
+        case "fx": return state.t("ui.119")
+        case "logs": return state.t("ui.096")
+        default: return state.t("ui.008")
         }
     }
     var body: some View {
         TacticalPanel(number: "+", title: title, symbol: "slider.horizontal.3") {
             if scope == "settings" {
-                TacticalInfoRow(title: state.t("操作权限", "Operations"), value: state.t("默认只读 · 逐操作确认", "Read-only default · Per-action consent"))
-                TacticalInfoRow(title: state.t("配置写入", "Configuration writes"), value: state.t("需预览与确认", "Preview and confirmation required"))
+                TacticalInfoRow(title: state.t("ui.226"), value: state.t("ui.249"))
+                TacticalInfoRow(title: state.t("ui.073"), value: state.t("ui.233"))
             }
             if state.rows("get_legacy_catalog", "operations").isEmpty {
-                Text(state.t("请刷新以读取后端能力。", "Refresh to read backend capabilities."))
+                Text(state.t("ui.265"))
             }
-            Text(state.t("锁标记表示执行前需要确认；打开面板不会执行操作。只读功能无需变更授权。", "A lock marks actions requiring confirmation before execution. Opening a panel runs nothing. Read-only tools need no change approval."))
+            Text(state.t("ui.001"))
                 .font(TacticalTypography.caption).foregroundStyle(.secondary)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 10)], alignment: .leading, spacing: 10) {
                 ForEach(state.rows("get_legacy_catalog", "operations").filter { $0["scope"]?.text == scope && !(["check_updates","test_guest_sudo"] + GUIAction.allCases.map(\.rawValue)).contains($0["method"]?.text ?? "") }, id: \.operationID) { row in
                     let method = row["method"]?.text ?? ""
                     let requiresConsent = row["confirmation"]?.boolean == true
                     TacticalButton(title: operationTitle(method, state), symbol: requiresConsent ? "lock" : "doc.text.magnifyingglass",
-                                   disabledReason: tasks.busy ? state.t("已有操作执行中，请等待完成或在操作面板取消。", "Another operation is running. Wait or cancel it in the operation panel.") : nil) {
+                                   disabledReason: tasks.busy ? state.t("ui.016") : nil) {
                         state.operationSelection = NativeOperation(method: method)
                     }
-                    .help(tasks.busy ? state.t("已有操作执行中，请等待完成或在操作面板取消。", "Another operation is running. Wait or cancel it in the operation panel.") : requiresConsent ? state.t("打开操作面板：执行前需确认具体影响范围。", "Open the operation panel; review the exact scope before confirming execution.") : state.t("打开只读检查面板；不会自动执行。", "Open the read-only inspection panel. It does not run automatically."))
+                    .help(tasks.busy ? state.t("ui.016") : requiresConsent ? state.t("ui.222") : state.t("ui.223"))
                 }
             }
         }
@@ -95,37 +95,36 @@ private extension Dictionary where Key == String, Value == JSONValue {
 }
 
 @MainActor private func operationTitle(_ method: String, _ state: AppState) -> String {
-    let titles: [String: (String, String)] = [
-        "read_configuration": ("读取启动配置", "Read launcher configuration"),
-        "save_configuration": ("预览并保存配置", "Preview and save configuration"),
-        "inspect_legacy_runtime": ("详细运行环境检查", "Inspect legacy runtime"),
-        "inspect_network": ("查看本机网络", "Inspect host network"),
-        "test_network": ("运行网络测试", "Run network test"),
-        "test_ssh": ("测试 SSH 连接", "Test SSH connection"),
-        "test_guest_sudo": ("验证 Guest sudo 密码", "Verify Guest sudo password"),
-        "connect_fx": ("连接 FX", "Connect FX"),
-        "inspect_guest_environment": ("检测环境", "Inspect environment"),
-        "check_fx_state": ("检查 FX 状态", "Check FX status"),
-        "start_fx": ("启动 FX", "Start FX"),
-        "start_steam": ("启动 Steam", "Start Steam"),
-        "inspect_guest": ("读取 Guest / Steam", "Inspect Guest / Steam"),
-        "launch_game": ("启动 HELLDIVERS 2", "Launch HELLDIVERS 2"),
-        "preflight_launch": ("启动前只读检查", "Read-only launch preflight"),
-        "observe_launch": ("只读复查游戏进程", "Recheck game process"),
-        "apply_performance": ("应用原性能配置", "Apply legacy performance profile"),
-        "read_performance": ("查看性能配置", "Read performance configuration"),
-        "apply_network_profile": ("应用有线网络方案", "Apply wired network profile"),
-        "restore_network_profile": ("恢复网络方案", "Restore network profile"),
-        "toggle_network_check": ("切换启动前网络检查", "Toggle prelaunch network check"),
-        "save_network_snapshot": ("保存网络快照", "Save network snapshot"),
-        "record_match": ("记录匹配结果", "Record match outcome"),
-        "read_network_history": ("查看网络历史", "Read network history"),
-        "export_network_report": ("导出网络报告", "Export network report"),
-        "export_environment_report": ("导出环境报告", "Export environment report"),
-        "check_updates": ("检查官方更新", "Check official updates"),
-        "get_legacy_catalog": ("帮助与功能清单", "Help and capability catalog")]
-    let value = titles[method] ?? (method, method)
-    return state.t(value.0, value.1)
+    let titles: [String: String] = [
+        "read_configuration": "ui.244",
+        "save_configuration": "ui.234",
+        "inspect_legacy_runtime": "ui.161",
+        "inspect_network": "ui.160",
+        "test_network": "ui.278",
+        "test_ssh": "ui.329",
+        "test_guest_sudo": "ui.378",
+        "connect_fx": "ui.076",
+        "inspect_guest_environment": "ui.159",
+        "check_fx_state": "ui.048",
+        "start_fx": "ui.316",
+        "start_steam": "ui.317",
+        "inspect_guest": "ui.158",
+        "launch_game": "ui.176",
+        "preflight_launch": "ui.253",
+        "observe_launch": "ui.258",
+        "apply_performance": "ui.022",
+        "read_performance": "ui.246",
+        "apply_network_profile": "ui.024",
+        "restore_network_profile": "ui.274",
+        "toggle_network_check": "ui.361",
+        "save_network_snapshot": "ui.295",
+        "record_match": "ui.261",
+        "read_network_history": "ui.245",
+        "export_network_report": "ui.114",
+        "export_environment_report": "ui.113",
+        "check_updates": "ui.052",
+        "get_legacy_catalog": "ui.150"]
+    return titles[method].map { state.t($0) } ?? method
 }
 
 struct LegacyOperationSheet: View {
@@ -153,19 +152,19 @@ struct LegacyOperationSheet: View {
         state.rows("get_legacy_catalog", "operations").first { $0["method"]?.text == operation }?["confirmation"]?.boolean ?? true
     }
     private var disabledReason: String? {
-        if tasks.busy { return state.t("当前操作执行中", "An operation is running") }
-        if needsRoot && state.runtimeRoot.isEmpty { return state.t("请先选择启动器目录", "Choose a launcher directory first") }
-        if needsConsent && !confirmed { return state.t("请先核对影响范围并勾选授权", "Review the scope and grant authorization first") }
+        if tasks.busy { return state.t("ui.014") }
+        if needsRoot && state.runtimeRoot.isEmpty { return state.t("ui.059") }
+        if needsConsent && !confirmed { return state.t("ui.276") }
         return nil
     }
     private var effect: String {
         switch GUIAction(rawValue: operation) {
-        case .connect: return state.t("检查所选 FX 并连接、验证 Guest 身份。不会启动 FX 或修改 Guest 配置。", "Inspect the selected FX and connect/verify Guest identity. Does not start FX or change Guest configuration.")
-        case .inspect: return state.t("只读检查 Guest 系统、Steam、游戏和兼容工具文件；不会自动修复。", "Read-only inspection of Guest, Steam, game and compatibility-tool files. No automatic repair.")
-        case .fxState: return state.t("只读检查所选 FX 的版本与宿主进程；不会连接 Guest。", "Read-only check of the selected FX version and host processes; no Guest connection.")
-        case .startFX: return state.t("使用原脚本验证过的入口与参数启动专用 FX。宿主启动后，Guest 就绪状态需点击连接检查。取消不会强制关闭已启动的 FX。", "Start the dedicated FX using the original verified entry and arguments. Connect afterwards to check Guest readiness. Cancellation does not force-quit FX.")
-        case .steam: return state.t("连接目标 Guest，通过原 Core 受控启动 Steam；已运行则复用，不请求启动游戏。", "Connect to the target Guest and use the original controlled Steam start; reuse a running service without requesting game launch.")
-        default: return state.t("只读是默认模式。仅执行主动选择的操作；启动或配置可能连接 Guest、启动应用或修改配置。具体变更需要单独预览与确认，取消不会强制关闭已启动的游戏。", "Read-only is the default. Only the selected action runs. Starts/configuration may connect Guest, open apps or change configuration. Exact changes require separate review and consent; cancellation does not force-quit a running game.")
+        case .connect: return state.t("ui.162")
+        case .inspect: return state.t("ui.251")
+        case .fxState: return state.t("ui.248")
+        case .startFX: return state.t("ui.318")
+        case .steam: return state.t("ui.078")
+        default: return state.t("ui.252")
         }
     }
     private var jsonResult: String { pretty(.object(state.operationResult)) }
@@ -175,59 +174,59 @@ struct LegacyOperationSheet: View {
                 Text(operationTitle(operation, state)).font(TacticalTypography.page)
                 TacticalWarningBanner(text: effect)
                 if operation == "apply_network_profile" {
-                    TacticalWarningBanner(text: state.t("该原脚本方案会在确认有线网络与代理可用后关闭 Wi-Fi，并保存恢复记录。请先核对下方具体变更。", "The legacy profile disables Wi-Fi after checking wired connectivity and the proxy, and records recovery state. Review the exact change below."))
+                    TacticalWarningBanner(text: state.t("ui.342"))
                 }
                 if needsRoot {
-                    TextField(state.t("已有旧启动器完整目录", "Existing full legacy launcher directory"), text: $state.runtimeRoot)
+                    TextField(state.t("ui.110"), text: $state.runtimeRoot)
                         .disabled(tasks.busy)
-                    TacticalButton(title: state.t("选择目录…", "Choose directory…"), symbol: "folder") { choosingRoot = true }.disabled(tasks.busy)
-                    Text(state.t("不会下载或移动 FX。目录内 JS 和 wrapper 必须与归档一致，原 Core 的二进制哈希与目标检查仍然生效。", "No FX download or relocation. JS and wrapper must match the archive; original Core binary-hash and target checks remain active."))
+                    TacticalButton(title: state.t("ui.060"), symbol: "folder") { choosingRoot = true }.disabled(tasks.busy)
+                    Text(state.t("ui.195"))
                         .font(TacticalTypography.caption)
                 }
                 if operation == "launch_game" {
-                    TacticalButton(title: state.t("先做只读预检", "Run read-only preflight"), symbol: "checklist") { state.runOperation("preflight_launch") }
+                    TacticalButton(title: state.t("ui.279"), symbol: "checklist") { state.runOperation("preflight_launch") }
                         .disabled(tasks.busy || state.runtimeRoot.isEmpty)
                 }
                 if ["connect_fx","inspect_guest_environment","start_steam","test_ssh","test_guest_sudo","inspect_guest","launch_game","apply_performance","save_network_snapshot"].contains(operation) {
                     CredentialInputFields(state: state, credentials: credentials, tasks: tasks, operation: operation)
                 }
                 if operation == "save_configuration" {
-                    Text(state.operationResult["target"]?.text ?? state.t("先读取目标配置", "Read target configuration first")).textSelection(.enabled)
-                    TacticalButton(title: state.t("重新读取配置", "Reload configuration"), symbol: "arrow.clockwise") { state.runOperation("read_configuration") }
+                    Text(state.operationResult["target"]?.text ?? state.t("ui.247")).textSelection(.enabled)
+                    TacticalButton(title: state.t("ui.266"), symbol: "arrow.clockwise") { state.runOperation("read_configuration") }
                     TextEditor(text: $configuration).font(TacticalTypography.log).frame(minHeight: 220)
-                    Text(state.t("仅编辑已显示的非秘密字段。未知原字段保留；原内容发生变化将拒绝保存，并在原目录建立备份。", "Edit only the displayed non-secret fields. Existing unknown fields are preserved; concurrent changes reject saving. A backup is created in the original directory."))
+                    Text(state.t("ui.106"))
                         .font(TacticalTypography.caption)
                 }
                 if operation == "record_match" {
-                    Picker(state.t("实际观察到的结果", "Actually observed result"), selection: $matchResult) {
-                        Text(state.t("成功", "Success")).tag("success")
-                        Text(state.t("超时", "Timeout")).tag("timeout")
-                        Text(state.t("断线", "Disconnect")).tag("disconnect")
+                    Picker(state.t("ui.007"), selection: $matchResult) {
+                        Text(state.t("ui.326")).tag("success")
+                        Text(state.t("ui.360")).tag("timeout")
+                        Text(state.t("ui.099")).tag("disconnect")
                     }
-                    TextField(state.t("备注（自动脱敏）", "Note (redacted)"), text: $note)
+                    TextField(state.t("ui.218"), text: $note)
                 }
                 if operation == "check_updates" {
-                    Picker(state.t("通道", "Channel"), selection: $channel) {
-                        Text("Preview").tag("preview"); Text("Stable").tag("stable")
+                    Picker(state.t("ui.047"), selection: $channel) {
+                        Text(state.t("ui.232")).tag("preview"); Text(state.t("ui.314")).tag("stable")
                     }
                 }
                 if needsConsent {
-                    Toggle(state.t("我允许本次明确选择的操作，并知悉上方影响范围", "I authorize this selected action and understand the effects above"), isOn: $confirmed)
+                    Toggle(state.t("ui.153"), isOn: $confirmed)
                 }
                 if let error = state.operationError {
-                    TacticalWarningBanner(text: error.message(state.chinese), isError: true)
+                    TacticalWarningBanner(text: error.message(state.languageCode), isError: true)
                     if let change = error.details["change"] {
                         Text(pretty(change)).font(TacticalTypography.log).textSelection(.enabled)
-                        TacticalButton(title: state.t("确认这项具体变更并继续", "Approve this exact change and continue"), symbol: "checkmark.shield") {
+                        TacticalButton(title: state.t("ui.025"), symbol: "checkmark.shield") {
                             approved.append(change); run()
                         }.disabled(!confirmed || tasks.busy)
                     }
                 }
-                if inputError { TacticalWarningBanner(text: state.t("配置必须为有效 JSON 对象，且已读取当前修订。", "Configuration must be a valid JSON object with a loaded revision."), isError: true) }
+                if inputError { TacticalWarningBanner(text: state.t("ui.072"), isError: true) }
                 if let record = state.guiRecords[operation] {
-                    TacticalInfoRow(title: state.t("执行状态", "Execution status"), value: record.status == .running ? state.t("正在执行", "Running") : record.status == .succeeded ? state.t("已完成；结果见详情或对应页面", "Completed; see details or the related page") : record.status == .cancelled ? state.t("已取消", "Cancelled") : record.status == .timedOut ? state.t("已超时", "Timed out") : state.t("执行失败", "Failed"))
+                    TacticalInfoRow(title: state.t("ui.109"), value: record.status == .running ? state.t("ui.281") : record.status == .succeeded ? state.t("ui.071") : record.status == .cancelled ? state.t("ui.039") : record.status == .timedOut ? state.t("ui.359") : state.t("ui.125"))
                 }
-                DisclosureGroup(state.t("查看详情 · 高级日志", "Details · Advanced logs")) {
+                DisclosureGroup(state.t("ui.094")) {
                     if !state.operationResult.isEmpty { Text(jsonResult).font(TacticalTypography.log).textSelection(.enabled) }
                     if let error = state.operationError { Text(error.code + " · " + (error.details["summary"]?.text ?? "")).font(TacticalTypography.log).textSelection(.enabled) }
                     ForEach(Array(state.operationEvents.enumerated()), id: \.offset) { _, event in
@@ -243,10 +242,10 @@ struct LegacyOperationSheet: View {
                 TacticalDivider()
                 if let disabledReason { Text(disabledReason).font(TacticalTypography.caption).foregroundStyle(.secondary) }
                 HStack {
-                    TacticalButton(title: tasks.busy ? state.t("执行中…", "Running…") : state.t("执行所选操作", "Run selected action"), symbol: "play.fill", primary: true, loading: tasks.busy, disabledReason: disabledReason) { run() }
-                    if tasks.busy { Button(state.t("取消当前操作", "Cancel current operation")) { state.tasks.cancel() } }
+                    TacticalButton(title: tasks.busy ? state.t("ui.282") : state.t("ui.280"), symbol: "play.fill", primary: true, loading: tasks.busy, disabledReason: disabledReason) { run() }
+                    if tasks.busy { Button(state.t("ui.038")) { state.tasks.cancel() } }
                     Spacer(minLength: 8)
-                    Button(state.t("关闭", "Close")) { dismiss() }.disabled(tasks.busy)
+                    Button(state.t("ui.069")) { dismiss() }.disabled(tasks.busy)
                 }
             }.padding(16).background(.background)
         }
@@ -292,17 +291,17 @@ private struct CredentialInputFields: View {
     let operation: String
     @State private var expanded = false
     var body: some View {
-        DisclosureGroup(state.t("凭据（已有连接／免密码 sudo 可留空）", "Credentials (optional with an existing connection / passwordless sudo)"), isExpanded: $expanded) {
+        DisclosureGroup(state.t("ui.084"), isExpanded: $expanded) {
             VStack(alignment: .leading, spacing: 10) {
-                SecureField(state.t("本次 SSH 密码", "Session SSH password"), text: $credentials.password)
-                Toggle(state.t("记住 SSH 密码（认证成功后保存）", "Remember SSH password after successful authentication"), isOn: Binding(get: { credentials.rememberSSH }, set: { credentials.setRemember(.ssh, $0) }))
-                SecureField(state.t("本次密钥口令（仅保留在会话）", "Key passphrase (session only)"), text: $credentials.passphrase)
-                SecureField(state.t("本次 Guest sudo 密码", "Session Guest sudo password"), text: $credentials.sudoPassword)
-                Toggle(state.t("记住 Guest sudo 密码（认证成功后保存）", "Remember Guest sudo password after successful authentication"), isOn: Binding(get: { credentials.rememberSudo }, set: { credentials.setRemember(.sudo, $0) }))
-                Text(state.t("默认仅存本次会话。勾选后，仅经实际密码认证的对应凭据保存到本 App 专用钥匙串记录；两种密码互不替代。自动读取不弹出授权窗口，访问受限时请手动输入。密钥口令不持久化。", "Session only by default. When selected, each password is saved to this App’s Keychain records only after an actual password challenge succeeds. SSH and sudo remain separate. Automatic reads never request authorization UI; enter manually if access is restricted. Key passphrases are not saved."))
+                SecureField(state.t("ui.305"), text: $credentials.password)
+                Toggle(state.t("ui.268"), isOn: Binding(get: { credentials.rememberSSH }, set: { credentials.setRemember(.ssh, $0) }))
+                SecureField(state.t("ui.168"), text: $credentials.passphrase)
+                SecureField(state.t("ui.304"), text: $credentials.sudoPassword)
+                Toggle(state.t("ui.267"), isOn: Binding(get: { credentials.rememberSudo }, set: { credentials.setRemember(.sudo, $0) }))
+                Text(state.t("ui.307"))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
                 CredentialVaultNotice(state: state, credentials: credentials)
-                Button(state.t("清除本次会话凭据", "Clear session credentials")) { credentials.clear() }
+                Button(state.t("ui.067")) { credentials.clear() }
             }.padding(.top, 8).disabled(tasks.busy)
         }
         .onAppear { expanded = ["test_ssh","test_guest_sudo"].contains(operation) || needsInput }
@@ -321,9 +320,9 @@ private struct CredentialVaultNotice: View {
     }
     private func message(_ error: CredentialVaultError) -> String {
         switch error {
-        case .locked: return state.t("登录钥匙串已锁定，尚未解锁；自动读取已停止，请自行解锁或使用本次会话输入。", "The login Keychain is locked; it has not been unlocked. Automatic reads stopped. Unlock it yourself or use session input.")
-        case .permission: return state.t("钥匙串访问授权受限（或已停用自动读取），不等于钥匙串解锁失败。可手动输入，或主动点击下方授权读取；应用身份／签名变化可能需要系统确认。", "Keychain access requires authorization (or automatic reads are disabled); this is distinct from an unlock failure. Enter manually or explicitly authorize access below. App identity/signing changes can require system confirmation.")
-        default: return state.t("安全存储当前不可用；凭据仍仅存于会话内存，未降级为文件保存。", "Secure storage is unavailable. Credentials remain in session memory; no file-storage fallback was used.")
+        case .locked: return state.t("ui.343")
+        case .permission: return state.t("ui.169")
+        default: return state.t("ui.299")
         }
     }
 }
@@ -335,37 +334,37 @@ private struct CredentialManagementView: View {
     @State private var clearing: CredentialKind?
     @State private var clearAll = false
     var body: some View {
-        TacticalPanel(number: "K", title: state.t("凭据管理", "Credential management"), symbol: "key") {
-            Text(state.t("仅管理当前启动目录与配置对应的记录；更新所存凭据不修改 Guest 账户密码；验证后勾选才保存。保存目标目录便于下次复用，不保存密码到偏好设置。", "Manage records for the selected launcher directory and configuration. Updating stored credentials does not change the Guest account password. Saving requires verification and opt-in. The launcher directory is retained for reuse; passwords are never stored in preferences."))
+        TacticalPanel(number: "K", title: state.t("ui.083"), symbol: "key") {
+            Text(state.t("ui.189"))
                 .font(TacticalTypography.caption).foregroundStyle(.secondary)
             ForEach(CredentialKind.allCases, id: \.self) { kind in
                 VStack(alignment: .leading, spacing: 8) {
-                    TacticalInfoRow(title: kind == .ssh ? state.t("SSH 密码", "SSH password") : state.t("Guest sudo 密码", "Guest sudo password"), value: status(kind))
+                    TacticalInfoRow(title: kind == .ssh ? state.t("ui.288") : state.t("ui.148"), value: status(kind))
                     HStack {
-                        Button(state.t("更新密码", "Update password")) {
+                        Button(state.t("ui.371")) {
                             credentials.update(kind)
                             state.operationSelection = NativeOperation(method: kind == .ssh ? "test_ssh" : "test_guest_sudo")
                         }
-                        Button(state.t("清除密码", "Clear password")) { clearing = kind }
+                        Button(state.t("ui.066")) { clearing = kind }
                     }
                 }
             }
             CredentialVaultNotice(state: state, credentials: credentials)
-            Button(state.t("授权读取当前目标凭据…", "Authorize reading this target’s credentials…")) { Task { await state.prepareCredentials(interactive: true) } }
-            Button(state.t("清除所有已保存凭据…", "Clear all saved credentials…")) { clearAll = true }
+            Button(state.t("ui.028")) { Task { await state.prepareCredentials(interactive: true) } }
+            Button(state.t("ui.065")) { clearAll = true }
         }
         .disabled(tasks.busy)
         .task(id: state.runtimeRoot) { if !tasks.busy { await state.prepareCredentials() } }
-        .confirmationDialog(state.t("清除当前目标的这项密码？同时清除本次会话副本。", "Clear this password for the current target and its session copy?"), isPresented: Binding(get: { clearing != nil }, set: { if !$0 { clearing = nil } })) {
-            if let kind = clearing { Button(state.t("确认清除", "Confirm clear"), role: .destructive) { Task { await credentials.remove(kind) }; clearing = nil } }
+        .confirmationDialog(state.t("ui.068"), isPresented: Binding(get: { clearing != nil }, set: { if !$0 { clearing = nil } })) {
+            if let kind = clearing { Button(state.t("ui.074"), role: .destructive) { Task { await credentials.remove(kind) }; clearing = nil } }
         }
-        .confirmationDialog(state.t("清除本 App 所有已保存凭据？不会删除旧脚本或其他应用的钥匙串记录。", "Clear all credentials saved by this App? Legacy-script and other apps’ Keychain records are untouched."), isPresented: $clearAll) {
-            Button(state.t("清除所有已保存凭据", "Clear all saved credentials"), role: .destructive) { Task { await credentials.removeAll() } }
+        .confirmationDialog(state.t("ui.063"), isPresented: $clearAll) {
+            Button(state.t("ui.064"), role: .destructive) { Task { await credentials.removeAll() } }
         }
     }
     private func status(_ kind: CredentialKind) -> String {
-        if credentials.vaultError != nil { return state.t("无法确认 · 自动复用受限", "Cannot confirm · Automatic reuse restricted") }
-        if credentials.rejected.contains(kind) { return state.t("认证失效／已停止复用", "Authentication rejected / reuse stopped") }
-        return credentials.saved.contains(kind) ? state.t("已保存 · 当前目标", "Saved · Current target") : state.t("未保存", "Not saved")
+        if credentials.vaultError != nil { return state.t("ui.042") }
+        if credentials.rejected.contains(kind) { return state.t("ui.027") }
+        return credentials.saved.contains(kind) ? state.t("ui.296") : state.t("ui.215")
     }
 }

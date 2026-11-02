@@ -83,14 +83,14 @@ struct NavigationCommands: Commands {
     @ObservedObject var state: AppState
     var body: some Commands {
         CommandGroup(replacing: .newItem) {}
-        CommandMenu(state.t("导航", "Navigate")) {
+        CommandMenu(state.t("ui.193")) {
             ForEach(Array(Page.allCases.enumerated()), id: \.element.id) { index, page in
                 Button(state.pageTitle(page)) { state.selection = page }
                     .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: .command)
             }
             .id(state.languageCode)
             Divider()
-            Button(state.t("刷新", "Refresh")) { state.refresh() }.keyboardShortcut("r", modifiers: .command)
+            Button(state.t("ui.262")) { state.refresh() }.keyboardShortcut("r", modifiers: .command)
                 .id(state.languageCode)
         }
     }

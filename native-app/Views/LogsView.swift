@@ -38,8 +38,8 @@ struct LogsView: View {
     var body: some View {
         let c = TacticalColors(scheme: scheme)
         VStack(alignment: .leading, spacing: 18) {
-            TacticalPageHeader(title: state.t("运行日志", "Session logs"), refreshState: state)
-            TacticalWarningBanner(text: state.t("仅本次会话 App 与 Bridge 日志。原始日志没有等级字段时显示“未标级”，不会推断成功等级。", "App and bridge logs from this session only. Entries without an explicit severity remain unclassified; success is not inferred."))
+            TacticalPageHeader(title: state.t("ui.306"), refreshState: state)
+            TacticalWarningBanner(text: state.t("ui.017"))
             LegacyOperationsView(state: state, scope: "logs")
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) { filters; searchField; logActions }
@@ -52,14 +52,14 @@ struct LogsView: View {
                             Text(row.time).foregroundStyle(c.muted)
                             Text(row.source).foregroundStyle(c.accent)
                             Spacer()
-                            TacticalStatusBadge(text: row.level == "UNCLASSIFIED" ? state.t("未标级", "Unclassified") : row.level, tone: row.tone)
+                            TacticalStatusBadge(text: row.level == "UNCLASSIFIED" ? state.t("ui.364") : row.level, tone: row.tone)
                         }
                         Text(row.message).foregroundStyle(c.text).textSelection(.enabled)
                     }.font(TacticalTypography.log).padding(12)
                     TacticalDivider()
                 }
                 if filtered.isEmpty {
-                    Text(state.t("没有匹配的会话日志", "No matching session entries"))
+                    Text(state.t("ui.200"))
                         .foregroundStyle(c.muted).padding(20)
                 }
             }.frame(maxWidth: .infinity, minHeight: 320, alignment: .topLeading)
@@ -74,18 +74,18 @@ struct LogsView: View {
         }
     }
     private var filters: some View {
-        Picker(state.t("等级", "Level"), selection: $level) {
-            Text(state.t("全部", "All")).tag("ALL")
-            Text(state.t("未标级", "Unclassified")).tag("UNCLASSIFIED")
+        Picker(state.t("ui.182"), selection: $level) {
+            Text(state.t("ui.010")).tag("ALL")
+            Text(state.t("ui.364")).tag("UNCLASSIFIED")
             ForEach(["INFO", "SUCCESS", "WARNING", "ERROR", "DEBUG"], id: \.self) { Text($0).tag($0) }
         }.frame(maxWidth: 210)
     }
     private var searchField: some View {
-        TextField(state.t("搜索日志…", "Search logs…"), text: $search).textFieldStyle(.roundedBorder)
-            .accessibilityLabel(state.t("搜索日志", "Search logs"))
+        TextField(state.t("ui.298"), text: $search).textFieldStyle(.roundedBorder)
+            .accessibilityLabel(state.t("ui.297"))
     }
     private var copyButton: some View {
-        TacticalButton(title: state.t("复制", "Copy"), symbol: "doc.on.doc", disabledReason: filtered.isEmpty ? state.t("没有可复制的日志", "No entries to copy") : nil) {
+        TacticalButton(title: state.t("ui.081"), symbol: "doc.on.doc", disabledReason: filtered.isEmpty ? state.t("ui.197") : nil) {
             let text = filtered.map { "\($0.time) [\($0.source)] [\($0.level)] \($0.message)" }.joined(separator: "\n")
             NSPasteboard.general.clearContents(); NSPasteboard.general.setString(state.credentials.redactor.text(text), forType: .string)
         }
