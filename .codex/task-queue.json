@@ -101,13 +101,15 @@
       "task": "HD2_PROJECT_LOCALIZATION_AND_DOCUMENTATION_POLICY",
       "previous_status": "PAUSED_QUOTA",
       "previous_status_evidence": "Prior thread 01a198e0-76dc-7700-9850-85858b8cf179 ended with explicit usage-limit error; 18 tracked modifications uncommitted.",
-      "status": "RUNNING",
+      "status": "COMPLETED",
       "branch": "feature/native-localization-recovery-20261103",
       "baseline": "ed9d89357e51ca1d4958517f51ae37c221d5dce8",
       "current_scheduled_task_started": false,
-      "stage": "Implementation and verification complete; awaiting commit/push",
+      "stage": "Recovered localization implementation verified and published",
       "tests": "Debug build PASS; 151 existing checks PASS; 8 localization negative checks PASS; bundled 10 languages x 386 keys and 10 lproj directories PASS",
-      "next": "Commit/push recovered localization; record completion; start TASK-005 from latest main plus recovered changes."
+      "next": "Start TASK-005 from latest origin/main and integrate this recovered branch in an isolated UX worktree.",
+      "commit": "c346f9a527c4bc86b5694a8f918d7df3575a7a34",
+      "push": "Verified origin/feature/native-localization-recovery-20261103 matches implementation commit"
     }
   ]
 }
