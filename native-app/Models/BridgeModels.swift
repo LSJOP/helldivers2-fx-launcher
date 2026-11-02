@@ -71,6 +71,7 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
         case "SSH_UNAVAILABLE": return zh ? "找不到可用 SSH 客户端。" : "An SSH client is unavailable."
         case "FX_PROFILE_MISMATCH": return zh ? "FX 当前配置与原验证组合不符；未自动修改。" : "The FX profile differs from the verified combination; nothing was changed automatically."
         case "FX_START_FAILED": return zh ? "FX 启动或虚拟机等待阶段失败。" : "FX startup or VM readiness failed."
+        case "FX_IDENTITY_UNVERIFIED": return zh ? "FX 进程拓扑不明确；未获准写入 Guest。" : "The FX process topology is ambiguous; Guest writes are blocked."
         case "SSH_CONNECTION_FAILED", "AUTH_REQUIRED": return zh ? "Guest / SSH 连接需要处理；可在启动面板输入本次认证信息。" : "Guest / SSH needs attention; enter session credentials in the launch panel if required."
         case "COMPATIBILITY_CHECK_FAILED": return zh ? "兼容组件或目标身份检查未通过；现有环境未被重置。" : "Compatibility or target identity checks failed; the existing environment was not reset."
         case "STEAM_START_FAILED": return zh ? "Steam 启动或登录等待失败。" : "Steam startup or login readiness failed."

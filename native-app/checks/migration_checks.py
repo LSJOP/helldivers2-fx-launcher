@@ -171,5 +171,17 @@ class MigrationChecks(unittest.TestCase):
         with patch.object(self.ops,'runtime',return_value=helper),patch.object(helper,'main',side_effect=AssertionError('must not launch')):
             value=self.ops.run('observe_launch',{'confirmed':True})
         self.assertTrue(value['game_process_detected']);self.assertEqual(value['main_menu'],'unverified')
+    def test_supervisor_vm_topology_retains_raw_child_identity(self):
+        app='/fixture/FX.app/Contents/MacOS/steamac-vm'
+        rows={10:(1,'start',app),11:(10,'start',app),12:(10,'start','/bin/sh'),13:(12,'start','/fixture/gvproxy')}
+        view,proof=m.fx_process_view(rows,app)
+        self.assertEqual([pid for pid,row in view.items() if row[2]==app],[10])
+        self.assertEqual(view[12],rows[12]);self.assertEqual(proof,[(11,rows[11])]);self.assertEqual(rows[11][2],app)
+        replaced=dict(rows);replaced[11]=(10,'new-start',app)
+        self.assertNotEqual(m.fx_process_view(replaced,app)[1],proof)
+    def test_ambiguous_or_multiple_vm_topology_fails_closed(self):
+        app='/fixture/fx'
+        for rows in [{},{1:(0,'s',app),2:(0,'s',app)}, {1:(2,'s',app),2:(1,'s',app)}, {1:(0,'s',app),2:(1,'s',app),3:(1,'s',app)}]:
+            with self.assertRaises(m.OperationError):m.fx_process_view(rows,app)
 
 if __name__=='__main__':unittest.main(verbosity=2)

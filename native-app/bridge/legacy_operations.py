@@ -47,6 +47,24 @@ OPERATIONS = {
     'get_legacy_catalog': ('settings', False, False),
 }
 
+def fx_process_view(rows, executable):
+    """Normalize only the observed one-supervisor/one-direct-VM-child topology.
+
+    The original guard still verifies the supervisor's complete descendant tree,
+    listeners, SSH peer, CDP forward and binary hashes. Retain raw child identity
+    in the returned proof so child replacement cannot evade Session.verify().
+    """
+    matches=[pid for pid,row in rows.items() if row[2]==executable]
+    if len(matches)==1:return rows,[]
+    if len(matches)!=2:raise OperationError('FX_IDENTITY_UNVERIFIED')
+    edges=[(rows[pid][0],pid) for pid in matches if rows[pid][0] in matches]
+    if len(edges)!=1:raise OperationError('FX_IDENTITY_UNVERIFIED')
+    parent,child=edges[0]
+    if rows[parent][0]==child:raise OperationError('FX_IDENTITY_UNVERIFIED')
+    view=dict(rows)
+    view[child]=(rows[child][0],rows[child][1],executable+' [verified VM child]')
+    return view,[(child,rows[child])]
+
 class Operations:
     def __init__(self, root, emit=None, settings_file=None, data_dir=None):
         self.root = Path(root)
@@ -156,6 +174,21 @@ class Operations:
         helper.GVPROXY_WRAPPER=root/'goal-fx-multiplayer-20261026/gvproxy-eim-wrapper'
         helper.NETWORK_DIR=helper.GVPROXY.parent
         helper.dependencies.ROOT=root
+        original_identity=helper.safety.host_identity
+        def native_identity(target):
+            original_table=helper.safety.process_table
+            children=[]
+            def table(text):
+                view,proof=fx_process_view(original_table(text),str(Path(target.APP)/'Contents/MacOS/steamac-vm'))
+                children.extend(proof)
+                return view
+            helper.safety.process_table=table
+            try:
+                result=original_identity(target)
+                result['native_fx_children']=children
+                return result
+            finally:helper.safety.process_table=original_table
+        helper.safety.host_identity=native_identity
         original_store=helper.diagnostics.Store
         native_directory=self.data/'diagnostics'
         class NativeStore(original_store):
@@ -325,6 +358,7 @@ class Operations:
             helper=self.runtime(params)
             self.read_config()  # Reject malformed settings instead of legacy fallback to defaults.
             if method=='observe_launch':
+                progress('WaitingForGuest')
                 helper.safety.Session(helper).bind()  # Read-only target identity, not merely a reachable port.
                 current=helper.state()  # BatchMode only; never starts a new master or writes Guest configuration.
                 detected=bool(current.get('game_pids'))
