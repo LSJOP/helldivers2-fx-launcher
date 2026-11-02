@@ -8,6 +8,11 @@ import ApplicationServices
     private static var started = false
     static func runIfRequested(state: AppState) async {
         let args = ProcessInfo.processInfo.arguments
+        if !started, let i = args.firstIndex(of: "--readme-screenshots"), args.count > i + 2 {
+            started = true
+            await readmeScreenshots(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true), language: args[i + 2])
+            return
+        }
         if !started, let i = args.firstIndex(of: "--task-queue-smoke"), args.count > i + 1 {
             started = true
             await queueReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
@@ -227,6 +232,77 @@ import ApplicationServices
         } catch { result["result"] = "FAIL"; result["error"] = (error as? ErrorState)?.code ?? "UPDATE_REVIEW_FAILED" }
         if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted,.sortedKeys]) {
             try? data.write(to: directory.appendingPathComponent("updates-menu.json"), options: .atomic)
+        }
+        NSApp.terminate(nil)
+    }
+    /// Capture only real UI and read-only metadata. Language/privacy are process arguments,
+    /// so no saved language, target directory or credential preference is changed.
+    private static func readmeScreenshots(_ state: AppState, directory: URL, language: String) async {
+        var result: [String: Any] = [:]
+        do {
+            guard ["zh-CN", "en"].contains(language),
+                  state.runtimeRoot.isEmpty, UserDefaults.standard.bool(forKey: "NativeCredentialAutoLoadDisabled") else {
+                throw ErrorState("SCREENSHOT_ARGUMENT_GUARD")
+            }
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try await waitForTask(state)
+            guard state.hasLoaded, state.error == nil else { throw ErrorState("SNAPSHOT_FAILED") }
+            if state.languageCode != language {
+                // Cold English startup can restore no window in this macOS session.
+                // Change the real language state only inside a separately identified capture copy.
+                guard Bundle.main.bundleIdentifier?.hasPrefix("com.lsjop.helldivers2fx.native.readme.") == true else { throw ErrorState("SCREENSHOT_LANGUAGE_ISOLATION_REQUIRED") }
+                state.languageCode = language
+            }
+            state.appearance = .dark
+            state.runOperation("read_performance"); try await waitForTask(state)
+            guard state.operationError == nil else { throw ErrorState("PERFORMANCE_READ_FAILED") }
+            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
+            var files: [String] = []
+            let pages: [(Page, String)] = [(.dashboard,"dashboard"),(.environment,"environment"),(.fx,"fx-manager"),(.performance,"performance"),(.logs,"logs"),(.settings,"settings")]
+            for (page, name) in pages {
+                state.selection = page
+                window.setContentSize(NSSize(width: 1180, height: page == .fx ? 700 : 850))
+                try await Task.sleep(nanoseconds: 700_000_000)
+                window.contentView?.layoutSubtreeIfNeeded()
+                if language == "en", let root = window.contentView {
+                    func splitViews(_ view: NSView) -> [NSSplitView] {
+                        (view as? NSSplitView).map { [$0] } ?? view.subviews.flatMap(splitViews)
+                    }
+                    if let split = splitViews(root).first(where: { $0.isVertical && $0.arrangedSubviews.count > 1 }) {
+                        split.setPosition(250, ofDividerAt: 0)
+                        split.layoutSubtreeIfNeeded()
+                        try await Task.sleep(nanoseconds: 200_000_000)
+                    }
+                }
+                guard try await capture(window, name: name + ".png", directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
+                files.append(name + ".png")
+                if page == .performance || page == .settings {
+                    func scrollViews(_ view: NSView) -> [NSScrollView] {
+                        (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews)
+                    }
+                    if let root = window.contentView,
+                       let scroll = scrollViews(root).filter({ $0.bounds.width > 600 }).max(by: { $0.bounds.width < $1.bounds.width }),
+                       let document = scroll.documentView {
+                        let maximum = max(0, document.bounds.height - scroll.contentView.bounds.height)
+                        let fraction: CGFloat = page == .performance ? 1 : 0.7
+                        scroll.contentView.scroll(to: NSPoint(x: 0, y: maximum * (document.isFlipped ? fraction : 1 - fraction)))
+                        scroll.reflectScrolledClipView(scroll.contentView)
+                        try await Task.sleep(nanoseconds: 500_000_000)
+                        let detail = page == .performance ? "performance-actions.png" : "settings-updates.png"
+                        guard try await capture(window, name: detail, directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
+                        files.append(detail)
+                    }
+                }
+            }
+            result = ["result":"PASS", "language":language, "files":files,
+                      "captured_at":ISO8601DateFormatter().string(from:Date()),
+                      "app_version":Bundle.main.object(forInfoDictionaryKey:"CFBundleShortVersionString") ?? "unknown",
+                      "app_build":Bundle.main.object(forInfoDictionaryKey:"CFBundleVersion") ?? "unknown",
+                      "hardware":"real_read_only", "guest_actions":"none", "credential_autoload":"disabled_by_process_argument",
+                      "production_app_preferences":"unchanged", "capture_bundle_identifier":Bundle.main.bundleIdentifier ?? "unknown", "interactive_clicks":"NOT_TESTED"]
+        } catch { result = ["result":"FAIL", "code":(error as? ErrorState)?.code ?? "README_CAPTURE_FAILED"] }
+        if let data = try? JSONSerialization.data(withJSONObject:result, options:[.prettyPrinted,.sortedKeys]) {
+            try? data.write(to:directory.appendingPathComponent("readme-capture.json"))
         }
         NSApp.terminate(nil)
     }

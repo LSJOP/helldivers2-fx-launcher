@@ -27,24 +27,35 @@
 
 ## 软件截图
 
-[![总览](docs/images/dashboard.png)](docs/images/dashboard.png)
+[![总览](docs/images/zh-CN/dashboard.png)](docs/images/zh-CN/dashboard.png)
 
 | 运行环境 | FX 管理 |
 | --- | --- |
-| [![运行环境](docs/images/environment.png)](docs/images/environment.png) | [![FX 管理](docs/images/fx-manager.png)](docs/images/fx-manager.png) |
+| [![运行环境](docs/images/zh-CN/environment.png)](docs/images/zh-CN/environment.png) | [![FX 管理](docs/images/zh-CN/fx-manager.png)](docs/images/zh-CN/fx-manager.png) |
 
 <details>
 <summary>游戏性能配置</summary>
 
-[![游戏性能配置](docs/images/performance.png)](docs/images/performance.png)
+[![游戏性能配置](docs/images/zh-CN/performance.png)](docs/images/zh-CN/performance.png)
+
+[![性能配置操作区](docs/images/zh-CN/performance-actions.png)](docs/images/zh-CN/performance-actions.png)
+
+</details>
+<details>
+<summary>日志、设置与软件更新</summary>
+
+[![日志](docs/images/zh-CN/logs.png)](docs/images/zh-CN/logs.png)
+[![设置](docs/images/zh-CN/settings.png)](docs/images/zh-CN/settings.png)
+[![软件更新](docs/images/zh-CN/settings-updates.png)](docs/images/zh-CN/settings-updates.png)
 
 </details>
 
-四张均为 2026-11-03 从实际运行的 Debug App 窗口采集，使用真实本机元数据，仅做等比缩小，没有合成界面或状态。FX 图展示操作区域，下方内容可滚动查看。用户提供的图标和插画是 App 中实际渲染的生成式素材，不是生成式 UI 截图。这些图片不证明 Guest、游戏或联机就绪。
+
+八张简体中文截图均于 2026-11-03 从当前真实 Native Debug App（0.1.0，构建 1）采集，使用只读本机元数据，原始像素未改动，没有合成界面或状态；滚动视图展示性能操作和软件更新。截图副本隔离偏好并禁用凭据自动读取，未执行 FX／Guest 操作或配置写入。插画是在真实 App 内渲染的素材。截图不证明游戏、性能提升或安装已就绪。[采集来源与限制](docs/images/README.md)。
 
 <a id="zh-features"></a>
 
-性能编辑现支持已固定构建的 **FX 1.9.4**：CPU、Guest 内存、实际可用的 Vulkan 驱动、Metal HUD。流程为读取 → 编辑 → 预览确认 → 自动备份并验证 → 写入并重新读取；恢复使用本系统的真实备份，外部修改会阻止覆盖。FX 运行时禁止写入，不会自动停止或重启。保存后需重新启动 FX／Guest，仍显示运行中配置未验证。原启动命令会覆盖参数，固定预检可能拒绝自定义值，使用原路径前应恢复备份。超分辨率与 6144 MiB GPU 预算保持只读，无性能提升保证。现有截图待更新。[机制、范围与风险](docs/GAME_PERFORMANCE.md)。
+性能编辑现支持已固定构建的 **FX 1.9.4**：CPU、Guest 内存、实际可用的 Vulkan 驱动、Metal HUD。流程为读取 → 编辑 → 预览确认 → 自动备份并验证 → 写入并重新读取；恢复使用本系统的真实备份，外部修改会阻止覆盖。FX 运行时禁止写入，不会自动停止或重启。保存后需重新启动 FX／Guest，仍显示运行中配置未验证。原启动命令会覆盖参数，固定预检可能拒绝自定义值，使用原路径前应恢复备份。超分辨率与 6144 MiB GPU 预算保持只读，无性能提升保证。对应语言的当前截图已同步。[机制、范围与风险](docs/GAME_PERFORMANCE.md)。
 
 ## 主要功能
 

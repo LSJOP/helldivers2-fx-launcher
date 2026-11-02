@@ -28,20 +28,31 @@ A native **SwiftUI + AppKit** interface over the original Python Core: launch th
 
 ## Screenshots
 
-[![Dashboard](docs/images/dashboard.png)](docs/images/dashboard.png)
+[![Dashboard](docs/images/en/dashboard.png)](docs/images/en/dashboard.png)
 
 | Environment | FX Manager |
 | --- | --- |
-| [![Environment](docs/images/environment.png)](docs/images/environment.png) | [![FX Manager](docs/images/fx-manager.png)](docs/images/fx-manager.png) |
+| [![Environment](docs/images/en/environment.png)](docs/images/en/environment.png) | [![FX Manager](docs/images/en/fx-manager.png)](docs/images/en/fx-manager.png) |
 
 <details>
 <summary>Game Performance</summary>
 
-[![Game Performance](docs/images/performance.png)](docs/images/performance.png)
+[![Game Performance](docs/images/en/performance.png)](docs/images/en/performance.png)
+
+[![Performance actions](docs/images/en/performance-actions.png)](docs/images/en/performance-actions.png)
+
+</details>
+<details>
+<summary>Logs, Settings and Software Update</summary>
+
+[![Logs](docs/images/en/logs.png)](docs/images/en/logs.png)
+[![Settings](docs/images/en/settings.png)](docs/images/en/settings.png)
+[![Software Update](docs/images/en/settings-updates.png)](docs/images/en/settings-updates.png)
 
 </details>
 
-Four actual Debug App window captures, taken on 2026-11-03 with real host metadata. Only proportional resizing was applied; no status or interface was composited. The FX image shows the operation area; additional content is accessible by scrolling. The supplied icon/illustrations are generated artwork rendered in the real App, not generated UI screenshots. These images do not prove Guest, game or multiplayer readiness.
+
+Eight English screenshots captured from the current real Native Debug App (0.1.0, build 1) on 2026-11-03, with read-only host metadata. Pixels are unmodified; no UI/status was composited. Scrolled views show performance actions and software update. Capture copies isolate App preferences and disable credential autoload; no FX/Guest action or configuration write was performed. Supplied artwork is rendered inside the real App. Screenshots do not prove gameplay, performance gains or installation readiness. [Capture provenance and limitations](docs/images/README.md).
 
 <a id="en-features"></a>
 
@@ -57,7 +68,7 @@ Four actual Debug App window captures, taken on 2026-11-03 with real host metada
 | 🟠 In development | Ten original locale catalogs retained; new Native translations are partial, with English fallback |
 | ⚪ Planned / unavailable | Safe FX stop/restart, verified performance recommendations, signed/notarized installer |
 
-Performance rules are local and reproducible. The recorded **M4 Pro / 24 GiB** settings are a candidate baseline, not comprehensive performance validation. Other hardware has no inferred writable profile. FX 1.9.4 with the pinned build supports a conservative CPU/memory/Vulkan/Metal HUD editor with preview, consent, verified backups and conflict-guarded restore. FX must be stopped; saved preferences need a fresh FX/Guest start and remain unverified. The original launch path overrides values and may reject custom settings: restore before using it. Super resolution and the 6144 MiB GPU budget remain read-only. Existing screenshots await a real updated capture. [Parameter sources and limits](docs/GAME_PERFORMANCE.md).
+Performance rules are local and reproducible. The recorded **M4 Pro / 24 GiB** settings are a candidate baseline, not comprehensive performance validation. Other hardware has no inferred writable profile. FX 1.9.4 with the pinned build supports a conservative CPU/memory/Vulkan/Metal HUD editor with preview, consent, verified backups and conflict-guarded restore. FX must be stopped; saved preferences need a fresh FX/Guest start and remain unverified. The original launch path overrides values and may reject custom settings: restore before using it. Super resolution and the 6144 MiB GPU budget remain read-only. Current localized screenshots include the new performance and update surfaces. [Parameter sources and limits](docs/GAME_PERFORMANCE.md).
 
 <a id="en-requirements"></a>
 <a id="en-installation"></a>

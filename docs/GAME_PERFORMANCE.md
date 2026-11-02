@@ -48,6 +48,6 @@ Read-only bounded process enumeration rejects any local `steamac-vm`, `gvproxy`,
 
 Five tactical panels: hardware, saved current values, reference evidence, parameter editor and apply/restore. Advanced fields collapse by default. Preview/confirmation shows real changes and launch limitations; operation events show checking, backing up, applying/restoring, saved/unverified or failure. User-facing errors are localized; diagnostic codes are collapsed. New strings cover all ten original languages; English fallback does not count as translation.
 
-Existing real screenshots remain historical and are **pending update**. No replacement/generated screenshot is claimed. No real FX configuration was modified for automated testing. Fixture tests include a fresh isolated CFPreferences domain; live game performance, actual Guest adoption and human GUI acceptance remain NOT_TESTED.
+Current English/Chinese README screenshots now show the real performance page and gated action area in their own language directories; provenance is in `docs/images/README.md`. No generated UI screenshot is used. No real FX configuration was modified for automated testing. Fixture tests include a fresh isolated CFPreferences domain; live game performance, actual Guest adoption and human GUI acceptance remain NOT_TESTED.
 
 本次新增限定参数的安全保存与备份恢复：先读取、编辑、预览并确认，再校验备份、写入和重新读取。真实 FX 运行时禁止保存；不停止或重启任何进程。CPU、Guest 内存、实际可用 Vulkan 驱动和 Metal HUD 可编辑；超分辨率与 GPU 预算保持只读。原启动路径有固定参数和预检，自定义值可能被拒绝，使用该路径前应恢复备份。「已写入」始终不等于 Guest 已生效或游戏性能提升。
