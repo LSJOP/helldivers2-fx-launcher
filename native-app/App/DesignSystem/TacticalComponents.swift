@@ -178,7 +178,7 @@ struct SuperEarthGlobeDecoration: View {
                 context.stroke(Path(ellipseIn: CGRect(x: 50 - 40 * fraction, y: 3, width: 80 * fraction, height: 80)), with: .color(color), lineWidth: 0.7)
                 context.stroke(Path(ellipseIn: CGRect(x: 10, y: 43 - 40 * fraction, width: 80, height: 80 * fraction)), with: .color(color), lineWidth: 0.7)
             }
-        }.frame(width: 100, height: 86).accessibilityHidden(true)
+        }.frame(width: 100, height: 86).accessibilityHidden(true).allowsHitTesting(false)
     }
 }
 
@@ -186,6 +186,7 @@ struct TacticalPageHeader: View {
     let number: String
     let title: String
     let section: String
+    var refreshState: AppState? = nil
     @Environment(\.colorScheme) private var scheme
     var body: some View {
         let c = TacticalColors(scheme: scheme)
@@ -193,13 +194,25 @@ struct TacticalPageHeader: View {
             HStack {
                 VStack(alignment: .leading, spacing: 10) {
                     TacticalEyebrow(text: number + " / " + section)
-                    Text(title).font(TacticalTypography.page).foregroundStyle(c.text)
-                        .accessibilityIdentifier("page.title").accessibilityAddTraits(.isHeader)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                            pageTitle
+                            if let refreshState { TacticalRefreshButton(state: refreshState, tasks: refreshState.tasks) }
+                        }
+                        VStack(alignment: .leading, spacing: 10) {
+                            pageTitle
+                            if let refreshState { TacticalRefreshButton(state: refreshState, tasks: refreshState.tasks) }
+                        }
+                    }
                 }.frame(maxWidth: .infinity, alignment: .leading)
                 SuperEarthGlobeDecoration()
             }
             Rectangle().fill(c.yellow).frame(height: 2)
         }
+    }
+    private var pageTitle: some View {
+        Text(title).font(TacticalTypography.page).foregroundStyle(TacticalColors(scheme: scheme).text)
+            .accessibilityIdentifier("page.title").accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -281,6 +294,58 @@ struct TacticalAdaptiveLayout: Layout {
                 subviews[i].place(at: CGPoint(x: bounds.minX+CGFloat(i-start)*(w+gap), y: y), anchor: .topLeading, proposal: ProposedViewSize(width: w, height: h))
             }
             y += h+gap
+        }
+    }
+}
+
+// Every page refresh uses the same read-only snapshot transaction as Dashboard / Cmd-R.
+struct TacticalRefreshButton: View {
+    @ObservedObject var state: AppState
+    @ObservedObject var tasks: TaskManager
+    var body: some View {
+        Button { state.refresh() } label: {
+            HStack(spacing: 6) {
+                if state.refreshing { ProgressView().controlSize(.mini) }
+                else { Image(systemName: "arrow.clockwise") }
+                Text(state.t("刷新", "Refresh"))
+            }.font(TacticalTypography.caption).padding(.horizontal, 9).padding(.vertical, 7)
+        }
+        .buttonStyle(.plain)
+        .overlay(Rectangle().stroke(.secondary.opacity(0.4)))
+        .disabled(tasks.busy)
+        .help(state.t("刷新全部只读快照：本机环境、依赖、FX 安装、会话日志及功能清单；不会启动或修改运行环境。也可按 ⌘R。", "Refresh all read-only snapshots: host environment, dependencies, FX installations, session logs and capabilities. No runtime starts or changes. Also available with ⌘R."))
+        .accessibilityIdentifier("refresh")
+    }
+}
+
+// Presentation of the bounded snapshot only; missing runtime probes never become health.
+enum InspectionStatus {
+    case unchecked, checking, normal, action, failed, uncertain
+    var tone: TacticalTone {
+        switch self {
+        case .unchecked, .uncertain: return .neutral
+        case .checking: return .checking
+        case .normal: return .success
+        case .action: return .warning
+        case .failed: return .error
+        }
+    }
+    @MainActor func title(_ state: AppState) -> String {
+        switch self {
+        case .unchecked: return state.t("未检查", "Not checked")
+        case .checking: return state.t("检查中", "Checking")
+        case .normal: return state.t("正常", "Normal")
+        case .action: return state.t("需要操作", "Action needed")
+        case .failed: return state.t("检查失败", "Check failed")
+        case .uncertain: return state.t("无法确认", "Cannot confirm")
+        }
+    }
+    static func dependency(_ raw: String?) -> Self {
+        switch raw {
+        case nil: return .unchecked
+        case "running_bridge": return .normal
+        case "missing", "invalid": return .action
+        default: return .uncertain
         }
     }
 }

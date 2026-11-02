@@ -1,7 +1,7 @@
 # Native App development
 
-Instruction version: **v1.2.0** · Updated: **2026-11-02**.
-Change: require session-only SSH credentials, centralized redaction and staged/release secret gates; preserve existing runtime and update safety boundaries.
+Instruction version: **v1.2.1** · Updated: **2026-11-02**.
+Change: unify five-page refresh placement, honest inspection states and production-facing tool labels; preserve launch, credential and updater boundaries.
 
 - Architecture: SwiftUI + narrowly scoped AppKit; one AppState and existing Service Layer. Refresh remains read-only. The functional migration permits allowlisted Core actions through the supervised Bridge, with explicit user initiation and consent for writes/launch/SSH. Unknown/unverified is never success. Development tests use isolated fixtures; real game/network/system changes require the corresponding user action.
 - Work on `feature/macos-native-app`; batch related changes, verify the affected behavior, commit and push the feature branch. Merge substantial completed stages into main only after appropriate checks. Never force-push, rewrite unknown history, delete releases/tags, or overwrite another developer's changes.
@@ -20,6 +20,8 @@ Change: require session-only SSH credentials, centralized redaction and staged/r
 - Completion reports: completed work, GitHub branch state, necessary verification, real remaining issues, next direction. Keep them brief.
 
 UI instruction: **HD2_NATIVE_APP_UI_REFINEMENT_v1.0.2** · 2026-11-02. Five-page tactical visual system; the supplied generated soldier image is bundled as HelldiverHero and is Dashboard-only. Environment, FX, Logs and Settings share one small upper-right wireframe globe. Never use a whole UI preview as artwork or copy its example health states. Keep absent metadata explicit.
+
+UI polish instruction: **HD2_NATIVE_APP_UI_POLISH_v1.0.1** · 2026-11-02. No titlebar refresh control. Keep full read-only refresh on Dashboard Check Environment, Environment/FX page headers, Logs toolbar and Cmd-R; Settings has no independent refresh. Use Network and connection tools / FX diagnostics / Diagnostic reports / Advanced configuration names. Distinguish not checked, checking, normal, action needed, failed and cannot confirm using actual probe scope. Installation metadata never establishes an active FX/Guest or EAC/multiplayer health. Keep update controls before advanced configuration and use adaptive tool grids. Preserve existing authorization, session-only credentials and redaction.
 
 Functional instruction: **HD2_NATIVE_APP_FUNCTION_MIGRATION_v1.0.0** · 2026-11-02. Reuse actual archived behavior; no fabricated success, EAC or multiplayer inference. Keep target/hash/boot guards and exact-change approvals. Preserve unknown configuration with revision checking, backup and atomic replacement. Bound/redact logs and provide cancellation. No FX installation changes, file deletion or high-risk system actions without explicit confirmation. Original locale coverage and new Native translation coverage must be reported separately.
 

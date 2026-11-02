@@ -42,6 +42,7 @@ final class AppState: ObservableObject {
     @Published private(set) var sessionLogs: [String] = []
     @Published private(set) var hasLoaded = false
     @Published private(set) var stale = false
+    @Published private(set) var refreshing = false
     let tasks = TaskManager()
     private let bridge = BridgeService()
 
@@ -103,6 +104,8 @@ final class AppState: ObservableObject {
         tasks.start { [weak self] in await self?.load() }
     }
     private func load() async {
+        refreshing = true
+        defer { refreshing = false }
         error = nil
         stale = !results.isEmpty
         do {
