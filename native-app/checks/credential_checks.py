@@ -103,4 +103,51 @@ class CredentialChecks(unittest.TestCase):
         helper.safety.request(helper,{},sudo=True)
         self.assertEqual(seen,[sudo]);self.assertEqual(helper.CLIENT.password,self.fake)
 
+    def sudo_fixture(self, mutation_exit=0):
+        safety=load('fixture_archived_safety',APP/'CoreSnapshot/launcher-20261026/launch_safety.py')
+        safety.guest_code=lambda data:'print("fixture transaction")'
+        calls=[]
+        def run(args,**kwargs):
+            calls.append((args,kwargs))
+            command=args[-1]
+            if command=='sudo -n -v':return subprocess.CompletedProcess(args,1,'','sudo: a password is required')
+            if command=='sudo -S -p "" -v':
+                self.assertEqual(kwargs['input'],self.fake+'\n')
+                return subprocess.CompletedProcess(args,0,'','')
+            # Model the Guest policy: an independent SSH exec has no cached sudo.
+            if command.startswith('sudo -n python3 -c '):return subprocess.CompletedProcess(args,1,'','sudo: a password is required')
+            self.assertTrue(command.startswith('sudo -S -p "" python3 -c '))
+            self.assertEqual(kwargs['input'],self.fake+'\n')
+            return subprocess.CompletedProcess(args,mutation_exit,'{"ok":true}',('fixture transaction failure '+self.fake) if mutation_exit else '')
+        h=types.SimpleNamespace(CLIENT=types.SimpleNamespace(password='fixture-ssh-only'),SSH=['fixture-ssh','fixture-host'],subprocess=types.SimpleNamespace(run=run),safety=safety)
+        return h,calls
+    def test_sudo_credential_reaches_exactly_one_mutation_without_argv_or_environment(self):
+        h,calls=self.sudo_fixture()
+        security.bind_session_sudo(h,{'sudo_password':self.fake})
+        self.assertEqual(h.safety.request(h,{'action':'ipv6'},sudo=True),{'ok':True})
+        self.assertEqual(len(calls),3)
+        self.assertEqual(sum('python3 -c' in args[-1] for args,kwargs in calls),1)
+        for args,kwargs in calls:
+            self.assertNotIn(self.fake,repr(args));self.assertNotIn('env',kwargs)
+        self.assertEqual(h.CLIENT.password,'fixture-ssh-only')
+    def test_sudo_failed_mutation_is_not_retried_or_reported_as_unwritten(self):
+        h,calls=self.sudo_fixture(mutation_exit=1)
+        security.bind_session_sudo(h,{'sudo_password':self.fake})
+        with self.assertRaises(security.GuestTransactionFailure) as error:h.safety.request(h,{'action':'ipv6'},sudo=True)
+        self.assertEqual(len(calls),3)
+        self.assertIn('outcome unverified',str(error.exception))
+        self.assertNotIn(self.fake,str(error.exception));self.assertEqual(h.CLIENT.password,'fixture-ssh-only')
+
+    def test_sudo_mutation_timeout_is_never_retried_and_clears_temporary_role(self):
+        h,calls=self.sudo_fixture()
+        original_run=h.subprocess.run
+        def run(args,**kwargs):
+            value=original_run(args,**kwargs)
+            if 'python3 -c' in args[-1]:raise subprocess.TimeoutExpired(args,45)
+            return value
+        h.subprocess.run=run
+        security.bind_session_sudo(h,{'sudo_password':self.fake})
+        with self.assertRaises(subprocess.TimeoutExpired):h.safety.request(h,{'action':'ipv6'},sudo=True)
+        self.assertEqual(len(calls),3);self.assertEqual(h.CLIENT.password,'fixture-ssh-only')
+
 if __name__=='__main__':unittest.main(verbosity=2)

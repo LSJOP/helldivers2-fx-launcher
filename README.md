@@ -15,8 +15,8 @@
 ![Pinned Core version](https://img.shields.io/badge/Pinned%20Core-0.1.0--preview.4-808080?style=flat-square&labelColor=171A1F)
 
 > [!IMPORTANT]
-> **Developer preview · 开发预览** — No signed installer or complete game environment is provided. Game launch, EAC and multiplayer remain unverified.
-> 尚无已签名安装包或完整游戏环境。游戏启动、EAC 和多人联机仍未完成实机验收。
+> **Developer preview · 开发预览** — No signed installer or complete game environment is provided. The recorded dedicated FX profile reached the main menu with user confirmation; single-player missions, independent EAC acceptance and multiplayer remain unverified.
+> 尚无已签名安装包或完整游戏环境。已在记录中的专用 FX 配置下通过 Native 启动并由用户确认进入主菜单；单人任务、独立 EAC 验收及多人联机仍未验证。
 
 [Native mainline / 主线](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main) · [Development / 开发分支](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app) · [Legacy Script / 原脚本](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script) · [Migration checklist / 迁移清单](docs/FUNCTION_MIGRATION.md)
 
@@ -46,10 +46,11 @@ A native macOS command interface for HELLDIVERS 2 FX Launcher, built with **Swif
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) | Local inspection | Real host metadata, bounded FX discovery, versions and discovered paths; discovering an installation does not establish readiness |
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) | Configuration protection | Real read/edit/save, validation, revision conflicts, existing unknown-field preservation, backup and atomic replacement; checked with isolated data |
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) | Logs and diagnostics | Real progress/error streaming, bounded/redacted logs, search/filter/copy, user-reported match history and report export |
+| ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) | Game launch · Recorded profile | Dedicated FX 1.9.4: Native → FX/Guest/SSH → Steam → game; user confirmed the main menu/controllable ship on 2026-11-03. This does not establish support for other FX environments |
 | ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) | Legacy operation integration | 22 Core interfaces, including launch, SSH/Guest/Steam checks, performance profile, network tests and profile/recovery; real backends are wired, live acceptance is pending |
 | ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) | Localization and help | All ten original catalogs retained and selectable; new Native strings, full help/changelog presentation and broader reports remain partial |
 | ![Planned](https://img.shields.io/badge/STATUS-Planned-808080?style=flat-square&labelColor=171A1F) | Distribution and integration | Signed/notarized distribution and CrossOver integration; no complete installer |
-| ![Unverified](https://img.shields.io/badge/STATUS-Unverified-808080?style=flat-square&labelColor=171A1F) | Runtime and compatibility | FX/Guest/SSH/Steam behavior, actual game launch, fresh EAC evidence and multiplayer require separate live verification |
+| ![Unverified](https://img.shields.io/badge/STATUS-Unverified-808080?style=flat-square&labelColor=171A1F) | Runtime and compatibility | Single-player missions, independent EAC acceptance, multiplayer and other FX environments remain unverified |
 
 **Ten original locales:** zh-CN, en, ja, ko, ru, es, de, fr, pt-BR, zh-TW. Missing Native translations fall back to English.
 
@@ -129,11 +130,11 @@ Native bundle version **0.1.0**, build **1**, comes from the [Xcode project](nat
 
 The update module uses official Sparkle UI and signed-feed/archive verification; it does not update FX Runtime or replace the Python Bridge. Release preparation and missing trust conditions are documented in [Native updates](docs/NATIVE_UPDATES.md). English/Chinese standard menu localization requires an App restart after changing the in-App language.
 
-The last functional verification passed an Xcode Debug build, 18 protocol/metadata checks, 14 isolated migration checks, 21 service checks and one focused App smoke. Hero integration subsequently passed a build and a single App session checking two window sizes. These checks did not exercise a real game, live SSH or network/system changes. These earlier functional checks are separate from update integration: the latter passed a Debug build and English/Chinese menu/settings smoke checks, with no live upgrade.
+Earlier isolated functional verification passed an Xcode Debug build, 18 protocol/metadata checks, 14 isolated migration checks, 21 service checks and one focused App smoke. Hero integration subsequently passed a build and a single App session checking two window sizes. These checks did not exercise a real game, live SSH or network/system changes. These earlier functional checks are separate from update integration: the latter passed a Debug build and English/Chinese menu/settings smoke checks, with no live upgrade.
 
 Staged-file and release-artifact secret gates block suspected secrets and incomplete scans. Passing a bounded pattern scan is not proof that every possible secret is absent. See [release preparation](docs/NATIVE_UPDATES.md).
 
-See the [migration checklist](docs/FUNCTION_MIGRATION.md). Phase 2 adds real launch preflight, staged progress/errors and separate user confirmations for the main menu and single-player. A Native attempt reached FX/Guest and found Steam; gameplay acceptance remains pending. Full Native translations and runtime acceptance remain incomplete. GitHub Actions is not published because the configured token lacks `workflow` permission; use the local development checks described in [AGENTS.md](AGENTS.md).
+See the [migration checklist](docs/FUNCTION_MIGRATION.md). Phase 2 adds real launch preflight, staged progress/errors and separate user confirmations for the main menu and single-player. On 2026-11-03, a real Native attempt used the original `steam -applaunch 553850` flow and the user confirmed the main menu/controllable ship. The approved Guest IPv6 transaction retained its original-value backup; sudo credentials use stdin for the actual privileged command instead of assuming authorization carries between SSH invocations. Single-player missions, independent EAC acceptance and multiplayer remain unverified. Full Native translations and runtime acceptance remain incomplete. GitHub Actions is not published because the configured token lacks `workflow` permission; use the local development checks described in [AGENTS.md](AGENTS.md).
 
 <a id="en-legacy"></a>
 
@@ -194,10 +195,11 @@ No project-wide source license has been selected. Do not assume blanket redistri
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) 已实现 | 本地检查 | 真实本机元数据、限定范围 FX 发现、版本和发现路径；检测到安装不等于运行就绪 |
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) 已实现 | 配置保护 | 真实读取/编辑/保存，验证、修订冲突检查、已有未知字段保留、备份及原子替换；使用隔离数据验证 |
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) 已实现 | 日志与诊断 | 真实进度/错误流、有容量限制且脱敏的日志、搜索/筛选/复制、用户报告的匹配历史和报告导出 |
+| ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) 已实现 | 游戏启动 · 记录中的配置 | 专用 FX 1.9.4：Native → FX/Guest/SSH → Steam → 游戏；2026-11-03 用户确认已进入主菜单／飞船且可操作。不代表支持其他 FX 环境 |
 | ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) 开发中 | 原脚本操作集成 | 22 个 Core 接口，包含启动、SSH/Guest/Steam 检查、性能配置、网络测试及方案/恢复；已连接真实后端，仍待实机验收 |
 | ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) 开发中 | 多语言与帮助 | 保留并可选择原十种语言资源；新增 Native 文案、完整帮助/更新日志及更全面报告仍不完整 |
 | ![Planned](https://img.shields.io/badge/STATUS-Planned-808080?style=flat-square&labelColor=171A1F) 计划中 | 发行与集成 | 签名/公证发行、CrossOver 集成；没有完整安装包 |
-| ![Unverified](https://img.shields.io/badge/STATUS-Unverified-808080?style=flat-square&labelColor=171A1F) 未验证 | 运行环境与兼容性 | FX/Guest/SSH/Steam 行为、真实游戏启动、新鲜 EAC 证据和多人联机需要分别实机验证 |
+| ![Unverified](https://img.shields.io/badge/STATUS-Unverified-808080?style=flat-square&labelColor=171A1F) 未验证 | 运行环境与兼容性 | 单人任务、独立 EAC 验收、多人联机及其他 FX 环境仍未验证 |
 
 **原十种语言：** zh-CN、en、ja、ko、ru、es、de、fr、pt-BR、zh-TW。缺失的 Native 翻译回退英文。
 
@@ -277,11 +279,11 @@ Native 包版本 **0.1.0**、构建号 **1** 来自 [Xcode 工程](native-app/HD
 
 更新模块采用官方 Sparkle 界面与 Feed/归档签名验证，不更新 FX Runtime，也不替换 Python Bridge。发布准备和缺少的信任条件见 [Native 更新](docs/NATIVE_UPDATES.md)。在 App 内切换语言后，中英文标准菜单本地化需要重启 App。
 
-最近一次功能验证通过 Xcode Debug 编译、18 项协议/元数据检查、14 项隔离迁移检查、21 项服务检查和一次针对性 App 冒烟验证。随后士兵素材集成通过编译，并在一次 App 会话中检查两种窗口尺寸。这些检查没有执行真实游戏、实机 SSH 或网络/系统变更。上述功能检查与本次更新集成验证分开记录：更新模块通过 Debug 编译及中英文菜单/设置冒烟检查，未执行真实升级。
+较早的隔离功能验证通过 Xcode Debug 编译、18 项协议/元数据检查、14 项隔离迁移检查、21 项服务检查和一次针对性 App 冒烟验证。随后士兵素材集成通过编译，并在一次 App 会话中检查两种窗口尺寸。这些检查没有执行真实游戏、实机 SSH 或网络/系统变更。上述功能检查与本次更新集成验证分开记录：更新模块通过 Debug 编译及中英文菜单/设置冒烟检查，未执行真实升级。
 
 暂存文件和发行产物的敏感信息检查会阻止疑似秘密及无法完成的扫描。有限规则检查通过不等于证明所有秘密均不存在。见[发布准备](docs/NATIVE_UPDATES.md)。
 
-各项状态见[迁移清单](docs/FUNCTION_MIGRATION.md)。Phase 2 新增真实启动预检、阶段进度/错误以及主菜单和单人任务的独立用户确认。Native 尝试已到达 FX/Guest 并检测到 Steam，游戏内验收仍待完成。完整 Native 翻译与实机验收仍未完成。当前 token 缺少 `workflow` 权限，尚未发布 GitHub Actions 配置；本地开发检查规则见 [AGENTS.md](AGENTS.md)。
+各项状态见[迁移清单](docs/FUNCTION_MIGRATION.md)。Phase 2 新增真实启动预检、阶段进度/错误以及主菜单和单人任务的独立用户确认。2026-11-03 的真实 Native 启动沿用原有 `steam -applaunch 553850` 流程，用户确认已进入主菜单／飞船且可操作。已批准的 Guest IPv6 变更保留原值备份；实际提权命令通过 stdin 接收 sudo 凭据，不再假定授权能跨 SSH 调用延续。单人任务、独立 EAC 验收和多人联机仍未验证。完整 Native 翻译与实机验收仍未完成。当前 token 缺少 `workflow` 权限，尚未发布 GitHub Actions 配置；本地开发检查规则见 [AGENTS.md](AGENTS.md)。
 
 <a id="zh-legacy"></a>
 

@@ -443,6 +443,7 @@ class Operations:
             # Do not misreport a rejected sudo credential as component incompatibility.
             if isinstance(error,getattr(getattr(locals().get('helper'),'safety',None),'NotWrittenError',())):
                 code='SUDO_AUTH_FAILED'
+            if isinstance(error,security.GuestTransactionFailure):code='GUEST_TRANSACTION_FAILED'
             if type(error).__name__=='Deadline' or isinstance(error,subprocess.TimeoutExpired):code='TIMEOUT'
             details={'stage':self.launch_stage,'summary':self.scrub(str(error))}
             if isinstance(error,subprocess.CalledProcessError):
