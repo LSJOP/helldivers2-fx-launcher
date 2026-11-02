@@ -47,7 +47,7 @@ A native macOS command interface for HELLDIVERS 2 FX Launcher, built with **Swif
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) | Configuration protection | Real read/edit/save, validation, revision conflicts, existing unknown-field preservation, backup and atomic replacement; checked with isolated data |
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) | Logs and diagnostics | Real progress/error streaming, bounded/redacted logs, search/filter/copy, user-reported match history and report export |
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) | Game launch · Recorded profile | Dedicated FX 1.9.4: Native → FX/Guest/SSH → Steam → game; user confirmed the main menu/controllable ship on 2026-11-03. This does not establish support for other FX environments |
-| ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) | Legacy operation integration | 22 Core interfaces, including launch, SSH/Guest/Steam checks, performance profile, network tests and profile/recovery; real backends are wired, live acceptance is pending |
+| ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) | Legacy operation integration | 23 Core interfaces, including launch, SSH/Guest/Steam checks, performance profile, network tests and profile/recovery; real backends are wired, live acceptance is pending |
 | ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) | Localization and help | All ten original catalogs retained and selectable; new Native strings, full help/changelog presentation and broader reports remain partial |
 | ![Planned](https://img.shields.io/badge/STATUS-Planned-808080?style=flat-square&labelColor=171A1F) | Distribution and integration | Signed/notarized distribution and CrossOver integration; no complete installer |
 | ![Unverified](https://img.shields.io/badge/STATUS-Unverified-808080?style=flat-square&labelColor=171A1F) | Runtime and compatibility | Single-player missions, independent EAC acceptance, multiplayer and other FX environments remain unverified |
@@ -71,7 +71,7 @@ Sparkle 2.10.1 is integrated for Launcher-only updates, with shared menu/setting
 | [![Logs](docs/images/logs.png)](docs/images/logs.png) | [![Settings](docs/images/settings.png)](docs/images/settings.png) |
 
 > [!NOTE]
-> All five images were captured from the running Debug App on 2026-11-02 during `HD2_NATIVE_APP_HEADER_ASSET_REFINEMENT_v1.0.0`, using its real read-only snapshot. They show the shared space-artwork headers on the four secondary pages and the unchanged Dashboard hero, with one main content heading per page, not generated UI mockups. Lower sections remain accessible by scrolling. Images were proportionally reduced for the README; no status or UI was composited. No FX/game launch, EAC or multiplayer success is implied.
+> All five images were captured from the running Debug App on 2026-11-02 during `HD2_NATIVE_APP_HEADER_ASSET_REFINEMENT_v1.0.0`, using its real read-only snapshot. They show the shared space-artwork headers on the four secondary pages and the unchanged Dashboard hero, with one main content heading per page, not generated UI mockups. Lower sections remain accessible by scrolling. The Settings capture predates optional credential management and is pending refresh. Images were proportionally reduced for the README; no status or UI was composited. No FX/game launch, EAC or multiplayer success is implied.
 
 <a id="en-requirements"></a>
 
@@ -115,7 +115,7 @@ For an existing clone, select the intended branch and run `git submodule update 
 
 - Configuration: `~/Library/Application Support/Helldivers2FXLauncher/settings.json`. The editor shows the target/revision and backs up before replacement.
 - Native diagnostics/reports: `~/Library/Application Support/Helldivers2FXLauncher/native`. Original Core recovery receipts may also be written under the selected legacy directory.
-- SSH password, key passphrase and Guest sudo password stay in App session memory and travel only through stdin. Native SSH never reads/writes Keychain or persists passwords. Target/config changes clear reuse; quitting requires re-entry. Existing legacy Keychain items are not read or deleted.
+- By default, SSH password, key passphrase and Guest sudo password stay in App session memory and use controlled stdin/PTY. Optional, unchecked-by-default remember controls save SSH and sudo independently to a new App-owned macOS Keychain service only after a real password challenge succeeds. Saved passwords can be reused after restarting; key passphrases remain session-only. Settings provides update, per-password clear and confirmed clear-all. Unchecking remember stops automatic reuse without silently deleting the item. Invalid saved credentials are quarantined until replaced. Automatic Keychain reads suppress authorization UI; locked/access-restricted storage falls back to session input. An explicit access action or a changed App identity/signature can require system authorization. No raw password or App-owned encryption key is kept in preferences/files. Legacy Keychain items remain untouched.
 - Cancellation attempts supported recovery. Already started FX/Steam/game processes may continue; recheck actual state after interruption.
 
 </details>
@@ -131,6 +131,8 @@ Native bundle version **0.1.0**, build **1**, comes from the [Xcode project](nat
 The update module uses official Sparkle UI and signed-feed/archive verification; it does not update FX Runtime or replace the Python Bridge. Release preparation and missing trust conditions are documented in [Native updates](docs/NATIVE_UPDATES.md). English/Chinese standard menu localization requires an App restart after changing the in-App language.
 
 Earlier isolated functional verification passed an Xcode Debug build, 18 protocol/metadata checks, 14 isolated migration checks, 21 service checks and one focused App smoke. Hero integration subsequently passed a build and a single App session checking two window sizes. These checks did not exercise a real game, live SSH or network/system changes. These earlier functional checks are separate from update integration: the latter passed a Debug build and English/Chinese menu/settings smoke checks, with no live upgrade.
+
+Opt-in remembering uses a separate macOS Keychain namespace for SSH and sudo, with target/config isolation, verified-password-only saves, rejection quarantine and user-confirmed deletion. Focused tests cover session/restart reuse with fictional credentials and actual Keychain write/read/delete across separate processes. This change did not start/reset FX or modify the successful environment. FX was not running at the final read-only check, so a real-password game cold launch was not repeated.
 
 Staged-file and release-artifact secret gates block suspected secrets and incomplete scans. Passing a bounded pattern scan is not proof that every possible secret is absent. See [release preparation](docs/NATIVE_UPDATES.md).
 
@@ -196,7 +198,7 @@ No project-wide source license has been selected. Do not assume blanket redistri
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) 已实现 | 配置保护 | 真实读取/编辑/保存，验证、修订冲突检查、已有未知字段保留、备份及原子替换；使用隔离数据验证 |
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) 已实现 | 日志与诊断 | 真实进度/错误流、有容量限制且脱敏的日志、搜索/筛选/复制、用户报告的匹配历史和报告导出 |
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) 已实现 | 游戏启动 · 记录中的配置 | 专用 FX 1.9.4：Native → FX/Guest/SSH → Steam → 游戏；2026-11-03 用户确认已进入主菜单／飞船且可操作。不代表支持其他 FX 环境 |
-| ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) 开发中 | 原脚本操作集成 | 22 个 Core 接口，包含启动、SSH/Guest/Steam 检查、性能配置、网络测试及方案/恢复；已连接真实后端，仍待实机验收 |
+| ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) 开发中 | 原脚本操作集成 | 23 个 Core 接口，包含启动、SSH/Guest/Steam 检查、性能配置、网络测试及方案/恢复；已连接真实后端，仍待实机验收 |
 | ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) 开发中 | 多语言与帮助 | 保留并可选择原十种语言资源；新增 Native 文案、完整帮助/更新日志及更全面报告仍不完整 |
 | ![Planned](https://img.shields.io/badge/STATUS-Planned-808080?style=flat-square&labelColor=171A1F) 计划中 | 发行与集成 | 签名/公证发行、CrossOver 集成；没有完整安装包 |
 | ![Unverified](https://img.shields.io/badge/STATUS-Unverified-808080?style=flat-square&labelColor=171A1F) 未验证 | 运行环境与兼容性 | 单人任务、独立 EAC 验收、多人联机及其他 FX 环境仍未验证 |
@@ -220,7 +222,7 @@ No project-wide source license has been selected. Do not assume blanket redistri
 | [![Logs](docs/images/logs.png)](docs/images/logs.png) | [![Settings](docs/images/settings.png)](docs/images/settings.png) |
 
 > [!NOTE]
-> 五张均于 2026-11-02 的 `HD2_NATIVE_APP_HEADER_ASSET_REFINEMENT_v1.0.0` 检查中，从运行中的 Debug App 及其真实只读快照采集，展示四个次级页面共享的太空横幅及保留的首页人物主视觉，每页仅保留一个主标题，不是生成式 UI 预览图。下方区域可通过滚动查看。图片仅按比例缩小用于 README，没有合成界面或运行状态，不证明 FX／游戏启动、EAC 或联机成功。
+> 五张均于 2026-11-02 的 `HD2_NATIVE_APP_HEADER_ASSET_REFINEMENT_v1.0.0` 检查中，从运行中的 Debug App 及其真实只读快照采集，展示四个次级页面共享的太空横幅及保留的首页人物主视觉，每页仅保留一个主标题，不是生成式 UI 预览图。下方区域可通过滚动查看；设置截图早于可选凭据管理功能，待更新。图片仅按比例缩小用于 README，没有合成界面或运行状态，不证明 FX／游戏启动、EAC 或联机成功。
 
 <a id="zh-requirements"></a>
 
@@ -264,7 +266,7 @@ open build/Debug/HD2FXNative.app
 
 - 配置：`~/Library/Application Support/Helldivers2FXLauncher/settings.json`。编辑器显示目标/修订，替换前备份。
 - Native 诊断/报告：`~/Library/Application Support/Helldivers2FXLauncher/native`。原 Core 恢复凭据还可能写入选定旧目录。
-- SSH 密码、私钥口令和 Guest sudo 密码仅存 App 会话内存，通过 stdin 传递。Native SSH 不读写钥匙串，也不持久化密码；目标/配置变化会清除复用，退出后需重新输入。旧钥匙串项目不读取、不删除。
+- 默认仅在 App 会话内保存 SSH 密码、密钥口令和 Guest sudo 密码，通过受控 stdin／PTY 传递。“记住密码”默认不勾选，只有实际密码认证成功后，才将 SSH 与 sudo 分别保存到本 App 新建的 macOS Keychain service。保存后支持重启复用；密钥口令仍仅限会话。设置支持更新、逐项清除及确认后清除全部。取消记住会停止自动复用，不会静默删除已有记录；失效凭据停止复用直到更新。自动读取禁止授权弹窗，钥匙串锁定／访问受限时退回会话输入；主动授权访问或 App 身份／签名变化时仍可能需要系统确认。不在偏好设置或文件保存原始密码或 App 自有加密密钥；旧脚本钥匙串项目保持不动。
 - 取消会尝试支持的恢复。已经启动的 FX/Steam/游戏进程可能继续运行，中断后请重新核对实际状态。
 
 </details>
@@ -282,6 +284,8 @@ Native 包版本 **0.1.0**、构建号 **1** 来自 [Xcode 工程](native-app/HD
 较早的隔离功能验证通过 Xcode Debug 编译、18 项协议/元数据检查、14 项隔离迁移检查、21 项服务检查和一次针对性 App 冒烟验证。随后士兵素材集成通过编译，并在一次 App 会话中检查两种窗口尺寸。这些检查没有执行真实游戏、实机 SSH 或网络/系统变更。上述功能检查与本次更新集成验证分开记录：更新模块通过 Debug 编译及中英文菜单/设置冒烟检查，未执行真实升级。
 
 暂存文件和发行产物的敏感信息检查会阻止疑似秘密及无法完成的扫描。有限规则检查通过不等于证明所有秘密均不存在。见[发布准备](docs/NATIVE_UPDATES.md)。
+
+可选记住密码使用独立的 macOS Keychain namespace 分别管理 SSH 与 sudo，按目标／配置隔离，仅保存经实际密码认证的凭据，并支持失效停用及确认删除。针对性测试使用虚构凭据覆盖会话／重启复用，并跨独立进程验证真实 Keychain 的写入、读取和删除。本次没有启动／重置 FX，也没有修改成功环境；最终只读复查时 FX 未运行，因此没有用真实密码执行游戏冷启动复测。
 
 各项状态见[迁移清单](docs/FUNCTION_MIGRATION.md)。Phase 2 新增真实启动预检、阶段进度/错误以及主菜单和单人任务的独立用户确认。2026-11-03 的真实 Native 启动沿用原有 `steam -applaunch 553850` 流程，用户确认已进入主菜单／飞船且可操作。已批准的 Guest IPv6 变更保留原值备份；实际提权命令通过 stdin 接收 sudo 凭据，不再假定授权能跨 SSH 调用延续。单人任务、独立 EAC 验收和多人联机仍未验证。完整 Native 翻译与实机验收仍未完成。当前 token 缺少 `workflow` 权限，尚未发布 GitHub Actions 配置；本地开发检查规则见 [AGENTS.md](AGENTS.md)。
 

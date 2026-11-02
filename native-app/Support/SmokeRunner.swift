@@ -232,7 +232,7 @@ import ApplicationServices
             try await waitForTask(state)
             guard state.hasLoaded, state.error == nil else { throw ErrorState("BRIDGE_UNAVAILABLE") }
             guard state.rows("get_legacy_catalog", "languages").count == 10,
-                  state.rows("get_legacy_catalog", "operations").count == 22 else { throw ErrorState("CATALOG_MISSING") }
+                  state.rows("get_legacy_catalog", "operations").count == 23 else { throw ErrorState("CATALOG_MISSING") }
             guard let base = Bundle.main.resourceURL else { throw ErrorState("CORE_UNAVAILABLE") }
             for (code, _) in NativeLocalization.languages {
                 guard FileManager.default.fileExists(atPath: base.appendingPathComponent("locales/" + code + ".json").path) else { throw ErrorState("LOCALE_MISSING") }
@@ -250,7 +250,7 @@ import ApplicationServices
             try await Task.sleep(nanoseconds: 300_000_000)
             guard NSApp.windows.contains(where: { $0.isVisible }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
             state.operationSelection = nil
-            result = ["result":"PASS", "catalog_operations":22, "bundled_original_locales":10,
+            result = ["result":"PASS", "catalog_operations":23, "bundled_original_locales":10,
                       "configuration":"read_only", "launch_guards":"consent_and_root_rejected",
                       "live_game_network_writes":"not_performed", "native_translation":"partial"]
         } catch { result = ["result":"FAIL", "code":(error as? ErrorState)?.code ?? "SMOKE_FAILED"] }

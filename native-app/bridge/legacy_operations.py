@@ -32,6 +32,7 @@ OPERATIONS = {
     'inspect_network': ('environment', False, True),
     'test_network': ('environment', False, True),
     'test_ssh': ('environment', True, True),
+    'test_guest_sudo': ('settings', True, True),
     'inspect_guest': ('environment', True, True),
     'launch_game': ('dashboard', True, True),
     'preflight_launch': ('dashboard', False, True),
@@ -218,7 +219,14 @@ class Operations:
             return 'missing'
         helper.dependencies.node_state=checked_node
         helper.prefs.path=lambda:self.settings
-        security.session_only(helper.prefs)
+        def credential_status(kind):
+            rejected=kind.endswith('_rejected')
+            role=kind.split('_')[0]
+            # _remember_authenticated_password runs only after an actual password
+            # challenge; an existing SSH master does not emit authentication proof.
+            if role=='ssh' and not params.get('password'):return
+            self.event('INFO','Credential authentication result',kind='credential_status',credential_kind=role,status='rejected' if rejected else 'authenticated')
+        security.session_only(helper.prefs,credential_status)
         def session_settings():
             _,config,revision=self.read_config()
             if any(self.secret_values) and revision!=params.get('credential_revision'):raise OperationError('CREDENTIAL_SCOPE_CHANGED')
@@ -250,7 +258,7 @@ class Operations:
             return True
         helper.CONFIRM_HOOK=confirm
         helper.refresh_settings()
-        security.bind_session_sudo(helper,params)
+        security.bind_session_sudo(helper,params,credential_status)
         return helper
 
     def run(self, method, params):
@@ -335,13 +343,33 @@ class Operations:
             result=helper.dependencies.inspect_runtime(helper)
             result.update(runtime_path=helper.APP,gvproxy_path=str(helper.GVPROXY),guest='unverified',eac='unverified',multiplayer='unverified')
             return result
+        if method=='test_guest_sudo':
+            self.check_fx_entry(helper,require_running=True)
+            helper.CLIENT.connect_once()
+            helper.safety.Session(helper).bind()  # Bind the configured FX/Guest, never an arbitrary SSH host.
+            probe=helper.subprocess.run(helper.SSH+['sudo -n -v'],capture_output=True,text=True,timeout=15)
+            if probe.returncode==0:return {'sudo':'available_without_password_prompt','password_verified':False,'configuration_changed':False}
+            value=params.get('sudo_password')
+            if not value:raise OperationError('AUTH_REQUIRED',{'credential_kind':'sudo_password'})
+            marker='[HD2_NATIVE_SUDO_AUTH]'
+            result=helper.subprocess.run(helper.SSH+['sudo -S -p "'+marker+'" -v'],input=value+'\n',capture_output=True,text=True,timeout=20)
+            if result.returncode:raise OperationError('SUDO_AUTH_FAILED')
+            verified=marker in (result.stderr or '')
+            if verified:self.event('INFO','Credential authentication result',kind='credential_status',credential_kind='sudo',status='authenticated')
+            return {'sudo':'authenticated','password_verified':verified,'configuration_changed':False}
         if method in ('test_ssh','inspect_guest','save_network_snapshot'):
             if method=='test_ssh':
                 test=helper.prefs.SSHClient(helper.prefs.load(),test=True)
                 test.prompt_secret=helper.CLIENT.prompt_secret;test.notify=helper.CLIENT.notify
-                test.test_connection()
+                try:test.test_connection()
+                except helper.prefs.AuthenticationError as error:
+                    if str(error).startswith('SSH authentication failed.'):raise OperationError('SSH_AUTH_FAILED') from None
+                    raise
                 return {'ssh':'authenticated','guest_python':'checked','game':'unverified','eac':'unverified','multiplayer':'unverified'}
-            helper.CLIENT.connect_once()
+            try:helper.CLIENT.connect_once()
+            except helper.prefs.AuthenticationError as error:
+                if str(error).startswith('SSH authentication failed.'):raise OperationError('SSH_AUTH_FAILED') from None
+                raise
             records=self.module('network_records')
             if method=='inspect_guest':return self.scrub(records.guest_snapshot(helper))
             value=records.capture(helper,self.module('network_profile'));path=records.save(value,self.settings)
@@ -443,6 +471,8 @@ class Operations:
             # Do not misreport a rejected sudo credential as component incompatibility.
             if isinstance(error,getattr(getattr(locals().get('helper'),'safety',None),'NotWrittenError',())):
                 code='SUDO_AUTH_FAILED'
+            if isinstance(error,getattr(getattr(locals().get('helper'),'prefs',None),'AuthenticationError',())) and str(error).startswith('SSH authentication failed.'):
+                code='SSH_AUTH_FAILED'
             if isinstance(error,security.GuestTransactionFailure):code='GUEST_TRANSACTION_FAILED'
             if type(error).__name__=='Deadline' or isinstance(error,subprocess.TimeoutExpired):code='TIMEOUT'
             details={'stage':self.launch_stage,'summary':self.scrub(str(error))}

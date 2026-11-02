@@ -33,6 +33,7 @@ struct SettingsView: View {
                     TacticalWarningBanner(text: state.t("请选择可执行的 python3 或 python3.x 文件。", "Select an executable python3 or python3.x file."), isError: true)
                 }
             }
+            CredentialManagementView(state: state, credentials: state.credentials, tasks: state.tasks)
             SoftwareUpdateView(manager: state.updates, language: state.languageCode)
             LegacyOperationsView(state: state, scope: "settings")
 
@@ -75,7 +76,7 @@ struct LegacyOperationsView: View {
             Text(state.t("锁标记表示执行前需要确认；打开面板不会执行操作。只读功能无需变更授权。", "A lock marks actions requiring confirmation before execution. Opening a panel runs nothing. Read-only tools need no change approval."))
                 .font(TacticalTypography.caption).foregroundStyle(.secondary)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 10)], alignment: .leading, spacing: 10) {
-                ForEach(state.rows("get_legacy_catalog", "operations").filter { $0["scope"]?.text == scope && $0["method"]?.text != "check_updates" }, id: \.operationID) { row in
+                ForEach(state.rows("get_legacy_catalog", "operations").filter { $0["scope"]?.text == scope && !["check_updates","test_guest_sudo"].contains($0["method"]?.text ?? "") }, id: \.operationID) { row in
                     let method = row["method"]?.text ?? ""
                     let requiresConsent = row["confirmation"]?.boolean == true
                     TacticalButton(title: operationTitle(method, state), symbol: requiresConsent ? "lock" : "doc.text.magnifyingglass",
@@ -101,6 +102,7 @@ private extension Dictionary where Key == String, Value == JSONValue {
         "inspect_network": ("查看本机网络", "Inspect host network"),
         "test_network": ("运行网络测试", "Run network test"),
         "test_ssh": ("测试 SSH 连接", "Test SSH connection"),
+        "test_guest_sudo": ("验证 Guest sudo 密码", "Verify Guest sudo password"),
         "inspect_guest": ("读取 Guest / Steam", "Inspect Guest / Steam"),
         "launch_game": ("启动 HELLDIVERS 2", "Launch HELLDIVERS 2"),
         "preflight_launch": ("启动前只读检查", "Read-only launch preflight"),
@@ -141,7 +143,7 @@ struct LegacyOperationSheet: View {
     @State private var note = ""
     @State private var channel = "preview"
     @State private var inputError = false
-    private var needsRoot: Bool { ["inspect_legacy_runtime","test_ssh","inspect_guest","launch_game","preflight_launch","observe_launch","apply_performance","save_network_snapshot"].contains(operation) }
+    private var needsRoot: Bool { ["inspect_legacy_runtime","test_ssh","test_guest_sudo","inspect_guest","launch_game","preflight_launch","observe_launch","apply_performance","save_network_snapshot"].contains(operation) }
     private var needsConsent: Bool {
         state.rows("get_legacy_catalog", "operations").first { $0["method"]?.text == operation }?["confirmation"]?.boolean ?? true
     }
@@ -171,13 +173,8 @@ struct LegacyOperationSheet: View {
                     TacticalButton(title: state.t("先做只读预检", "Run read-only preflight"), symbol: "checklist") { state.runOperation("preflight_launch") }
                         .disabled(tasks.busy || state.runtimeRoot.isEmpty)
                 }
-                if ["test_ssh","inspect_guest","launch_game","apply_performance","save_network_snapshot"].contains(operation) {
-                    SecureField(state.t("本次 SSH 密码（可留空使用已有连接）", "Session SSH password (optional with an existing connection)"), text: $credentials.password)
-                    SecureField(state.t("本次密钥口令", "Session key passphrase"), text: $credentials.passphrase)
-                    SecureField(state.t("本次 Guest sudo 密码", "Session Guest sudo password"), text: $credentials.sudoPassword)
-                    Text(state.t("凭据仅存本次 App 内存，可在本次会话复用；通过 stdin 传递，不读写 SSH 钥匙串。关闭 App 后重新输入。更改目标会清除会话凭据。", "Credentials stay in App memory for this session and use stdin only. SSH Keychain access is disabled. Re-enter after quitting; changing target clears session credentials."))
-                        .font(TacticalTypography.caption)
-                    Button(state.t("清除本次会话凭据", "Clear session credentials")) { credentials.clear() }.disabled(tasks.busy)
+                if ["test_ssh","test_guest_sudo","inspect_guest","launch_game","apply_performance","save_network_snapshot"].contains(operation) {
+                    CredentialInputFields(state: state, credentials: credentials, tasks: tasks, operation: operation)
                 }
                 if operation == "save_configuration" {
                     Text(state.operationResult["target"]?.text ?? state.t("先读取目标配置", "Read target configuration first")).textSelection(.enabled)
@@ -247,7 +244,10 @@ struct LegacyOperationSheet: View {
                     configuration = pretty(value); revision = current
                 }
             }
-            .task { if operation == "save_configuration" { state.runOperation("read_configuration") } }
+            .task {
+                if operation == "save_configuration" { state.runOperation("read_configuration") }
+                else if !tasks.busy { await state.prepareCredentials() }
+            }
     }
     private func pretty(_ value: JSONValue) -> String {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -265,5 +265,91 @@ struct LegacyOperationSheet: View {
         if operation == "record_match" { params["match_result"] = .string(matchResult); params["note"] = .string(note) }
         if operation == "check_updates" { params["channel"] = .string(channel) }
         state.runOperation(operation, params: params)
+    }
+}
+
+
+private struct CredentialInputFields: View {
+    @ObservedObject var state: AppState
+    @ObservedObject var credentials: SessionCredentialManager
+    @ObservedObject var tasks: TaskManager
+    let operation: String
+    @State private var expanded = false
+    var body: some View {
+        DisclosureGroup(state.t("凭据（已有连接／免密码 sudo 可留空）", "Credentials (optional with an existing connection / passwordless sudo)"), isExpanded: $expanded) {
+            VStack(alignment: .leading, spacing: 10) {
+                SecureField(state.t("本次 SSH 密码", "Session SSH password"), text: $credentials.password)
+                Toggle(state.t("记住 SSH 密码（认证成功后保存）", "Remember SSH password after successful authentication"), isOn: Binding(get: { credentials.rememberSSH }, set: { credentials.setRemember(.ssh, $0) }))
+                SecureField(state.t("本次密钥口令（仅保留在会话）", "Key passphrase (session only)"), text: $credentials.passphrase)
+                SecureField(state.t("本次 Guest sudo 密码", "Session Guest sudo password"), text: $credentials.sudoPassword)
+                Toggle(state.t("记住 Guest sudo 密码（认证成功后保存）", "Remember Guest sudo password after successful authentication"), isOn: Binding(get: { credentials.rememberSudo }, set: { credentials.setRemember(.sudo, $0) }))
+                Text(state.t("默认仅存本次会话。勾选后，仅经实际密码认证的对应凭据保存到本 App 专用钥匙串记录；两种密码互不替代。自动读取不弹出授权窗口，访问受限时请手动输入。密钥口令不持久化。", "Session only by default. When selected, each password is saved to this App’s Keychain records only after an actual password challenge succeeds. SSH and sudo remain separate. Automatic reads never request authorization UI; enter manually if access is restricted. Key passphrases are not saved."))
+                    .font(TacticalTypography.caption).foregroundStyle(.secondary)
+                CredentialVaultNotice(state: state, credentials: credentials)
+                Button(state.t("清除本次会话凭据", "Clear session credentials")) { credentials.clear() }
+            }.padding(.top, 8).disabled(tasks.busy)
+        }
+        .onAppear { expanded = ["test_ssh","test_guest_sudo"].contains(operation) || needsInput }
+        .onChange(of: state.operationError?.code) { if needsInput { expanded = true } }
+    }
+    private var needsInput: Bool { ["AUTH_REQUIRED","SSH_AUTH_FAILED","SUDO_AUTH_FAILED"].contains(state.operationError?.code ?? "") }
+}
+
+private struct CredentialVaultNotice: View {
+    @ObservedObject var state: AppState
+    @ObservedObject var credentials: SessionCredentialManager
+    var body: some View {
+        if let error = credentials.vaultError {
+            Text(message(error)).font(TacticalTypography.caption).foregroundStyle(.orange)
+        }
+    }
+    private func message(_ error: CredentialVaultError) -> String {
+        switch error {
+        case .locked: return state.t("登录钥匙串已锁定，尚未解锁；自动读取已停止，请自行解锁或使用本次会话输入。", "The login Keychain is locked; it has not been unlocked. Automatic reads stopped. Unlock it yourself or use session input.")
+        case .permission: return state.t("钥匙串访问授权受限（或已停用自动读取），不等于钥匙串解锁失败。可手动输入，或主动点击下方授权读取；应用身份／签名变化可能需要系统确认。", "Keychain access requires authorization (or automatic reads are disabled); this is distinct from an unlock failure. Enter manually or explicitly authorize access below. App identity/signing changes can require system confirmation.")
+        default: return state.t("安全存储当前不可用；凭据仍仅存于会话内存，未降级为文件保存。", "Secure storage is unavailable. Credentials remain in session memory; no file-storage fallback was used.")
+        }
+    }
+}
+
+private struct CredentialManagementView: View {
+    @ObservedObject var state: AppState
+    @ObservedObject var credentials: SessionCredentialManager
+    @ObservedObject var tasks: TaskManager
+    @State private var clearing: CredentialKind?
+    @State private var clearAll = false
+    var body: some View {
+        TacticalPanel(number: "K", title: state.t("凭据管理", "Credential management"), symbol: "key") {
+            Text(state.t("仅管理当前启动目录与配置对应的记录；更新所存凭据不修改 Guest 账户密码；验证后勾选才保存。保存目标目录便于下次复用，不保存密码到偏好设置。", "Manage records for the selected launcher directory and configuration. Updating stored credentials does not change the Guest account password. Saving requires verification and opt-in. The launcher directory is retained for reuse; passwords are never stored in preferences."))
+                .font(TacticalTypography.caption).foregroundStyle(.secondary)
+            ForEach(CredentialKind.allCases, id: \.self) { kind in
+                VStack(alignment: .leading, spacing: 8) {
+                    TacticalInfoRow(title: kind == .ssh ? state.t("SSH 密码", "SSH password") : state.t("Guest sudo 密码", "Guest sudo password"), value: status(kind))
+                    HStack {
+                        Button(state.t("更新密码", "Update password")) {
+                            credentials.update(kind)
+                            state.operationSelection = NativeOperation(method: kind == .ssh ? "test_ssh" : "test_guest_sudo")
+                        }
+                        Button(state.t("清除密码", "Clear password")) { clearing = kind }
+                    }
+                }
+            }
+            CredentialVaultNotice(state: state, credentials: credentials)
+            Button(state.t("授权读取当前目标凭据…", "Authorize reading this target’s credentials…")) { Task { await state.prepareCredentials(interactive: true) } }
+            Button(state.t("清除所有已保存凭据…", "Clear all saved credentials…")) { clearAll = true }
+        }
+        .disabled(tasks.busy)
+        .task(id: state.runtimeRoot) { if !tasks.busy { await state.prepareCredentials() } }
+        .confirmationDialog(state.t("清除当前目标的这项密码？同时清除本次会话副本。", "Clear this password for the current target and its session copy?"), isPresented: Binding(get: { clearing != nil }, set: { if !$0 { clearing = nil } })) {
+            if let kind = clearing { Button(state.t("确认清除", "Confirm clear"), role: .destructive) { Task { await credentials.remove(kind) }; clearing = nil } }
+        }
+        .confirmationDialog(state.t("清除本 App 所有已保存凭据？不会删除旧脚本或其他应用的钥匙串记录。", "Clear all credentials saved by this App? Legacy-script and other apps’ Keychain records are untouched."), isPresented: $clearAll) {
+            Button(state.t("清除所有已保存凭据", "Clear all saved credentials"), role: .destructive) { Task { await credentials.removeAll() } }
+        }
+    }
+    private func status(_ kind: CredentialKind) -> String {
+        if credentials.vaultError != nil { return state.t("无法确认 · 自动复用受限", "Cannot confirm · Automatic reuse restricted") }
+        if credentials.rejected.contains(kind) { return state.t("认证失效／已停止复用", "Authentication rejected / reuse stopped") }
+        return credentials.saved.contains(kind) ? state.t("已保存 · 当前目标", "Saved · Current target") : state.t("未保存", "Not saved")
     }
 }

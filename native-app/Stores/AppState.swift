@@ -17,7 +17,7 @@ final class AppState: ObservableObject {
     }
     @Published var operationSelection: NativeOperation?
     let credentials = SessionCredentialManager()
-    @Published var runtimeRoot = "" {
+    @Published var runtimeRoot = UserDefaults.standard.string(forKey: "NativeRememberedRuntimeRoot") ?? "" {
         didSet { if oldValue != runtimeRoot { credentials.clear() } }
     }
     @Published private(set) var operationResult: [String: JSONValue] = [:]
@@ -52,7 +52,7 @@ final class AppState: ObservableObject {
         guard !tasks.busy else { return }
         let generation = UUID(); operationGeneration = generation
         let selectedRoot = runtimeRoot
-        let redactor = credentials.redactor
+        var redactor = credentials.redactor
         if method == "launch_game" { launchSession.begin(root: selectedRoot); recordLaunch() }
         if method == "observe_launch", selectedRoot != launchSession.root { launchSession.begin(root: selectedRoot) }
         operationError = nil; operationResult = [:]; operationEvents = []
@@ -64,17 +64,32 @@ final class AppState: ObservableObject {
                 if !selectedRoot.isEmpty { input["runtime_root"] = .string(selectedRoot) }
                 if let note = input["note"]?.text { input["note"] = .string(redactor.text(note)) }
                 if method == "save_configuration", let value = input["configuration"], redactor.containsSecret(value) { throw ErrorState("SENSITIVE_CONFIGURATION") }
-                if ["launch_game","test_ssh","inspect_guest","apply_performance","save_network_snapshot"].contains(method), !self.credentials.isEmpty {
+                if ["launch_game","test_ssh","test_guest_sudo","inspect_guest","apply_performance","save_network_snapshot"].contains(method) {
                     let metadata = try await self.bridge.request("read_configuration", configuration: config)
                     guard let revision = metadata.result["revision"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
+                    await self.credentials.prepare(for: selectedRoot + "|" + revision)
                     input.merge(try self.credentials.parameters(for: selectedRoot + "|" + revision)) { _, new in new }
+                    redactor = self.credentials.redactor
                     input["credential_revision"] = .string(revision)
                 }
+                let eventRedactor = redactor
+                let authInput = input
+                let credentialTarget = selectedRoot + "|" + (input["credential_revision"]?.text ?? "")
                 let reply = try await self.bridge.request(method, configuration: config, timeout: method == "launch_game" || method == "apply_performance" ? 900 : 90, params: input) { [weak self] event in
                     Task { @MainActor in
                         guard let self, self.operationGeneration == generation else { return }
                         if method == "launch_game" { self.launchSession.consume(event) }
-                        let safeEvent = redactor.event(event)
+                        if event["kind"]?.text == "credential_status",
+                           let role = event["credential_kind"]?.text.flatMap(CredentialKind.init(rawValue:)) {
+                            if event["status"]?.text == "rejected" { self.credentials.reject(role) }
+                            else if event["status"]?.text == "authenticated", let value = authInput[role.bridgeField]?.text {
+                                await self.credentials.authenticated(role, value: value, target: credentialTarget)
+                                if self.credentials.saved.contains(role), !selectedRoot.isEmpty {
+                                    UserDefaults.standard.set(selectedRoot, forKey: "NativeRememberedRuntimeRoot")
+                                }
+                            }
+                        }
+                        let safeEvent = eventRedactor.event(event)
                         self.operationEvents.append(safeEvent)
                         self.runtimeLogs.append(safeEvent)
                         if self.runtimeLogs.count > 500 { self.runtimeLogs.removeFirst(self.runtimeLogs.count - 500) }
@@ -87,6 +102,8 @@ final class AppState: ObservableObject {
             } catch {
                 let failure = error as? ErrorState ?? ErrorState("PROTOCOL_ERROR", method: method)
                 self.operationError = ErrorState(failure.code, method: failure.method, details: redactor.diagnostic(failure.details))
+                if failure.code == "SUDO_AUTH_FAILED" { self.credentials.reject(.sudo) }
+                if failure.code == "SSH_AUTH_FAILED" { self.credentials.reject(.ssh) }
                 if method == "launch_game" || method == "observe_launch", let failure = self.operationError {
                     if method == "observe_launch" { self.launchSession = LaunchSession() }
                     self.launchSession.fail(failure)
@@ -95,6 +112,14 @@ final class AppState: ObservableObject {
                 self.appendLog(method + ": " + (self.operationError?.code ?? "UNKNOWN"))
             }
         }
+    }
+    func prepareCredentials(interactive: Bool = false) async {
+        do {
+            let config = try BridgeConfiguration.bundled(python: pythonURL)
+            let metadata = try await bridge.request("read_configuration", configuration: config)
+            guard let revision = metadata.result["revision"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
+            await credentials.prepare(for: runtimeRoot + "|" + revision, interactive: interactive)
+        } catch { appendLog("credential target unavailable") }
     }
     private func recordLaunch() {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"

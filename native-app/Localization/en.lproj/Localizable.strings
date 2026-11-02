@@ -9,6 +9,6 @@
 "updates.finished" = "Update check cycle finished. This does not confirm installation.";
 "updates.failed" = "Update check failed. See Sparkle for details.";
 "updates.scope" = "Updates apply only to this Launcher. FX Runtime, SteamOS, game files and EAC are not updated.";
-"updates.languageRestart" = "Language and Python selection are saved for this App. Restart the App to apply its language to standard macOS and Sparkle menus/dialogs. Appearance and runtime directory remain session-only. Ten original catalogs are retained; some Native text falls back to English.";
+"updates.languageRestart" = "Language and Python selection are saved for this App. Restart the App to apply its language to standard macOS and Sparkle menus/dialogs. Appearance remains session-only. The runtime directory is retained only after opting in to save verified credentials. Ten original catalogs are retained; some Native text falls back to English.";
 "updates.automaticOff" = "Automatic checks: off. Sparkle manages first-run consent once the service is configured.";
 "updates.automaticOn" = "Automatic checks: on (Sparkle preference).";

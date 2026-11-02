@@ -77,9 +77,13 @@ class CredentialChecks(unittest.TestCase):
         self.assertEqual(scan.report()['status'],'SUSPECTED');self.assertNotIn('A'*80,json.dumps(scan.report()))
         scan=scanner.Scan();scan.path(self.directory/'missing')
         self.assertEqual(scan.report()['status'],'UNABLE')
-    def test_manager_source_has_no_persistence_or_keychain_calls(self):
+    def test_manager_has_no_plaintext_storage_and_keychain_is_opt_in(self):
         source=(APP/'Services/SessionCredentialManager.swift').read_text()
-        for forbidden in ['UserDefaults','AppStorage','SecItem','FileManager','KeychainAccess','Process(']:self.assertNotIn(forbidden,source)
+        for forbidden in ['AppStorage','FileManager','Process(']:self.assertNotIn(forbidden,source)
+        self.assertIn('kSecUseAuthenticationUIFail',source)
+        self.assertIn('guard remembers(kind) else { return }',source)
+        self.assertNotIn('preferences.set(password',source)
+        self.assertNotIn('preferences.set(sudoPassword',source)
     def test_source_prompt_labels_are_not_literal_password_assignments(self):
         self.assertEqual(scanner.rules(b"prompt('SSH password: ')",'prompts.py'),[])
         data=b'password = '+repr(self.fake).encode()
@@ -149,5 +153,40 @@ class CredentialChecks(unittest.TestCase):
         security.bind_session_sudo(h,{'sudo_password':self.fake})
         with self.assertRaises(subprocess.TimeoutExpired):h.safety.request(h,{'action':'ipv6'},sudo=True)
         self.assertEqual(len(calls),3);self.assertEqual(h.CLIENT.password,'fixture-ssh-only')
+
+    def test_sudo_auth_proof_requires_password_prompt_not_just_success(self):
+        for prompted in (False,True):
+            h,calls=self.sudo_fixture()
+            original_run=h.subprocess.run
+            def run(args,**kwargs):
+                # Use the preserved validation barrier; both successes are real
+                # outcomes in the fixture, but only a prompt proves password use.
+                command=args[-1]
+                if command=='sudo -n -v':return subprocess.CompletedProcess(args,1,'','')
+                stderr='[HD2_NATIVE_SUDO_AUTH]' if prompted else ''
+                return subprocess.CompletedProcess(args,0,'{"ok":true}',stderr)
+            h.subprocess.run=run
+            proof=[];security.bind_session_sudo(h,{'sudo_password':self.fake},proof.append)
+            self.assertEqual(h.safety.request(h,{'action':'ipv6'},sudo=True),{'ok':True})
+            self.assertEqual(bool(proof),prompted)
+
+    def test_passwordless_sudo_check_never_prompts_or_mutates(self):
+        calls=[];events=[];self.ops.emit=events.append
+        helper=types.SimpleNamespace(CLIENT=types.SimpleNamespace(connect_once=lambda:None),SSH=['fixture-ssh'],safety=types.SimpleNamespace(Session=lambda h:types.SimpleNamespace(bind=lambda:{})),subprocess=types.SimpleNamespace(run=lambda args,**kwargs:(calls.append((args,kwargs)) or subprocess.CompletedProcess(args,0,'',''))))
+        with patch.object(self.ops,'runtime',return_value=helper),patch.object(self.ops,'check_fx_entry'):
+            result=self.ops.run('test_guest_sudo',{'confirmed':True})
+        self.assertEqual(result['configuration_changed'],False);self.assertEqual(result['password_verified'],False)
+        self.assertEqual(len(calls),1);self.assertEqual(calls[0][0][-1],'sudo -n -v');self.assertNotIn('input',calls[0][1])
+        self.assertFalse(any(row.get('kind')=='credential_status' for row in events))
+    def test_cached_ssh_master_is_not_password_verification_proof(self):
+        prefs=self.ops.module('preferences');proof=[]
+        security.session_only(prefs,proof.append)
+        client=prefs.SSHClient(prefs.DEFAULTS)
+        client.password=self.fake
+        with patch.object(prefs.subprocess,'run',return_value=subprocess.CompletedProcess([],0,b'',b'')):
+            client.connect_once()
+        self.assertEqual(proof,[])
+        client._remember_authenticated_password()
+        self.assertEqual(proof,['ssh'])
 
 if __name__=='__main__':unittest.main(verbosity=2)

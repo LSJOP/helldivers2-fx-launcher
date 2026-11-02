@@ -53,7 +53,7 @@ The script archives a **Release** build, requires Developer ID, validates the bu
 
 The staged Git hook runs `check_release_secrets.py --staged` against index blobs, not the working copy. This checkout enables `.githooks` locally; other checkouts can opt in with `git config --local core.hooksPath .githooks` after preserving any existing hook configuration. Release preparation scans tracked files, the built App before notarization, the final ZIP before signing, then the appcast and notes. Results are PASS, SUSPECTED or UNABLE; either non-pass result stops the script. Only relative file/rule identifiers are reported, never matching credential text. Private-key material, credential assignments, private config/key files and recognized tokens are checked with bounded standard-library rules. Source Python assignments and structured catalogs are parsed to distinguish labels from credentials; this is not a proof against arbitrary encoding or secret-bearing images. No user file is deleted.
 
-SSH secrets use App session memory only; the Native adapter ignores legacy SSH Keychain preferences. Old service `org.hd2fx.launcher.ssh-password.v1` items are not read or deleted; inspect them manually in Keychain Access if desired. Sparkle signing keys, Developer ID and notarization Keychain profiles are independent and unchanged.
+SSH/sudo secrets default to App session memory; explicit opt-in saves independently verified passwords in a new Native-only Keychain namespace with noninteractive automatic reads. The Python adapter still ignores legacy SSH Keychain preferences. Old service `org.hd2fx.launcher.ssh-password.v1` items are not read or deleted; inspect them manually in Keychain Access if desired. Sparkle signing keys, Developer ID and notarization Keychain profiles are independent and unchanged.
 
 ### Language, data and recovery
 
@@ -98,7 +98,7 @@ Official references: [Sparkle setup](https://sparkle-project.org/documentation/)
 
 暂存 Git hook 使用 `check_release_secrets.py --staged` 检查 index 内容，不以工作副本替代。当前检出已在本地启用 `.githooks`；其他检出需保留已有 hook 配置后自行选择启用。发布准备依次检查 Git 跟踪文件、公证前 App、签名前最终 ZIP、appcast 和更新说明。结果区分 PASS、SUSPECTED、UNABLE，后两者均停止发布；仅报告相对文件/规则，不输出匹配内容。标准库规则有容量限制，检查私钥正文、凭据赋值、敏感配置/密钥文件及已识别 token，并解析 Python 赋值和结构化语言资源以区分标签。这不证明任意编码或图片中的秘密不存在，不自动删除用户文件。
 
-SSH 秘密仅存 App 会话内存，Native 忽略旧 SSH 钥匙串偏好。不会读取/删除旧 service `org.hd2fx.launcher.ssh-password.v1` 项目，用户可自行在钥匙串访问中核对。Sparkle 签名密钥、Developer ID、公证钥匙串配置相互独立，保持原有机制。
+SSH／sudo 默认只保留在 App 会话内；用户明确选择后，将分别验证的密码保存在新的 Native 专用 Keychain namespace，自动读取禁止弹窗。Python 适配器仍忽略旧 SSH 钥匙串偏好。不会读取/删除旧 service `org.hd2fx.launcher.ssh-password.v1` 项目，用户可自行在钥匙串访问中核对。Sparkle 签名密钥、Developer ID、公证钥匙串配置相互独立，保持原有机制。
 
 ### 语言与数据保护
 

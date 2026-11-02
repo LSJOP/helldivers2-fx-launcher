@@ -30,11 +30,21 @@ class DisabledCredentialStore:
     def put(self,*args):raise RuntimeError('Persistent SSH credential storage is disabled in Native App')
     def delete(self,*args):raise RuntimeError('Native App never deletes existing Keychain credentials')
 
-def session_only(preferences):
+def session_only(preferences,on_auth=None):
     # Class overrides also cover CLIENT instances constructed during the original import.
     preferences.VAULT=DisabledCredentialStore()
     preferences.SSHClient._saved_password=lambda self:None
-    preferences.SSHClient._remember_authenticated_password=lambda self:None
+    def authenticated(client):
+        if on_auth is not None and client.password is not None:on_auth('ssh')
+    preferences.SSHClient._remember_authenticated_password=authenticated
+    original_connect=preferences.SSHClient.connect_once
+    def connect(client):
+        try:return original_connect(client)
+        except preferences.AuthenticationError as error:
+            if on_auth is not None and str(error).startswith('SSH authentication failed.'):
+                on_auth('ssh_rejected')
+            raise
+    preferences.SSHClient.connect_once=connect
 
 class GuestTransactionFailure(RuntimeError):
     """Mutation was submitted once; its outcome requires the original recovery checks."""
@@ -43,7 +53,7 @@ class GuestTransactionFailure(RuntimeError):
         self.stderr=redactor.text(result.stderr or '')[-700:]
         super().__init__('Guest transaction failed; outcome unverified; inspect the recovery backup. '+self.stderr)
 
-def bind_session_sudo(helper,params):
+def bind_session_sudo(helper,params,on_auth=None):
     original=helper.safety.request
     def request(target,data,sudo=False):
         if not sudo:return original(target,data,sudo=False)
@@ -53,16 +63,22 @@ def bind_session_sudo(helper,params):
         redactor=Redactor([params.get(key,'') for key in ('password','passphrase','sudo_password')])
         def run(args,**kwargs):
             command=args[-1] if isinstance(args,(list,tuple)) and args else ''
+            marker='[HD2_NATIVE_SUDO_AUTH]'
+            if on_auth is not None and command=='sudo -S -p "" -v':
+                result=target.subprocess.run(list(args[:-1])+['sudo -S -p "'+marker+'" -v'],**kwargs)
+                if result.returncode==0 and marker in (result.stderr or ''):on_auth('sudo')
+                return result
             prefix='sudo -n python3 -c '
             if password is not None and args[:-1]==target.SSH and isinstance(command,str) and command.startswith(prefix):
                 # sudo timestamps can be scoped to each SSH command's parent process.
                 # Keep the archive's separate authentication check; supply the same
                 # explicitly entered sudo credential to the ONE mutation invocation.
                 # Never retry this command, whether it fails or times out.
-                args=list(args[:-1])+['sudo -S -p "" python3 -c '+command[len(prefix):]]
+                args=list(args[:-1])+['sudo -S -p "'+(marker if on_auth is not None else '')+'" python3 -c '+command[len(prefix):]]
                 kwargs['input']=password+'\n'
                 result=target.subprocess.run(args,**kwargs)
                 mutation.append(result)
+                if on_auth is not None and result.returncode==0 and marker in (result.stderr or ''):on_auth('sudo')
                 return result
             return target.subprocess.run(args,**kwargs)
         class Target:
