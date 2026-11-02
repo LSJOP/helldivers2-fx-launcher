@@ -16,7 +16,10 @@ final class AppState: ObservableObject {
         set { languageCode = newValue ? "zh-CN" : "en" }
     }
     @Published var operationSelection: NativeOperation?
-    @Published var runtimeRoot = ""
+    let credentials = SessionCredentialManager()
+    @Published var runtimeRoot = "" {
+        didSet { if oldValue != runtimeRoot { credentials.clear() } }
+    }
     @Published private(set) var operationResult: [String: JSONValue] = [:]
     @Published private(set) var operationError: ErrorState?
     @Published private(set) var operationEvents: [[String: JSONValue]] = []
@@ -48,6 +51,7 @@ final class AppState: ObservableObject {
         guard !tasks.busy else { return }
         let generation = UUID(); operationGeneration = generation
         let selectedRoot = runtimeRoot
+        let redactor = credentials.redactor
         if method == "launch_game" { launchSession.begin(root: selectedRoot) }
         if method == "observe_launch", selectedRoot != launchSession.root { launchSession.begin(root: selectedRoot) }
         operationError = nil; operationResult = [:]; operationEvents = []
@@ -55,14 +59,23 @@ final class AppState: ObservableObject {
             guard let self else { return }
             do {
                 let config = try BridgeConfiguration.bundled(python: self.pythonURL)
-                var input = params
+                var input = params.filter { !["password","passphrase","sudo_password"].contains($0.key) }
                 if !selectedRoot.isEmpty { input["runtime_root"] = .string(selectedRoot) }
+                if let note = input["note"]?.text { input["note"] = .string(redactor.text(note)) }
+                if method == "save_configuration", let value = input["configuration"], redactor.containsSecret(value) { throw ErrorState("SENSITIVE_CONFIGURATION") }
+                if ["launch_game","test_ssh","inspect_guest","apply_performance","save_network_snapshot"].contains(method), !self.credentials.isEmpty {
+                    let metadata = try await self.bridge.request("read_configuration", configuration: config)
+                    guard let revision = metadata.result["revision"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
+                    input.merge(try self.credentials.parameters(for: selectedRoot + "|" + revision)) { _, new in new }
+                    input["credential_revision"] = .string(revision)
+                }
                 let reply = try await self.bridge.request(method, configuration: config, timeout: method == "launch_game" || method == "apply_performance" ? 900 : 90, params: input) { [weak self] event in
                     Task { @MainActor in
                         guard let self, self.operationGeneration == generation else { return }
                         if method == "launch_game" { self.launchSession.consume(event) }
-                        self.operationEvents.append(event)
-                        self.runtimeLogs.append(event)
+                        let safeEvent = redactor.event(event)
+                        self.operationEvents.append(safeEvent)
+                        self.runtimeLogs.append(safeEvent)
                         if self.runtimeLogs.count > 500 { self.runtimeLogs.removeFirst(self.runtimeLogs.count - 500) }
                         if self.operationEvents.count > 200 { self.operationEvents.removeFirst(self.operationEvents.count - 200) }
                     }
@@ -71,7 +84,8 @@ final class AppState: ObservableObject {
                 if method == "launch_game" || method == "observe_launch" { self.launchSession.complete(reply.result, at: reply.observedAt) }
                 self.appendLog(method + ": COMPLETED")
             } catch {
-                self.operationError = error as? ErrorState ?? ErrorState("PROTOCOL_ERROR", method: method)
+                let failure = error as? ErrorState ?? ErrorState("PROTOCOL_ERROR", method: method)
+                self.operationError = ErrorState(failure.code, method: failure.method, details: redactor.diagnostic(failure.details))
                 if method == "launch_game" || method == "observe_launch", let failure = self.operationError {
                     if method == "observe_launch" { self.launchSession = LaunchSession() }
                     self.launchSession.fail(failure)
@@ -82,6 +96,7 @@ final class AppState: ObservableObject {
     }
     func confirmMainMenu() { launchSession.confirmMainMenu() }
     func confirmSinglePlayer() { launchSession.confirmSinglePlayer() }
+    func endSession() { tasks.cancel(); credentials.clear() }
     func value(_ method: String, _ key: String) -> String { results[method]?[key]?.text ?? t("未知", "Unknown") }
     func rows(_ method: String, _ key: String) -> [[String: JSONValue]] { results[method]?[key]?.array.map(\.object) ?? [] }
     func refresh() {
@@ -123,11 +138,11 @@ final class AppState: ObservableObject {
         if !valid { throw ErrorState("PROTOCOL_ERROR", method: method) }
     }
     private func appendLog(_ line: String) {
-        sessionLogs.append("\(ISO8601DateFormatter().string(from: Date()))  \(line)")
+        sessionLogs.append("\(ISO8601DateFormatter().string(from: Date()))  \(credentials.redactor.text(line))")
         if sessionLogs.count > 200 { sessionLogs.removeFirst(sessionLogs.count - 200) }
     }
     var logText: String {
         let bridgeLogs = rows("get_logs", "entries").map { ($0["at"]?.text ?? "") + "  " + ($0["message"]?.text ?? "") }
-        return (sessionLogs + bridgeLogs).joined(separator: "\n")
+        return credentials.redactor.text((sessionLogs + bridgeLogs).joined(separator: "\n"))
     }
 }

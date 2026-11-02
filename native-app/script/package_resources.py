@@ -10,7 +10,7 @@ app = Path(__file__).resolve().parents[1]
 root = app / 'CoreSnapshot/native-app-core-snapshot'
 destination = Path(sys.argv[1])
 destination.mkdir(parents=True, exist_ok=True)
-for name in ('bridge.py', 'core_adapter.py', 'legacy_operations.py'):
+for name in ('bridge.py', 'core_adapter.py', 'legacy_operations.py', 'credential_security.py'):
     target = destination / 'bridge' / name
     target.parent.mkdir(exist_ok=True)
     shutil.copyfile(app / 'bridge' / name, target)

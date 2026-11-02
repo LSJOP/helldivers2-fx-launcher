@@ -44,6 +44,15 @@ import Foundation
         let progress = ProgressRecorder()
         _ = try await BridgeService().request("launch_game", configuration: streaming, params: ["confirmed": .bool(true)]) { progress.record($0) }
         try check(progress.count == 1, "progress frames delivered before final result")
+        let secret = String(repeating:"m",count:24)
+        let echo = try fixture("credential_echo", prefix + "import os\ns=r['params']['password']\nassert s not in sys.argv and s not in os.environ.values()\nprint(json.dumps(dict(protocol=1,request_id=r['request_id'],event=dict(message=s))))\nprint(json.dumps(dict(protocol=1,request_id=r['request_id'],ok=False,error=dict(code='AUTH_REQUIRED',message='required',details=dict(summary=s)))))\n")
+        let diagnostics = MessageRecorder()
+        do {
+            _ = try await BridgeService().request("launch_game",configuration:echo,params:["password":.string(secret)]) { diagnostics.record($0["message"]?.text ?? "") }
+            throw ErrorState("EXPECTED_FAILURE")
+        } catch let error as ErrorState {
+            try check(error.code == "AUTH_REQUIRED" && error.details["summary"]?.text == "[REDACTED]" && diagnostics.safe(secret),"stdin credentials excluded from argv/env and redacted in progress/errors")
+        }
         try await expect("PROTOCOL_ERROR", config: fixture("foreign_progress", prefix + "print(json.dumps(dict(protocol=1,request_id='foreign',event={})))\nprint(json.dumps(" + good + "))\n"))
         try await expect("FX_IDENTITY_UNVERIFIED", config: fixture("launch_identity_error", prefix + "print(json.dumps(dict(protocol=1,request_id=r['request_id'],ok=False,error=dict(code='FX_IDENTITY_UNVERIFIED',message='blocked',details=dict(stage='CheckingCompatibility')))))\n"), method: "launch_game")
         try await expect("FX_INSTANCE_MISMATCH", config: fixture("launch_foreign_error", prefix + "print(json.dumps(dict(protocol=1,request_id=r['request_id'],ok=False,error=dict(code='FX_INSTANCE_MISMATCH',message='blocked',details=dict(stage='CheckingFXEntry')))))\n"), method: "launch_game")
@@ -73,6 +82,13 @@ final class ProgressRecorder: @unchecked Sendable {
     private var events = 0
     func record(_ event: [String: JSONValue]) { lock.lock(); events += 1; lock.unlock() }
     var count: Int { lock.lock(); defer { lock.unlock() }; return events }
+}
+
+final class MessageRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var messages: [String] = []
+    func record(_ text: String) { lock.lock(); messages.append(text); lock.unlock() }
+    func safe(_ secret: String) -> Bool { lock.lock(); defer { lock.unlock() }; return messages == ["[REDACTED]"] }
 }
 
 @MainActor enum TaskManagerChecks {

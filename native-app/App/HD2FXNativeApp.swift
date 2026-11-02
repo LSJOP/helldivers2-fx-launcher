@@ -47,7 +47,7 @@ struct HD2FXNativeApp: App {
                 .frame(minWidth: 850, minHeight: 560)
                 .preferredColorScheme(state.appearance.scheme)
                 .task {
-                    NativeLifecycle.cancel = { state.tasks.cancel() }
+                    NativeLifecycle.cancel = { state.endSession() }
                     if !state.hasLoaded { state.refresh() }
                     #if DEBUG
                     await SmokeRunner.runIfRequested(state: state)

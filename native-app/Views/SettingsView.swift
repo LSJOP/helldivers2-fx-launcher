@@ -106,12 +106,14 @@ private extension Dictionary where Key == String, Value == JSONValue {
 struct LegacyOperationSheet: View {
     @ObservedObject var state: AppState
     let operation: String
+    @ObservedObject private var credentials: SessionCredentialManager
+    init(state: AppState, operation: String) {
+        self.state = state; self.operation = operation
+        self._credentials = ObservedObject(wrappedValue: state.credentials)
+    }
     @Environment(\.dismiss) private var dismiss
     @State private var confirmed = false
     @State private var choosingRoot = false
-    @State private var password = ""
-    @State private var passphrase = ""
-    @State private var sudoPassword = ""
     @State private var configuration = "{}"
     @State private var revision = ""
     @State private var approved: [JSONValue] = []
@@ -144,11 +146,12 @@ struct LegacyOperationSheet: View {
                         .disabled(state.tasks.busy || state.runtimeRoot.isEmpty)
                 }
                 if ["test_ssh","inspect_guest","launch_game","apply_performance","save_network_snapshot"].contains(operation) {
-                    SecureField(state.t("本次 SSH 密码（可留空使用已有认证）", "Session SSH password (optional with existing authentication)"), text: $password)
-                    SecureField(state.t("本次密钥口令", "Session key passphrase"), text: $passphrase)
-                    SecureField(state.t("本次 Guest sudo 密码", "Session Guest sudo password"), text: $sudoPassword)
-                    Text(state.t("秘密只通过进程 stdin 传递；是否使用钥匙串由原 SSH 配置控制。", "Secrets are sent only through process stdin. The original SSH setting controls Keychain use."))
+                    SecureField(state.t("本次 SSH 密码（可留空使用已有连接）", "Session SSH password (optional with an existing connection)"), text: $credentials.password)
+                    SecureField(state.t("本次密钥口令", "Session key passphrase"), text: $credentials.passphrase)
+                    SecureField(state.t("本次 Guest sudo 密码", "Session Guest sudo password"), text: $credentials.sudoPassword)
+                    Text(state.t("凭据仅存本次 App 内存，可在本次会话复用；通过 stdin 传递，不读写 SSH 钥匙串。关闭 App 后重新输入。更改目标会清除会话凭据。", "Credentials stay in App memory for this session and use stdin only. SSH Keychain access is disabled. Re-enter after quitting; changing target clears session credentials."))
                         .font(TacticalTypography.caption)
+                    Button(state.t("清除本次会话凭据", "Clear session credentials")) { credentials.clear() }.disabled(state.tasks.busy)
                 }
                 if operation == "save_configuration" {
                     Text(state.operationResult["target"]?.text ?? state.t("先读取目标配置", "Read target configuration first")).textSelection(.enabled)
@@ -220,9 +223,6 @@ struct LegacyOperationSheet: View {
         inputError = false
         var params: [String: JSONValue] = [:]
         if needsConsent { params["confirmed"] = .bool(confirmed) }
-        if !password.isEmpty { params["password"] = .string(password) }
-        if !passphrase.isEmpty { params["passphrase"] = .string(passphrase) }
-        if !sudoPassword.isEmpty { params["sudo_password"] = .string(sudoPassword) }
         params["approved_changes"] = .array(approved)
         if operation == "save_configuration" {
             guard !revision.isEmpty, let data = configuration.data(using: .utf8), let value = try? JSONDecoder().decode(JSONValue.self, from: data), case .object = value else { inputError = true; return }

@@ -82,7 +82,7 @@ struct LogsView: View {
     private var copyButton: some View {
         TacticalButton(title: state.t("复制", "Copy"), symbol: "doc.on.doc", disabledReason: filtered.isEmpty ? state.t("没有可复制的日志", "No entries to copy") : nil) {
             let text = filtered.map { "\($0.time) [\($0.source)] [\($0.level)] \($0.message)" }.joined(separator: "\n")
-            NSPasteboard.general.clearContents(); NSPasteboard.general.setString(text, forType: .string)
+            NSPasteboard.general.clearContents(); NSPasteboard.general.setString(state.credentials.redactor.text(text), forType: .string)
         }
     }
 }

@@ -49,6 +49,12 @@ The script archives a **Release** build, requires Developer ID, validates the bu
 5. Verify the final public asset URL and byte size, then publish the generated signed appcast to the matching Pages path. Do not point a public feed at private/draft/missing assets. Commit the exact signed XML when tracking it; do not hand-edit a signed feed afterward. Keep previous entries/assets.
 6. On a separately installed older signed version, explicitly validate check → download → signature verification → installation → restart and retained settings. Only then mark end-to-end updating verified. No live upgrade is claimed now.
 
+### Secret gates
+
+The staged Git hook runs `check_release_secrets.py --staged` against index blobs, not the working copy. This checkout enables `.githooks` locally; other checkouts can opt in with `git config --local core.hooksPath .githooks` after preserving any existing hook configuration. Release preparation scans tracked files, the built App before notarization, the final ZIP before signing, then the appcast and notes. Results are PASS, SUSPECTED or UNABLE; either non-pass result stops the script. Only relative file/rule identifiers are reported, never matching credential text. Private-key material, credential assignments, private config/key files and recognized tokens are checked with bounded standard-library rules. Source Python assignments and structured catalogs are parsed to distinguish labels from credentials; this is not a proof against arbitrary encoding or secret-bearing images. No user file is deleted.
+
+SSH secrets use App session memory only; the Native adapter ignores legacy SSH Keychain preferences. Old service `org.hd2fx.launcher.ssh-password.v1` items are not read or deleted; inspect them manually in Keychain Access if desired. Sparkle signing keys, Developer ID and notarization Keychain profiles are independent and unchanged.
+
 ### Language, data and recovery
 
 English/Simplified Chinese standard macOS menus use bundle localization and the App's own `AppleLanguages` preference. The interface can change immediately; **restart the App for standard menus and Sparkle dialogs**. No system-wide language is changed and no menu-tree translation is performed. The visible name is consistently HELLDIVERS 2 FX Launcher; internal executable/bundle ID remain stable.
@@ -87,6 +93,12 @@ Official references: [Sparkle setup](https://sparkle-project.org/documentation/)
 4. 创建 `native-v$NEXT_VERSION` 的 GitHub Release 草稿并附最终 ZIP，审阅后获得授权再发布。预览版标为 prerelease，稳定版不标。不得使用分支 ZIP 或未签名 Debug 构建。
 5. 验证正式附件公开 URL 和大小，再将生成的签名 appcast 发布至对应 Pages 路径。不能指向草稿、私有或不存在的附件；跟踪签名 XML 时原样提交，不手动修改。保留既有条目和附件。
 6. 从另行安装的较旧签名版本验证检查、下载、签名、安装、重启和设置保留，完成后才能声明端到端更新正常。本次未执行实机升级。
+
+### 敏感信息检查
+
+暂存 Git hook 使用 `check_release_secrets.py --staged` 检查 index 内容，不以工作副本替代。当前检出已在本地启用 `.githooks`；其他检出需保留已有 hook 配置后自行选择启用。发布准备依次检查 Git 跟踪文件、公证前 App、签名前最终 ZIP、appcast 和更新说明。结果区分 PASS、SUSPECTED、UNABLE，后两者均停止发布；仅报告相对文件/规则，不输出匹配内容。标准库规则有容量限制，检查私钥正文、凭据赋值、敏感配置/密钥文件及已识别 token，并解析 Python 赋值和结构化语言资源以区分标签。这不证明任意编码或图片中的秘密不存在，不自动删除用户文件。
+
+SSH 秘密仅存 App 会话内存，Native 忽略旧 SSH 钥匙串偏好。不会读取/删除旧 service `org.hd2fx.launcher.ssh-password.v1` 项目，用户可自行在钥匙串访问中核对。Sparkle 签名密钥、Developer ID、公证钥匙串配置相互独立，保持原有机制。
 
 ### 语言与数据保护
 

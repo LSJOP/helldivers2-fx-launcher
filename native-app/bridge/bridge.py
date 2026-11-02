@@ -101,7 +101,10 @@ class Bridge:
             response = {'protocol': PROTOCOL, 'request_id': rid, 'ok': True, 'result': result,
                         'observed_at': stamp()}
         except self.operations_module.OperationError as failure:
-            response=error(rid,failure.code,'Core operation requires attention',failure.details)
+            details=dict(failure.details)
+            for key in ('summary','stderr','stdout','message'):
+                if isinstance(details.get(key),str):details[key]=self.operations.scrub(details[key])
+            response=error(rid,failure.code,'Core operation requires attention',details)
         except Deadline:
             response = error(rid, 'TIMEOUT', 'Operation timed out; recheck actual state')
         except (OSError, ValueError, RuntimeError, AttributeError, TypeError, KeyError) as failure:

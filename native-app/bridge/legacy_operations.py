@@ -17,6 +17,9 @@ import tempfile
 import time
 import uuid
 
+_security_spec=importlib.util.spec_from_file_location('native_credential_security',Path(__file__).with_name('credential_security.py'))
+security=importlib.util.module_from_spec(_security_spec);_security_spec.loader.exec_module(security)
+
 class OperationError(Exception):
     def __init__(self, code, details=None):
         self.code, self.details = code, details or {}
@@ -82,16 +85,16 @@ class Operations:
             path = self.root/'launcher-20261026'/(name+'.py')
             spec = importlib.util.spec_from_file_location('native_legacy_'+name, path)
             value = importlib.util.module_from_spec(spec); spec.loader.exec_module(value)
+            if name=='preferences':security.session_only(value)
             self.modules[name] = value
         return self.modules[name]
 
     def scrub(self, value):
-        if isinstance(value, dict): return {k:self.scrub(v) for k,v in value.items() if not re.search(r'password|passphrase|token|secret',k,re.I)}
+        if isinstance(value, dict): return {k:self.scrub(v) for k,v in value.items() if not re.search(r'password|passphrase|token|secret|authorization|private[_-]?key|api[_-]?key',k,re.I)}
         if isinstance(value, (list,tuple)): return [self.scrub(x) for x in value[:200]]
-        if isinstance(value,Path): return str(value)
+        if isinstance(value,Path): value=str(value)
         if not isinstance(value,str): return value
-        for secret in self.secret_values:
-            if secret:value=value.replace(secret,'[REDACTED]')
+        value=security.Redactor(self.secret_values).text(value)
         value=re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]','',value)
         value=re.sub(r'(?i)(password|passphrase|token|authorization)\s*[:=]\s*\S+',r'\1=[REDACTED]',value)
         value=re.sub(r'/Users/[^/\s]+', '~/…', value)
@@ -99,7 +102,7 @@ class Operations:
         return value[:4000]
 
     def event(self, level, message, **extra):
-        self.emit(dict(level=level, message=self.scrub(message), **extra))
+        self.emit(self.scrub(dict(level=level, message=message, **extra)))
 
     def read_config(self):
         prefs = self.module('preferences')
@@ -115,6 +118,7 @@ class Operations:
         original, _, digest = self.read_config()
         if digest != params['expected_revision']: raise OperationError('CONFIG_CHANGED')
         patch = params['configuration']
+        if security.Redactor().contains_secret(original) or security.Redactor().contains_secret(patch):raise OperationError('SENSITIVE_CONFIGURATION')
         if set(patch)-{'ssh','ssh_configured','appearance','version'}: raise OperationError('INVALID_ARGUMENT')
         candidate=copy.deepcopy(original)
         for key,value in patch.items():
@@ -214,10 +218,15 @@ class Operations:
             return 'missing'
         helper.dependencies.node_state=checked_node
         helper.prefs.path=lambda:self.settings
-        self.secret_values=[params.get('password',''),params.get('passphrase',''),params.get('sudo_password','')]
+        security.session_only(helper.prefs)
+        def session_settings():
+            _,config,revision=self.read_config()
+            if any(self.secret_values) and revision!=params.get('credential_revision'):raise OperationError('CREDENTIAL_SCOPE_CHANGED')
+            return config
+        helper.prefs.load=session_settings
         def secret(prompt):
             key='passphrase' if 'passphrase' in prompt.lower() else 'sudo_password' if 'sudo' in prompt.lower() else 'password'
-            if not params.get(key):raise OperationError('AUTH_REQUIRED')
+            if not params.get(key):raise OperationError('AUTH_REQUIRED',{'credential_kind':key})
             return params[key]
         def connect_settings():
             helper.refresh_settings()
@@ -232,6 +241,8 @@ class Operations:
             self.event('SUCCESS' if status in ('done','passed') else 'ERROR' if status=='failed' else 'INFO',stage,stage=stage,status=status)
         helper.PROGRESS_HOOK=progress
         def confirm(kind,before,after):
+            if security.Redactor(self.secret_values).contains_secret(before) or security.Redactor(self.secret_values).contains_secret(after):
+                raise OperationError('SENSITIVE_CHANGE_BLOCKED')
             plan={'kind':kind,'before':before,'after':after,'target':{'runtime_root':str(root),'ssh_fingerprint':hashlib.sha256(json.dumps(helper.SETTINGS['ssh'],sort_keys=True).encode()).hexdigest(),'boot':getattr(helper.SAFETY_SESSION,'boot',None)}}
             approved=params.get('approved_changes',[])
             if not isinstance(approved,list) or plan not in approved:
@@ -239,21 +250,24 @@ class Operations:
             return True
         helper.CONFIRM_HOOK=confirm
         helper.refresh_settings()
+        security.bind_session_sudo(helper,params)
         return helper
 
     def run(self, method, params):
         if method not in OPERATIONS or not isinstance(params,dict):raise OperationError('INVALID_ARGUMENT')
-        allowed={'confirmed','runtime_root','password','passphrase','sudo_password','approved_changes','configuration','expected_revision','channel','match_result','note'}
+        self.secret_values=[params.get('password',''),params.get('passphrase',''),params.get('sudo_password','')]
+        allowed={'confirmed','runtime_root','password','passphrase','sudo_password','credential_revision','approved_changes','configuration','expected_revision','channel','match_result','note'}
         if set(params)-allowed:raise OperationError('INVALID_ARGUMENT')
         if OPERATIONS[method][1] and params.get('confirmed') is not True:raise OperationError('CONFIRMATION_REQUIRED')
         for key in ['password','passphrase','sudo_password','note','runtime_root']:
             if key in params and (not isinstance(params[key],str) or len(params[key])>4096 or '\x00' in params[key]):raise OperationError('INVALID_ARGUMENT')
+        if any(self.secret_values) and params.get('credential_revision')!=self.read_config()[2]:raise OperationError('CREDENTIAL_SCOPE_CHANGED')
         self.event('INFO',method+' started')
         if method in ('launch_game','preflight_launch','observe_launch'):
             return self.launch_operation(method,params)
         if method=='read_configuration':
             _,config,revision=self.read_config()
-            return {'configuration':config,'revision':revision,'target':str(self.settings)}
+            return {'configuration':config,'revision':revision,'target':str(self.settings),'credential_policy':'session_memory_only_keychain_ignored'}
         if method=='save_configuration':return self.save_config(params)
         if method=='get_legacy_catalog':
             locale=self.module('i18n')
@@ -271,13 +285,13 @@ class Operations:
             diag=self.module('network_diagnostics');store=diag.Store(self.data/'diagnostics')
             history=store.directory/'history.jsonl'
             if history.is_symlink() or (history.exists() and history.stat().st_size>8*1024*1024):raise OperationError('OUTPUT_LIMIT')
-            records=store.read()[-100:]
+            records=self.scrub(store.read()[-100:])
             if method=='read_network_history':return {'records':diag.scrub(records),'summary':diag.summarize(records)}
-            if method=='export_network_report':return {'export':str(store.export(records,store.windows()))}
+            if method=='export_network_report':return {'export':str(store.export(records,self.scrub(store.windows())))}
             if params.get('match_result') not in ('success','timeout','disconnect'):raise OperationError('INVALID_ARGUMENT')
             # Submission is a user's observation, never an automatically verified match.
             current={'id':uuid.uuid4().hex,'kind':'snapshot','time':diag.stamp(),'fx':None,'gvproxy':None,'steam':None,'udp_connectivity':'unverified','nat':'unknown'}
-            return {'record':store.record_match(params['match_result'],current,params.get('note','')),'source':'user_reported'}
+            return {'record':store.record_match(params['match_result'],current,self.scrub(params.get('note',''))),'source':'user_reported'}
         if method=='toggle_network_check':
             module=self.module('network_profile');path=module.settings_path(self.settings)
             if path.exists() and set(json.loads(path.read_text()))-set(module.DEFAULTS):raise OperationError('UNSUPPORTED_CONFIGURATION')

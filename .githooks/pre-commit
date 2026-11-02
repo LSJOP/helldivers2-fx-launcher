@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+cd "$(git rev-parse --show-toplevel)"
+exec /usr/bin/python3 -I -B native-app/script/check_release_secrets.py --staged

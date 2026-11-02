@@ -114,7 +114,7 @@ For an existing clone, select the intended branch and run `git submodule update 
 
 - Configuration: `~/Library/Application Support/Helldivers2FXLauncher/settings.json`. The editor shows the target/revision and backs up before replacement.
 - Native diagnostics/reports: `~/Library/Application Support/Helldivers2FXLauncher/native`. Original Core recovery receipts may also be written under the selected legacy directory.
-- Secrets travel through stdin, never command arguments; original SSH settings control Keychain use.
+- SSH password, key passphrase and Guest sudo password stay in App session memory and travel only through stdin. Native SSH never reads/writes Keychain or persists passwords. Target/config changes clear reuse; quitting requires re-entry. Existing legacy Keychain items are not read or deleted.
 - Cancellation attempts supported recovery. Already started FX/Steam/game processes may continue; recheck actual state after interruption.
 
 </details>
@@ -130,6 +130,8 @@ Native bundle version **0.1.0**, build **1**, comes from the [Xcode project](nat
 The update module uses official Sparkle UI and signed-feed/archive verification; it does not update FX Runtime or replace the Python Bridge. Release preparation and missing trust conditions are documented in [Native updates](docs/NATIVE_UPDATES.md). English/Chinese standard menu localization requires an App restart after changing the in-App language.
 
 The last functional verification passed an Xcode Debug build, 18 protocol/metadata checks, 14 isolated migration checks, 21 service checks and one focused App smoke. Hero integration subsequently passed a build and a single App session checking two window sizes. These checks did not exercise a real game, live SSH or network/system changes. These earlier functional checks are separate from update integration: the latter passed a Debug build and English/Chinese menu/settings smoke checks, with no live upgrade.
+
+Staged-file and release-artifact secret gates block suspected secrets and incomplete scans. Passing a bounded pattern scan is not proof that every possible secret is absent. See [release preparation](docs/NATIVE_UPDATES.md).
 
 See the [migration checklist](docs/FUNCTION_MIGRATION.md). Phase 2 adds real launch preflight, staged progress/errors and separate user confirmations for the main menu and single-player. A Native attempt reached FX/Guest and found Steam; gameplay acceptance remains pending. Full Native translations and runtime acceptance remain incomplete. GitHub Actions is not published because the configured token lacks `workflow` permission; use the local development checks described in [AGENTS.md](AGENTS.md).
 
@@ -260,7 +262,7 @@ open build/Debug/HD2FXNative.app
 
 - 配置：`~/Library/Application Support/Helldivers2FXLauncher/settings.json`。编辑器显示目标/修订，替换前备份。
 - Native 诊断/报告：`~/Library/Application Support/Helldivers2FXLauncher/native`。原 Core 恢复凭据还可能写入选定旧目录。
-- 秘密通过 stdin 传递，不进入命令参数；钥匙串使用由原 SSH 配置控制。
+- SSH 密码、私钥口令和 Guest sudo 密码仅存 App 会话内存，通过 stdin 传递。Native SSH 不读写钥匙串，也不持久化密码；目标/配置变化会清除复用，退出后需重新输入。旧钥匙串项目不读取、不删除。
 - 取消会尝试支持的恢复。已经启动的 FX/Steam/游戏进程可能继续运行，中断后请重新核对实际状态。
 
 </details>
@@ -276,6 +278,8 @@ Native 包版本 **0.1.0**、构建号 **1** 来自 [Xcode 工程](native-app/HD
 更新模块采用官方 Sparkle 界面与 Feed/归档签名验证，不更新 FX Runtime，也不替换 Python Bridge。发布准备和缺少的信任条件见 [Native 更新](docs/NATIVE_UPDATES.md)。在 App 内切换语言后，中英文标准菜单本地化需要重启 App。
 
 最近一次功能验证通过 Xcode Debug 编译、18 项协议/元数据检查、14 项隔离迁移检查、21 项服务检查和一次针对性 App 冒烟验证。随后士兵素材集成通过编译，并在一次 App 会话中检查两种窗口尺寸。这些检查没有执行真实游戏、实机 SSH 或网络/系统变更。上述功能检查与本次更新集成验证分开记录：更新模块通过 Debug 编译及中英文菜单/设置冒烟检查，未执行真实升级。
+
+暂存文件和发行产物的敏感信息检查会阻止疑似秘密及无法完成的扫描。有限规则检查通过不等于证明所有秘密均不存在。见[发布准备](docs/NATIVE_UPDATES.md)。
 
 各项状态见[迁移清单](docs/FUNCTION_MIGRATION.md)。Phase 2 新增真实启动预检、阶段进度/错误以及主菜单和单人任务的独立用户确认。Native 尝试已到达 FX/Guest 并检测到 Steam，游戏内验收仍待完成。完整 Native 翻译与实机验收仍未完成。当前 token 缺少 `workflow` 权限，尚未发布 GitHub Actions 配置；本地开发检查规则见 [AGENTS.md](AGENTS.md)。
 

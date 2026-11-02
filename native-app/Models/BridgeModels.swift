@@ -74,7 +74,13 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
         case "FX_IDENTITY_UNVERIFIED": return zh ? "FX 进程拓扑不明确；未获准写入 Guest。" : "The FX process topology is ambiguous; Guest writes are blocked."
         case "FX_INSTANCE_MISMATCH": return zh ? "当前 FX 实例与选定专用副本不一致。请先检查现有工作，正常退出其他 FX，再通过 Native App 重试；不会自动退出或重置虚拟机。" : "The running FX instance differs from the selected copy. Preserve existing work, quit the other FX normally, then retry from this App. No VM is stopped or reset automatically."
         case "FX_ENTRY_MISMATCH": return zh ? "未验证到原启动入口要求的 gvproxy-eim 进程；这不是 EAC 检测结果。请正常退出该 FX 后由 Native App 按原参数重新启动。" : "The gvproxy-eim process required by the recorded entry was not verified; this is not an EAC result. Quit this FX normally and relaunch through the Native App with the original arguments."
-        case "SSH_CONNECTION_FAILED", "AUTH_REQUIRED": return zh ? "Guest / SSH 连接需要处理；可在启动面板输入本次认证信息。" : "Guest / SSH needs attention; enter session credentials in the launch panel if required."
+        case "SSH_CONNECTION_FAILED": return zh ? "Guest / SSH 连接需要处理；可在启动面板输入本次认证信息。" : "Guest / SSH needs attention; enter session credentials in the launch panel if required."
+        case "AUTH_REQUIRED":
+            if details["credential_kind"]?.text == "sudo_password" { return zh ? "需要 Guest 账户的 sudo 密码。请填第三个安全输入框；这不是 macOS 密码。" : "The Guest account sudo password is required in the third secure field; this is not your macOS password." }
+            if details["credential_kind"]?.text == "passphrase" { return zh ? "需要 SSH 私钥口令，请填写本次密钥口令。" : "The SSH private-key passphrase is required for this session." }
+            return zh ? "需要本次 SSH 密码；Native App 不会读取钥匙串。" : "A session SSH password is required; Native App does not read Keychain."
+        case "CREDENTIAL_SCOPE_CHANGED": return zh ? "连接目标或配置已变化，会话凭据未发送。请核对目标后重新输入。" : "The target or configuration changed; credentials were not sent. Verify the target and re-enter them."
+        case "SENSITIVE_CONFIGURATION", "SENSITIVE_CHANGE_BLOCKED": return zh ? "配置包含疑似秘密，已停止复制或写入；请手动移除秘密，不会自动删除用户内容。" : "Possible secrets in configuration blocked copying/writing. Remove them manually; user content is not deleted automatically."
         case "COMPATIBILITY_CHECK_FAILED": return zh ? "兼容组件或目标身份检查未通过；现有环境未被重置。" : "Compatibility or target identity checks failed; the existing environment was not reset."
         case "STEAM_START_FAILED": return zh ? "Steam 启动或登录等待失败。" : "Steam startup or login readiness failed."
         case "GAME_START_FAILED": return zh ? "游戏请求失败或未在期限内检测到游戏进程。" : "The game request failed or no game process appeared before the deadline."

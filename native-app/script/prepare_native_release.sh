@@ -8,6 +8,7 @@ fi
 RELEASE_VERSION="$1"; RELEASE_BUILD="$2"; CHANNEL="$3"; TEAM="$4"; IDENTITY="$5"
 NOTARY_PROFILE="$6"; NOTES="$7"; STAGING="$8"; EXISTING_FEED="$9"
 APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+(cd "$APP_ROOT/.." && /usr/bin/python3 -I -B "$APP_ROOT/script/check_release_secrets.py" --tracked)
 [[ "$CHANNEL" == stable || "$CHANNEL" == preview ]] || exit 2
 [[ "$IDENTITY" == 'Developer ID Application: '* ]] || { echo 'Developer ID Application identity required' >&2; exit 2; }
 [[ -f "$NOTES" && -f "$EXISTING_FEED" && ! -e "$STAGING" ]] || { echo 'Notes/feed required; staging must not already exist' >&2; exit 2; }
@@ -37,6 +38,7 @@ assert p['SUFeedURL']=='https://lsjop.github.io/helldivers2-fx-launcher/updates/
 assert len(base64.b64decode(p['SUPublicEDKey'],validate=True))==32
 PY
 codesign --verify --deep --strict "$APP"
+/usr/bin/python3 -I -B "$APP_ROOT/script/check_release_secrets.py" --path "$APP"
 codesign -dv "$APP" 2>&1 | /usr/bin/grep -F 'Authority=Developer ID Application:' >/dev/null
 ditto -c -k --sequesterRsrc --keepParent "$APP" "$STAGING/notary-submission.zip"
 xcrun notarytool submit "$STAGING/notary-submission.zip" --keychain-profile "$NOTARY_PROFILE" --wait
@@ -47,6 +49,7 @@ ARCHIVES="$STAGING/updates"
 mkdir "$ARCHIVES"
 ARCHIVE_NAME="HD2FXLauncher-${RELEASE_VERSION}.zip"
 ditto -c -k --sequesterRsrc --keepParent "$APP" "$ARCHIVES/$ARCHIVE_NAME"
+/usr/bin/python3 -I -B "$APP_ROOT/script/check_release_secrets.py" --archive "$ARCHIVES/$ARCHIVE_NAME"
 cp "$NOTES" "$ARCHIVES/${ARCHIVE_NAME%.zip}.md"
 cp "$EXISTING_FEED" "$ARCHIVES/appcast.xml"
 TOOLS="$STAGING/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin"
@@ -66,6 +69,7 @@ if [[ "$CHANNEL" == preview ]]; then CHANNEL_ARGS=(--channel preview); fi
     --embed-release-notes --download-url-prefix "https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/native-v${RELEASE_VERSION}/" \
     "${CHANNEL_ARGS[@]}" "$ARCHIVES"
 "$TOOLS/sign_update" --verify "$ARCHIVES/appcast.xml"
+/usr/bin/python3 -I -B "$APP_ROOT/script/check_release_secrets.py" --path "$ARCHIVES/appcast.xml" --path "$NOTES"
 /usr/bin/python3 - "$ARCHIVES/appcast.xml" "$ARCHIVES/$ARCHIVE_NAME" "$RELEASE_BUILD" "$CHANNEL" "$EXISTING_FEED" <<'PY'
 import base64,pathlib,sys,xml.etree.ElementTree as E
 feed,archive,build,channel,previous=sys.argv[1:];ns={'s':'http://www.andymatuschak.org/xml-namespaces/sparkle'}
