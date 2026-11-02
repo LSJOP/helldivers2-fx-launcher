@@ -1,0 +1,10 @@
+{
+  "VERSION": "0a32083bbebaa38564432f89f6ba18dc7e55110d8b81c041d67064755b1760f9",
+  "launcher-20261026/launcher_version.py": "c3e15a53d079c855a0f10520313d08049135c2866026e3410929e3aaabc0e3f8",
+  "launcher-20261026/dependencies.py": "c498c33bcc4e6b84c7fad4e2f902160c97f0ca4aeb4a89d12b90a7e79ab94af5",
+  "launcher-20261026/dependency_discovery.py": "5adc2ec961c090b8dbf1c8c510ad5ebb2e3dd043fa092a7504fc2ef6eb587c5f",
+  "launcher-20261026/runtime_paths.py": "6216f6a2ef0a9a9bd6390dfdf651baa3367ec5db0b1fdd541be7b6478cb28e22",
+  "launcher-20261026/fx_versions.py": "2d0a4fa39c0d43df023adc664d5f74d8b58fb1692dbcd56bab1b24404f5f10fb",
+  "launcher-20261026/fx_updates.py": "80d423b048065df5f29f8567f2821a8e5fd48e8cefe975e5795e02bf2f8c4aa9",
+  "launcher-20261026/update_checker.py": "aa6a7b0deeb25f700b2328d90b3f5e8b5066934429c839e1153942bbf45b8992"
+}
