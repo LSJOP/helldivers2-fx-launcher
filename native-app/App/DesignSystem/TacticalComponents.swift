@@ -182,27 +182,24 @@ struct SuperEarthGlobeDecoration: View {
     }
 }
 
+// One content heading per page; navigation identity belongs to the sidebar.
 struct TacticalPageHeader: View {
-    let number: String
     let title: String
-    let section: String
     var refreshState: AppState? = nil
     @Environment(\.colorScheme) private var scheme
     var body: some View {
         let c = TacticalColors(scheme: scheme)
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 10) {
-                    TacticalEyebrow(text: number + " / " + section)
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .firstTextBaseline, spacing: 12) {
-                            pageTitle
-                            if let refreshState { TacticalRefreshButton(state: refreshState, tasks: refreshState.tasks) }
-                        }
-                        VStack(alignment: .leading, spacing: 10) {
-                            pageTitle
-                            if let refreshState { TacticalRefreshButton(state: refreshState, tasks: refreshState.tasks) }
-                        }
+            HStack(spacing: 12) {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        pageTitle
+                        Spacer(minLength: 12)
+                        if let refreshState { TacticalRefreshButton(state: refreshState, tasks: refreshState.tasks) }
+                    }
+                    VStack(alignment: .leading, spacing: 10) {
+                        pageTitle
+                        if let refreshState { TacticalRefreshButton(state: refreshState, tasks: refreshState.tasks) }
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading)
                 SuperEarthGlobeDecoration()

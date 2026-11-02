@@ -13,7 +13,7 @@ struct EnvironmentView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            TacticalPageHeader(number: "02", title: state.t("运行环境检测", "Environment inspection"), section: state.pageTitle(.environment), refreshState: state)
+            TacticalPageHeader(title: state.t("运行环境检测", "Environment inspection"), refreshState: state)
             TacticalAdaptiveLayout(minimumWidth: 140, maximumColumns: 4) {
                 TacticalMetric(title: "macOS", value: state.value("get_system_info", "os_version"), symbol: "apple.logo")
                 TacticalMetric(title: state.t("架构", "Architecture"), value: state.value("get_system_info", "arch"), symbol: "cpu")
@@ -38,7 +38,6 @@ struct EnvironmentView: View {
                         .font(TacticalTypography.caption).foregroundStyle(.secondary)
                 }
                 TacticalPanel(number: "B", title: state.t("运行组件", "Runtime components"), symbol: "cpu") {
-                    badge(snapshotStatus("get_environment_status"))
                     TacticalInfoRow(title: state.t("FX 运行时", "FX runtime"), value: state.t("无法确认 · 只读快照未探测进程", "Cannot confirm · Snapshot does not probe processes"))
                     TacticalInfoRow(title: state.t("gvproxy 运行时", "gvproxy runtime"), value: state.t("无法确认 · 只读快照未探测服务", "Cannot confirm · Snapshot does not probe services"))
                     TacticalWarningBanner(text: state.t("刷新不会启动 FX 或连接 Guest。使用网络与连接工具主动检查；启动记录不等于当前实时状态。", "Refresh does not start FX or connect to Guest. Use the connection tools for explicit checks; launch history is not current live state."))

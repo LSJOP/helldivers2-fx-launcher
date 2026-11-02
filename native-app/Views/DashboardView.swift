@@ -7,11 +7,10 @@ struct DashboardView: View {
     private var c: TacticalColors { TacticalColors(scheme: scheme) }
     private var unverified: String { state.t("未验证", "Unverified") }
     private var launchReason: String {
-        state.t("默认只读。启动需主动操作、指定既有运行目录，并确认实际变更；兼容性与联机仍未验证。", "Read-only by default. Launch requires an explicit action, an existing runtime directory and approval of actual changes. Compatibility and multiplayer remain unverified.")
+        state.t("启动需主动操作、指定既有运行目录，并确认实际变更；兼容性与联机仍未验证。", "Launch requires an explicit action, an existing runtime directory and approval of actual changes. Compatibility and multiplayer remain unverified.")
     }
     var body: some View {
         VStack(alignment: .leading, spacing: TacticalSpacing.panel) {
-            commandBar
             hero
             if state.launchSession.current != .idle { LaunchProgressView(state: state, tasks: tasks) }
             if let error = state.error {
@@ -35,38 +34,15 @@ struct DashboardView: View {
             }
         }.foregroundStyle(c.text).font(TacticalTypography.body)
     }
-    private var commandBar: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack {
-                TacticalEyebrow(text: state.t("超级地球 / 指挥界面", "SUPER EARTH / COMMAND INTERFACE"))
-                Spacer(minLength: 12)
-                TacticalStatusBadge(text: state.t("迁移预览 · 默认只读", "MIGRATION PREVIEW · READ-ONLY DEFAULT"))
-            }
-            VStack(alignment: .leading, spacing: 8) {
-                TacticalEyebrow(text: state.t("超级地球 / 指挥界面", "SUPER EARTH / COMMAND INTERFACE"))
-                TacticalStatusBadge(text: state.t("迁移预览 · 默认只读", "MIGRATION PREVIEW · READ-ONLY DEFAULT"))
-            }
-        }
-    }
     private var hero: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
-                        Text("01").foregroundStyle(c.accent)
-                        Text(state.pageTitle(.dashboard)).foregroundStyle(c.muted)
-                            .accessibilityIdentifier("page.title")
-                        Text("/ " + state.value("get_launcher_version", "version")).foregroundStyle(c.muted)
-                    }.font(TacticalTypography.log)
                     Text("HELLDIVERS 2").font(TacticalTypography.brand).foregroundStyle(c.accent).lineLimit(1).minimumScaleFactor(0.75)
-                        .accessibilityAddTraits(.isHeader)
+                        .accessibilityIdentifier("page.title").accessibilityAddTraits(.isHeader)
                     Text("FX LAUNCHER").font(.system(size: 19, weight: .bold, design: .monospaced)).tracking(4).foregroundStyle(c.text)
-                    TacticalDivider().padding(.vertical, 5)
-                    Text(state.t("为了超级地球 · 为了民主", "FOR SUPER EARTH / FOR DEMOCRACY"))
-                        .font(TacticalTypography.caption).foregroundStyle(c.muted)
                 }.frame(maxWidth: 380, alignment: .leading)
                 HStack(spacing: 10) {
-                    TacticalEyebrow(text: state.t("行动状态", "OPERATION STATUS"))
                     TacticalStatusBadge(text: state.t("当前运行状态：未验证", "Current runtime: unverified"))
                 }
             }
@@ -97,7 +73,6 @@ struct DashboardView: View {
     }
     private var runtimeCard: some View {
         TacticalPanel(number: "02", title: state.t("FX 运行时", "FX RUNTIME"), symbol: "shippingbox") {
-            TacticalStatusBadge(text: unverified)
             TacticalInfoRow(title: state.t("已发现版本", "Discovered versions"), value: versions)
             TacticalInfoRow(title: state.t("运行路径", "Runtime path"), value: state.t("未读取", "Not read"))
             Text(state.t("仅应用元数据；未识别当前运行实例。", "App metadata only; the active runtime has not been identified."))
@@ -118,7 +93,6 @@ struct DashboardView: View {
     }
     private var environmentCard: some View {
         TacticalPanel(number: "03", title: state.t("运行环境", "ENVIRONMENT"), symbol: "desktopcomputer") {
-            TacticalStatusBadge(text: state.hasLoaded ? state.t("本机元数据", "Host metadata") : state.t("尚未读取", "Not yet inspected"))
             TacticalInfoRow(title: "macOS", value: state.value("get_system_info", "os_version"))
             TacticalInfoRow(title: state.t("架构", "Architecture"), value: architecture)
             TacticalInfoRow(title: "Python", value: state.value("get_system_info", "python"))

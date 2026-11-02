@@ -12,7 +12,7 @@ struct SettingsView: View {
     @StateObject private var presentation = SettingsPresentation()
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            TacticalPageHeader(number: "05", title: state.t("设置", "Settings"), section: state.pageTitle(.settings))
+            TacticalPageHeader(title: state.t("设置", "Settings"))
             TacticalPanel(number: "A", title: state.t("界面设置", "Interface"), symbol: "slider.horizontal.3") {
                 Picker(state.t("语言", "Language"), selection: $state.languageCode) {
                     ForEach(NativeLocalization.languages, id: \.0) { code, title in Text(title).tag(code) }
@@ -35,10 +35,7 @@ struct SettingsView: View {
             }
             SoftwareUpdateView(manager: state.updates, language: state.languageCode)
             LegacyOperationsView(state: state, scope: "settings")
-            TacticalPanel(number: "C", title: state.t("高级设置", "Advanced"), symbol: "lock.shield") {
-                TacticalInfoRow(title: state.t("操作权限", "Operations"), value: state.t("默认只读 · 逐操作确认", "Read-only default · Per-action consent"))
-                TacticalInfoRow(title: state.t("配置写入", "Configuration writes"), value: state.t("需预览与确认", "Preview and confirmation required"))
-            }
+
         }
         .fileImporter(isPresented: $presentation.choosingPython, allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
             guard case .success(let urls) = result, let url = urls.first else { return }
@@ -68,6 +65,10 @@ struct LegacyOperationsView: View {
     }
     var body: some View {
         TacticalPanel(number: "+", title: title, symbol: "slider.horizontal.3") {
+            if scope == "settings" {
+                TacticalInfoRow(title: state.t("操作权限", "Operations"), value: state.t("默认只读 · 逐操作确认", "Read-only default · Per-action consent"))
+                TacticalInfoRow(title: state.t("配置写入", "Configuration writes"), value: state.t("需预览与确认", "Preview and confirmation required"))
+            }
             if state.rows("get_legacy_catalog", "operations").isEmpty {
                 Text(state.t("请刷新以读取后端能力。", "Refresh to read backend capabilities."))
             }

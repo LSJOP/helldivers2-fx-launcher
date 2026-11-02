@@ -38,7 +38,7 @@ struct LogsView: View {
     var body: some View {
         let c = TacticalColors(scheme: scheme)
         VStack(alignment: .leading, spacing: 18) {
-            TacticalPageHeader(number: "04", title: state.t("运行日志", "Session logs"), section: state.pageTitle(.logs))
+            TacticalPageHeader(title: state.t("运行日志", "Session logs"))
             TacticalWarningBanner(text: state.t("仅本次会话 App 与 Bridge 日志。原始日志没有等级字段时显示“未标级”，不会推断成功等级。", "App and bridge logs from this session only. Entries without an explicit severity remain unclassified; success is not inferred."))
             LegacyOperationsView(state: state, scope: "logs")
             ViewThatFits(in: .horizontal) {

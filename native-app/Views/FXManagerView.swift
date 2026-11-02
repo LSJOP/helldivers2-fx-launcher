@@ -4,7 +4,7 @@ struct FXManagerView: View {
     @ObservedObject var state: AppState
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            TacticalPageHeader(number: "03", title: state.t("FX 版本管理", "FX version management"), section: state.pageTitle(.fx), refreshState: state)
+            TacticalPageHeader(title: state.t("FX 版本管理", "FX version management"), refreshState: state)
             if state.results["list_fx_versions"]?["scan_incomplete"]?.boolean == true {
                 TacticalWarningBanner(text: scanWarning + " " + state.t("这是扫描范围限制，不代表安装异常。", "This limits scan coverage; it does not indicate a damaged installation."))
             }
@@ -16,13 +16,11 @@ struct FXManagerView: View {
                 ForEach(Array(candidates.enumerated()), id: \.offset) { index, row in
                     TacticalPanel(number: String(format: "%02d", index + 1), title: "FX " + version(row), symbol: "shippingbox") {
                         TacticalStatusBadge(text: state.t("已发现 · 元数据", "Discovered · Metadata"))
-                        TacticalInfoRow(title: state.t("版本", "Version"), value: version(row))
                         TacticalInfoRow(title: state.t("App 名称", "App name"), value: row["path"]?.text.map { URL(fileURLWithPath: $0).lastPathComponent } ?? state.t("未知", "Unknown"))
                         TacticalInfoRow(title: state.t("扫描位置", "Discovery scope"), value: row["location"]?.text ?? state.t("未知", "Unknown"))
                         TacticalInfoRow(title: state.t("完整安装路径", "Full installation path"), value: row["path"]?.text ?? state.t("未知", "Unknown"))
                         TacticalDivider()
                         TacticalInfoRow(title: state.t("安装文件", "Installation files"), value: state.t("已发现 · 仅元数据", "Found · Metadata only"))
-                        TacticalInfoRow(title: state.t("扫描范围", "Scan coverage"), value: state.results["list_fx_versions"]?["scan_incomplete"]?.boolean == true ? state.t("限定扫描不完整", "Bounded scan incomplete") : state.t("已完成限定目录扫描", "Bounded directories inspected"))
                         TacticalInfoRow(title: state.t("结构检测", "Structure check"), value: row["structure"]?.text == "metadata_valid" ? state.t("匹配 Core 结构规则", "Matches Core structure rules") : state.t("未验证", "Unverified"))
                         TacticalDivider()
                         TacticalInfoRow(title: state.t("进程 / 活动实例", "Process / Active instance"), value: state.t("无法确认 · 未执行实例关联检测", "Cannot confirm · No instance correlation probe"))

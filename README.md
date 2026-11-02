@@ -59,7 +59,7 @@ Sparkle 2.10.1 is integrated for Launcher-only updates, with shared menu/setting
 
 ### Screenshots
 
-**Dashboard — five-page UI polish, actual App capture on 2026-11-02.** Click for the full image.
+**Dashboard — streamlined page hierarchy, actual App capture on 2026-11-02.** Click for the full image.
 
 [![Dashboard — actual Native App window, runtime unverified](docs/images/dashboard.png)](docs/images/dashboard.png)
 
@@ -70,7 +70,7 @@ Sparkle 2.10.1 is integrated for Launcher-only updates, with shared menu/setting
 | [![Logs](docs/images/logs.png)](docs/images/logs.png) | [![Settings](docs/images/settings.png)](docs/images/settings.png) |
 
 > [!NOTE]
-> All five images were captured from the running Debug App on 2026-11-02 during `HD2_NATIVE_APP_UI_POLISH_v1.0.1`, using its real read-only snapshot. They show the refreshed five-page layout, not generated UI mockups. Lower sections remain accessible by scrolling. Images were proportionally reduced for the README; no status or UI was composited. No FX/game launch, EAC or multiplayer success is implied.
+> All five images were captured from the running Debug App on 2026-11-02 during `HD2_NATIVE_APP_UI_INFORMATION_HIERARCHY_v1.0.0`, using its real read-only snapshot. They show the five-page layout with one main content heading per page, not generated UI mockups. Lower sections remain accessible by scrolling. Images were proportionally reduced for the README; no status or UI was composited. No FX/game launch, EAC or multiplayer success is implied.
 
 <a id="en-requirements"></a>
 
@@ -207,7 +207,7 @@ No project-wide source license has been selected. Do not assume blanket redistri
 
 ### 软件截图
 
-**总览——2026-11-02 五页面 UI 精修后的真实 App 截图。** 点击可查看大图。
+**总览——2026-11-02 页面信息层级优化后的真实 App 截图。** 点击可查看大图。
 
 [![总览——真实 Native App 窗口，运行状态未验证](docs/images/dashboard.png)](docs/images/dashboard.png)
 
@@ -218,7 +218,7 @@ No project-wide source license has been selected. Do not assume blanket redistri
 | [![Logs](docs/images/logs.png)](docs/images/logs.png) | [![Settings](docs/images/settings.png)](docs/images/settings.png) |
 
 > [!NOTE]
-> 五张均于 2026-11-02 的 `HD2_NATIVE_APP_UI_POLISH_v1.0.1` 检查中，从运行中的 Debug App 及其真实只读快照采集，展示本轮五页布局，不是生成式 UI 预览图。下方区域可通过滚动查看。图片仅按比例缩小用于 README，没有合成界面或运行状态，不证明 FX／游戏启动、EAC 或联机成功。
+> 五张均于 2026-11-02 的 `HD2_NATIVE_APP_UI_INFORMATION_HIERARCHY_v1.0.0` 检查中，从运行中的 Debug App 及其真实只读快照采集，展示每页仅保留一个主标题的五页布局，不是生成式 UI 预览图。下方区域可通过滚动查看。图片仅按比例缩小用于 README，没有合成界面或运行状态，不证明 FX／游戏启动、EAC 或联机成功。
 
 <a id="zh-requirements"></a>
 

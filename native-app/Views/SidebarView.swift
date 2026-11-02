@@ -41,7 +41,6 @@ struct SidebarView: View {
             TacticalDivider()
             VStack(alignment: .leading, spacing: 10) {
                 TacticalEyebrow(text: state.t("系统状态", "SYSTEM STATUS"))
-                TacticalStatusBadge(text: state.t("运行状态未验证", "Runtime unverified"))
                 Text(state.t("按操作授权 / 默认只读", "ACTION CONSENT / READ-ONLY DEFAULT"))
                     .font(TacticalTypography.log).foregroundStyle(c.accent)
                 Text(state.t("为了超级地球 · 为了民主", "FOR SUPER EARTH\nFOR DEMOCRACY"))

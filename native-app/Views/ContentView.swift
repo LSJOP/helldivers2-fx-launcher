@@ -50,7 +50,7 @@ struct ContentView: View {
             .padding(TacticalSpacing.page)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(TacticalColors(scheme: scheme).background)
-            .navigationTitle(state.selection == .dashboard ? "HELLDIVERS 2 / FX LAUNCHER" : (state.selection ?? .dashboard).title(state.chinese))
+            .navigationTitle("")
             .tint(TacticalColors(scheme: scheme).accent)
 
         }
