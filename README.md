@@ -45,7 +45,7 @@ Configuration: `~/Library/Application Support/Helldivers2FXLauncher/settings.jso
 - Original binary/target guards remain enforced; arbitrary FX versions are not interchangeable.
 - Full Native translations, complete help/changelog presentation and broader environment reports remain partial.
 - The archived menu did not implement FX version switching or automatic update installation.
-- CrossOver, licensed standalone Dashboard soldier artwork and signing/notarization remain future work. A whole UI preview is not used as artwork.
+- CrossOver and signing/notarization remain future work. The Dashboard uses the user-supplied generated soldier illustration, bundled in the HelldiverHero asset catalog; a whole UI preview is not used as artwork.
 - GitHub Actions remains unpublished because the current token lacks `workflow` permission; use local checks.
 
 File presence, a running service, reachability, SSH authentication and game-service availability are separate evidence. Launch does not prove EAC/multiplayer; match submissions remain user reports.

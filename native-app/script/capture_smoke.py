@@ -15,7 +15,7 @@ result_file = directory / ('refinement-review.json' if refinement else 'menu-rev
 request_file = directory / 'capture-request.json'
 for path in (result_file, request_file):
     if path.exists(): path.unlink()
-subprocess.run(['/usr/bin/open', '-n', str(bundle), '--args', '--ui-refinement-smoke' if refinement else '--ui-v2-menu-review' if focused else '--phase1-smoke', str(directory), '--external-capture'], check=True)
+subprocess.run(['/usr/bin/open', '-n', str(bundle), '--args', '--ui-refinement-smoke' if refinement else '--ui-v2-menu-review' if focused else '--phase1-smoke', str(directory), '--external-capture'] + (['--hero-only'] if '--hero-only' in sys.argv[3:] else []), check=True)
 seen = set()
 deadline = time.monotonic() + 240
 while time.monotonic() < deadline:

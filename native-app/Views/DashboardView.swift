@@ -49,7 +49,7 @@ struct DashboardView: View {
     }
     private var hero: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
                         Text("01").foregroundStyle(c.accent)
@@ -63,13 +63,15 @@ struct DashboardView: View {
                     TacticalDivider().padding(.vertical, 5)
                     Text(state.t("为了超级地球 · 为了民主", "FOR SUPER EARTH / FOR DEMOCRACY"))
                         .font(TacticalTypography.caption).foregroundStyle(c.muted)
-                }.frame(maxWidth: .infinity, alignment: .leading).layoutPriority(1)
-                SoldierBackdrop(chinese: state.chinese).frame(width: 190, height: 180)
-            }.padding(.horizontal, 20).padding(.top, 16)
-            HStack(spacing: 10) {
-                TacticalEyebrow(text: state.t("行动状态", "OPERATION STATUS"))
-                TacticalStatusBadge(text: state.t("当前运行状态：未验证", "Current runtime: unverified"))
-            }.padding(.horizontal, 20).padding(.bottom, 12)
+                }.frame(maxWidth: 380, alignment: .leading)
+                HStack(spacing: 10) {
+                    TacticalEyebrow(text: state.t("行动状态", "OPERATION STATUS"))
+                    TacticalStatusBadge(text: state.t("当前运行状态：未验证", "Current runtime: unverified"))
+                }
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, minHeight: 300, alignment: .leading)
+            .background { SoldierBackdrop() }
             TacticalDivider()
             VStack(alignment: .leading, spacing: 10) {
                 ViewThatFits(in: .horizontal) {

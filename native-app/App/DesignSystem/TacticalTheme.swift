@@ -108,29 +108,34 @@ struct TacticalStatusLayout: Layout {
 
 // Reserved for a separately licensed, standalone soldier asset. Never uses a UI screenshot.
 struct SoldierBackdrop: View {
-    let chinese: Bool
     @Environment(\.colorScheme) private var scheme
-    private var assetURL: URL? { Bundle.main.url(forResource: "dashboard-soldier", withExtension: "png") }
     var body: some View {
         let c = TacticalColors(scheme: scheme)
-        ZStack {
-            if let url = assetURL, let image = NSImage(contentsOf: url) {
-                GeometryReader { geometry in
-                    Image(nsImage: image).resizable().scaledToFill()
-                        .frame(width: geometry.size.width, height: geometry.size.height).clipped()
-                        .mask(LinearGradient(colors: [.clear, .white], startPoint: .leading, endPoint: .trailing))
-                }
-            } else {
-                VStack(spacing: 14) {
-                    Image(systemName: "person.crop.rectangle").font(.system(size: 52, weight: .ultraLight))
-                    Text(chinese ? "人物视觉区" : "PERSONNEL VISUAL").font(TacticalTypography.module)
-                    Text(chinese ? "等待独立授权素材" : "Standalone licensed asset required")
-                        .font(TacticalTypography.caption).multilineTextAlignment(.center)
-                }.foregroundStyle(c.muted)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(c.accent.opacity(0.035))
-                    .overlay(Rectangle().stroke(c.accent.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [4, 5])))
-            }
+        GeometryReader { geometry in
+            // Preserve the complete vertical composition: fist, helmet and flag.
+            // Only surplus scenery on the left may leave the header's bounds.
+            Image("HelldiverHero")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: geometry.size.height * 1672 / 941, height: geometry.size.height)
+                .mask(LinearGradient(stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .white, location: 0.48),
+                    .init(color: .white, location: 1)
+                ], startPoint: .leading, endPoint: .trailing))
+                .frame(width: geometry.size.width, height: geometry.size.height, alignment: .trailing)
+                .overlay(LinearGradient(stops: [
+                    .init(color: c.panel, location: 0),
+                    .init(color: c.panel.opacity(0.96), location: 0.25),
+                    .init(color: c.panel.opacity(0.12), location: 0.62),
+                    .init(color: .clear, location: 0.82)
+                ], startPoint: .leading, endPoint: .trailing))
+                .overlay(LinearGradient(stops: [
+                    .init(color: .clear, location: 0.60),
+                    .init(color: c.panel.opacity(0.35), location: 0.83),
+                    .init(color: c.panel, location: 1)
+                ], startPoint: .top, endPoint: .bottom))
+                .clipped()
         }.accessibilityHidden(true).allowsHitTesting(false)
     }
 }

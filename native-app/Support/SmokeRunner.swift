@@ -217,11 +217,13 @@ import ApplicationServices
             try await waitForTask(state)
             guard state.hasLoaded, state.error == nil, let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) else { throw ErrorState("BRIDGE_OR_WINDOW_UNAVAILABLE") }
             let snapshot = state.observedAt
+            let heroOnly = ProcessInfo.processInfo.arguments.contains("--hero-only")
+            guard NSImage(named: "HelldiverHero") != nil else { throw ErrorState("HERO_ASSET_MISSING") }
             state.chinese = true; state.appearance = .dark
             window.setContentSize(NSSize(width: 1180, height: 850))
             try await Task.sleep(nanoseconds: 300_000_000)
             var files: [String] = []
-            for page in Page.allCases {
+            for page in (heroOnly ? [.dashboard] : Page.allCases) {
                 NSApp.mainMenu?.update()
                 guard let menu = NSApp.mainMenu?.items.compactMap(\.submenu).first(where: { $0.title == "导航" }) else { throw ErrorState("MENU_UNAVAILABLE") }
                 menu.delegate?.menuNeedsUpdate?(menu); menu.delegate?.menuWillOpen?(menu); menu.update()
@@ -234,7 +236,7 @@ import ApplicationServices
                 files.append(file)
             }
             state.selection = .dashboard
-            for variant in ["en-dark-dashboard", "zh-light-dashboard", "zh-dark-minimum-dashboard"] {
+            for variant in (heroOnly ? ["zh-dark-minimum-dashboard"] : ["en-dark-dashboard", "zh-light-dashboard", "zh-dark-minimum-dashboard"]) {
                 state.chinese = !variant.hasPrefix("en")
                 state.appearance = variant.contains("light") ? .light : .dark
                 if variant.contains("minimum") { window.setContentSize(NSSize(width: 850, height: 560)) }
@@ -244,10 +246,10 @@ import ApplicationServices
                 files.append(file)
             }
             result["files"] = files
-            result["native_menu_pages"] = 5
+            result["native_menu_pages"] = heroOnly ? 1 : 5
             result["snapshot_preserved"] = state.observedAt == snapshot
             result["runtime_evidence"] = state.results["get_environment_status"]?["status"]?.text ?? "unknown"
-            result["soldier_asset"] = Bundle.main.url(forResource: "dashboard-soldier", withExtension: "png") == nil ? "UNAVAILABLE_PLACEHOLDER" : "PRESENT"
+            result["soldier_asset"] = "HelldiverHero asset catalog image loaded"
             result["result"] = state.observedAt == snapshot ? "PASS" : "FAIL"
             window.setContentSize(NSSize(width: 1180, height: 850))
             state.chinese = true; state.appearance = .dark
