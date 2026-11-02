@@ -167,49 +167,50 @@ struct TacticalNavigationItem: View {
     }
 }
 
-struct SuperEarthGlobeDecoration: View {
-    @Environment(\.colorScheme) private var scheme
-    var body: some View {
-        Canvas { context, size in
-            let rect = CGRect(x: 10, y: 3, width: 80, height: 80)
-            let color = TacticalColors(scheme: scheme).accent.opacity(0.28)
-            context.stroke(Path(ellipseIn: rect), with: .color(color), lineWidth: 1)
-            for fraction in [0.25, 0.55] {
-                context.stroke(Path(ellipseIn: CGRect(x: 50 - 40 * fraction, y: 3, width: 80 * fraction, height: 80)), with: .color(color), lineWidth: 0.7)
-                context.stroke(Path(ellipseIn: CGRect(x: 10, y: 43 - 40 * fraction, width: 80, height: 80 * fraction)), with: .color(color), lineWidth: 0.7)
-            }
-        }.frame(width: 100, height: 86).accessibilityHidden(true).allowsHitTesting(false)
-    }
-}
-
-// One content heading per page; navigation identity belongs to the sidebar.
+// One shared secondary-page banner. Artwork is bundled, decorative and noninteractive.
 struct TacticalPageHeader: View {
     let title: String
     var refreshState: AppState? = nil
-    @Environment(\.colorScheme) private var scheme
+    private let height: CGFloat = 160
     var body: some View {
-        let c = TacticalColors(scheme: scheme)
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .firstTextBaseline, spacing: 12) {
-                        pageTitle
-                        Spacer(minLength: 12)
-                        if let refreshState { TacticalRefreshButton(state: refreshState, tasks: refreshState.tasks) }
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                Color(red: 0.035, green: 0.043, blue: 0.055)
+                Image("SuperEarthSpaceHeader")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    // Fit the entire vertical composition, including all stars and wings.
+                    // On narrow windows only spare scenery at the left may leave the bounds.
+                    .frame(width: height * 3, height: height)
+                    .mask(LinearGradient(stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .white, location: 0.45),
+                        .init(color: .white, location: 1)
+                    ], startPoint: .leading, endPoint: .trailing))
+                    .frame(width: geometry.size.width - 8, height: height, alignment: .trailing)
+                    .accessibilityHidden(true).allowsHitTesting(false)
+                VStack(alignment: .leading, spacing: 12) {
+                    Rectangle().fill(TacticalColors(scheme: .dark).yellow).frame(width: 28, height: 2)
+                    HStack(alignment: .center, spacing: 12) {
+                        Text(title).font(TacticalTypography.page).foregroundStyle(.white)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("page.title").accessibilityAddTraits(.isHeader)
+                        if let refreshState {
+                            TacticalRefreshButton(state: refreshState, tasks: refreshState.tasks)
+                                .fixedSize()
+                        }
                     }
-                    VStack(alignment: .leading, spacing: 10) {
-                        pageTitle
-                        if let refreshState { TacticalRefreshButton(state: refreshState, tasks: refreshState.tasks) }
-                    }
-                }.frame(maxWidth: .infinity, alignment: .leading)
-                SuperEarthGlobeDecoration()
+                }
+                // Reserve the right-hand emblem region so neither title nor button covers it.
+                .frame(width: max(1, geometry.size.width - 230), alignment: .leading)
+                .padding(.leading, 20)
             }
-            Rectangle().fill(c.yellow).frame(height: 2)
+            .clipped()
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(TacticalColors(scheme: .dark).yellow).frame(height: 1)
+            }
         }
-    }
-    private var pageTitle: some View {
-        Text(title).font(TacticalTypography.page).foregroundStyle(TacticalColors(scheme: scheme).text)
-            .accessibilityIdentifier("page.title").accessibilityAddTraits(.isHeader)
+        .frame(height: height)
     }
 }
 
@@ -308,7 +309,10 @@ struct TacticalRefreshButton: View {
             }.font(TacticalTypography.caption).padding(.horizontal, 9).padding(.vertical, 7)
         }
         .buttonStyle(.plain)
-        .overlay(Rectangle().stroke(.secondary.opacity(0.4)))
+        .foregroundStyle(Color(white: 0.92))
+        .background(Color(white: 0.14))
+        .overlay(Rectangle().stroke(Color(white: 0.38), lineWidth: 1))
+        .opacity(tasks.busy ? 0.55 : 1)
         .disabled(tasks.busy)
         .help(state.t("刷新全部只读快照：本机环境、依赖、FX 安装、会话日志及功能清单；不会启动或修改运行环境。也可按 ⌘R。", "Refresh all read-only snapshots: host environment, dependencies, FX installations, session logs and capabilities. No runtime starts or changes. Also available with ⌘R."))
         .accessibilityIdentifier("refresh")

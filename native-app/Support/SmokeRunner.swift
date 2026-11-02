@@ -317,6 +317,8 @@ import ApplicationServices
                 result["inspection_status_mapping"] = "PASS"
             }
             guard NSImage(named: "HelldiverHero") != nil else { throw ErrorState("HERO_ASSET_MISSING") }
+            guard let header = NSImage(named: "SuperEarthSpaceHeader"), abs(header.size.width / header.size.height - 3) < 0.01 else { throw ErrorState("HEADER_ASSET_MISSING") }
+            result["header_asset"] = "SuperEarthSpaceHeader loaded with original 3:1 ratio"
             state.chinese = true; state.appearance = .dark
             window.setContentSize(NSSize(width: 1180, height: 850))
             try await Task.sleep(nanoseconds: 300_000_000)
@@ -334,8 +336,8 @@ import ApplicationServices
                 files.append(file)
             }
             state.selection = .dashboard
-            for variant in (polish ? ["en-dark-minimum-logs", "en-dark-minimum-settings"] : heroOnly ? ["zh-dark-minimum-dashboard"] : ["en-dark-dashboard", "zh-light-dashboard", "zh-dark-minimum-dashboard"]) {
-                if polish { state.selection = variant.hasSuffix("logs") ? .logs : .settings }
+            for variant in (polish ? ["en-dark-minimum-logs", "en-dark-minimum-fx"] : heroOnly ? ["zh-dark-minimum-dashboard"] : ["en-dark-dashboard", "zh-light-dashboard", "zh-dark-minimum-dashboard"]) {
+                if polish { state.selection = variant.hasSuffix("logs") ? .logs : .fx }
                 state.chinese = !variant.hasPrefix("en")
                 state.appearance = variant.contains("light") ? .light : .dark
                 if variant.contains("minimum") { window.setContentSize(NSSize(width: 850, height: 560)) }
@@ -350,6 +352,12 @@ import ApplicationServices
             result["runtime_evidence"] = state.results["get_environment_status"]?["status"]?.text ?? "unknown"
             result["soldier_asset"] = "HelldiverHero asset catalog image loaded"
             result["result"] = state.observedAt == snapshot ? "PASS" : "FAIL"
+            if polish {
+                state.refresh()
+                try await waitForTask(state)
+                guard state.error == nil, state.observedAt != snapshot else { throw ErrorState("READ_ONLY_REFRESH_FAILED") }
+                result["read_only_refresh"] = "PASS"
+            }
             window.setContentSize(NSSize(width: 1180, height: 850))
             state.chinese = true; state.appearance = .dark
         } catch { result["result"] = "FAIL"; result["error"] = (error as? ErrorState)?.code ?? "UI_CHECK_FAILED" }

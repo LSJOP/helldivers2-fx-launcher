@@ -70,7 +70,7 @@ Sparkle 2.10.1 is integrated for Launcher-only updates, with shared menu/setting
 | [![Logs](docs/images/logs.png)](docs/images/logs.png) | [![Settings](docs/images/settings.png)](docs/images/settings.png) |
 
 > [!NOTE]
-> All five images were captured from the running Debug App on 2026-11-02 during `HD2_NATIVE_APP_UI_INFORMATION_HIERARCHY_v1.0.0`, using its real read-only snapshot. They show the five-page layout with one main content heading per page, not generated UI mockups. Lower sections remain accessible by scrolling. Images were proportionally reduced for the README; no status or UI was composited. No FX/game launch, EAC or multiplayer success is implied.
+> All five images were captured from the running Debug App on 2026-11-02 during `HD2_NATIVE_APP_HEADER_ASSET_REFINEMENT_v1.0.0`, using its real read-only snapshot. They show the shared space-artwork headers on the four secondary pages and the unchanged Dashboard hero, with one main content heading per page, not generated UI mockups. Lower sections remain accessible by scrolling. Images were proportionally reduced for the README; no status or UI was composited. No FX/game launch, EAC or multiplayer success is implied.
 
 <a id="en-requirements"></a>
 
@@ -158,7 +158,7 @@ Old main.zip links now download Native source; replace main with legacy-script i
 > [!WARNING]
 > **A detected installation ≠ a usable runtime ≠ a launched game ≠ verified EAC ≠ working multiplayer.** Each requires its own fresh evidence. User-submitted match outcomes remain user reports.
 
-This is an unofficial project with no claimed endorsement. No anti-cheat bypass or guaranteed compatibility is offered. The Dashboard image is a user-supplied generated illustration rendered inside the actual App; the software screenshots themselves are genuine captures.
+This is an unofficial project with no claimed endorsement. No anti-cheat bypass or guaranteed compatibility is offered. The Dashboard and space-header artwork are user-supplied generated illustrations rendered inside the actual App; the software screenshots themselves are genuine captures.
 
 <a id="en-license"></a>
 
@@ -218,7 +218,7 @@ No project-wide source license has been selected. Do not assume blanket redistri
 | [![Logs](docs/images/logs.png)](docs/images/logs.png) | [![Settings](docs/images/settings.png)](docs/images/settings.png) |
 
 > [!NOTE]
-> 五张均于 2026-11-02 的 `HD2_NATIVE_APP_UI_INFORMATION_HIERARCHY_v1.0.0` 检查中，从运行中的 Debug App 及其真实只读快照采集，展示每页仅保留一个主标题的五页布局，不是生成式 UI 预览图。下方区域可通过滚动查看。图片仅按比例缩小用于 README，没有合成界面或运行状态，不证明 FX／游戏启动、EAC 或联机成功。
+> 五张均于 2026-11-02 的 `HD2_NATIVE_APP_HEADER_ASSET_REFINEMENT_v1.0.0` 检查中，从运行中的 Debug App 及其真实只读快照采集，展示四个次级页面共享的太空横幅及保留的首页人物主视觉，每页仅保留一个主标题，不是生成式 UI 预览图。下方区域可通过滚动查看。图片仅按比例缩小用于 README，没有合成界面或运行状态，不证明 FX／游戏启动、EAC 或联机成功。
 
 <a id="zh-requirements"></a>
 
@@ -306,7 +306,7 @@ Native 包版本 **0.1.0**、构建号 **1** 来自 [Xcode 工程](native-app/HD
 > [!WARNING]
 > **检测到安装 ≠ 运行环境可用 ≠ 游戏启动成功 ≠ EAC 验证成功 ≠ 多人联机成功。** 每项都需要独立的新鲜证据，用户录入的匹配结果仍属于用户报告。
 
-本项目非官方，不宣称获得官方认可，不提供反作弊绕过或兼容性保证。首页插图为用户提供的生成式素材，在真实 App 中渲染；软件截图本身均为实际窗口采集。
+本项目非官方，不宣称获得官方认可，不提供反作弊绕过或兼容性保证。首页及太空横幅插图为用户提供的生成式素材，在真实 App 中渲染；软件截图本身均为实际窗口采集。
 
 <a id="zh-license"></a>
 
