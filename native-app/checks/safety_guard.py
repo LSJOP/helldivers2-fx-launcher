@@ -25,6 +25,8 @@ adapter = module.CoreAdapter(app / 'CoreSnapshot/native-app-core-snapshot', [app
 for method in ('launcher_version', 'system_info', 'environment', 'dependency_info', 'fx_versions'):
     value = getattr(adapter, method)()
     assert isinstance(value, dict)
+target = adapter.launch_target(str(app / 'checks/nonexistent-runtime'))
+assert target['launch'] == 'unverified' and not target['fx_executable_present']
 print(json.dumps({'result': 'PASS', 'guard': 'imports and all five adapter operations',
                   'writes': 'denied', 'process_execution': 'denied', 'network': 'denied',
                   'settings_ssh_keychain_access': 'denied'}))

@@ -385,7 +385,14 @@
     "ui.029": "Automatic checks: off. Sparkle manages first-run consent once the service is configured.",
     "ui.030": "Automatic checks: on (Sparkle preference).",
     "ui.232": "Preview",
-    "ui.314": "Stable"
+    "ui.314": "Stable",
+    "ui.ux.target": "Launch target",
+    "ui.ux.choose": "Choose an existing complete runtime directory",
+    "ui.ux.files": "Helper files match · FX file present",
+    "ui.ux.incomplete": "Directory or files need attention",
+    "ui.ux.details": "Directory and preflight details",
+    "ui.ux.scope": "Automatic preflight checks bounded files and metadata in the selected directory. It runs no programs, connects no SSH and reads no credentials. It does not establish running FX/Guest, gameplay, EAC or multiplayer. Starting still performs the original identity, hash and configuration checks.",
+    "ui.ux.checking": "Checking launch directory read-only…"
   },
   "zh-CN": {
     "ui.193": "导航",
@@ -773,7 +780,14 @@
     "ui.029": "自动检查：关闭。服务配置完成后，由 Sparkle 管理首次运行授权。",
     "ui.030": "自动检查：开启（Sparkle 偏好）。",
     "ui.232": "预览通道",
-    "ui.314": "稳定通道"
+    "ui.314": "稳定通道",
+    "ui.ux.target": "启动目标",
+    "ui.ux.choose": "请选择已有完整启动目录",
+    "ui.ux.files": "辅助文件匹配 · FX 文件存在",
+    "ui.ux.incomplete": "目录或文件需要检查",
+    "ui.ux.details": "目录与预检详情",
+    "ui.ux.scope": "自动预检仅核对所选目录的有限文件和元数据，不执行程序、不连接 SSH、不读取凭据。它不证明 FX 或 Guest 正在运行，也不代表游戏、EAC 或联机通过。正式启动仍执行原有身份、哈希和配置检查。",
+    "ui.ux.checking": "正在只读预检启动目录…"
   },
   "ja": {
     "ui.193": "移動",
@@ -1161,7 +1175,14 @@
     "ui.384": "Guest／SSH を待機中",
     "ui.385": "ゲームプロセスを待機中",
     "ui.386": "ウインドウ",
-    "ui.387": "gvproxy 実行環境"
+    "ui.387": "gvproxy 実行環境",
+    "ui.ux.target": "起動対象",
+    "ui.ux.choose": "既存の完全な実行フォルダを選択",
+    "ui.ux.files": "補助ファイル一致・FX ファイルあり",
+    "ui.ux.incomplete": "フォルダまたはファイルの確認が必要",
+    "ui.ux.details": "フォルダと事前検査の詳細",
+    "ui.ux.scope": "自動事前検査は選択フォルダの限られたファイルとメタデータのみを確認します。プログラム実行、SSH 接続、資格情報の読み取りは行いません。FX／Guest 稼働、ゲーム、EAC、マルチプレイの証明ではありません。起動時は元の身元・ハッシュ・構成検査を実行します。",
+    "ui.ux.checking": "起動フォルダを読み取り専用で検査中…"
   },
   "ko": {
     "ui.193": "탐색",
@@ -1549,7 +1570,14 @@
     "ui.384": "Guest / SSH 대기 중",
     "ui.385": "게임 프로세스 대기 중",
     "ui.386": "윈도우",
-    "ui.387": "gvproxy 실행 환경"
+    "ui.387": "gvproxy 실행 환경",
+    "ui.ux.target": "실행 대상",
+    "ui.ux.choose": "기존 전체 실행 디렉터리를 선택하세요",
+    "ui.ux.files": "보조 파일 일치 · FX 파일 있음",
+    "ui.ux.incomplete": "디렉터리 또는 파일 확인 필요",
+    "ui.ux.details": "디렉터리 및 사전 검사 세부 정보",
+    "ui.ux.scope": "자동 사전 검사는 선택 디렉터리의 제한된 파일과 메타데이터만 확인합니다. 프로그램 실행, SSH 연결, 자격 증명 읽기는 하지 않습니다. FX/Guest 실행, 게임, EAC, 멀티플레이를 입증하지 않습니다. 실행 시 원래 신원·해시·구성 검사를 수행합니다.",
+    "ui.ux.checking": "실행 디렉터리를 읽기 전용으로 확인 중…"
   },
   "ru": {
     "ui.193": "Навигация",
@@ -1937,7 +1965,14 @@
     "ui.384": "Ожидание Guest / SSH",
     "ui.385": "Ожидание процесса игры",
     "ui.386": "Окно",
-    "ui.387": "Среда gvproxy"
+    "ui.387": "Среда gvproxy",
+    "ui.ux.target": "Цель запуска",
+    "ui.ux.choose": "Выберите полный существующий каталог запуска",
+    "ui.ux.files": "Вспомогательные файлы совпадают · FX найден",
+    "ui.ux.incomplete": "Проверьте каталог или файлы",
+    "ui.ux.details": "Каталог и сведения предварительной проверки",
+    "ui.ux.scope": "Автопроверка читает ограниченные файлы и метаданные выбранного каталога. Она не запускает программы, не подключается по SSH и не читает учётные данные. Это не подтверждает работу FX/Guest, игры, EAC или сетевой игры. При запуске сохраняются исходные проверки идентичности, хешей и конфигурации.",
+    "ui.ux.checking": "Проверка каталога запуска без записи…"
   },
   "es": {
     "ui.193": "Navegación",
@@ -2325,7 +2360,14 @@
     "ui.384": "Esperando Guest / SSH",
     "ui.385": "Esperando proceso del juego",
     "ui.386": "Ventana",
-    "ui.387": "Entorno gvproxy"
+    "ui.387": "Entorno gvproxy",
+    "ui.ux.target": "Destino de inicio",
+    "ui.ux.choose": "Seleccione un directorio de ejecución completo existente",
+    "ui.ux.files": "Archivos auxiliares coinciden · Archivo FX presente",
+    "ui.ux.incomplete": "Revise el directorio o los archivos",
+    "ui.ux.details": "Directorio y detalles de comprobación previa",
+    "ui.ux.scope": "La comprobación automática lee archivos y metadatos limitados del directorio elegido. No ejecuta programas, conecta SSH ni lee credenciales. No confirma FX/Guest en ejecución, juego, EAC ni multijugador. El inicio conserva las comprobaciones originales de identidad, hash y configuración.",
+    "ui.ux.checking": "Comprobando directorio de inicio en modo solo lectura…"
   },
   "de": {
     "ui.193": "Navigation",
@@ -2713,7 +2755,14 @@
     "ui.384": "Warten auf Guest / SSH",
     "ui.385": "Warten auf Spielprozess",
     "ui.386": "Fenster",
-    "ui.387": "gvproxy-Laufzeit"
+    "ui.387": "gvproxy-Laufzeit",
+    "ui.ux.target": "Startziel",
+    "ui.ux.choose": "Vorhandenes vollständiges Laufzeitverzeichnis wählen",
+    "ui.ux.files": "Hilfsdateien stimmen überein · FX-Datei vorhanden",
+    "ui.ux.incomplete": "Verzeichnis oder Dateien prüfen",
+    "ui.ux.details": "Verzeichnis und Vorprüfungsdetails",
+    "ui.ux.scope": "Die automatische Vorprüfung liest begrenzte Dateien und Metadaten im gewählten Verzeichnis. Keine Programme, SSH-Verbindungen oder Zugangsdaten. Sie belegt weder laufendes FX/Guest noch Spiel, EAC oder Mehrspieler. Beim Start bleiben die ursprünglichen Identitäts-, Hash- und Konfigurationsprüfungen aktiv.",
+    "ui.ux.checking": "Startverzeichnis schreibgeschützt prüfen…"
   },
   "fr": {
     "ui.193": "Navigation",
@@ -3101,7 +3150,14 @@
     "ui.384": "Attente de Guest / SSH",
     "ui.385": "Attente du processus du jeu",
     "ui.386": "Fenêtre",
-    "ui.387": "Environnement gvproxy"
+    "ui.387": "Environnement gvproxy",
+    "ui.ux.target": "Cible de lancement",
+    "ui.ux.choose": "Choisissez un dossier d’exécution complet existant",
+    "ui.ux.files": "Fichiers auxiliaires conformes · Fichier FX présent",
+    "ui.ux.incomplete": "Vérifiez le dossier ou les fichiers",
+    "ui.ux.details": "Dossier et détails de la vérification préalable",
+    "ui.ux.scope": "La vérification automatique lit des fichiers et métadonnées limités du dossier choisi. Aucun programme, connexion SSH ou accès aux identifiants. Elle ne confirme ni FX/Guest actif, ni jeu, EAC ou multijoueur. Le lancement conserve les contrôles d’identité, d’empreinte et de configuration d’origine.",
+    "ui.ux.checking": "Vérification du dossier de lancement en lecture seule…"
   },
   "pt-BR": {
     "ui.193": "Navegação",
@@ -3489,7 +3545,14 @@
     "ui.384": "Aguardando Guest / SSH",
     "ui.385": "Aguardando processo do jogo",
     "ui.386": "Janela",
-    "ui.387": "Ambiente gvproxy"
+    "ui.387": "Ambiente gvproxy",
+    "ui.ux.target": "Destino de inicialização",
+    "ui.ux.choose": "Escolha um diretório de execução completo existente",
+    "ui.ux.files": "Arquivos auxiliares correspondem · Arquivo FX presente",
+    "ui.ux.incomplete": "Verifique o diretório ou os arquivos",
+    "ui.ux.details": "Diretório e detalhes da verificação prévia",
+    "ui.ux.scope": "A verificação automática lê arquivos e metadados limitados do diretório escolhido. Não executa programas, conecta SSH nem lê credenciais. Não comprova FX/Guest ativo, jogo, EAC ou multijogador. A inicialização mantém as verificações originais de identidade, hash e configuração.",
+    "ui.ux.checking": "Verificando diretório de inicialização somente para leitura…"
   },
   "zh-TW": {
     "ui.270": "需要 Python 3.9 或更新版本；選擇後按 ⌘R 讀取全部只讀快照。",
@@ -3877,6 +3940,13 @@
     "ui.265": "請刷新以讀取後端能力。",
     "ui.096": "診斷報告",
     "ui.122": "FX 運行時",
-    "ui.316": "啓動 FX"
+    "ui.316": "啓動 FX",
+    "ui.ux.target": "啟動目標",
+    "ui.ux.choose": "請選擇現有完整啟動目錄",
+    "ui.ux.files": "輔助檔案相符 · FX 檔案存在",
+    "ui.ux.incomplete": "目錄或檔案需要檢查",
+    "ui.ux.details": "目錄與預檢詳情",
+    "ui.ux.scope": "自動預檢僅核對所選目錄的有限檔案與中繼資料，不執行程式、不連線 SSH、不讀取憑證。它不證明 FX 或 Guest 正在執行，也不代表遊戲、EAC 或連線驗證通過。正式啟動仍執行原有身分、雜湊與設定檢查。",
+    "ui.ux.checking": "正在唯讀預檢啟動目錄…"
   }
 }

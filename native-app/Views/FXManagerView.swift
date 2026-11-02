@@ -14,8 +14,8 @@ struct FXManagerView: View {
                 TacticalWarningBanner(text: state.t("ui.211"))
             }
             TacticalAdaptiveLayout(minimumWidth: 255, maximumColumns: 2) {
-                ForEach(Array(candidates.enumerated()), id: \.offset) { index, row in
-                    TacticalPanel(number: String(format: "%02d", index + 1), title: "FX " + version(row), symbol: "shippingbox") {
+                ForEach(candidates, id: \.fxCandidatePath) { row in
+                    TacticalPanel(number: "FX", title: "FX " + version(row), symbol: "shippingbox") {
                         TacticalStatusBadge(text: state.t("ui.101"))
                         TacticalInfoRow(title: state.t("ui.019"), value: row["path"]?.text.map { URL(fileURLWithPath: $0).lastPathComponent } ?? state.t("ui.366"))
                         TacticalInfoRow(title: state.t("ui.102"), value: row["location"]?.text ?? state.t("ui.366"))
@@ -47,4 +47,8 @@ struct FXManagerView: View {
             ? state.t("ui.227")
             : state.t("ui.228")
     }
+}
+
+private extension Dictionary where Key == String, Value == JSONValue {
+    var fxCandidatePath: String { self["path"]?.text ?? "unknown" }
 }

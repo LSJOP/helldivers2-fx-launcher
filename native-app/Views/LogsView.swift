@@ -40,7 +40,7 @@ struct LogsView: View {
         VStack(alignment: .leading, spacing: 18) {
             TacticalPageHeader(title: state.t("ui.306"), refreshState: state)
             TacticalWarningBanner(text: state.t("ui.017"))
-            LegacyOperationsView(state: state, scope: "logs")
+            DisclosureGroup(state.t("ui.096")) { LegacyOperationsView(state: state, scope: "logs") }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) { filters; searchField; logActions }
                 VStack(alignment: .leading, spacing: 12) { searchField; HStack { filters; Spacer(minLength: 0); logActions } }

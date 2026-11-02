@@ -10,6 +10,7 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 210, ideal: 210, max: 250)
         } detail: {
             VStack(alignment: .leading, spacing: 16) {
+                RuntimeTargetPanel(state: state, tasks: tasks)
                 if let error = state.error, state.selection != .dashboard {
                     Label(error.message(state.languageCode), systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red).textSelection(.enabled)
@@ -37,7 +38,7 @@ struct ContentView: View {
                 if tasks.busy {
                     HStack(spacing: 10) {
                         ProgressView().controlSize(.small)
-                        Text(state.refreshing ? state.t("ui.255") : state.t("ui.225"))
+                        Text(state.inspectingTarget ? state.t("ui.ux.checking") : state.refreshing ? state.t("ui.255") : state.t("ui.225"))
                             .font(TacticalTypography.caption)
                         Spacer()
                         Button(state.t("ui.038")) { tasks.cancel() }
@@ -54,6 +55,9 @@ struct ContentView: View {
             .navigationTitle("")
             .tint(TacticalColors(scheme: scheme).accent)
 
+        }
+        .task(id: state.targetInspectionIdentity + (tasks.busy ? "|busy" : "|idle")) {
+            state.inspectTargetIfNeeded()
         }
         .confirmationDialog(state.t("ui.075"), isPresented: Binding(get: { state.pendingAction != nil }, set: { if !$0 { state.pendingAction = nil } }), titleVisibility: .visible) {
             if let action = state.pendingAction {

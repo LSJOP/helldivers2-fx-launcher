@@ -35,7 +35,7 @@ struct SettingsView: View {
             }
             CredentialManagementView(state: state, credentials: state.credentials, tasks: state.tasks)
             SoftwareUpdateView(manager: state.updates, language: state.languageCode)
-            LegacyOperationsView(state: state, scope: "settings")
+            DisclosureGroup(state.t("ui.008")) { LegacyOperationsView(state: state, scope: "settings") }
 
         }
         .fileImporter(isPresented: $presentation.choosingPython, allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
@@ -139,7 +139,6 @@ struct LegacyOperationSheet: View {
     }
     @Environment(\.dismiss) private var dismiss
     @State private var confirmed = false
-    @State private var choosingRoot = false
     @State private var configuration = "{}"
     @State private var revision = ""
     @State private var approved: [JSONValue] = []
@@ -176,16 +175,13 @@ struct LegacyOperationSheet: View {
                 if operation == "apply_network_profile" {
                     TacticalWarningBanner(text: state.t("ui.342"))
                 }
-                if needsRoot {
-                    TextField(state.t("ui.110"), text: $state.runtimeRoot)
-                        .disabled(tasks.busy)
-                    TacticalButton(title: state.t("ui.060"), symbol: "folder") { choosingRoot = true }.disabled(tasks.busy)
-                    Text(state.t("ui.195"))
-                        .font(TacticalTypography.caption)
-                }
+                if needsRoot { RuntimeTargetPanel(state: state, tasks: tasks) }
                 if operation == "launch_game" {
-                    TacticalButton(title: state.t("ui.279"), symbol: "checklist") { state.runOperation("preflight_launch") }
-                        .disabled(tasks.busy || state.runtimeRoot.isEmpty)
+                    DisclosureGroup(state.t("ui.ux.details")) {
+                        TacticalButton(title: state.t("ui.279"), symbol: "checklist") { state.runOperation("preflight_launch") }
+                            .disabled(tasks.busy || state.runtimeRoot.isEmpty)
+                        Text(state.t("ui.195")).font(TacticalTypography.caption)
+                    }
                 }
                 if ["connect_fx","inspect_guest_environment","start_steam","test_ssh","test_guest_sudo","inspect_guest","launch_game","apply_performance","save_network_snapshot"].contains(operation) {
                     CredentialInputFields(state: state, credentials: credentials, tasks: tasks, operation: operation)
@@ -242,7 +238,7 @@ struct LegacyOperationSheet: View {
                 TacticalDivider()
                 if let disabledReason { Text(disabledReason).font(TacticalTypography.caption).foregroundStyle(.secondary) }
                 HStack {
-                    TacticalButton(title: tasks.busy ? state.t("ui.282") : state.t("ui.280"), symbol: "play.fill", primary: true, loading: tasks.busy, disabledReason: disabledReason) { run() }
+                    TacticalButton(title: tasks.busy ? state.t("ui.282") : operation == "launch_game" ? state.t("ui.176") : state.t("ui.280"), symbol: "play.fill", primary: true, loading: tasks.busy, disabledReason: disabledReason) { run() }
                     if tasks.busy { Button(state.t("ui.038")) { state.tasks.cancel() } }
                     Spacer(minLength: 8)
                     Button(state.t("ui.069")) { dismiss() }.disabled(tasks.busy)
@@ -251,9 +247,6 @@ struct LegacyOperationSheet: View {
         }
         .frame(minWidth: 620, idealWidth: 750, minHeight: 550, idealHeight: 700)
             .interactiveDismissDisabled(tasks.busy)
-            .fileImporter(isPresented: $choosingRoot, allowedContentTypes: [.folder]) { result in
-                if case .success(let url) = result { state.runtimeRoot = url.path }
-            }
             .onReceive(state.$operationResult) { result in
                 if let value = result["configuration"], let current = result["revision"]?.text {
                     configuration = pretty(value); revision = current

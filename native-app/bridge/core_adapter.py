@@ -1,9 +1,11 @@
 """Narrow read-only reuse of current Python Core. Never imports entrypoints."""
 import importlib.util
+import hashlib
 import itertools
 import os
 from pathlib import Path
 import platform
+import plistlib
 import shutil
 import stat
 import sys
@@ -56,6 +58,51 @@ class CoreAdapter:
             items.append({'name': name, 'version': 'unknown', 'state': 'file_present_unverified' if state == 'ready' else state})
         items.append({'name': 'Game components', 'version': 'unknown', 'state': 'unverified'})
         return {'items': items, 'scope': 'file_presence_only_no_binary_execution'}
+
+    def launch_target(self, selected):
+        """Bounded file metadata only; never imports a launcher or runs a binary."""
+        if not isinstance(selected, str) or not selected or len(selected) > 4096 or '\x00' in selected:
+            raise ValueError('Invalid selected target')
+        root = Path(selected).expanduser().resolve()
+        archive = self.root.parent / 'legacy'
+        if not archive.is_dir():
+            archive = self.root.parent
+        required = ['launcher-20261026/steam-cdp.mjs', 'tools/check_node.cjs',
+                    'goal-fx-multiplayer-20261026/gvproxy-eim-wrapper']
+
+        def regular(base, relative, limit):
+            path = base
+            for part in Path(relative).parts:
+                path = path / part
+                if path.is_symlink():
+                    return None
+            try:
+                info = path.stat()
+                return path if stat.S_ISREG(info.st_mode) and info.st_size <= limit else None
+            except OSError:
+                return None
+
+        matches = []
+        for relative in required:
+            actual = regular(root, relative, 2 * 1024 * 1024)
+            expected = regular(archive, relative, 2 * 1024 * 1024)
+            matches.append(bool(actual and expected and
+                                hashlib.sha256(actual.read_bytes()).digest() == hashlib.sha256(expected.read_bytes()).digest()))
+        bundle = 'performance-stutter-20261027/FX HUD隔离诊断.app'
+        executable = regular(root, bundle + '/Contents/MacOS/steamac-vm', 512 * 1024 * 1024)
+        metadata = regular(root, bundle + '/Contents/Info.plist', 65536)
+        version = None
+        if metadata:
+            try:
+                info = plistlib.loads(metadata.read_bytes())
+                version = info.get('CFBundleShortVersionString') if isinstance(info, dict) else None
+            except (ValueError, plistlib.InvalidFileException):
+                pass
+        return {'target_root': str(root), 'target_kind': 'fx_app_bundle' if root.suffix.casefold() == '.app' else 'runtime_directory',
+                'archive_files_match': all(matches), 'fx_executable_present': bool(executable and os.access(executable, os.X_OK)),
+                'fx_path': str(root / bundle), 'fx_version': version if isinstance(version, str) else 'unknown',
+                'scope': 'selected_target_file_metadata_only', 'guest': 'unverified', 'eac': 'unverified',
+                'multiplayer': 'unverified', 'launch': 'unverified'}
 
     def fx_versions(self):
         candidates = []

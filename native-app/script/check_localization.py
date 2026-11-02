@@ -9,7 +9,7 @@ import subprocess
 
 LANGUAGES = {'en', 'zh-CN', 'zh-TW', 'ja', 'ko', 'ru', 'es', 'de', 'fr', 'pt-BR'}
 FORMATS = re.compile(r'%(?:\d+\$)?[-+ #0]*(?:\d+|\*)?(?:\.\d+)?(?:ll|l|h)?[@diufseEgG]|\{[A-Za-z_][A-Za-z_0-9]*\}')
-KEY = re.compile(r'"(ui\.\d+)"')
+KEY = re.compile(r'"(ui\.[A-Za-z0-9_.]+)"')
 LITERAL = re.compile(r'\b(?:Text|Button|Label|Toggle|TextField|SecureField)\(\s*"((?:[^"\\]|\\.)*)"')
 BRANDS = {'HELLDIVERS 2', 'FX LAUNCHER'}
 

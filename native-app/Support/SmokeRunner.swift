@@ -8,6 +8,11 @@ import ApplicationServices
     private static var started = false
     static func runIfRequested(state: AppState) async {
         let args = ProcessInfo.processInfo.arguments
+        if !started, let i = args.firstIndex(of: "--ux-refinement-smoke"), args.count > i + 1 {
+            started = true
+            await uxReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
+            return
+        }
         if !started, let i = args.firstIndex(of: "--task-queue-smoke"), args.count > i + 1 {
             started = true
             await queueReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
@@ -262,6 +267,51 @@ import ApplicationServices
             result = ["result":"PASS", "files":files, "navigation_pages":6, "hardware":"real_read_only", "apply_restore":"disabled", "guest_writes":"not_performed", "english_minimum_pages":"rendered"]
         } catch { result = ["result":"FAIL", "code":(error as? ErrorState)?.code ?? "QUEUE_SMOKE_FAILED"] }
         if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted,.sortedKeys]) { try? data.write(to: directory.appendingPathComponent("queue-review.json")) }
+        NSApp.terminate(nil)
+    }
+    private static func uxReview(_ state: AppState, directory: URL) async {
+        var result: [String: Any] = [:]
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try await waitForTask(state)
+            guard state.hasLoaded, state.error == nil,
+                  let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
+            state.runtimeRoot = directory.appendingPathComponent("missing-runtime-fixture").path
+            state.inspectTargetIfNeeded()
+            try await waitForTask(state)
+            guard state.targetInspection["archive_files_match"]?.boolean == false,
+                  state.targetInspection["fx_executable_present"]?.boolean == false else { throw ErrorState("TARGET_GUARD_FAILED") }
+            state.runtimeRoot = ""
+            state.perform(.game)
+            guard state.operationSelection?.method == "launch_game", state.pendingAction == nil else { throw ErrorState("LAUNCH_PRESENTATION_FAILED") }
+            try await Task.sleep(nanoseconds: 150_000_000)
+            state.operationSelection = nil
+            var renders = 0
+            for (language, _) in NativeLocalization.languages {
+                state.languageCode = language
+                guard NativeStrings.catalog[language]?.values.allSatisfy({ !$0.contains("⟦") }) == true else { throw ErrorState("LOCALE_MISSING") }
+                window.setContentSize(NSSize(width: language == "en" ? 1180 : 850, height: 850))
+                for page in Page.allCases {
+                    state.selection = page
+                    try await Task.sleep(nanoseconds: 100_000_000)
+                    window.contentView?.layoutSubtreeIfNeeded()
+                    guard !state.pageTitle(page).contains("⟦") else { throw ErrorState("LOCALE_MISSING") }
+                    renders += 1
+                    try await waitForTask(state)
+                    if language == "en" {
+                        try await Task.sleep(nanoseconds: 100_000_000)
+                        guard try await capture(window, name: page.rawValue + ".png", directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
+                    }
+                }
+            }
+            result = ["result": "PASS", "page_language_renders": renders, "languages": 10,
+                      "automatic_preflight_missing_target": "PASS", "single_launch_sheet": "PASS",
+                      "screenshots": "six real English App windows", "preferences_and_keychain": "not modified by isolated smoke",
+                      "live_game_guest_eac_multiplayer": "NOT_TESTED", "human_clicks_and_translation_review": "NOT_TESTED"]
+        } catch { result = ["result": "FAIL", "code": (error as? ErrorState)?.code ?? "SMOKE_FAILED"] }
+        if let bytes = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]) {
+            try? bytes.write(to: directory.appendingPathComponent("ux-review.json"), options: .atomic)
+        }
         NSApp.terminate(nil)
     }
     private static func migrationReview(_ state: AppState, directory: URL) async {

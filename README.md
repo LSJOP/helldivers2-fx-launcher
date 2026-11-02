@@ -41,7 +41,7 @@ A native **SwiftUI + AppKit** interface over the original Python Core: launch th
 
 </details>
 
-Four actual Debug App window captures, taken on 2026-11-03 with real host metadata. Only proportional resizing was applied; no status or interface was composited. The FX image shows the operation area; additional content is accessible by scrolling. The supplied icon/illustrations are generated artwork rendered in the real App, not generated UI screenshots. These images do not prove Guest, game or multiplayer readiness.
+Four actual Debug App window captures refreshed for UX v2.1 on 2026-11-03 with real host metadata and no selected launch target. No status or interface was composited. The FX image shows the operation area; additional content is accessible by scrolling. The supplied icon/illustrations are generated artwork rendered in the real App, not generated UI screenshots. These images do not prove Guest, game or multiplayer readiness.
 
 <a id="en-features"></a>
 
@@ -124,4 +124,6 @@ Existing clones need the intended branch and `git submodule update --init --recu
 
 Unofficial project; no endorsement or compatibility guarantee. HELLDIVERS 2 and related marks belong to their respective owners. A project-wide source license has **not been selected**; do not assume redistribution rights. See [rights and provenance](THIRD_PARTY_NOTICES.md), including the separate Sparkle license and supplied artwork notes.
 
-Development checks: `python3 native-app/script/check_localization.py` reports ten-language key/format coverage and README review candidates; `native-app/script/run_checks.sh` and the pre-commit hook include this gate. UI changes require a review of both READMEs and their real screenshots. Current screenshots precede this localization repair; localized variants still need fresh capture. No CI workflow is configured.
+Development checks: `python3 native-app/script/check_localization.py` reports ten-language key/format coverage and README review candidates; `native-app/script/run_checks.sh` and the pre-commit hook include this gate. UI changes require a review of both READMEs and their real screenshots. The English screenshots were refreshed after UX verification; non-English screenshot variants and translation naturalness still need human review. No CI workflow is configured.
+
+UX v2.1: all six pages share the selected launch target and bounded automatic file preflight. Choose the complete existing launcher/runtime directory, not an FX .app bundle. Application-folder discovery lists installation candidates separately and never changes the launch target. Automatic inspection reads only fixed helper files and bundle metadata, without programs, SSH or credentials; matching files do not prove runtime or game health. Launch HELLDIVERS 2 opens one panel for target, optional credentials and start consent; advanced preflight details are folded. Actual configuration changes retain their separate exact-change approval. Refresh rechecks target metadata. Stop/restart and performance Apply/Restore remain unavailable.

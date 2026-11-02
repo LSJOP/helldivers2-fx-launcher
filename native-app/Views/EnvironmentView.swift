@@ -17,8 +17,8 @@ struct EnvironmentView: View {
     private func chainStatus(_ name: String) -> InspectionStatus {
         switch name {
         case "FX": return actionEvidence["fx_host_running"]?.boolean == true ? .normal : actionEvidence["fx_host_running"]?.boolean == false ? .action : .unchecked
-        case "SSH": return actionEvidence["ssh_connected"]?.boolean == true ? .normal : .unchecked
-        case "Guest": return actionEvidence["guest_ready"]?.boolean == true ? .normal : .unchecked
+        case "SSH": return actionEvidence["ssh_connected"]?.boolean == true ? .normal : actionEvidence["ssh_connected"]?.boolean == false ? .action : .unchecked
+        case "Guest": return actionEvidence["guest_ready"]?.boolean == true ? .normal : actionEvidence["guest_ready"]?.boolean == false ? .action : .unchecked
         case "Steam": return actionEvidence["steam_running"]?.boolean == true || (actionEvidence["steam_process_count"]?.integer ?? 0) > 0 ? .normal : actionEvidence["steam_process_count"] != nil ? .action : .unchecked
         default: return .unchecked
         }

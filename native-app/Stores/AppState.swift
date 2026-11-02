@@ -5,6 +5,7 @@ final class AppState: ObservableObject {
     @Published var selection: Page? = .dashboard
     @Published var languageCode = NativeLocalization.initialLanguage {
         didSet {
+            guard !NativeLocalization.isolatedUXSmoke else { return }
             UserDefaults.standard.set(languageCode, forKey: "NativeLanguage")
             let systemLanguage = languageCode == "zh-CN" ? "zh-Hans" : languageCode == "zh-TW" ? "zh-Hant" : languageCode
             UserDefaults.standard.set([systemLanguage, "en"], forKey: "AppleLanguages")
@@ -18,8 +19,37 @@ final class AppState: ObservableObject {
     @Published var operationSelection: NativeOperation?
     @Published var pendingAction: GUIAction?
     let credentials = SessionCredentialManager()
-    @Published var runtimeRoot = UserDefaults.standard.string(forKey: "NativeRememberedRuntimeRoot") ?? "" {
-        didSet { if oldValue != runtimeRoot { credentials.clear(); guiSnapshots = [:] } }
+    @Published var runtimeRoot = NativeLocalization.isolatedUXSmoke ? "" : UserDefaults.standard.string(forKey: "NativeRememberedRuntimeRoot") ?? "" {
+        didSet { if oldValue != runtimeRoot { credentials.clear(); guiSnapshots = [:]; targetInspection = [:]; targetInspectionError = nil; inspectedTarget = nil } }
+    }
+    @Published private(set) var targetInspection: [String: JSONValue] = [:]
+    @Published private(set) var targetInspectionError: ErrorState?
+    @Published private(set) var inspectingTarget = false
+    private var inspectedTarget: String?
+    var targetInspectionIdentity: String { runtimeRoot + "|" + pythonURL.path }
+    func inspectTargetIfNeeded(force: Bool = false) {
+        let root = runtimeRoot, identity = targetInspectionIdentity
+        guard (hasLoaded || error != nil), !root.isEmpty, !tasks.busy, force || inspectedTarget != identity else { return }
+        inspectingTarget = true
+        targetInspection = [:]; targetInspectionError = nil
+        tasks.start { [weak self] in
+            guard let self else { return }
+            defer { self.inspectingTarget = false }
+            do {
+                let config = try BridgeConfiguration.bundled(python: self.pythonURL)
+                let reply = try await self.bridge.request("inspect_launch_target", configuration: config, params: ["runtime_root": .string(root)])
+                guard self.targetInspectionIdentity == identity else { return }
+                guard reply.result["scope"]?.text == "selected_target_file_metadata_only",
+                      reply.result["archive_files_match"]?.boolean != nil,
+                      reply.result["fx_executable_present"]?.boolean != nil else { throw ErrorState("PROTOCOL_ERROR") }
+                self.targetInspection = reply.result
+                self.inspectedTarget = identity
+            } catch {
+                guard self.targetInspectionIdentity == identity else { return }
+                self.targetInspectionError = error as? ErrorState ?? ErrorState("CORE_UNAVAILABLE")
+                self.inspectedTarget = identity
+            }
+        }
     }
     @Published private(set) var performanceSnapshot: [String: JSONValue] = [:]
     @Published private(set) var guiRecords: [String: GUIOperationRecord] = [:]
@@ -35,6 +65,7 @@ final class AppState: ObservableObject {
         didSet { UserDefaults.standard.set(pythonURL.path, forKey: "NativePythonPath") }
     }
     private static var savedPythonURL: URL {
+        if NativeLocalization.isolatedUXSmoke { return URL(fileURLWithPath: "/usr/bin/python3") }
         if let path = UserDefaults.standard.string(forKey: "NativePythonPath"), FileManager.default.isExecutableFile(atPath: path) {
             return URL(fileURLWithPath: path)
         }
@@ -132,7 +163,8 @@ final class AppState: ObservableObject {
     }
     func perform(_ action: GUIAction) {
         guard !tasks.busy else { return }
-        if runtimeRoot.isEmpty { operationSelection = NativeOperation(method: action.rawValue) }
+        operationError = nil; operationResult = [:]; operationEvents = []
+        if action == .game || runtimeRoot.isEmpty { operationSelection = NativeOperation(method: action.rawValue) }
         else if action.needsReview { pendingAction = action }
         else { runOperation(action.rawValue, params: ["confirmed": .bool(true)]) }
     }
@@ -155,6 +187,7 @@ final class AppState: ObservableObject {
         }
     }
     func prepareCredentials(interactive: Bool = false) async {
+        guard !NativeLocalization.isolatedUXSmoke else { return }
         do {
             let config = try BridgeConfiguration.bundled(python: pythonURL)
             let metadata = try await bridge.request("read_configuration", configuration: config)
@@ -179,6 +212,7 @@ final class AppState: ObservableObject {
     func value(_ method: String, _ key: String) -> String { results[method]?[key]?.text ?? t("ui.366") }
     func rows(_ method: String, _ key: String) -> [[String: JSONValue]] { results[method]?[key]?.array.map(\.object) ?? [] }
     func refresh() {
+        inspectedTarget = nil
         tasks.start { [weak self] in await self?.load() }
     }
     private func load() async {

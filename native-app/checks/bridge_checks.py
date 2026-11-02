@@ -43,6 +43,68 @@ class ContractChecks(unittest.TestCase):
         self.assertEqual(proc.stderr, b'')
         return [json.loads(line) for line in proc.stdout.splitlines()]
 
+    def target_fixture(self):
+        archive, selected = self.home / 'archive', self.home / 'selected'
+        for relative in ['launcher-20261026/steam-cdp.mjs', 'tools/check_node.cjs', 'goal-fx-multiplayer-20261026/gvproxy-eim-wrapper']:
+            for folder in [archive, selected]:
+                path = folder / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b'fixture helper; never execute')
+        bundle = selected / 'performance-stutter-20261027/FX HUD隔离诊断.app'
+        executable = bundle / 'Contents/MacOS/steamac-vm'
+        executable.parent.mkdir(parents=True)
+        executable.write_bytes(b'fixture executable; never execute')
+        executable.chmod(0o700)
+        (bundle / 'Contents/Info.plist').write_bytes(plistlib.dumps({'CFBundleShortVersionString': 'fixture'}))
+        adapter = object.__new__(core.CoreAdapter)
+        adapter.root = archive / 'native-app-core-snapshot'
+        return adapter, selected, bundle
+
+    def test_target_inspection_is_metadata_not_health(self):
+        adapter, selected, _ = self.target_fixture()
+        with patch('subprocess.Popen', side_effect=AssertionError('No process permitted')):
+            value = adapter.launch_target(str(selected))
+        self.assertTrue(value['archive_files_match'] and value['fx_executable_present'])
+        self.assertEqual(value['fx_version'], 'fixture')
+        for key in ['guest', 'launch', 'eac', 'multiplayer']:
+            self.assertEqual(value[key], 'unverified')
+
+    def test_target_mismatch_never_repairs(self):
+        adapter, selected, _ = self.target_fixture()
+        path = selected / 'tools/check_node.cjs'
+        path.write_bytes(b'user modification')
+        self.assertFalse(adapter.launch_target(str(selected))['archive_files_match'])
+        self.assertEqual(path.read_bytes(), b'user modification')
+
+    def test_app_bundle_is_not_complete_runtime(self):
+        adapter, _, bundle = self.target_fixture()
+        value = adapter.launch_target(str(bundle))
+        self.assertEqual(value['target_kind'], 'fx_app_bundle')
+        self.assertFalse(value['archive_files_match'])
+
+    def test_target_symlink_and_large_files_are_rejected(self):
+        adapter, selected, _ = self.target_fixture()
+        path = selected / 'tools/check_node.cjs'
+        path.unlink()
+        path.symlink_to(self.home / 'archive/tools/check_node.cjs')
+        self.assertFalse(adapter.launch_target(str(selected))['archive_files_match'])
+        path.unlink()
+        path.write_bytes(b'x' * (2 * 1024 * 1024 + 1))
+        self.assertFalse(adapter.launch_target(str(selected))['archive_files_match'])
+
+    def test_target_invalid_metadata_and_missing_directory(self):
+        adapter, _, bundle = self.target_fixture()
+        (bundle / 'Contents/Info.plist').write_bytes(b'bad plist')
+        self.assertEqual(adapter.launch_target(str(bundle.parent.parent))['fx_version'], 'unknown')
+        self.assertFalse(adapter.launch_target(str(self.home / 'absent'))['fx_executable_present'])
+
+    def test_target_protocol_forbids_commands_credentials_and_consent(self):
+        for params in [{}, {'runtime_root': ''}, {'runtime_root': '/fixture', 'confirmed': True},
+                       {'runtime_root': '/fixture', 'password': 'fixture-not-a-real-password'}, {'runtime_root': '/fixture', 'command': 'id'}]:
+            request = dict(req('inspect_launch_target'), params=params)
+            row = self.run_protocol((json.dumps(request) + '\n').encode())[0]
+            self.assertEqual(row['error']['code'], 'INVALID_ARGUMENT')
+
     def test_multiple_requests_and_id_correlation(self):
         methods = ['handshake', 'get_launcher_version', 'get_system_info', 'get_environment_status', 'get_dependencies', 'get_logs']
         requests = [req(method, 'r-' + str(i)) for i, method in enumerate(methods)]
