@@ -42,7 +42,7 @@
       "name": "游戏性能配置",
       "priority": "P1",
       "status": "COMPLETED",
-      "commit": null,
+      "commit": "5eb08cf",
       "evidence": [
         "Read-only fallback authorized by task: no validated inference/write/restore bounds",
         "Actual M4 Pro, CPU 12, GPU 16, 24 GiB, macOS detected",
@@ -57,9 +57,18 @@
       "id": "TASK-004",
       "name": "README 视觉重设计",
       "priority": "P2",
-      "status": "IN_PROGRESS",
-      "commit": null,
-      "evidence": []
+      "status": "COMPLETED",
+      "commit": "HEAD at task completion; resolve commit_subject",
+      "evidence": [
+        "FlClash structure referenced; no brand assets copied",
+        "Two synchronized README files; relative language links PASS",
+        "Four real 2026-11-03 App captures; proportional resizing only",
+        "Local links, anchors and Markdown fences PASS",
+        "GitHub Releases API returned empty list; no fake installer link",
+        "No App build/start during README task"
+      ],
+      "commit_subject": "docs: redesign README with visual product showcase"
     }
-  ]
+  ],
+  "status": "COMPLETED"
 }

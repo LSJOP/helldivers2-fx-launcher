@@ -1,17 +1,16 @@
 # Unified task progress
 
-Instruction: HD2_NATIVE_APP_UNIFIED_TASK_QUEUE v1.0.0. Development branch: feature/macos-native-app.
+HD2_NATIVE_APP_UNIFIED_TASK_QUEUE v1.0.0 · 2026-11-03 · feature/macos-native-app
 
-- Baseline: 3a7e304. Existing GUI backends and credential remembering retained; no verified graceful stop/restart. Five pages, no AppIcon or dedicated performance page. README currently single-file bilingual. Unknown untracked hero PNG preserved.
-- TASK-001 COMPLETED: one main inspect action, FX action cards, shared inline feedback, compact start consent; authentication/exact changes retained. Debug and bundled GUI/root-guard/render smoke PASS. Live Guest not retested.
-- TASK-002 COMPLETED: Debug build and bundled AppIcon.icns/plist PASS. No extra rounded mask. Finder/Dock/switcher/Launchpad not manually verified. Source: supplied PNG exists, 1254×1254 RGB, no alpha; resize proportionally, no additional rounded mask.
-- TASK-003 COMPLETED (authorized read-only fallback): hardware, current preferences, baseline classification/differences and disabled apply/restore; 9 inference + 35 migration checks, Debug build, six-page smoke PASS. audit fixed legacy settings and implement only safe evidence-backed inference.
-- TASK-004 IN_PROGRESS: use two synchronized README files per new instruction, real screenshots and genuine release availability.
+**All four tasks COMPLETED within the instruction's allowed scope. Stop development; do not regenerate completed work.**
 
-Resume: inspect this queue and Git, continue the first non-completed task. This is a persistent checkpoint, not an automatic wakeup mechanism.
+| Task | Commit | Result / evidence |
+| --- | --- | --- |
+| TASK-001 GUI simplification | e87e27c | One primary inspection action, FX cards, inline feedback and short start consent; original advanced tools/authentication/exact-change approval retained. Debug build and GUI/root-guard smoke PASS. |
+| TASK-002 App icon | 36e9cfa | Supplied 1254×1254 RGB PNG proportionally resized; no extra rounded mask. Debug and Release settings reference AppIcon; Debug bundle icns/plist verified. Finder/Dock/switcher/Launchpad not manually verified. |
+| TASK-003 Game Performance | 5eb08cf | Six pages, actual M4 Pro / CPU 12 / GPU 16 / 24 GiB detection, original FX preferences and baseline differences. Read-only fallback is complete as expressly permitted: no safe portable ranges/scoped restore backend, so Apply/Restore disabled. 9 inference + 35 migration checks, Debug build and six-page/hardware smoke PASS. |
+| TASK-004 README showcase | This commit: docs: redesign README with visual product showcase | English/Chinese files synchronized, formal icon, four actual App screenshots, honest release/compatibility states. Link/anchor/fence checks PASS. No App build/start for documentation. |
 
-Next: integrate supplied AppIcon only; do not rerun completed GUI work.
+Known limits: fresh GUI SSH/Guest success was blocked by a different running FX copy; no process was stopped. Main-menu confirmation belongs to the earlier recorded environment, not this task's testing. Ground mission, independent EAC, multiplayer, broad performance tuning and writable inferred profiles remain unverified/unavailable. Original launch, authentication/storage, FX/Guest configuration and updater were preserved. Unknown untracked hero PNG was not staged.
 
-TASK-001 commit e87e27c. Next: read-only performance page; old apply calls complete launch/configuration, not a safe inferred-profile writer.
-
-TASK-002 commit 36e9cfa. Captured four real App windows in ignored native-app/evidence/task-queue-ui; no personal paths in FX viewport. Performance writes/restore require future validated ranges and a scoped backend, not part of this completed fallback. Next: inspect FlClash reference, reuse these captures, publish synchronized English/Chinese README.
+Resume: read task-queue.json and Git. There is no unfinished executable task in this queue. A future request to enable performance writes needs validated bounds and a separately reviewed parameter-scoped apply/backup/restore backend; do not silently activate the original broad configure handler. No scheduled continuation has been created; these files do not automatically wake Codex.

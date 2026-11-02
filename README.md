@@ -1,96 +1,72 @@
-# HELLDIVERS 2 FX LAUNCHER
-
-**macOS Native Launcher**
-
-[**English**](#english) | [**简体中文**](#简体中文)
-
-![HELLDIVERS 2 FX LAUNCHER](https://img.shields.io/badge/HELLDIVERS%202-FX%20LAUNCHER-FFD600?style=flat-square&labelColor=171A1F)
-![macOS 14+](https://img.shields.io/badge/macOS-14%2B-0078D4?style=flat-square&labelColor=171A1F)
-![Apple Silicon](https://img.shields.io/badge/Platform-Apple%20Silicon-0078D4?style=flat-square&labelColor=171A1F)
-![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-0078D4?style=flat-square&labelColor=171A1F)
-![AppKit](https://img.shields.io/badge/Desktop-AppKit-0078D4?style=flat-square&labelColor=171A1F)
-![Python Bridge](https://img.shields.io/badge/Core-Python%20Bridge-0078D4?style=flat-square&labelColor=171A1F)
-![Development status](https://img.shields.io/badge/Development-Migration%20Preview-F29D38?style=flat-square&labelColor=171A1F)
-![Native App version](https://img.shields.io/badge/Native%20App-0.1.0-FFD600?style=flat-square&labelColor=171A1F)
-![Pinned Core version](https://img.shields.io/badge/Pinned%20Core-0.1.0--preview.4-808080?style=flat-square&labelColor=171A1F)
-
-> [!IMPORTANT]
-> **Developer preview · 开发预览** — No signed installer or complete game environment is provided. The recorded dedicated FX profile reached the main menu with user confirmation; single-player missions, independent EAC acceptance and multiplayer remain unverified.
-> 尚无已签名安装包或完整游戏环境。已在记录中的专用 FX 配置下通过 Native 启动并由用户确认进入主菜单；单人任务、独立 EAC 验收及多人联机仍未验证。
-
-[Native mainline / 主线](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main) · [Development / 开发分支](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app) · [Legacy Script / 原脚本](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script) · [Migration checklist / 迁移清单](docs/FUNCTION_MIGRATION.md)
-
----
+<div align="center">
+  <img src="docs/assets/app-icon.png" width="128" alt="HELLDIVERS 2 FX Launcher icon">
+  <h1>HELLDIVERS 2 FX Launcher</h1>
+  <p>A HELLDIVERS 2 FX launcher and management tool for Apple Silicon Macs.</p>
+</div>
 
 <a id="english"></a>
+<a id="简体中文"></a>
 
-## English
+[**English**](README.md) | [**简体中文**](README.zh-CN.md)
 
-[Overview](#en-overview) · [Features](#en-features) · [Screenshots](#en-screenshots) · [Requirements](#en-requirements) · [Installation](#en-installation) · [Usage](#en-usage) · [Development Status](#en-development) · [Legacy Script](#en-legacy) · [Disclaimer](#en-disclaimer) · [License](#en-license) · [简体中文](#简体中文)
+![macOS](https://img.shields.io/badge/macOS-14%2B-0078D4?style=flat-square&labelColor=171A1F)
+![Apple Silicon](https://img.shields.io/badge/Platform-Apple%20Silicon-0078D4?style=flat-square&labelColor=171A1F)
+![SwiftUI](https://img.shields.io/badge/UI-SwiftUI%20%2B%20AppKit-0078D4?style=flat-square&labelColor=171A1F)
+![Status](https://img.shields.io/badge/Status-Development%20Preview-F29D38?style=flat-square&labelColor=171A1F)
+![Version](https://img.shields.io/badge/Native-0.1.0-FFD600?style=flat-square&labelColor=171A1F)
+
+[Screenshots](#en-screenshots) · [Features](#en-features) · [Installation](#en-installation) · [Quick start](#en-usage) · [Compatibility](#en-development) · [Legacy script](#en-legacy)
 
 <a id="en-overview"></a>
 
-### Overview
+A native **SwiftUI + AppKit** interface over the original Python Core: launch the game, inspect the selected FX environment and read performance settings from six focused pages. The interface defaults to dark, with inline operation feedback and advanced details available when needed.
 
-A native macOS command interface for HELLDIVERS 2 FX Launcher, built with **SwiftUI + narrowly scoped AppKit**. A supervised **Python JSONL Bridge** reuses the original launcher Core while keeping system operations outside SwiftUI. The five-page military-tech interface defaults to dark, with light/system appearance available.
-
-`main` is the Native App mainline; `feature/macos-native-app` contains current functional migration work and may be ahead of main. The descriptions below apply to that development branch. The archive is preserved separately.
-
-<a id="en-features"></a>
-
-### Features
-
-| Status | Scope | What this means |
-| --- | --- | --- |
-| ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) | Native interface | Dashboard, Environment, FX Manager, Logs and Settings; Cmd+1…5 navigation and Cmd+R refresh; bundled Dashboard soldier illustration |
-| ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) | Local inspection | Real host metadata, bounded FX discovery, versions and discovered paths; discovering an installation does not establish readiness |
-| ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) | Configuration protection | Real read/edit/save, validation, revision conflicts, existing unknown-field preservation, backup and atomic replacement; checked with isolated data |
-| ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) | Logs and diagnostics | Real progress/error streaming, bounded/redacted logs, search/filter/copy, user-reported match history and report export |
-| ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) | Game launch · Recorded profile | Dedicated FX 1.9.4: Native → FX/Guest/SSH → Steam → game; user confirmed the main menu/controllable ship on 2026-11-03. This does not establish support for other FX environments |
-| ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) | Legacy operation integration | 28 Core interfaces, including launch, SSH/Guest/Steam checks, performance profile, network tests and profile/recovery; real backends are wired, live acceptance is pending |
-| ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) | Localization and help | All ten original catalogs retained and selectable; new Native strings, full help/changelog presentation and broader reports remain partial |
-| ![Planned](https://img.shields.io/badge/STATUS-Planned-808080?style=flat-square&labelColor=171A1F) | Distribution and integration | Signed/notarized distribution and CrossOver integration; no complete installer |
-| ![Unverified](https://img.shields.io/badge/STATUS-Unverified-808080?style=flat-square&labelColor=171A1F) | Runtime and compatibility | Single-player missions, independent EAC acceptance, multiplayer and other FX environments remain unverified |
-
-**Ten original locales:** zh-CN, en, ja, ko, ru, es, de, fr, pt-BR, zh-TW. Missing Native translations fall back to English.
-
-Sparkle 2.10.1 is integrated for Launcher-only updates, with shared menu/settings controls and automatic-check preferences. The signed feed and release service are not configured, so checks are disabled and online installation is unverified. See [release preparation](docs/NATIVE_UPDATES.md). The archived menu did not implement FX version switching, so it is not presented as a migrated capability.
+> [!IMPORTANT]
+> **Development preview.** No official installer has been released. The descriptions and screenshots refer to [feature/macos-native-app](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app), which may be ahead of main. Runtime binaries, game files and Guest images are not included.
 
 <a id="en-screenshots"></a>
 
-### Screenshots
+## Screenshots
 
-**Dashboard — streamlined page hierarchy, actual App capture on 2026-11-02.** Click for the full image.
+[![Dashboard](docs/images/dashboard.png)](docs/images/dashboard.png)
 
-[![Dashboard — actual Native App window, runtime unverified](docs/images/dashboard.png)](docs/images/dashboard.png)
-
-| Environment · 运行环境 | FX Manager · FX 管理 |
-| :---: | :---: |
+| Environment | FX Manager |
+| --- | --- |
 | [![Environment](docs/images/environment.png)](docs/images/environment.png) | [![FX Manager](docs/images/fx-manager.png)](docs/images/fx-manager.png) |
-| Logs · 运行日志 | Settings · 设置 |
-| [![Logs](docs/images/logs.png)](docs/images/logs.png) | [![Settings](docs/images/settings.png)](docs/images/settings.png) |
 
-> [!NOTE]
-> All five images were captured from the running Debug App on 2026-11-02 during `HD2_NATIVE_APP_HEADER_ASSET_REFINEMENT_v1.0.0`, using its real read-only snapshot. They show the shared space-artwork headers on the four secondary pages and the unchanged Dashboard hero, with one main content heading per page, not generated UI mockups. Lower sections remain accessible by scrolling. The Environment/FX Manager captures predate the GUI action cards, and Settings predates optional credential management; these captures are pending refresh. Images were proportionally reduced for the README; no status or UI was composited. No FX/game launch, EAC or multiplayer success is implied.
+<details>
+<summary>Game Performance</summary>
+
+[![Game Performance](docs/images/performance.png)](docs/images/performance.png)
+
+</details>
+
+Four actual Debug App window captures, taken on 2026-11-03 with real host metadata. Only proportional resizing was applied; no status or interface was composited. The FX image shows the operation area; additional content is accessible by scrolling. The supplied icon/illustrations are generated artwork rendered in the real App, not generated UI screenshots. These images do not prove Guest, game or multiplayer readiness.
+
+<a id="en-features"></a>
+
+## Features
+
+| Status | Capability |
+| --- | --- |
+| 🟢 Implemented | Six-page native interface, Cmd+1…6 navigation, dark/light/system appearance, bundled official project icon |
+| 🟢 Implemented | Bounded host/FX discovery; validated configuration editing with revision checks, backup and atomic replacement |
+| 🟢 Implemented | Searchable, filtered, bounded and redacted logs; diagnostic reports |
+| 🟢 Implemented · Read-only | Real chip/CPU/GPU/memory detection, current FX preferences and baseline differences in Game Performance |
+| 🟠 In development | One-click environment inspection and background SSH operations; original-entry FX/Steam starts, independent SSH/sudo credential reuse; fresh live acceptance remains pending |
+| 🟠 In development | Ten original locale catalogs retained; new Native translations are partial, with English fallback |
+| ⚪ Planned / unavailable | Safe FX stop/restart, writable inferred performance profiles with scoped restore, signed/notarized installer |
+
+Performance rules are local and reproducible. The recorded **M4 Pro / 24 GiB** settings are a candidate baseline, not comprehensive performance validation. Other hardware has no inferred writable profile. Apply/restore are disabled with visible reasons. [Parameter sources and limits](docs/GAME_PERFORMANCE.md).
 
 <a id="en-requirements"></a>
-
-### Requirements
-
-| Item | Requirement |
-| --- | --- |
-| Platform | Apple Silicon Mac, macOS 14 or newer |
-| Local build | Complete Xcode with macOS SDK |
-| Bridge | Existing Python 3.9 or newer interpreter |
-| Legacy operations | Existing complete legacy launcher directory, originally verified FX/gvproxy assets and compatible SSH settings |
-
-Runtime binaries, game files, fonts, credentials and Guest images are not bundled. The App does not install, relocate or silently select runtime assets. Arbitrary FX versions are not interchangeable with the original guarded runtime.
-
 <a id="en-installation"></a>
 
-### Installation
+## Download and installation
 
-Build the current development preview:
+**An official installer has not been released.** The repository [Releases page](https://github.com/LSJOP/helldivers2-fx-launcher/releases) currently has no published release; this is not a download button for a nonexistent package.
+
+Source preview requirements: **Apple Silicon, macOS 14+, a complete Xcode/macOS SDK and Python 3.9+**. Game operations also require the existing complete legacy launcher directory, the original validated FX/gvproxy assets and compatible Guest access.
 
 ```sh
 git clone --branch feature/macos-native-app --recurse-submodules https://github.com/LSJOP/helldivers2-fx-launcher.git
@@ -99,229 +75,51 @@ cd helldivers2-fx-launcher/native-app
 open build/Debug/HD2FXNative.app
 ```
 
-For an existing clone, select the intended branch and run `git submodule update --init --recursive` from the repository root. Source ZIPs omit submodules. The pinned archive provides selected Core sources and locale catalogs; packaging does not run launch operations or download dependencies. There is no ready-to-install signed/notarized Native release.
+Existing clones need the intended branch and `git submodule update --init --recursive`. Source ZIPs omit the pinned Core submodule. See the [development guide](docs/NATIVE_DEVELOPMENT.md).
 
 <a id="en-usage"></a>
 
-### Usage
+## Quick start
 
-1. Open the App and refresh local metadata. Refresh remains read-only.
-2. In Settings, select language, appearance and an existing Python interpreter (default `/usr/bin/python3`). Language and Python selection persist in the App preferences; restart the App to apply its language to standard macOS menus and Sparkle dialogs. Appearance and runtime-root selection remain session-only.
-3. Open the relevant action panel for detailed operations. Select the existing complete legacy directory when requested; verify the target and authentication settings.
-4. Approve writes, SSH or launch explicitly. Specific Guest, performance and Wi-Fi changes require additional approval. Opening a page does not run a live operation.
-
-<details>
-<summary>Configuration, credentials and recovery paths</summary>
-
-- Configuration: `~/Library/Application Support/Helldivers2FXLauncher/settings.json`. The editor shows the target/revision and backs up before replacement.
-- Native diagnostics/reports: `~/Library/Application Support/Helldivers2FXLauncher/native`. Original Core recovery receipts may also be written under the selected legacy directory.
-- By default, SSH password, key passphrase and Guest sudo password stay in App session memory and use controlled stdin/PTY. Optional, unchecked-by-default remember controls save SSH and sudo independently to a new App-owned macOS Keychain service only after a real password challenge succeeds. Saved passwords can be reused after restarting; key passphrases remain session-only. Settings provides update, per-password clear and confirmed clear-all. Unchecking remember stops automatic reuse without silently deleting the item. Invalid saved credentials are quarantined until replaced. Automatic Keychain reads suppress authorization UI; locked/access-restricted storage falls back to session input. An explicit access action or a changed App identity/signature can require system authorization. No raw password or App-owned encryption key is kept in preferences/files. Legacy Keychain items remain untouched.
-- Cancellation attempts supported recovery. Already started FX/Steam/game processes may continue; recheck actual state after interruption.
-
-</details>
-
-GUI actions are available in Environment (Connect FX, Inspect environment, Inspect again) and FX Manager (Start FX, Check FX status, Check Guest connection, Start Steam, and the existing game launch). Checks use the selected target and identity guards; Steam/game starts require confirmation. SSH and sudo reuse the independent session/opt-in remembered credentials. Missing or rejected credentials open the existing secure panel. Stop/restart are unavailable until a verified graceful backend exists. File discovery is separate from runtime readiness. This change passed 33 isolated migration checks, 17 launch/GUI state checks, 30 service checks and 17 credential checks. The live host check rejected a different running FX copy, so fresh SSH/Guest inspection through the new actions remains unverified; it was not stopped or modified.
+1. Open the App; choose your language, appearance and existing Python interpreter in Settings.
+2. Select the existing launcher directory on first use. Use **Inspect environment** for read-only Guest checks; FX must already be running. Use **Start FX** in FX Manager if needed.
+3. Click **Launch HELLDIVERS 2** on Dashboard. The existing launch workflow performs its required checks automatically. Review start consent and any exact configuration-change preview; enter credentials only in App secure fields.
+4. Use Game Performance for hardware and baseline comparisons, and Logs for failure details. A detected process does not establish arrival at the game menu.
 
 <a id="en-development"></a>
 
-### Development Status
+## Compatibility status
 
-![Migration Preview](https://img.shields.io/badge/STATUS-Migration%20Preview-F29D38?style=flat-square&labelColor=171A1F) ![Live Acceptance Pending](https://img.shields.io/badge/STATUS-Live%20Acceptance%20Pending-808080?style=flat-square&labelColor=171A1F)
+| Evidence | Current result |
+| --- | --- |
+| Native App | Debug build and six-page smoke passed; current focused checks: 35 migration + 9 inference cases |
+| FX / game process | Observed during the earlier recorded dedicated FX 1.9.4 launch; not a claim about every FX installation |
+| Main menu / controllable ship | Explicitly confirmed by the user on 2026-11-03 in that recorded environment |
+| Current GUI SSH / Guest read | Real backends wired; latest host check rejected a different running FX copy before connecting. Fresh success through the new actions remains pending |
+| Single-player mission / independent EAC / multiplayer | **Unverified**, separately |
+| Performance | Read-only candidate comparison; no measured performance guarantee or automatic tuning |
 
-Native bundle version **0.1.0**, build **1**, comes from the [Xcode project](native-app/HD2FXNative.xcodeproj/project.pbxproj). Pinned Core version **0.1.0-preview.4** comes from [Core VERSION](https://github.com/LSJOP/helldivers2-fx-launcher/blob/f6dfb4c9757fe07c176d01e5e3f67cd404d87351/native-app-core-snapshot/VERSION). Neither number implies a published Release. The README instruction version is separate from software versions.
+> [!WARNING]
+> Installation found ≠ runtime ready ≠ game process started ≠ main menu reached ≠ EAC accepted ≠ multiplayer working. No anti-cheat bypass is provided.
 
-The update module uses official Sparkle UI and signed-feed/archive verification; it does not update FX Runtime or replace the Python Bridge. Release preparation and missing trust conditions are documented in [Native updates](docs/NATIVE_UPDATES.md). English/Chinese standard menu localization requires an App restart after changing the in-App language.
+## FAQ
 
-Earlier isolated functional verification passed an Xcode Debug build, 18 protocol/metadata checks, 14 isolated migration checks, 21 service checks and one focused App smoke. Hero integration subsequently passed a build and a single App session checking two window sizes. These checks did not exercise a real game, live SSH or network/system changes. These earlier functional checks are separate from update integration: the latter passed a Debug build and English/Chinese menu/settings smoke checks, with no live upgrade.
-
-Opt-in remembering uses a separate macOS Keychain namespace for SSH and sudo, with target/config isolation, verified-password-only saves, rejection quarantine and user-confirmed deletion. Focused tests cover session/restart reuse with fictional credentials and actual Keychain write/read/delete across separate processes. This change did not start/reset FX or modify the successful environment. FX was not running at the final read-only check, so a real-password game cold launch was not repeated.
-
-Staged-file and release-artifact secret gates block suspected secrets and incomplete scans. Passing a bounded pattern scan is not proof that every possible secret is absent. See [release preparation](docs/NATIVE_UPDATES.md).
-
-See the [migration checklist](docs/FUNCTION_MIGRATION.md). Phase 2 adds real launch preflight, staged progress/errors and separate user confirmations for the main menu and single-player. On 2026-11-03, a real Native attempt used the original `steam -applaunch 553850` flow and the user confirmed the main menu/controllable ship. The approved Guest IPv6 transaction retained its original-value backup; sudo credentials use stdin for the actual privileged command instead of assuming authorization carries between SSH invocations. Single-player missions, independent EAC acceptance and multiplayer remain unverified. Full Native translations and runtime acceptance remain incomplete. GitHub Actions is not published because the configured token lacks `workflow` permission; use the local development checks described in [AGENTS.md](AGENTS.md).
+- **Why are stop/restart or Apply disabled?** A verified graceful-exit backend and safe inferred-profile write/restore bounds are not available. The App does not force-stop or silently reconfigure FX.
+- **Must I retype passwords?** Session reuse is the default. Optional remembering stores independently verified SSH/sudo credentials in a new App-owned macOS Keychain namespace; automatic reads suppress authorization dialogs. Locked/access-restricted storage falls back to secure input. Explicit access or App identity/signature changes may still require system authorization. Old script items are untouched.
+- **Are automatic updates ready?** Sparkle 2 is integrated, but a signed feed/release service is not configured. Update checks remain disabled; installation is unverified.
 
 <a id="en-legacy"></a>
 
-### Legacy Script
+## Development and legacy script
 
-| Branch | Purpose |
-| --- | --- |
-| [main](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main) | Native App mainline |
-| [feature/macos-native-app](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app) | Active Native development; not automatically merged |
-| [legacy-script](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script) | Original terminal launcher archive and pinned compatibility supplement |
-
-[Original README](https://github.com/LSJOP/helldivers2-fx-launcher/blob/legacy-script/README.md) · [Script ZIP](https://github.com/LSJOP/helldivers2-fx-launcher/archive/refs/heads/legacy-script.zip) · [Original baseline 0205aca](https://github.com/LSJOP/helldivers2-fx-launcher/tree/0205acaec3b32024df180a6dfb8ecc587e2f1914)
-
-Old main.zip links now download Native source; replace main with legacy-script in script-specific URLs. No archive content, Release or Tag is removed by this documentation work.
+- [main](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main): Native mainline; this work is not automatically merged.
+- [feature/macos-native-app](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app): current development.
+- [legacy-script](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script): original script archive; its history is preserved.
+- [Development guide](docs/NATIVE_DEVELOPMENT.md) · [Migration evidence](docs/FUNCTION_MIGRATION.md) · [Performance](docs/GAME_PERFORMANCE.md) · [Updates](docs/NATIVE_UPDATES.md) · [Development rules](AGENTS.md)
 
 <a id="en-disclaimer"></a>
-
-### Disclaimer
-
-![Compatibility not guaranteed](https://img.shields.io/badge/Compatibility-No%20guarantee-D73A49?style=flat-square&labelColor=171A1F)
-
-> [!WARNING]
-> **A detected installation ≠ a usable runtime ≠ a launched game ≠ verified EAC ≠ working multiplayer.** Each requires its own fresh evidence. User-submitted match outcomes remain user reports.
-
-This is an unofficial project with no claimed endorsement. No anti-cheat bypass or guaranteed compatibility is offered. The Dashboard and space-header artwork are user-supplied generated illustrations rendered inside the actual App; the software screenshots themselves are genuine captures.
-
 <a id="en-license"></a>
 
-### License
+## Disclaimer and license
 
-No project-wide source license has been selected. Do not assume blanket redistribution rights. HELLDIVERS 2 and related marks belong to their owners. See [rights and provenance](THIRD_PARTY_NOTICES.md) and archive notices.
-
-[简体中文 ↓](#简体中文) · [Back to English](#english)
-
----
-
-<a id="简体中文"></a>
-
-## 简体中文
-
-[项目介绍](#zh-overview) · [功能介绍](#zh-features) · [软件截图](#zh-screenshots) · [系统要求](#zh-requirements) · [安装方法](#zh-installation) · [使用说明](#zh-usage) · [开发进度](#zh-development) · [旧版脚本](#zh-legacy) · [免责声明](#zh-disclaimer) · [开源协议](#zh-license) · [English](#english)
-
-<a id="zh-overview"></a>
-
-### 项目介绍
-
-面向 HELLDIVERS 2 FX Launcher 的 macOS 原生指挥界面，采用 **SwiftUI + 小范围 AppKit**。受监管的 **Python JSONL Bridge** 复用原启动器 Core，系统操作独立于 SwiftUI。五页军事科技界面默认深色，可选浅色或跟随系统。
-
-`main` 是 Native App 主线；`feature/macos-native-app` 包含当前功能迁移，可能领先于 main。以下描述对应开发分支，原脚本另行归档保留。
-
-<a id="zh-features"></a>
-
-### 功能介绍
-
-| 状态 | 范围 | 实际含义 |
-| --- | --- | --- |
-| ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) 已实现 | 原生界面 | 总览、运行环境、FX 管理、日志、设置；Cmd+1…5 导航与 Cmd+R 刷新；首页士兵插图随 App 打包 |
-| ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) 已实现 | 本地检查 | 真实本机元数据、限定范围 FX 发现、版本和发现路径；检测到安装不等于运行就绪 |
-| ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) 已实现 | 配置保护 | 真实读取/编辑/保存，验证、修订冲突检查、已有未知字段保留、备份及原子替换；使用隔离数据验证 |
-| ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) 已实现 | 日志与诊断 | 真实进度/错误流、有容量限制且脱敏的日志、搜索/筛选/复制、用户报告的匹配历史和报告导出 |
-| ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) 已实现 | 游戏启动 · 记录中的配置 | 专用 FX 1.9.4：Native → FX/Guest/SSH → Steam → 游戏；2026-11-03 用户确认已进入主菜单／飞船且可操作。不代表支持其他 FX 环境 |
-| ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) 开发中 | 原脚本操作集成 | 28 个 Core 接口，包含启动、SSH/Guest/Steam 检查、性能配置、网络测试及方案/恢复；已连接真实后端，仍待实机验收 |
-| ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) 开发中 | 多语言与帮助 | 保留并可选择原十种语言资源；新增 Native 文案、完整帮助/更新日志及更全面报告仍不完整 |
-| ![Planned](https://img.shields.io/badge/STATUS-Planned-808080?style=flat-square&labelColor=171A1F) 计划中 | 发行与集成 | 签名/公证发行、CrossOver 集成；没有完整安装包 |
-| ![Unverified](https://img.shields.io/badge/STATUS-Unverified-808080?style=flat-square&labelColor=171A1F) 未验证 | 运行环境与兼容性 | 单人任务、独立 EAC 验收、多人联机及其他 FX 环境仍未验证 |
-
-**原十种语言：** zh-CN、en、ja、ko、ru、es、de、fr、pt-BR、zh-TW。缺失的 Native 翻译回退英文。
-
-已集成 Sparkle 2.10.1，提供仅更新启动器的菜单/设置入口及自动检查偏好。签名 Feed 和发行服务尚未配置，检查入口禁用，在线安装未验证。见[发布准备](docs/NATIVE_UPDATES.md)。归档菜单没有实现 FX 版本切换，因此不将其作为已迁移能力展示。
-
-<a id="zh-screenshots"></a>
-
-### 软件截图
-
-**总览——2026-11-02 页面信息层级优化后的真实 App 截图。** 点击可查看大图。
-
-[![总览——真实 Native App 窗口，运行状态未验证](docs/images/dashboard.png)](docs/images/dashboard.png)
-
-| Environment · 运行环境 | FX Manager · FX 管理 |
-| :---: | :---: |
-| [![Environment](docs/images/environment.png)](docs/images/environment.png) | [![FX Manager](docs/images/fx-manager.png)](docs/images/fx-manager.png) |
-| Logs · 运行日志 | Settings · 设置 |
-| [![Logs](docs/images/logs.png)](docs/images/logs.png) | [![Settings](docs/images/settings.png)](docs/images/settings.png) |
-
-> [!NOTE]
-> 五张均于 2026-11-02 的 `HD2_NATIVE_APP_HEADER_ASSET_REFINEMENT_v1.0.0` 检查中，从运行中的 Debug App 及其真实只读快照采集，展示四个次级页面共享的太空横幅及保留的首页人物主视觉，每页仅保留一个主标题，不是生成式 UI 预览图。下方区域可通过滚动查看；运行环境／FX 管理截图早于 GUI 操作卡片，设置截图早于可选凭据管理功能，均待更新。图片仅按比例缩小用于 README，没有合成界面或运行状态，不证明 FX／游戏启动、EAC 或联机成功。
-
-<a id="zh-requirements"></a>
-
-### 系统要求
-
-| 项目 | 要求 |
-| --- | --- |
-| 平台 | Apple Silicon Mac，macOS 14 或更新版本 |
-| 本地构建 | 包含 macOS SDK 的完整 Xcode |
-| Bridge | 已有 Python 3.9 或更新解释器 |
-| 原运行环境操作 | 已有完整旧启动器目录、原验证版本 FX/gvproxy 资源和兼容 SSH 配置 |
-
-不捆绑运行时二进制、游戏文件、字体、凭据或 Guest 镜像。App 不安装、移动或静默选用运行资源。任意 FX 版本不能替代原有受保护的运行环境。
-
-<a id="zh-installation"></a>
-
-### 安装方法
-
-构建当前开发预览版：
-
-```sh
-git clone --branch feature/macos-native-app --recurse-submodules https://github.com/LSJOP/helldivers2-fx-launcher.git
-cd helldivers2-fx-launcher/native-app
-./script/build_and_run.sh --xcode-only
-open build/Debug/HD2FXNative.app
-```
-
-已有克隆请先切换目标分支，再于仓库根目录执行 `git submodule update --init --recursive`。源码 ZIP 不含子模块。固定归档提供选定 Core 源码和语言资源；打包不执行启动操作或下载依赖。暂无已签名/公证、可直接安装的 Native 发行版。
-
-<a id="zh-usage"></a>
-
-### 使用说明
-
-1. 打开 App，刷新本地元数据。刷新保持只读。
-2. 设置页选择语言、外观及已有 Python 解释器（默认 `/usr/bin/python3`）。语言和 Python 选择保存在 App 偏好中；重启 App 后标准 macOS 菜单及 Sparkle 对话框应用所选语言。外观和运行根目录选择仍仅在本次会话生效。
-3. 在对应面板主动执行详细操作，需要时选择已有完整旧目录，核对目标与认证设置。
-4. 写入、SSH 和启动均需明确授权；具体 Guest、性能及 Wi-Fi 变更还需额外确认。仅打开页面不会执行实机操作。
-
-<details>
-<summary>配置、凭据与恢复路径</summary>
-
-- 配置：`~/Library/Application Support/Helldivers2FXLauncher/settings.json`。编辑器显示目标/修订，替换前备份。
-- Native 诊断/报告：`~/Library/Application Support/Helldivers2FXLauncher/native`。原 Core 恢复凭据还可能写入选定旧目录。
-- 默认仅在 App 会话内保存 SSH 密码、密钥口令和 Guest sudo 密码，通过受控 stdin／PTY 传递。“记住密码”默认不勾选，只有实际密码认证成功后，才将 SSH 与 sudo 分别保存到本 App 新建的 macOS Keychain service。保存后支持重启复用；密钥口令仍仅限会话。设置支持更新、逐项清除及确认后清除全部。取消记住会停止自动复用，不会静默删除已有记录；失效凭据停止复用直到更新。自动读取禁止授权弹窗，钥匙串锁定／访问受限时退回会话输入；主动授权访问或 App 身份／签名变化时仍可能需要系统确认。不在偏好设置或文件保存原始密码或 App 自有加密密钥；旧脚本钥匙串项目保持不动。
-- 取消会尝试支持的恢复。已经启动的 FX/Steam/游戏进程可能继续运行，中断后请重新核对实际状态。
-
-</details>
-
-运行环境页提供“连接 FX／检测环境／重新检测”，FX 管理页提供“启动 FX／检查 FX 状态／检查 Guest 连接／启动 Steam”及已有游戏启动入口。检查遵守所选目标与身份校验；启动 Steam／游戏需确认。SSH 与 sudo 分别复用会话或主动记住的凭据，缺失或失效时打开已有安全输入面板。停止／重启尚无经验证的安全退出后端，保持不可用。文件发现与运行就绪分别展示。本次通过 33 项隔离迁移检查、17 项启动／GUI 状态检查、30 项服务检查及 17 项凭据检查。实际宿主检查因另一份 FX 正在运行而拒绝连接，新入口的实时 SSH／Guest 检测仍未验证；没有停止或修改该 FX。
-
-<a id="zh-development"></a>
-
-### 开发进度
-
-![Migration Preview](https://img.shields.io/badge/STATUS-Migration%20Preview-F29D38?style=flat-square&labelColor=171A1F) ![Live Acceptance Pending](https://img.shields.io/badge/STATUS-Live%20Acceptance%20Pending-808080?style=flat-square&labelColor=171A1F)
-
-Native 包版本 **0.1.0**、构建号 **1** 来自 [Xcode 工程](native-app/HD2FXNative.xcodeproj/project.pbxproj)；固定 Core 版本 **0.1.0-preview.4** 来自 [Core VERSION](https://github.com/LSJOP/helldivers2-fx-launcher/blob/f6dfb4c9757fe07c176d01e5e3f67cd404d87351/native-app-core-snapshot/VERSION)。两者均不代表已经发布 Release，README 指令版本与软件版本独立。
-
-更新模块采用官方 Sparkle 界面与 Feed/归档签名验证，不更新 FX Runtime，也不替换 Python Bridge。发布准备和缺少的信任条件见 [Native 更新](docs/NATIVE_UPDATES.md)。在 App 内切换语言后，中英文标准菜单本地化需要重启 App。
-
-较早的隔离功能验证通过 Xcode Debug 编译、18 项协议/元数据检查、14 项隔离迁移检查、21 项服务检查和一次针对性 App 冒烟验证。随后士兵素材集成通过编译，并在一次 App 会话中检查两种窗口尺寸。这些检查没有执行真实游戏、实机 SSH 或网络/系统变更。上述功能检查与本次更新集成验证分开记录：更新模块通过 Debug 编译及中英文菜单/设置冒烟检查，未执行真实升级。
-
-暂存文件和发行产物的敏感信息检查会阻止疑似秘密及无法完成的扫描。有限规则检查通过不等于证明所有秘密均不存在。见[发布准备](docs/NATIVE_UPDATES.md)。
-
-可选记住密码使用独立的 macOS Keychain namespace 分别管理 SSH 与 sudo，按目标／配置隔离，仅保存经实际密码认证的凭据，并支持失效停用及确认删除。针对性测试使用虚构凭据覆盖会话／重启复用，并跨独立进程验证真实 Keychain 的写入、读取和删除。本次没有启动／重置 FX，也没有修改成功环境；最终只读复查时 FX 未运行，因此没有用真实密码执行游戏冷启动复测。
-
-各项状态见[迁移清单](docs/FUNCTION_MIGRATION.md)。Phase 2 新增真实启动预检、阶段进度/错误以及主菜单和单人任务的独立用户确认。2026-11-03 的真实 Native 启动沿用原有 `steam -applaunch 553850` 流程，用户确认已进入主菜单／飞船且可操作。已批准的 Guest IPv6 变更保留原值备份；实际提权命令通过 stdin 接收 sudo 凭据，不再假定授权能跨 SSH 调用延续。单人任务、独立 EAC 验收和多人联机仍未验证。完整 Native 翻译与实机验收仍未完成。当前 token 缺少 `workflow` 权限，尚未发布 GitHub Actions 配置；本地开发检查规则见 [AGENTS.md](AGENTS.md)。
-
-<a id="zh-legacy"></a>
-
-### 旧版脚本
-
-| 分支 | 用途 |
-| --- | --- |
-| [main](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main) | Native App 主线 |
-| [feature/macos-native-app](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app) | 当前 Native 开发，不自动合并 |
-| [legacy-script](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script) | 原终端启动器归档及固定兼容补充 |
-
-[原版 README](https://github.com/LSJOP/helldivers2-fx-launcher/blob/legacy-script/README.md) · [脚本 ZIP](https://github.com/LSJOP/helldivers2-fx-launcher/archive/refs/heads/legacy-script.zip) · [原始基线 0205aca](https://github.com/LSJOP/helldivers2-fx-launcher/tree/0205acaec3b32024df180a6dfb8ecc587e2f1914)
-
-旧 main.zip 链接现在下载 Native 源码；脚本专属链接请将 main 改为 legacy-script。本次文档修改不删除归档内容、Release 或 Tag。
-
-<a id="zh-disclaimer"></a>
-
-### 免责声明
-
-![Compatibility not guaranteed](https://img.shields.io/badge/Compatibility-No%20guarantee-D73A49?style=flat-square&labelColor=171A1F)
-
-> [!WARNING]
-> **检测到安装 ≠ 运行环境可用 ≠ 游戏启动成功 ≠ EAC 验证成功 ≠ 多人联机成功。** 每项都需要独立的新鲜证据，用户录入的匹配结果仍属于用户报告。
-
-本项目非官方，不宣称获得官方认可，不提供反作弊绕过或兼容性保证。首页及太空横幅插图为用户提供的生成式素材，在真实 App 中渲染；软件截图本身均为实际窗口采集。
-
-<a id="zh-license"></a>
-
-### 开源协议
-
-尚未选定项目统一源码许可证，不应推定均可自由再分发。HELLDIVERS 2 及相关标识归各权利人所有。见[权利与来源说明](THIRD_PARTY_NOTICES.md)及归档声明。
-
-[English ↑](#english) · [返回中文](#简体中文)
+Unofficial project; no endorsement or compatibility guarantee. HELLDIVERS 2 and related marks belong to their respective owners. A project-wide source license has **not been selected**; do not assume redistribution rights. See [rights and provenance](THIRD_PARTY_NOTICES.md), including the separate Sparkle license and supplied artwork notes.
