@@ -8,6 +8,31 @@ import ApplicationServices
     private static var started = false
     static func runIfRequested(state: AppState) async {
         let args = ProcessInfo.processInfo.arguments
+        if !started, let i = args.firstIndex(of: "--task-queue-smoke"), args.count > i + 1 {
+            started = true
+            await queueReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
+            return
+        }
+        if !started, let i = args.firstIndex(of: "--phase2-live"), args.count > i + 2 {
+            started = true
+            await phase2Live(state, directory: URL(fileURLWithPath: args[i + 1]), root: args[i + 2])
+            return
+        }
+        if !started, let i = args.firstIndex(of: "--update-menu-smoke"), args.count > i + 1 {
+            started = true
+            await updateMenuReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
+            return
+        }
+        if !started, let i = args.firstIndex(of: "--migration-smoke"), args.count > i + 1 {
+            started = true
+            await migrationReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
+            return
+        }
+        if !started, let i = args.firstIndex(of: "--ui-refinement-smoke"), args.count > i + 1 {
+            started = true
+            await refinementReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
+            return
+        }
         if !started, let index = args.firstIndex(of: "--ui-v2-menu-review"), args.count > index + 1 {
             started = true
             await menuReview(state, directory: URL(fileURLWithPath: args[index + 1], isDirectory: true))
@@ -126,6 +151,172 @@ import ApplicationServices
         }
     }
     // One focused check after the user's menu-label feedback; no five-page sweep.
+    private static func phase2Live(_ state: AppState, directory: URL, root: String) async {
+        var result: [String: Any] = ["entry":"Native AppState -> supervised Bridge -> pinned legacy Core", "kind":"explicit_live_launch", "main_menu":"unverified", "single_player":"unverified", "multiplayer":"not_requested"]
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try await waitForTask(state)
+            state.runtimeRoot = root
+            state.runOperation("preflight_launch")
+            try await waitForTask(state)
+            if let error = state.operationError { throw error }
+            guard state.operationResult["host_ready"]?.boolean == true else { throw ErrorState("ENVIRONMENT_CHECK_FAILED") }
+            state.selection = .dashboard
+            state.operationSelection = NativeOperation(method:"launch_game")
+            // This mode is opt-in only, for an explicitly authorized live acceptance.
+            // Never supplies approved_changes; any real configuration change still stops.
+            state.runOperation("launch_game", params:["confirmed":.bool(true)])
+            let deadline = ProcessInfo.processInfo.systemUptime + 940
+            while state.tasks.busy {
+                guard ProcessInfo.processInfo.systemUptime < deadline else { state.tasks.cancel(); throw ErrorState("TIMEOUT") }
+                try await Task.sleep(nanoseconds:100_000_000)
+            }
+            result["state"] = state.launchSession.current.rawValue
+            result["game_process_detected"] = state.launchSession.processDetected
+            result["stages"] = Dictionary(uniqueKeysWithValues: state.launchSession.evidence.map { ($0.key.rawValue,$0.value) })
+            if let error = state.operationError { throw error }
+            result["result"] = "PROCESS_ONLY_GAMEPLAY_PENDING"
+        } catch {
+            result["result"] = "NEEDS_ATTENTION"
+            result["code"] = (error as? ErrorState)?.code ?? "LIVE_CHECK_FAILED"
+            result["stage"] = (error as? ErrorState)?.details["stage"]?.text
+            result["summary"] = (error as? ErrorState)?.details["summary"]?.text
+        }
+        if let data = try? JSONSerialization.data(withJSONObject: result, options:[.prettyPrinted,.sortedKeys]) {
+            try? data.write(to: directory.appendingPathComponent("phase2-live.json"),options:.atomic)
+        }
+        // Leave the real App visible for exact-change consent or game-internal confirmation.
+    }
+    private static func updateMenuReview(_ state: AppState, directory: URL) async {
+        var result: [String: Any] = [:]
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try await waitForTask(state)
+            let zh = state.languageCode.hasPrefix("zh")
+            state.selection = .settings
+            try await Task.sleep(nanoseconds: 500_000_000)
+            guard let menu = NSApp.mainMenu else { throw ErrorState("MENU_UNAVAILABLE") }
+            menu.update()
+            for submenu in menu.items.compactMap(\.submenu) {
+                submenu.delegate?.menuNeedsUpdate?(submenu); submenu.update()
+            }
+            let titles = menu.items.map(\.title)
+            let appItems = menu.items.first?.submenu?.items ?? []
+            result["top_menus"] = titles
+            result["app_menu"] = appItems.map(\.title)
+            result["bundle_name"] = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
+            guard titles.contains(zh ? "编辑" : "Edit"), titles.contains(zh ? "窗口" : "Window"),
+                  !zh || !titles.contains("Help"),
+                  Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String == "HELLDIVERS 2 FX Launcher",
+                  let check = appItems.first(where: { $0.title == UpdateString.checkNow.text(state.languageCode) }),
+                  !check.isEnabled else { throw ErrorState("MENU_LOCALIZATION_FAILED") }
+            guard !state.updates.isConfigured, !state.updates.canCheck, state.updates.status == .unconfigured else { throw ErrorState("UPDATE_CONFIG_GUARD_FAILED") }
+            state.updates.checkForUpdates()
+            state.updates.setAutomaticChecks(true)
+            guard !state.updates.automaticChecks, state.updates.status == .unconfigured else { throw ErrorState("UNCONFIGURED_ACTION_FAILED") }
+            let valid: [String: Any] = ["HD2UpdateServiceEnabled":"YES", "SUFeedURL":"https://lsjop.github.io/helldivers2-fx-launcher/updates/stable/appcast.xml", "SUPublicEDKey":Data(repeating: 1, count: 32).base64EncodedString()]
+            guard UpdateConfiguration(info: valid).isValid else { throw ErrorState("CONFIG_VALIDATION_FAILED") }
+            for patch in [["SUFeedURL":"http://lsjop.github.io/helldivers2-fx-launcher/updates/stable/appcast.xml"], ["SUPublicEDKey":"invalid"], ["HD2UpdateServiceEnabled":"NO"], ["SUFeedURL":"https://example.invalid/appcast.xml"]] {
+                guard !UpdateConfiguration(info: valid.merging(patch) { _, v in v }).isValid else { throw ErrorState("CONFIG_VALIDATION_FAILED") }
+            }
+            result["result"] = "PASS"
+            result["service"] = "unconfigured_disabled_no_network"
+            result["configuration_guards"] = "HTTPS_feed_host_public_key_and_enable_flag"
+            result["language"] = state.languageCode
+            result["settings_page"] = state.selection?.rawValue
+        } catch { result["result"] = "FAIL"; result["error"] = (error as? ErrorState)?.code ?? "UPDATE_REVIEW_FAILED" }
+        if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted,.sortedKeys]) {
+            try? data.write(to: directory.appendingPathComponent("updates-menu.json"), options: .atomic)
+        }
+        NSApp.terminate(nil)
+    }
+    private static func queueReview(_ state: AppState, directory: URL) async {
+        var result: [String: Any] = [:]
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try await waitForTask(state)
+            guard state.hasLoaded, state.error == nil, Page.allCases.count == 6 else { throw ErrorState("SNAPSHOT_FAILED") }
+            state.runtimeRoot = "" // Never start/connect a real target during UI acceptance.
+            state.chinese = true; state.appearance = .dark
+            state.runOperation("read_performance"); try await waitForTask(state)
+            guard state.operationError == nil, state.performanceSnapshot["hardware"]?.object["chip"]?.text != nil,
+                  state.performanceSnapshot["can_apply"]?.boolean == false else { throw ErrorState("PERFORMANCE_READ_FAILED") }
+            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
+            var files: [String] = []
+            for page in [Page.dashboard, .environment, .fx, .performance] {
+                state.selection = page
+                // FX capture intentionally contains the action cards, without personal installation paths below.
+                window.setContentSize(NSSize(width: 1180, height: page == .fx ? 620 : 850))
+                try await Task.sleep(nanoseconds: 400_000_000)
+                let name = page.rawValue + ".png"
+                guard try await capture(window, name: name, directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
+                files.append(name)
+            }
+            for page in [Page.environment, .fx, .performance] {
+                state.chinese = false; state.selection = page
+                window.setContentSize(NSSize(width: 850, height: 600))
+                try await Task.sleep(nanoseconds: 150_000_000)
+                window.contentView?.layoutSubtreeIfNeeded()
+            }
+            state.selection = .dashboard; state.chinese = true
+            result = ["result":"PASS", "files":files, "navigation_pages":6, "hardware":"real_read_only", "apply_restore":"disabled", "guest_writes":"not_performed", "english_minimum_pages":"rendered"]
+        } catch { result = ["result":"FAIL", "code":(error as? ErrorState)?.code ?? "QUEUE_SMOKE_FAILED"] }
+        if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted,.sortedKeys]) { try? data.write(to: directory.appendingPathComponent("queue-review.json")) }
+        NSApp.terminate(nil)
+    }
+    private static func migrationReview(_ state: AppState, directory: URL) async {
+        var result: [String: Any] = [:]
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try await waitForTask(state)
+            guard state.hasLoaded, state.error == nil else { throw ErrorState("BRIDGE_UNAVAILABLE") }
+            guard state.rows("get_legacy_catalog", "languages").count == 10,
+                  state.rows("get_legacy_catalog", "operations").count == 28 else { throw ErrorState("CATALOG_MISSING") }
+            guard let base = Bundle.main.resourceURL else { throw ErrorState("CORE_UNAVAILABLE") }
+            for (code, _) in NativeLocalization.languages {
+                guard FileManager.default.fileExists(atPath: base.appendingPathComponent("locales/" + code + ".json").path) else { throw ErrorState("LOCALE_MISSING") }
+                state.languageCode = code
+                guard !state.pageTitle(.dashboard).isEmpty else { throw ErrorState("LOCALE_MISSING") }
+            }
+            state.languageCode = "zh-CN"
+            state.runtimeRoot = "" // Smoke must never use a remembered real launch target.
+            state.runOperation("read_configuration"); try await waitForTask(state)
+            guard state.operationError == nil, state.operationResult["revision"]?.text != nil else { throw ErrorState("CONFIG_READ_FAILED") }
+            state.runOperation("launch_game"); try await waitForTask(state)
+            guard state.operationError?.code == "CONFIRMATION_REQUIRED" else { throw ErrorState("CONSENT_FAILED") }
+            state.runOperation("launch_game", params: ["confirmed": .bool(true)]); try await waitForTask(state)
+            guard state.operationError?.code == "RUNTIME_ROOT_REQUIRED" else { throw ErrorState("ROOT_GUARD_FAILED") }
+            state.operationSelection = NativeOperation(method: "launch_game")
+            try await Task.sleep(nanoseconds: 300_000_000)
+            guard NSApp.windows.contains(where: { $0.isVisible }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
+            state.operationSelection = nil
+            state.perform(.connect)
+            guard state.operationSelection?.method == "connect_fx" else { throw ErrorState("GUI_ENTRY_FAILED") }
+            state.operationSelection = nil
+            for method in ["connect_fx", "inspect_guest_environment", "check_fx_state"] {
+                state.runOperation(method, params: ["confirmed": .bool(true)]); try await waitForTask(state)
+                guard state.operationError?.code == "RUNTIME_ROOT_REQUIRED", state.guiRecords[method]?.status == .failed else { throw ErrorState("GUI_ROOT_GUARD_FAILED") }
+            }
+            if let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) {
+                for zh in [true, false] {
+                    state.chinese = zh
+                    window.setContentSize(NSSize(width: zh ? 1180 : 850, height: 750))
+                    for page in [Page.environment, .fx] {
+                        state.selection = page
+                        try await Task.sleep(nanoseconds: 150_000_000)
+                        window.contentView?.layoutSubtreeIfNeeded()
+                    }
+                }
+            } else { throw ErrorState("WINDOW_UNAVAILABLE") }
+            result = ["result":"PASS", "catalog_operations":28, "bundled_original_locales":10,
+                      "configuration":"read_only", "gui_entry_and_root_errors":"PASS", "gui_pages":"environment_fx_zh_en_rendered", "launch_guards":"consent_and_root_rejected",
+                      "live_game_network_writes":"not_performed", "native_translation":"partial"]
+        } catch { result = ["result":"FAIL", "code":(error as? ErrorState)?.code ?? "SMOKE_FAILED"] }
+        if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]) {
+            try? data.write(to: directory.appendingPathComponent("migration.json"), options: .atomic)
+        }
+        NSApp.terminate(nil)
+    }
     private static func menuReview(_ state: AppState, directory: URL) async {
         var result: [String: Any] = ["kind": "ui_v2_menu_labels", "initial_appearance": state.appearance.rawValue]
         do {
@@ -164,6 +355,72 @@ import ApplicationServices
         } catch { result["result"] = "FAIL"; result["error"] = (error as? ErrorState)?.code ?? "REVIEW_FAILED" }
         if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]) {
             try? data.write(to: directory.appendingPathComponent("menu-review.json"))
+        }
+    }
+    private static func refinementReview(_ state: AppState, directory: URL) async {
+        var result: [String: Any] = ["kind": "five_page_ui_refinement", "physical_keyboard_voiceover": "NOT_TESTED"]
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try await waitForTask(state)
+            guard state.hasLoaded, state.error == nil, let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) else { throw ErrorState("BRIDGE_OR_WINDOW_UNAVAILABLE") }
+            let snapshot = state.observedAt
+            let heroOnly = ProcessInfo.processInfo.arguments.contains("--hero-only")
+            let polish = ProcessInfo.processInfo.arguments.contains("--page-polish")
+            if polish {
+                guard InspectionStatus.dependency("file_present_unverified") == .uncertain,
+                      InspectionStatus.dependency("missing") == .action,
+                      InspectionStatus.dependency("running_bridge") == .normal,
+                      InspectionStatus.dependency(nil) == .unchecked,
+                      InspectionStatus.dependency("future_unknown_value") == .uncertain else { throw ErrorState("INSPECTION_STATUS_FAILED") }
+                result["inspection_status_mapping"] = "PASS"
+            }
+            guard NSImage(named: "HelldiverHero") != nil else { throw ErrorState("HERO_ASSET_MISSING") }
+            guard let header = NSImage(named: "SuperEarthSpaceHeader"), abs(header.size.width / header.size.height - 3) < 0.01 else { throw ErrorState("HEADER_ASSET_MISSING") }
+            result["header_asset"] = "SuperEarthSpaceHeader loaded with original 3:1 ratio"
+            state.chinese = true; state.appearance = .dark
+            window.setContentSize(NSSize(width: 1180, height: 850))
+            try await Task.sleep(nanoseconds: 300_000_000)
+            var files: [String] = []
+            for page in (heroOnly ? [.dashboard] : Page.allCases) {
+                NSApp.mainMenu?.update()
+                guard let menu = NSApp.mainMenu?.items.compactMap(\.submenu).first(where: { $0.title == "导航" }) else { throw ErrorState("MENU_UNAVAILABLE") }
+                menu.delegate?.menuNeedsUpdate?(menu); menu.delegate?.menuWillOpen?(menu); menu.update()
+                guard let index = menu.items.firstIndex(where: { $0.title == page.title(true) }) else { throw ErrorState("MENU_UNAVAILABLE") }
+                menu.performActionForItem(at: index)
+                try await Task.sleep(nanoseconds: 500_000_000)
+                guard state.selection == page else { throw ErrorState("NAVIGATION_FAILED") }
+                let file = "zh-dark-" + page.rawValue + ".png"
+                guard try await capture(window, name: file, directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
+                files.append(file)
+            }
+            state.selection = .dashboard
+            for variant in (polish ? ["en-dark-minimum-logs", "en-dark-minimum-fx"] : heroOnly ? ["zh-dark-minimum-dashboard"] : ["en-dark-dashboard", "zh-light-dashboard", "zh-dark-minimum-dashboard"]) {
+                if polish { state.selection = variant.hasSuffix("logs") ? .logs : .fx }
+                state.chinese = !variant.hasPrefix("en")
+                state.appearance = variant.contains("light") ? .light : .dark
+                if variant.contains("minimum") { window.setContentSize(NSSize(width: 850, height: 560)) }
+                try await Task.sleep(nanoseconds: 500_000_000)
+                let file = variant + ".png"
+                guard try await capture(window, name: file, directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
+                files.append(file)
+            }
+            result["files"] = files
+            result["native_menu_pages"] = heroOnly ? 1 : Page.allCases.count
+            result["snapshot_preserved"] = state.observedAt == snapshot
+            result["runtime_evidence"] = state.results["get_environment_status"]?["status"]?.text ?? "unknown"
+            result["soldier_asset"] = "HelldiverHero asset catalog image loaded"
+            result["result"] = state.observedAt == snapshot ? "PASS" : "FAIL"
+            if polish {
+                state.refresh()
+                try await waitForTask(state)
+                guard state.error == nil, state.observedAt != snapshot else { throw ErrorState("READ_ONLY_REFRESH_FAILED") }
+                result["read_only_refresh"] = "PASS"
+            }
+            window.setContentSize(NSSize(width: 1180, height: 850))
+            state.chinese = true; state.appearance = .dark
+        } catch { result["result"] = "FAIL"; result["error"] = (error as? ErrorState)?.code ?? "UI_CHECK_FAILED" }
+        if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]) {
+            try? data.write(to: directory.appendingPathComponent("refinement-review.json"))
         }
     }
     private static func waitForTask(_ state: AppState) async throws {

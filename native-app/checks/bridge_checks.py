@@ -55,14 +55,16 @@ class ContractChecks(unittest.TestCase):
 
     def test_handshake_capabilities(self):
         row = self.run_protocol((json.dumps(req()) + '\n').encode())[0]['result']
-        self.assertEqual(row['capabilities'], list(bridge.METHODS))
-        self.assertTrue(row['read_only'])
+        self.assertTrue(set(row['capabilities']).issuperset(bridge.METHODS))
+        self.assertFalse(row['read_only'])
+        self.assertTrue(row['read_only_default'])
+        self.assertEqual(row['permission_model'],'explicit_actions')
 
     def test_unknown_write_operations_fail_closed(self):
         for method in ['launch_game', 'set_ssh_settings', 'update_settings', 'switch_fx', 'run_shell', 'check_fx_updates', 'install_update']:
             with self.subTest(method=method):
                 row = self.run_protocol((json.dumps(req(method)) + '\n').encode())[0]
-                self.assertEqual(row['error']['code'], 'NOT_IMPLEMENTED')
+                self.assertEqual(row['error']['code'], 'CONFIRMATION_REQUIRED' if method=='launch_game' else 'NOT_IMPLEMENTED')
 
     def test_invalid_params_and_schema(self):
         invalid = [dict(req(), params={'command': 'touch /tmp/should-never-run'}),
@@ -146,7 +148,8 @@ class CoreChecks(unittest.TestCase):
         self.assertEqual(row['version'], '1.9.6')
         self.assertEqual(row['structure'], 'metadata_valid')
         self.assertTrue(all(row[key] == 'unverified' for key in ('launch', 'eac', 'multiplayer')))
-        self.assertNotIn(str(self.directory), json.dumps(result))
+        self.assertEqual(result['candidates'][0]['path'], str(self.directory/'renamed.app'))
+        self.assertEqual(result['runtime_selection'], 'not_read')
 
     def test_incomplete_enumeration_is_explicit(self):
         for i in range(70): (self.directory / str(i)).touch()

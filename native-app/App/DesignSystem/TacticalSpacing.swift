@@ -7,5 +7,5 @@ enum TacticalSpacing {
     static let panel: CGFloat = 16
     static let page: CGFloat = 20
     static let large: CGFloat = 24
-    static let corner: CGFloat = 2
+    static let corner: CGFloat = 5
 }

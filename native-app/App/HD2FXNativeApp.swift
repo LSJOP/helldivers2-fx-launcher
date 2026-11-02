@@ -14,8 +14,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NativeLifecycle.cancel?()
         // AppKit runs a nested termination loop. A queued main-dispatch reply can
         // be blocked by the caller's MainActor task; use that loop's timer instead.
-        let timer = Timer(timeInterval: 0.6, repeats: false) { _ in
+        let timer = Timer(timeInterval: 0.1, repeats: true) { timer in
             MainActor.assumeIsolated {
+                guard !BridgeWorkerStatus.isActive else { return }
+                timer.invalidate()
                 #if DEBUG
                 NativeLifecycle.event?("replyToApplicationShouldTerminate")
                 #endif
@@ -45,7 +47,7 @@ struct HD2FXNativeApp: App {
                 .frame(minWidth: 850, minHeight: 560)
                 .preferredColorScheme(state.appearance.scheme)
                 .task {
-                    NativeLifecycle.cancel = { state.tasks.cancel() }
+                    NativeLifecycle.cancel = { state.endSession() }
                     if !state.hasLoaded { state.refresh() }
                     #if DEBUG
                     await SmokeRunner.runIfRequested(state: state)
@@ -53,11 +55,26 @@ struct HD2FXNativeApp: App {
                 }
         }
         .defaultSize(width: 1060, height: 720)
-        .commands { NavigationCommands(state: state) }
+        .commands {
+            NavigationCommands(state: state)
+            AppUpdateCommands(state: state, manager: state.updates)
+        }
         Settings {
-            SettingsView(state: state)
-                .padding(24).frame(width: 500)
+            ScrollView { SettingsView(state: state).padding(24) }
+                .frame(width: 650, height: 700)
                 .preferredColorScheme(state.appearance.scheme)
+        }
+    }
+}
+
+struct AppUpdateCommands: Commands {
+    @ObservedObject var state: AppState
+    @ObservedObject var manager: AppUpdateManager
+    var body: some Commands {
+        CommandGroup(after: .appInfo) {
+            Button(UpdateString.checkNow.text(state.languageCode)) { manager.checkForUpdates() }
+                .disabled(!manager.canCheck)
+                .id(state.languageCode)
         }
     }
 }
@@ -68,13 +85,13 @@ struct NavigationCommands: Commands {
         CommandGroup(replacing: .newItem) {}
         CommandMenu(state.t("导航", "Navigate")) {
             ForEach(Array(Page.allCases.enumerated()), id: \.element.id) { index, page in
-                Button(page.title(state.chinese)) { state.selection = page }
+                Button(state.pageTitle(page)) { state.selection = page }
                     .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: .command)
             }
-            .id(state.chinese)
+            .id(state.languageCode)
             Divider()
             Button(state.t("刷新", "Refresh")) { state.refresh() }.keyboardShortcut("r", modifiers: .command)
-                .id(state.chinese)
+                .id(state.languageCode)
         }
     }
 }

@@ -7,12 +7,13 @@ struct DashboardView: View {
     private var c: TacticalColors { TacticalColors(scheme: scheme) }
     private var unverified: String { state.t("未验证", "Unverified") }
     private var launchReason: String {
-        state.t("当前阶段仅支持只读环境检查，游戏启动功能尚未开放。", "This phase supports read-only environment checks. Game launch is not available yet.")
+        state.t("启动需主动操作、指定既有运行目录，并确认实际变更；兼容性与联机仍未验证。", "Launch requires an explicit action, an existing runtime directory and approval of actual changes. Compatibility and multiplayer remain unverified.")
     }
     var body: some View {
         VStack(alignment: .leading, spacing: TacticalSpacing.panel) {
-            commandBar
             hero
+            GUIActionFeedback(state: state, methods: [GUIAction.game.rawValue])
+            if state.launchSession.current != .idle { LaunchProgressView(state: state, tasks: tasks) }
             if let error = state.error {
                 TacticalWarningBanner(text: error.message(state.chinese) + " · " + error.code, isError: true)
                     .accessibilityIdentifier("bridge.error")
@@ -20,50 +21,40 @@ struct DashboardView: View {
             if state.stale {
                 TacticalWarningBanner(text: state.t("以下是上次读取的数据；本次尚未完成。", "Showing the previous snapshot; this refresh has not completed."))
             }
+            TacticalAdaptiveLayout(minimumWidth: 120, maximumColumns: 5) {
+                TacticalMetric(title: "FX", value: observed("fx_host_running"), symbol: "shippingbox")
+                TacticalMetric(title: state.t("虚拟机连接", "Guest connection"), value: observed("ssh_connected"), symbol: "link")
+                TacticalMetric(title: "Steam", value: observed("steam_running"), symbol: "play.circle")
+                TacticalMetric(title: "EAC", value: unverified, symbol: "shield.lefthalf.filled")
+                TacticalMetric(title: state.t("联机", "Multiplayer"), value: unverified, symbol: "person.2")
+            }
             TacticalStatusLayout {
                 runtimeCard
                 environmentCard
-                networkCard
+                report
             }
-            report
         }.foregroundStyle(c.text).font(TacticalTypography.body)
     }
-    private var commandBar: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack {
-                TacticalEyebrow(text: state.t("超级地球 / 指挥界面", "SUPER EARTH / COMMAND INTERFACE"))
-                Spacer(minLength: 12)
-                TacticalStatusBadge(text: state.t("第一阶段 · 只读", "PHASE 1 · READ ONLY"))
-            }
-            VStack(alignment: .leading, spacing: 8) {
-                TacticalEyebrow(text: state.t("超级地球 / 指挥界面", "SUPER EARTH / COMMAND INTERFACE"))
-                TacticalStatusBadge(text: state.t("第一阶段 · 只读", "PHASE 1 · READ ONLY"))
-            }
-        }
+    private func observed(_ key: String) -> String {
+        if let value = state.latestGUIEvidence[key]?.boolean { return value ? state.t("已观察到", "Observed") : state.t("未运行／未连接", "Not running / connected") }
+        if key == "steam_running", let count = state.latestGUIEvidence["steam_process_count"]?.integer { return count > 0 ? state.t("进程已观察到", "Process observed") : state.t("未发现进程", "No process found") }
+        return unverified
     }
     private var hero: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
-                        Text("01").foregroundStyle(c.accent)
-                        Text(Page.dashboard.title(state.chinese)).foregroundStyle(c.muted)
-                            .accessibilityIdentifier("page.title")
-                        Text("/ " + state.value("get_launcher_version", "version")).foregroundStyle(c.muted)
-                    }.font(TacticalTypography.log)
                     Text("HELLDIVERS 2").font(TacticalTypography.brand).foregroundStyle(c.accent).lineLimit(1).minimumScaleFactor(0.75)
-                        .accessibilityAddTraits(.isHeader)
+                        .accessibilityIdentifier("page.title").accessibilityAddTraits(.isHeader)
                     Text("FX LAUNCHER").font(.system(size: 19, weight: .bold, design: .monospaced)).tracking(4).foregroundStyle(c.text)
-                    TacticalDivider().padding(.vertical, 5)
-                    Text(state.t("为了超级地球 · 为了民主", "FOR SUPER EARTH / FOR DEMOCRACY"))
-                        .font(TacticalTypography.caption).foregroundStyle(c.muted)
-                }.frame(maxWidth: .infinity, alignment: .leading).layoutPriority(1)
-                TacticalGlobe(chinese: state.chinese).frame(width: 184, height: 156)
-            }.padding(.horizontal, 20).padding(.top, 16)
-            HStack(spacing: 10) {
-                TacticalEyebrow(text: state.t("行动状态", "OPERATION STATUS"))
-                TacticalStatusBadge(text: state.t("当前运行状态：未验证", "Current runtime: unverified"))
-            }.padding(.horizontal, 20).padding(.bottom, 12)
+                }.frame(maxWidth: 380, alignment: .leading)
+                HStack(spacing: 10) {
+                    TacticalStatusBadge(text: state.t("当前运行状态：未验证", "Current runtime: unverified"))
+                }
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, minHeight: 300, alignment: .leading)
+            .background { SoldierBackdrop() }
             TacticalDivider()
             VStack(alignment: .leading, spacing: 10) {
                 ViewThatFits(in: .horizontal) {
@@ -77,17 +68,17 @@ struct DashboardView: View {
         .overlay(alignment: .top) { Rectangle().fill(c.yellow).frame(height: 3) }
     }
     private var launchButton: some View {
-        TacticalButton(title: state.t("启动 HELLDIVERS 2", "Launch HELLDIVERS 2"), symbol: "lock.fill", primary: true, disabledReason: launchReason) {}
-            .accessibilityIdentifier("dashboard.launch.disabled")
+        TacticalButton(title: state.t("启动 HELLDIVERS 2", "Launch HELLDIVERS 2"), symbol: "play.fill", primary: true, loading: tasks.busy) { state.perform(.game) }
+            .accessibilityIdentifier("dashboard.launch")
+            .disabled(tasks.busy)
     }
     private var inspectButton: some View {
         TacticalButton(title: tasks.busy ? state.t("正在检查环境…", "Checking environment…") : state.t("检查环境", "Check environment"),
-                       symbol: "arrow.clockwise", primary: true, loading: tasks.busy) { state.refresh() }
+                       symbol: "arrow.clockwise", primary: false, loading: tasks.busy) { state.refresh() }
             .accessibilityIdentifier("dashboard.inspect")
     }
     private var runtimeCard: some View {
         TacticalPanel(number: "02", title: state.t("FX 运行时", "FX RUNTIME"), symbol: "shippingbox") {
-            TacticalStatusBadge(text: unverified)
             TacticalInfoRow(title: state.t("已发现版本", "Discovered versions"), value: versions)
             TacticalInfoRow(title: state.t("运行路径", "Runtime path"), value: state.t("未读取", "Not read"))
             Text(state.t("仅应用元数据；未识别当前运行实例。", "App metadata only; the active runtime has not been identified."))
@@ -108,7 +99,6 @@ struct DashboardView: View {
     }
     private var environmentCard: some View {
         TacticalPanel(number: "03", title: state.t("运行环境", "ENVIRONMENT"), symbol: "desktopcomputer") {
-            TacticalStatusBadge(text: state.hasLoaded ? state.t("本机元数据", "Host metadata") : state.t("尚未读取", "Not yet inspected"))
             TacticalInfoRow(title: "macOS", value: state.value("get_system_info", "os_version"))
             TacticalInfoRow(title: state.t("架构", "Architecture"), value: architecture)
             TacticalInfoRow(title: "Python", value: state.value("get_system_info", "python"))
@@ -149,7 +139,7 @@ struct DashboardView: View {
         return formatter.string(from: date)
     }
     private var report: some View {
-        TacticalPanel(number: "05", title: state.t("系统报告", "SYSTEM REPORT"), symbol: "doc.text") {
+        TacticalPanel(number: "04", title: state.t("系统报告", "SYSTEM REPORT"), symbol: "doc.text") {
             TacticalInfoRow(title: state.t("启动器版本", "Launcher version"), value: state.value("get_launcher_version", "version"))
             TacticalInfoRow(title: state.t("最近刷新 · 北京时间", "Last refresh · UTC+08"), value: refreshTime)
             TacticalInfoRow(title: state.t("检测范围", "Inspection scope"), value: state.t("本机元数据 / 依赖文件 / 限定 FX 目录", "Host metadata / dependency files / bounded FX directories"))

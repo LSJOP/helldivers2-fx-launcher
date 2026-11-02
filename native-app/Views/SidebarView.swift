@@ -22,7 +22,7 @@ struct SidebarView: View {
             VStack(spacing: 5) {
                 ForEach(Page.allCases) { page in
                     if page == .logs { TacticalDivider().padding(.vertical, 10) }
-                    TacticalNavigationItem(number: number(page), title: page.title(state.chinese), symbol: page.symbol,
+                    TacticalNavigationItem(number: number(page), title: state.pageTitle(page), symbol: page.symbol,
                                            selected: (state.selection ?? .dashboard) == page, shortcut: "⌘" + String(index(page) + 1)) {
                         state.selection = page
                     }
@@ -33,7 +33,7 @@ struct SidebarView: View {
             .onMoveCommand { direction in
                 guard direction == .up || direction == .down else { return }
                 let current = index(focusedPage ?? state.selection ?? .dashboard)
-                let next = Page.allCases[(current + (direction == .up ? 4 : 1)) % Page.allCases.count]
+                let next = Page.allCases[(current + (direction == .up ? Page.allCases.count - 1 : 1)) % Page.allCases.count]
                 focusedPage = next; state.selection = next
             }
                 }
@@ -41,8 +41,7 @@ struct SidebarView: View {
             TacticalDivider()
             VStack(alignment: .leading, spacing: 10) {
                 TacticalEyebrow(text: state.t("系统状态", "SYSTEM STATUS"))
-                TacticalStatusBadge(text: state.t("运行状态未验证", "Runtime unverified"))
-                Text(state.t("第一阶段 / 只读", "PHASE 1 / READ ONLY"))
+                Text(state.t("按操作授权 / 默认只读", "ACTION CONSENT / READ-ONLY DEFAULT"))
                     .font(TacticalTypography.log).foregroundStyle(c.accent)
                 Text(state.t("为了超级地球 · 为了民主", "FOR SUPER EARTH\nFOR DEMOCRACY"))
                     .font(TacticalTypography.caption).foregroundStyle(c.muted)

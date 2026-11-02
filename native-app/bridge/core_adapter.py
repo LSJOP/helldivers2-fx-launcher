@@ -89,6 +89,7 @@ class CoreAdapter:
                                        'structure': 'metadata_valid' if facts['structure'] is True else 'unverified',
                                        'launch': facts['launch'], 'eac': facts['eac'], 'multiplayer': facts['multiplayer'],
                                        'location': '/Applications' if directory == Path('/Applications') else '~/Applications',
+                                       'path': str(app),
                                        'name': 'FX candidate ' + str(len(candidates) + 1)})
             except FileNotFoundError:
                 continue

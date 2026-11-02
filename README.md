@@ -1,74 +1,125 @@
-# HELLDIVERS 2 FX Launcher — Native App
+<div align="center">
+  <img src="docs/assets/app-icon.png" width="128" alt="HELLDIVERS 2 FX Launcher icon">
+  <h1>HELLDIVERS 2 FX Launcher</h1>
+  <p>A HELLDIVERS 2 FX launcher and management tool for Apple Silicon Macs.</p>
+</div>
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+<a id="english"></a>
+<a id="简体中文"></a>
 
-A macOS tactical terminal for HELLDIVERS 2 FX Launcher, built with **SwiftUI + narrowly scoped AppKit integration**. **Native Phase 1: read-only developer preview.** This is an unofficial project; no official endorsement is claimed.
+[**English**](README.md) | [**简体中文**](README.zh-CN.md)
 
-## Current status and implemented features
+![macOS](https://img.shields.io/badge/macOS-14%2B-0078D4?style=flat-square&labelColor=171A1F)
+![Apple Silicon](https://img.shields.io/badge/Platform-Apple%20Silicon-0078D4?style=flat-square&labelColor=171A1F)
+![SwiftUI](https://img.shields.io/badge/UI-SwiftUI%20%2B%20AppKit-0078D4?style=flat-square&labelColor=171A1F)
+![Status](https://img.shields.io/badge/Status-Development%20Preview-F29D38?style=flat-square&labelColor=171A1F)
+![Version](https://img.shields.io/badge/Native-0.1.0-FFD600?style=flat-square&labelColor=171A1F)
 
-| Area | Available now |
+[Screenshots](#en-screenshots) · [Features](#en-features) · [Installation](#en-installation) · [Quick start](#en-usage) · [Compatibility](#en-development) · [Legacy script](#en-legacy)
+
+<a id="en-overview"></a>
+
+A native **SwiftUI + AppKit** interface over the original Python Core: launch the game, inspect the selected FX environment and read performance settings from six focused pages. The interface defaults to dark, with inline operation feedback and advanced details available when needed.
+
+> [!IMPORTANT]
+> **Development preview.** No official installer has been released. The completed Native snapshot is integrated into [main](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main); [feature/macos-native-app](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app) is retained for development history. Runtime binaries, game files and Guest images are not included.
+
+<a id="en-screenshots"></a>
+
+## Screenshots
+
+[![Dashboard](docs/images/dashboard.png)](docs/images/dashboard.png)
+
+| Environment | FX Manager |
 | --- | --- |
-| Navigation | Native Sidebar, Dashboard, Environment, FX Manager, Logs and Settings; Cmd+1…5 navigation and Cmd+R refresh |
-| Interface | Chinese/English functional labels; dark by default, optional light/system appearance; session-only preferences |
-| Host inspection | Real macOS, architecture and Python metadata through a supervised Python JSONL bridge |
-| Dependency inspection | Local file presence and bounded FX version/structure metadata; discovery does not establish runtime readiness |
-| Logs | App and read-only Bridge logs from the current session; historical game logs are unavailable |
-| Development branch additions | `feature/macos-native-app` adds a unified five-page tactical layout and log search, severity filtering and copy. Entries without severity metadata remain unclassified. These additions are not yet merged into main. |
+| [![Environment](docs/images/environment.png)](docs/images/environment.png) | [![FX Manager](docs/images/fx-manager.png)](docs/images/fx-manager.png) |
 
-Game launch is **disabled**, with an explicit reason. FX runtime, Guest, SSH, EAC and multiplayer remain **unverified**. Phase 1 does not install/update software, start games or write launcher settings.
+<details>
+<summary>Game Performance</summary>
 
-## Requirements
+[![Game Performance](docs/images/performance.png)](docs/images/performance.png)
 
-- Apple Silicon Mac running macOS 14 or newer.
-- Complete Xcode with a macOS SDK for local builds.
-- An existing Python 3.9 or newer interpreter.
+</details>
 
-A ready-to-install, signed/notarized Native release is **not available**. No runtime binaries, game files, fonts, credentials or Guest images are bundled.
+Four actual Debug App window captures, taken on 2026-11-03 with real host metadata. Only proportional resizing was applied; no status or interface was composited. The FX image shows the operation area; additional content is accessible by scrolling. The supplied icon/illustrations are generated artwork rendered in the real App, not generated UI screenshots. These images do not prove Guest, game or multiplayer readiness.
 
-## Installation and use
+<a id="en-features"></a>
 
-Build main locally:
+## Features
+
+| Status | Capability |
+| --- | --- |
+| 🟢 Implemented | Six-page native interface, Cmd+1…6 navigation, dark/light/system appearance, bundled official project icon |
+| 🟢 Implemented | Bounded host/FX discovery; validated configuration editing with revision checks, backup and atomic replacement |
+| 🟢 Implemented | Searchable, filtered, bounded and redacted logs; diagnostic reports |
+| 🟢 Implemented · Read-only | Real chip/CPU/GPU/memory detection, current FX preferences and baseline differences in Game Performance |
+| 🟠 In development | One-click environment inspection and background SSH operations; original-entry FX/Steam starts, independent SSH/sudo credential reuse; fresh live acceptance remains pending |
+| 🟠 In development | Ten original locale catalogs retained; new Native translations are partial, with English fallback |
+| ⚪ Planned / unavailable | Safe FX stop/restart, writable inferred performance profiles with scoped restore, signed/notarized installer |
+
+Performance rules are local and reproducible. The recorded **M4 Pro / 24 GiB** settings are a candidate baseline, not comprehensive performance validation. Other hardware has no inferred writable profile. Apply/restore are disabled with visible reasons. [Parameter sources and limits](docs/GAME_PERFORMANCE.md).
+
+<a id="en-requirements"></a>
+<a id="en-installation"></a>
+
+## Download and installation
+
+**An official installer has not been released.** The repository [Releases page](https://github.com/LSJOP/helldivers2-fx-launcher/releases) currently has no published release; this is not a download button for a nonexistent package.
+
+Source preview requirements: **Apple Silicon, macOS 14+, a complete Xcode/macOS SDK and Python 3.9+**. Game operations also require the existing complete legacy launcher directory, the original validated FX/gvproxy assets and compatible Guest access.
 
 ```sh
-git clone --recurse-submodules https://github.com/LSJOP/helldivers2-fx-launcher.git
+git clone --branch main --recurse-submodules https://github.com/LSJOP/helldivers2-fx-launcher.git
 cd helldivers2-fx-launcher/native-app
 ./script/build_and_run.sh --xcode-only
 open build/Debug/HD2FXNative.app
 ```
 
-To use the development additions, clone that branch instead:
+Existing clones need the intended branch and `git submodule update --init --recursive`. Source ZIPs omit the pinned Core submodule. See the [development guide](docs/NATIVE_DEVELOPMENT.md).
 
-```sh
-git clone --branch feature/macos-native-app --recurse-submodules https://github.com/LSJOP/helldivers2-fx-launcher.git
-```
+<a id="en-usage"></a>
 
-For an existing clone, run `git submodule update --init --recursive` at the repository root after checking out the intended branch. The `CoreSnapshot` submodule is pinned to an archive commit; a remote branch update does not silently change build input. The build copies only seven allowlisted compatibility modules plus VERSION into the App. It does not execute legacy launch scripts or download/install dependencies.
+## Quick start
 
-Use Settings to choose Chinese/English and dark/light/system appearance. Choices apply only to the current App session. The default interpreter is `/usr/bin/python3`; if unavailable, select an existing suitable interpreter and refresh. Finding a dependency file or FX candidate does not prove a working game environment.
+1. Open the App; choose your language, appearance and existing Python interpreter in Settings.
+2. Select the existing launcher directory on first use. Use **Inspect environment** for read-only Guest checks; FX must already be running. Use **Start FX** in FX Manager if needed.
+3. Click **Launch HELLDIVERS 2** on Dashboard. The existing launch workflow performs its required checks automatically. Review start consent and any exact configuration-change preview; enter credentials only in App secure fields.
+4. Use Game Performance for hardware and baseline comparisons, and Logs for failure details. A detected process does not establish arrival at the game menu.
 
-The Native source ZIP does **not** include submodule contents. Use the recursive clone instructions above.
+<a id="en-development"></a>
 
-## Not implemented or not verified
+## Compatibility status
 
-- Native game launch, runtime/version switching and automatic installation/updates are unavailable.
-- CrossOver integration and restoration of all ten legacy interface languages remain future work; Native currently provides Chinese and English.
-- FX runtime, Guest, SSH, Steam, EAC and multiplayer/gameplay validation are not established by host metadata, file presence or bundle structure.
-- The development branch reserves a Dashboard soldier-art container, but a separately licensed standalone asset has not been integrated. A whole UI preview is not used as background artwork.
-- Distribution signing/notarization and a ready-to-install Native release remain future work.
-- GitHub Actions is not enabled: the current OAuth token lacks the `workflow` permission needed to publish its configuration. Use the documented local checks.
+| Evidence | Current result |
+| --- | --- |
+| Native App | Debug build and six-page smoke passed; current focused checks: 35 migration + 9 inference cases |
+| FX / game process | Observed during the earlier recorded dedicated FX 1.9.4 launch; not a claim about every FX installation |
+| Main menu / controllable ship | Explicitly confirmed by the user on 2026-11-03 in that recorded environment |
+| Current GUI SSH / Guest read | Real backends wired; latest host check rejected a different running FX copy before connecting. Fresh success through the new actions remains pending |
+| Single-player mission / independent EAC / multiplayer | **Unverified**, separately |
+| Performance | Read-only candidate comparison; no measured performance guarantee or automatic tuning |
 
-## Branches and original script archive
+> [!WARNING]
+> Installation found ≠ runtime ready ≠ game process started ≠ main menu reached ≠ EAC accepted ≠ multiplayer working. No anti-cheat bypass is provided.
 
-- [`main`](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main): Native App mainline.
-- [`feature/macos-native-app`](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app): daily Native development.
-- [`legacy-script`](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script): complete original FX Launcher scripts and history, plus the read-only Native compatibility snapshot.
+## FAQ
 
-Use the [archived script README](https://github.com/LSJOP/helldivers2-fx-launcher/blob/legacy-script/README.md) and [script ZIP](https://github.com/LSJOP/helldivers2-fx-launcher/archive/refs/heads/legacy-script.zip) for the terminal launcher. Existing script installations are not modified. Old `main.zip` links now download Native source; old raw/main script paths no longer resolve. Replace `main` with `legacy-script` for script-specific links. The pre-migration commit remains [0205aca](https://github.com/LSJOP/helldivers2-fx-launcher/tree/0205acaec3b32024df180a6dfb8ecc587e2f1914). No existing Release or Tag was removed.
+- **Why are stop/restart or Apply disabled?** A verified graceful-exit backend and safe inferred-profile write/restore bounds are not available. The App does not force-stop or silently reconfigure FX.
+- **Must I retype passwords?** Session reuse is the default. Optional remembering stores independently verified SSH/sudo credentials in a new App-owned macOS Keychain namespace; automatic reads suppress authorization dialogs. Locked/access-restricted storage falls back to secure input. Explicit access or App identity/signature changes may still require system authorization. Old script items are untouched.
+- **Are automatic updates ready?** Sparkle 2 is integrated, but a signed feed/release service is not configured. Update checks remain disabled; installation is unverified.
 
-## Development and documentation
+<a id="en-legacy"></a>
 
-Follow [AGENTS.md](AGENTS.md) for batched development and minimal necessary verification. Run `native-app/script/run_checks.sh` when Bridge, packaging or service behavior changes. README-only updates require document/link checks, not App builds or launches. Maintain this README and [the Chinese version](README.zh-CN.md) together, with matching feature, version, installation and development-status information.
+## Development and legacy script
 
-## License and rights
+- [main](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main): integrated Native mainline.
+- [feature/macos-native-app](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app): retained Native development history; synchronize with main before reuse.
+- [legacy-script](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script): original script archive; its history is preserved.
+- [Development guide](docs/NATIVE_DEVELOPMENT.md) · [Migration evidence](docs/FUNCTION_MIGRATION.md) · [Performance](docs/GAME_PERFORMANCE.md) · [Updates](docs/NATIVE_UPDATES.md) · [Development rules](AGENTS.md)
 
-A project-wide source license has **not been selected**. Do not assume the entire repository is licensed for redistribution. HELLDIVERS 2 and related marks belong to their respective owners. The tactical geometry is drawn in code; no official game artwork is bundled. See [rights and provenance](THIRD_PARTY_NOTICES.md) and the historical notices in `legacy-script` for the actual scope and unresolved licensing questions.
+<a id="en-disclaimer"></a>
+<a id="en-license"></a>
+
+## Disclaimer and license
+
+Unofficial project; no endorsement or compatibility guarantee. HELLDIVERS 2 and related marks belong to their respective owners. A project-wide source license has **not been selected**; do not assume redistribution rights. See [rights and provenance](THIRD_PARTY_NOTICES.md), including the separate Sparkle license and supplied artwork notes.

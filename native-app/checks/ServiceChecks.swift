@@ -26,7 +26,7 @@ import Foundation
             } catch let error as ErrorState { try check(error.code == code, "\(code) \(config.script.lastPathComponent)") }
         }
         let handshake = try await BridgeService().request("handshake", configuration: real)
-        try check(handshake.result["read_only"]?.boolean == true, "real handshake and protocol negotiation")
+        try check(handshake.result["read_only_default"]?.boolean == true, "real handshake and protocol negotiation")
         let version = try await BridgeService().request("get_launcher_version", configuration: real)
         try check(version.result["version"]?.text != nil && !version.requestID.isEmpty, "real version and matching request_id")
         let prefix = "import json,sys\nr=json.loads(sys.stdin.readline())\n"
@@ -40,9 +40,29 @@ import Foundation
         try await expect("PROTOCOL_MISMATCH", config: fixture("wrong_protocol", prefix + "print(json.dumps(dict(protocol=2,request_id=r['request_id'],ok=True,result={},observed_at='now')))\n"))
         try await expect("PROTOCOL_MISMATCH", config: fixture("missing_capabilities", prefix + "print(json.dumps(" + good + "))\n"), method: "handshake")
         try await expect("PROTOCOL_ERROR", config: fixture("extra_frame", prefix + "print(json.dumps(" + good + "))\nprint('{}')\n"))
+        let streaming = try fixture("streaming", prefix + "print(json.dumps(dict(protocol=1,request_id=r['request_id'],event=dict(stage='preflight',status='running'))))\nprint(json.dumps(" + good + "))\n")
+        let progress = ProgressRecorder()
+        _ = try await BridgeService().request("launch_game", configuration: streaming, params: ["confirmed": .bool(true)]) { progress.record($0) }
+        try check(progress.count == 1, "progress frames delivered before final result")
+        let secret = String(repeating:"m",count:24)
+        let echo = try fixture("credential_echo", prefix + "import os\ns=r['params']['password']\nassert s not in sys.argv and s not in os.environ.values()\nprint(json.dumps(dict(protocol=1,request_id=r['request_id'],event=dict(message=s))))\nprint(json.dumps(dict(protocol=1,request_id=r['request_id'],ok=False,error=dict(code='AUTH_REQUIRED',message='required',details=dict(summary=s)))))\n")
+        let diagnostics = MessageRecorder()
+        do {
+            _ = try await BridgeService().request("launch_game",configuration:echo,params:["password":.string(secret)]) { diagnostics.record($0["message"]?.text ?? "") }
+            throw ErrorState("EXPECTED_FAILURE")
+        } catch let error as ErrorState {
+            try check(error.code == "AUTH_REQUIRED" && error.details["summary"]?.text == "[REDACTED]" && diagnostics.safe(secret),"stdin credentials excluded from argv/env and redacted in progress/errors")
+        }
+        try await expect("PROTOCOL_ERROR", config: fixture("foreign_progress", prefix + "print(json.dumps(dict(protocol=1,request_id='foreign',event={})))\nprint(json.dumps(" + good + "))\n"))
+        try await expect("FX_IDENTITY_UNVERIFIED", config: fixture("launch_identity_error", prefix + "print(json.dumps(dict(protocol=1,request_id=r['request_id'],ok=False,error=dict(code='FX_IDENTITY_UNVERIFIED',message='blocked',details=dict(stage='CheckingCompatibility')))))\n"), method: "launch_game")
+        try await expect("FX_INSTANCE_MISMATCH", config: fixture("launch_foreign_error", prefix + "print(json.dumps(dict(protocol=1,request_id=r['request_id'],ok=False,error=dict(code='FX_INSTANCE_MISMATCH',message='blocked',details=dict(stage='CheckingFXEntry')))))\n"), method: "launch_game")
+        for code in ["SSH_AUTH_FAILED","SUDO_AUTH_FAILED","GUEST_TRANSACTION_FAILED","FX_NOT_RUNNING","LOCAL_FX_REQUIRED","GUEST_INSPECTION_FAILED"] {
+            let failure = prefix + "print(json.dumps(dict(protocol=1,request_id=r['request_id'],ok=False,error=dict(code='" + code + "',message='blocked',details=dict(stage='WaitingForGuest')))))\n"
+            try await expect(code, config: fixture("gui_" + code, failure), method: "connect_fx")
+        }
         try await expect("OUTPUT_LIMIT", config: fixture("stdout_flood", "import sys\nsys.stdout.write('x'*100000)\nsys.stdout.flush()\n"))
         try await expect("OUTPUT_LIMIT", config: fixture("stderr_flood", "import sys\nsys.stderr.write('x'*100000)\nsys.stderr.flush()\n"))
-        try await expect("NOT_IMPLEMENTED", config: real, method: "launch_game")
+        try await expect("CONFIRMATION_REQUIRED", config: real, method: "launch_game")
         try await expect("PYTHON_UNAVAILABLE", config: BridgeConfiguration(python: directory.appendingPathComponent("missing"), script: script))
         let slow = try fixture("cancellation", "import time\ntime.sleep(10)\n")
         let service = BridgeService()
@@ -59,6 +79,20 @@ import Foundation
         try check(serialized, "TaskManager coalesces duplicate refreshes and releases busy")
         print("\(passed) service checks PASS")
     }
+}
+
+final class ProgressRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var events = 0
+    func record(_ event: [String: JSONValue]) { lock.lock(); events += 1; lock.unlock() }
+    var count: Int { lock.lock(); defer { lock.unlock() }; return events }
+}
+
+final class MessageRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var messages: [String] = []
+    func record(_ text: String) { lock.lock(); messages.append(text); lock.unlock() }
+    func safe(_ secret: String) -> Bool { lock.lock(); defer { lock.unlock() }; return messages == ["[REDACTED]"] }
 }
 
 @MainActor enum TaskManagerChecks {

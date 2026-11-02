@@ -1,74 +1,124 @@
-# HELLDIVERS 2 FX Launcher — macOS 原生 App
+<div align="center">
+  <img src="docs/assets/app-icon.png" width="128" alt="HELLDIVERS 2 FX Launcher 图标">
+  <h1>HELLDIVERS 2 FX Launcher</h1>
+  <p>为 Apple Silicon Mac 打造的 HELLDIVERS 2 FX 启动与管理工具。</p>
+</div>
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+<a id="简体中文"></a>
 
-采用 **SwiftUI + 小范围 AppKit 集成**构建的 macOS 战术终端，用于 HELLDIVERS 2 FX Launcher。**当前为 Native Phase 1：只读开发预览。** 本项目为非官方项目，不宣称获得官方认可。
+[**English**](README.md) | [**简体中文**](README.zh-CN.md)
 
-## 当前状态与已实现功能
+![macOS](https://img.shields.io/badge/macOS-14%2B-0078D4?style=flat-square&labelColor=171A1F)
+![Apple Silicon](https://img.shields.io/badge/Platform-Apple%20Silicon-0078D4?style=flat-square&labelColor=171A1F)
+![SwiftUI](https://img.shields.io/badge/UI-SwiftUI%20%2B%20AppKit-0078D4?style=flat-square&labelColor=171A1F)
+![状态](https://img.shields.io/badge/Status-Development%20Preview-F29D38?style=flat-square&labelColor=171A1F)
+![版本](https://img.shields.io/badge/Native-0.1.0-FFD600?style=flat-square&labelColor=171A1F)
 
-| 范围 | 当前可用内容 |
+[软件截图](#zh-screenshots) · [主要功能](#zh-features) · [下载安装](#zh-installation) · [快速开始](#zh-usage) · [兼容性](#zh-development) · [原脚本](#zh-legacy)
+
+<a id="zh-overview"></a>
+
+以 **SwiftUI + AppKit** 构建的原生界面，通过原有 Python Core 启动游戏、检查所选 FX 环境、读取性能配置。六个页面职责清晰，默认深色，操作进度和结果在页面内显示，技术细节按需展开。
+
+> [!IMPORTANT]
+> **开发预览。** 正式安装包尚未发布。已完成的 Native 成果已整合到 [main](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main)；[feature/macos-native-app](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app) 保留开发历史。仓库不包含运行时二进制、游戏文件或 Guest 镜像。
+
+<a id="zh-screenshots"></a>
+
+## 软件截图
+
+[![总览](docs/images/dashboard.png)](docs/images/dashboard.png)
+
+| 运行环境 | FX 管理 |
 | --- | --- |
-| 页面导航 | 原生侧边栏、总览、运行环境、FX 管理、日志和设置；支持 Cmd+1…5 切换页面、Cmd+R 刷新 |
-| 界面 | 中英文功能文案；默认深色，可选浅色或跟随系统；偏好仅在当前会话生效 |
-| 主机检查 | 通过受监督的 Python JSONL Bridge 读取真实 macOS、架构和 Python 元数据 |
-| 依赖检查 | 本地文件存在性，以及限定范围内的 FX 版本和结构元数据；发现文件不代表运行就绪 |
-| 日志 | 当前会话的 App 与只读 Bridge 日志；尚不能读取历史游戏日志 |
-| 开发分支新增内容 | `feature/macos-native-app` 提供五页统一战术布局，以及日志搜索、等级筛选和复制。原始记录没有等级字段时保持“未标级”。这些新增内容尚未合并至 main。 |
+| [![运行环境](docs/images/environment.png)](docs/images/environment.png) | [![FX 管理](docs/images/fx-manager.png)](docs/images/fx-manager.png) |
 
-游戏启动功能**保持禁用**，界面显示明确原因。FX 运行状态、Guest、SSH、EAC 和多人联机均**未验证**。Phase 1 不安装或更新软件、不启动游戏、不写入启动器设置。
+<details>
+<summary>游戏性能配置</summary>
 
-## 系统要求
+[![游戏性能配置](docs/images/performance.png)](docs/images/performance.png)
 
-- 搭载 Apple Silicon 的 Mac，运行 macOS 14 或更新版本。
-- 用于本地构建的完整 Xcode 及 macOS SDK。
-- 已安装的 Python 3.9 或更新版本解释器。
+</details>
 
-目前**没有**可直接安装、已签名并公证的 Native 发布包。项目不附带运行时二进制、游戏文件、字体、凭据或 Guest 映像。
+四张均为 2026-11-03 从实际运行的 Debug App 窗口采集，使用真实本机元数据，仅做等比缩小，没有合成界面或状态。FX 图展示操作区域，下方内容可滚动查看。用户提供的图标和插画是 App 中实际渲染的生成式素材，不是生成式 UI 截图。这些图片不证明 Guest、游戏或联机就绪。
 
-## 安装与使用
+<a id="zh-features"></a>
 
-在本机构建 main：
+## 主要功能
+
+| 状态 | 功能 |
+| --- | --- |
+| 🟢 已实现 | 六页原生界面、Cmd+1…6 导航、深色／浅色／跟随系统、正式项目图标 |
+| 🟢 已实现 | 限定范围本机／FX 发现；带校验、修订检查、备份和原子替换的配置编辑 |
+| 🟢 已实现 | 可搜索、筛选、有容量限制且脱敏的日志与诊断报告 |
+| 🟢 已实现 · 只读 | 游戏性能配置页的真实芯片／CPU／GPU／内存检测、当前 FX 偏好和基准差异 |
+| 🟠 开发中 | 一键检测与 SSH 后台操作；原入口 FX／Steam 启动、SSH／sudo 独立凭据复用；新入口实机验收仍待完成 |
+| 🟠 开发中 | 保留原十种语言资源；新增 Native 翻译尚不完整，缺失时回退英文 |
+| ⚪ 计划中／不可用 | 安全停止／重启 FX、可写推算配置与限定参数恢复、签名／公证安装包 |
+
+性能规则完全本地、可复现。原记录中的 **M4 Pro／24 GiB** 配置仅是候选基准，不代表全面性能验收。其他硬件不生成可写推算配置；应用／恢复明确禁用并显示原因。见[参数来源与限制](docs/GAME_PERFORMANCE.md)。
+
+<a id="zh-requirements"></a>
+<a id="zh-installation"></a>
+
+## 下载与安装
+
+**正式安装包尚未发布。** 仓库 [Releases 页面](https://github.com/LSJOP/helldivers2-fx-launcher/releases) 当前没有已发布版本；此链接不是不存在的安装包下载按钮。
+
+源码预览需要 **Apple Silicon、macOS 14+、完整 Xcode／macOS SDK、Python 3.9+**。游戏操作还需要既有完整旧启动器目录、原验证组合中的 FX／gvproxy 资源和可用的 Guest 认证配置。
 
 ```sh
-git clone --recurse-submodules https://github.com/LSJOP/helldivers2-fx-launcher.git
+git clone --branch main --recurse-submodules https://github.com/LSJOP/helldivers2-fx-launcher.git
 cd helldivers2-fx-launcher/native-app
 ./script/build_and_run.sh --xcode-only
 open build/Debug/HD2FXNative.app
 ```
 
-如需使用开发分支的新增内容，请改为克隆该分支：
+已有克隆需核对目标分支，并执行 `git submodule update --init --recursive`。源码 ZIP 不包含固定 Core 子模块。见[开发指南](docs/NATIVE_DEVELOPMENT.md)。
 
-```sh
-git clone --branch feature/macos-native-app --recurse-submodules https://github.com/LSJOP/helldivers2-fx-launcher.git
-```
+<a id="zh-usage"></a>
 
-已有克隆在切换到目标分支后，先于仓库根目录执行 `git submodule update --init --recursive`。`CoreSnapshot` 子模块固定到归档提交，远程分支更新不会自动改变构建输入。构建只将七个白名单兼容模块及 VERSION 复制到 App，不执行旧脚本启动入口，也不下载或安装依赖。
+## 快速开始
 
-在设置中选择中文或英文，以及深色、浅色或跟随系统外观。选项只在当前 App 会话生效。默认解释器为 `/usr/bin/python3`；如果不可用，可选择本机已有的合适解释器后刷新。找到依赖文件或 FX 候选并不代表游戏环境已经可用。
+1. 打开 App，在设置中选择语言、外观及已有 Python 解释器。
+2. 首次操作选择已有启动器目录。“一键检测”只读检查 Guest，要求 FX 已运行；需要时先在 FX 管理中点击“启动 FX”。
+3. 在总览点击“启动 HELLDIVERS 2”，原有启动流程自动完成必要检查。核对启动确认及具体配置变更预览；密码仅填写 App 安全输入框。
+4. 在游戏性能配置页查看硬件与基准差异，在日志页查看错误详情。检测到进程不代表已经进入主菜单。
 
-Native 源码 ZIP **不包含**子模块内容，请使用上述递归克隆方式。
+<a id="zh-development"></a>
 
-## 尚未实现或尚未验证
+## 兼容性状态
 
-- Native 游戏启动、运行版本切换、自动安装及更新尚未开放。
-- CrossOver 集成及恢复旧脚本全部十种界面语言仍属后续工作；Native 当前提供中文和英文。
-- 主机元数据、文件存在性或应用结构匹配，不能证明 FX、Guest、SSH、Steam、EAC 或多人联机及游戏运行已验证。
-- 开发分支预留了首页士兵主视觉容器，但尚未接入独立授权素材；没有将整张 UI 预览图当作背景。
-- 分发签名、公证及可直接安装的 Native 发布包仍待完成。
-- GitHub Actions 尚未启用：当前 OAuth 令牌缺少发布工作流配置所需的 `workflow` 权限；请使用文档中的本地检查方式。
+| 证据 | 当前结果 |
+| --- | --- |
+| Native App | Debug 构建、六页冒烟检查通过；本轮定向检查为 35 项迁移及 9 项推算用例 |
+| FX／游戏进程 | 此前记录中的专用 FX 1.9.4 启动已观察到；不代表任意 FX 安装均兼容 |
+| 主菜单／可操作飞船 | 2026-11-03 用户明确确认，限定于该记录环境 |
+| 当前 GUI SSH／Guest 读取 | 已连接真实后端；最近宿主检查因另一份 FX 正在运行，在连接前拒绝。新入口的成功实测仍待完成 |
+| 单人任务／独立 EAC 验收／多人联机 | 分别保持**未验证** |
+| 性能 | 只读候选比较，没有实测性能保证，也不自动调优 |
 
-## 分支与原脚本归档
+> [!WARNING]
+> 发现安装 ≠ 运行就绪 ≠ 游戏进程已启动 ≠ 进入主菜单 ≠ EAC 验证成功 ≠ 多人联机成功。不提供反作弊绕过。
 
-- [`main`](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main)：Native App 正式主线。
-- [`feature/macos-native-app`](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app)：Native 日常开发分支。
-- [`legacy-script`](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script)：原 FX Launcher 完整脚本与提交历史，以及 Native 只读兼容快照。
+## 常见问题
 
-终端启动器请访问[归档脚本 README](https://github.com/LSJOP/helldivers2-fx-launcher/blob/legacy-script/README.md)，或下载[脚本 ZIP](https://github.com/LSJOP/helldivers2-fx-launcher/archive/refs/heads/legacy-script.zip)。已有脚本安装不会被本次迁移修改。旧 `main.zip` 链接现在下载 Native 源码，旧 raw/main 脚本路径不再有效；访问旧脚本时，请将链接中的 `main` 改为 `legacy-script`。迁移前提交 [0205aca](https://github.com/LSJOP/helldivers2-fx-launcher/tree/0205acaec3b32024df180a6dfb8ecc587e2f1914) 仍可访问。没有删除已有 Release 或 Tag。
+- **为什么停止／重启或应用按钮禁用？** 尚无经验证的正常退出后端，以及安全推算／写入／恢复边界。App 不强制停止或静默重配 FX。
+- **每次都要输入密码吗？** 默认会话内复用。主动选择记住后，经实际验证的 SSH／sudo 凭据分别保存在本 App 新建的 macOS Keychain namespace；自动读取禁止授权弹窗。钥匙串锁定／访问受限时回退安全输入，主动授权访问或 App 身份／签名变化时仍可能出现系统授权。旧脚本钥匙串项目保持不动。
+- **自动更新能用了吗？** 已集成 Sparkle 2，但签名 Feed／发行服务尚未配置，更新检查禁用，安装未验证。
 
-## 开发与文档维护
+<a id="zh-legacy"></a>
 
-按 [AGENTS.md](AGENTS.md) 执行批量开发与最小必要验证。Bridge、打包或服务行为变化时，使用 `native-app/script/run_checks.sh`。仅修改 README 时只检查文档和链接，不编译或启动 App。本文与[英文版](README.md)必须同步维护，保持功能、版本、安装说明和开发状态一致。
+## 开发文档与原脚本
 
-## License 与权利说明
+- [main](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main)：已整合 Native 成果的主线。
+- [feature/macos-native-app](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app)：保留 Native 开发历史，后续复用前需安全同步 main。
+- [legacy-script](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script)：原脚本归档，保留历史。
+- [开发指南](docs/NATIVE_DEVELOPMENT.md) · [迁移证据](docs/FUNCTION_MIGRATION.md) · [性能配置](docs/GAME_PERFORMANCE.md) · [自动更新](docs/NATIVE_UPDATES.md) · [开发规则](AGENTS.md)
 
-仓库**尚未选定覆盖整个项目的源码许可证**，请勿据此假定整个仓库已获再分发许可。HELLDIVERS 2 及相关标识归各自权利人所有。战术几何图形由代码绘制，项目不附带官方游戏美术素材。实际范围和未决许可问题见[权利与来源说明](THIRD_PARTY_NOTICES.md)，以及 `legacy-script` 分支中的历史声明。
+<a id="zh-disclaimer"></a>
+<a id="zh-license"></a>
+
+## 免责声明与协议
+
+本项目非官方，不宣称获得官方认可，不保证兼容性。HELLDIVERS 2 及相关标识归各权利人所有。项目统一源码许可证**尚未选定**，不应推定均可自由再分发。见[权利与来源说明](THIRD_PARTY_NOTICES.md)，其中保留 Sparkle 的独立许可证和用户提供素材的来源。

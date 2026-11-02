@@ -1,0 +1,98 @@
+{
+  "instruction": "HD2_NATIVE_APP_UNIFIED_TASK_QUEUE",
+  "version": "1.0.0",
+  "branch": "feature/macos-native-app",
+  "updated": "2026-11-03",
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "name": "GUI 交互简化",
+      "priority": "P0",
+      "status": "COMPLETED",
+      "commit": "e87e27c",
+      "evidence": [
+        "Debug build PASS",
+        "Bundled App GUI entry/root guards and Environment/FX zh/en rendering PASS",
+        "Existing authentication, Core launch and unsupported stop/restart preserved"
+      ],
+      "commit_subject": "refactor(native-ui): simplify navigation and operation workflows"
+    },
+    {
+      "id": "TASK-002",
+      "name": "正式 App 图标集成",
+      "priority": "P1",
+      "status": "COMPLETED",
+      "commit": "36e9cfa",
+      "evidence": [
+        "Debug build PASS",
+        "Debug and Release target both reference AppIcon",
+        "Bundle AppIcon.icns and icon plist keys verified",
+        "Finder/Dock/switcher/Launchpad manual verification not performed"
+      ],
+      "source": {
+        "sha256": "3c132be0ba8fc268e6222c10bc2273f17e5053a12b38314122030b22638b9b7b",
+        "pixels": "1254x1254",
+        "format": "PNG RGB no alpha",
+        "processing": "sips proportional resize; no mask/crop"
+      },
+      "commit_subject": "feat(native-app): integrate official launcher app icon"
+    },
+    {
+      "id": "TASK-003",
+      "name": "游戏性能配置",
+      "priority": "P1",
+      "status": "COMPLETED",
+      "commit": "5eb08cf",
+      "evidence": [
+        "Read-only fallback authorized by task: no validated inference/write/restore bounds",
+        "Actual M4 Pro, CPU 12, GPU 16, 24 GiB, macOS detected",
+        "9 deterministic inference checks and 35 migration checks PASS",
+        "Debug build and six-page/hardware smoke PASS",
+        "Four actual screenshots captured; English minimum-width pages rendered",
+        "No FX/Guest/EAC/launch/authentication changes"
+      ],
+      "commit_subject": "feat(native-app): add inferred game performance profiles"
+    },
+    {
+      "id": "TASK-004",
+      "name": "README 视觉重设计",
+      "priority": "P2",
+      "status": "COMPLETED",
+      "commit": "028cfe2fdb743cd6d7771358358da101821f4985",
+      "evidence": [
+        "FlClash structure referenced; no brand assets copied",
+        "Two synchronized README files; relative language links PASS",
+        "Four real 2026-11-03 App captures; proportional resizing only",
+        "Local links, anchors and Markdown fences PASS",
+        "GitHub Releases API returned empty list; no fake installer link",
+        "No App build/start during README task"
+      ],
+      "commit_subject": "docs: redesign README with visual product showcase"
+    }
+  ],
+  "status": "COMPLETED",
+  "main_merge": {
+    "instruction": "HD2_NATIVE_APP_MAIN_MERGE_V2",
+    "version": "2.0.0",
+    "source_branch": "feature/macos-native-app",
+    "source_commit": "028cfe2fdb743cd6d7771358358da101821f4985",
+    "main_before": "2aedff81031a150cac1c1c2be5e6bba4a2236d51",
+    "backup_ref": "backup/native-app-before-main-merge-20261103",
+    "method": "no-ff merge in isolated worktree",
+    "completion_ref": "merge commit containing this record; confirm origin/main after push",
+    "real_game_guest_validation": "NOT_PERFORMED"
+  },
+  "deferred_tasks": [
+    {
+      "id": "TASK-005",
+      "instruction": "HD2_NATIVE_APP_UX_REFINEMENT_V2",
+      "version": "2.1.0",
+      "status": "PENDING",
+      "execution_authorized_in_this_merge": false,
+      "scheduling": "USER_WILL_SCHEDULE; not configured by this merge",
+      "suggested_branch": "feature/native-app-ux-v2",
+      "baseline": "Fetch latest origin/main before worktree creation; do not use a stale fixed hash",
+      "requirements": "Read original UX v2.1.0 instructions when the future task starts; not implemented or rewritten by this merge"
+    }
+  ]
+}

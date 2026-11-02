@@ -9,18 +9,20 @@ import time
 
 bundle, directory = (Path(value).resolve() for value in sys.argv[1:3])
 directory.mkdir(parents=True, exist_ok=True)
+queue = '--task-queue' in sys.argv[3:]
+refinement = '--ui-refinement' in sys.argv[3:]
 focused = '--menu-review-only' in sys.argv[3:]
-result_file = directory / ('menu-review.json' if focused else 'gui-smoke.json')
+result_file = directory / ('queue-review.json' if queue else 'refinement-review.json' if refinement else 'menu-review.json' if focused else 'gui-smoke.json')
 request_file = directory / 'capture-request.json'
 for path in (result_file, request_file):
     if path.exists(): path.unlink()
-subprocess.run(['/usr/bin/open', '-n', str(bundle), '--args', '--ui-v2-menu-review' if focused else '--phase1-smoke', str(directory), '--external-capture'], check=True)
+subprocess.run(['/usr/bin/open', '-n', str(bundle), '--args', '--task-queue-smoke' if queue else '--ui-refinement-smoke' if refinement else '--ui-v2-menu-review' if focused else '--phase1-smoke', str(directory), '--external-capture'] + ([flag for flag in ('--hero-only', '--page-polish') if flag in sys.argv[3:]]), check=True)
 seen = set()
 deadline = time.monotonic() + 240
 while time.monotonic() < deadline:
     if result_file.exists():
         result = json.loads(result_file.read_text())
-        if focused:
+        if focused or refinement or queue:
             print(json.dumps(result, ensure_ascii=False, indent=2))
             raise SystemExit(0 if result.get('result') == 'PASS' else 1)
         print(json.dumps({key: result.get(key) for key in ('programmatic_result', 'native_menu_actions', 'visual_capture', 'bridge_loaded', 'error_propagation', 'error_recovery', 'error')}, indent=2))

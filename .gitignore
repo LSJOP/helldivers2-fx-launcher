@@ -17,5 +17,10 @@ node_modules/
 .env.*
 *.pem
 *.key
+*.p8
+*.p12
+*.private
+*.ed25519
+**/UpdateSigning.local.xcconfig
 settings.json
 runtime-paths.json

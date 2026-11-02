@@ -22,14 +22,11 @@ struct ContentView: View {
                 }
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        if state.selection != .dashboard {
-                            Text((state.selection ?? .dashboard).title(state.chinese)).font(.largeTitle.bold())
-                                .accessibilityIdentifier("page.title")
-                        }
                         switch state.selection ?? .dashboard {
                         case .dashboard: DashboardView(state: state, tasks: tasks)
                         case .environment: EnvironmentView(state: state)
                         case .fx: FXManagerView(state: state)
+                        case .performance: GamePerformanceView(state: state)
                         case .logs: LogsView(state: state)
                         case .settings: SettingsView(state: state)
                         }
@@ -37,6 +34,15 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.bottom)
                 }
                 .id(state.selection)
+                if tasks.busy {
+                    HStack(spacing: 10) {
+                        ProgressView().controlSize(.small)
+                        Text(state.refreshing ? state.t("正在读取全部只读快照…", "Reading all read-only snapshots…") : state.t("操作执行中…", "Operation in progress…"))
+                            .font(TacticalTypography.caption)
+                        Spacer()
+                        Button(state.t("取消当前操作", "Cancel current operation")) { tasks.cancel() }
+                    }
+                }
                 if let time = state.observedAt, state.selection != .dashboard {
                     Text(state.t("快照时间：", "Snapshot: ") + time)
                         .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
@@ -44,15 +50,21 @@ struct ContentView: View {
             }
             .padding(TacticalSpacing.page)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(state.selection == .dashboard ? TacticalColors(scheme: scheme).background : Color(nsColor: .windowBackgroundColor))
-            .navigationTitle(state.selection == .dashboard ? "HELLDIVERS 2 / FX LAUNCHER" : (state.selection ?? .dashboard).title(state.chinese))
+            .background(TacticalColors(scheme: scheme).background)
+            .navigationTitle("")
             .tint(TacticalColors(scheme: scheme).accent)
-            .toolbar {
-                if tasks.busy { ProgressView().controlSize(.small) }
-                Button { state.refresh() } label: { Label(state.t("刷新", "Refresh"), systemImage: "arrow.clockwise") }
-                    .disabled(tasks.busy).accessibilityIdentifier("refresh")
-                if tasks.busy { Button(state.t("取消", "Cancel")) { tasks.cancel() } }
+
+        }
+        .confirmationDialog(state.t("确认启动操作", "Confirm start action"), isPresented: Binding(get: { state.pendingAction != nil }, set: { if !$0 { state.pendingAction = nil } }), titleVisibility: .visible) {
+            if let action = state.pendingAction {
+                Button(state.t(action.labels.0, action.labels.1)) { state.confirmPendingAction(action) }
             }
+            Button(state.t("取消", "Cancel"), role: .cancel) { state.pendingAction = nil }
+        } message: {
+            Text(state.t("将在所选环境执行此启动操作。游戏启动会自动执行原有必要检查；具体配置变更仍需单独核对确认，不会强制停止已运行的 FX 或游戏。", "This starts the selected action in your chosen environment. Game launch runs the original required checks automatically. Exact configuration changes still need separate approval; running FX or games are never forcibly stopped."))
+        }
+        .sheet(item: $state.operationSelection) { item in
+            LegacyOperationSheet(state: state, operation: item.method)
         }
     }
 }

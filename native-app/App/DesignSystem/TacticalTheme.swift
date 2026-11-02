@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct TacticalEyebrow: View {
     let text: String
@@ -102,5 +103,39 @@ struct TacticalStatusLayout: Layout {
             }
             y += height + gap
         }
+    }
+}
+
+// Reserved for a separately licensed, standalone soldier asset. Never uses a UI screenshot.
+struct SoldierBackdrop: View {
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        let c = TacticalColors(scheme: scheme)
+        GeometryReader { geometry in
+            // Preserve the complete vertical composition: fist, helmet and flag.
+            // Only surplus scenery on the left may leave the header's bounds.
+            Image("HelldiverHero")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: geometry.size.height * 1672 / 941, height: geometry.size.height)
+                .mask(LinearGradient(stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .white, location: 0.48),
+                    .init(color: .white, location: 1)
+                ], startPoint: .leading, endPoint: .trailing))
+                .frame(width: geometry.size.width, height: geometry.size.height, alignment: .trailing)
+                .overlay(LinearGradient(stops: [
+                    .init(color: c.panel, location: 0),
+                    .init(color: c.panel.opacity(0.96), location: 0.25),
+                    .init(color: c.panel.opacity(0.12), location: 0.62),
+                    .init(color: .clear, location: 0.82)
+                ], startPoint: .leading, endPoint: .trailing))
+                .overlay(LinearGradient(stops: [
+                    .init(color: .clear, location: 0.60),
+                    .init(color: c.panel.opacity(0.35), location: 0.83),
+                    .init(color: c.panel, location: 1)
+                ], startPoint: .top, endPoint: .bottom))
+                .clipped()
+        }.accessibilityHidden(true).allowsHitTesting(false)
     }
 }

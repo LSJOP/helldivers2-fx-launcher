@@ -2,40 +2,81 @@ import SwiftUI
 
 struct EnvironmentView: View {
     @ObservedObject var state: AppState
+    private func snapshotStatus(_ method: String, fact: InspectionStatus = .uncertain) -> InspectionStatus {
+        if state.refreshing { return .checking }
+        if state.error?.method == method { return .failed }
+        if state.stale { return .uncertain }
+        return state.results[method] == nil ? .unchecked : fact
+    }
+    private func badge(_ status: InspectionStatus) -> some View {
+        TacticalStatusBadge(text: status.title(state), tone: status.tone)
+    }
+    private var actionEvidence: [String: JSONValue] {
+        state.guiRecords.values.filter { $0.target == state.runtimeRoot && $0.status == .succeeded && state.guiSnapshots[$0.method] != nil }.max { $0.startedAt < $1.startedAt }.flatMap { state.guiSnapshots[$0.method] } ?? [:]
+    }
+    private func chainStatus(_ name: String) -> InspectionStatus {
+        switch name {
+        case "FX": return actionEvidence["fx_host_running"]?.boolean == true ? .normal : actionEvidence["fx_host_running"]?.boolean == false ? .action : .unchecked
+        case "SSH": return actionEvidence["ssh_connected"]?.boolean == true ? .normal : .unchecked
+        case "Guest": return actionEvidence["guest_ready"]?.boolean == true ? .normal : .unchecked
+        case "Steam": return actionEvidence["steam_running"]?.boolean == true || (actionEvidence["steam_process_count"]?.integer ?? 0) > 0 ? .normal : actionEvidence["steam_process_count"] != nil ? .action : .unchecked
+        default: return .unchecked
+        }
+    }
     var body: some View {
-        GroupBox(state.t("主机信息", "Host information")) {
-            VStack {
-                FactRow(title: "macOS", value: state.value("get_system_info", "os_version"))
-                FactRow(title: state.t("架构", "Architecture"), value: state.value("get_system_info", "arch"))
-                FactRow(title: "Python", value: state.value("get_system_info", "python"))
-            }.padding(8)
-        }
-        GroupBox(state.t("本地依赖", "Local dependencies")) {
-            VStack(alignment: .leading) {
-                if state.rows("get_dependencies", "items").isEmpty { Text(state.t("尚未读取", "Not yet inspected")) }
-                ForEach(Array(state.rows("get_dependencies", "items").enumerated()), id: \.offset) { _, row in
-                    FactRow(title: row["name"]?.text ?? "Unknown", value: dependencyState(row["state"]?.text ?? "unknown"))
+        VStack(alignment: .leading, spacing: 20) {
+            TacticalPageHeader(title: state.t("运行环境检测", "Environment inspection"), refreshState: state)
+            GUIOperationsPanel(state: state, tasks: state.tasks)
+            TacticalAdaptiveLayout(minimumWidth: 140, maximumColumns: 4) {
+                TacticalMetric(title: "macOS", value: state.value("get_system_info", "os_version"), symbol: "apple.logo")
+                TacticalMetric(title: state.t("架构", "Architecture"), value: state.value("get_system_info", "arch"), symbol: "cpu")
+                TacticalMetric(title: "Python", value: state.value("get_system_info", "python"), symbol: "terminal")
+                TacticalMetric(title: state.t("检测范围", "Inspection scope"), value: state.t("本机只读快照", "Host read-only snapshot"), symbol: "square.stack.3d.up")
+            }
+            TacticalAdaptiveLayout(minimumWidth: 255, maximumColumns: 2) {
+                TacticalPanel(number: "A", title: state.t("本地依赖", "Local dependencies"), symbol: "shippingbox") {
+                    ForEach(state.rows("get_dependencies", "items"), id: \.selfName) { row in
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(alignment: .top) {
+                                Text(TacticalEvidence.name(row["name"]?.text ?? "—", state)).font(TacticalTypography.body)
+                                Spacer(minLength: 6)
+                                badge(snapshotStatus("get_dependencies", fact: InspectionStatus.dependency(row["state"]?.text)))
+                            }
+                            Text(TacticalEvidence.dependency(row["state"]?.text ?? "unknown", state))
+                                .font(TacticalTypography.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    if state.rows("get_dependencies", "items").isEmpty { badge(snapshotStatus("get_dependencies")) }
+                    Text(state.t("正常仅表示该 Python 已执行 Bridge；工具文件存在仍无法确认连接或服务就绪。", "Normal means this Python executed the Bridge. Tool files alone do not confirm connectivity or service readiness."))
+                        .font(TacticalTypography.caption).foregroundStyle(.secondary)
                 }
-                Text(state.t("文件存在仅说明已找到该文件；未执行 Node 或 SSH。", "File presence only; Node and SSH are never executed."))
-                    .font(.caption).foregroundStyle(.secondary)
-            }.frame(maxWidth: .infinity, alignment: .leading).padding(8)
-        }
-        GroupBox(state.t("运行环境", "Runtime environment")) {
-            VStack {
-                ForEach(Array(state.rows("get_environment_status", "checks").enumerated()), id: \.offset) { _, row in
-                    FactRow(title: row["name"]?.text ?? "Unknown", value: state.t("未验证", "Unverified"))
+                TacticalPanel(number: "B", title: state.t("运行组件", "Runtime components"), symbol: "cpu") {
+                    TacticalInfoRow(title: state.t("FX 运行时", "FX runtime"), value: state.t("无法确认 · 只读快照未探测进程", "Cannot confirm · Snapshot does not probe processes"))
+                    TacticalInfoRow(title: state.t("gvproxy 运行时", "gvproxy runtime"), value: state.t("无法确认 · 只读快照未探测服务", "Cannot confirm · Snapshot does not probe services"))
+                    TacticalWarningBanner(text: state.t("刷新不会启动 FX 或连接 Guest。使用网络与连接工具主动检查；启动记录不等于当前实时状态。", "Refresh does not start FX or connect to Guest. Use the connection tools for explicit checks; launch history is not current live state."))
                 }
-                if state.rows("get_environment_status", "checks").isEmpty { Text(state.t("尚未读取", "Not yet inspected")) }
-            }.padding(8)
+            }
+            DisclosureGroup(state.t("高级检测与维护", "Advanced inspection and maintenance")) {
+                LegacyOperationsView(state: state, scope: "environment")
+            }
+            TacticalPanel(number: "C", title: state.t("游戏运行链路 · 检测范围", "Game runtime chain · inspection scope"), symbol: "point.3.connected.trianglepath.dotted") {
+                TacticalAdaptiveLayout(minimumWidth: 95, maximumColumns: 6) {
+                    ForEach(["FX", "SSH", "Guest", "Steam", "EAC", "Multiplayer"], id: \.self) { name in
+                        VStack(spacing: 10) {
+                            Image(systemName: name == "EAC" ? "shield.lefthalf.filled" : "shippingbox").font(.title2)
+                            Text(TacticalEvidence.name(name, state)).font(TacticalTypography.body.weight(.semibold))
+                            badge(chainStatus(name))
+                        }.frame(maxWidth: .infinity).padding(.vertical, 10)
+                    }
+                }
+                Text(state.t("链路显示当前目标最近一次操作的证据。FX 表示宿主进程，连接与 Guest 身份须分别验证；EAC 和联机未执行独立检查。游戏进程不代表已进入主菜单。", "The chain reflects the latest action on the current target. FX means host processes; connection and Guest identity need separate verification. EAC and multiplayer have not been independently checked. A game process does not prove the menu."))
+                    .font(TacticalTypography.caption).foregroundStyle(.secondary)
+            }
         }
     }
-    private func dependencyState(_ value: String) -> String {
-        switch value {
-        case "running_bridge": return state.t("本次 Bridge 使用中", "Running this bridge")
-        case "file_present_unverified": return state.t("找到文件 · 未验证", "File found · Unverified")
-        case "missing": return state.t("限定路径未找到", "Not found in checked paths")
-        case "invalid": return state.t("文件不可执行", "File is not executable")
-        default: return state.t("未验证", "Unverified")
-        }
-    }
+}
+
+// The bridge guarantees unique dependency names; use their semantic identity.
+private extension Dictionary where Key == String, Value == JSONValue {
+    var selfName: String { self["name"]?.text ?? "unknown" }
 }
