@@ -45,6 +45,7 @@ struct NativeOperation: Identifiable {
 @MainActor enum NativeLocalization {
     static let languages: [(String, String)] = [("zh-CN","简体中文"),("en","English"),("ja","日本語"),("ko","한국어"),("ru","Русский"),("es","Español"),("de","Deutsch"),("fr","Français"),("pt-BR","Português (Brasil)"),("zh-TW","繁體中文")]
     static var initialLanguage: String {
+        if let saved = UserDefaults.standard.string(forKey: "NativeLanguage"), languages.contains(where: { $0.0 == saved }) { return saved }
         let value = Locale.preferredLanguages.first ?? "en"
         if value.hasPrefix("zh") { return value.contains("Hant") || value.contains("TW") ? "zh-TW" : "zh-CN" }
         return languages.first(where: { value.hasPrefix($0.0) })?.0 ?? "en"

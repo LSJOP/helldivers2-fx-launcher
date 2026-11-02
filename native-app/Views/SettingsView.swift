@@ -20,7 +20,7 @@ struct SettingsView: View {
                 Picker(state.t("外观", "Appearance"), selection: $state.appearance) {
                     ForEach(Appearance.allCases, id: \.self) { item in Text(item.title(state.chinese)).tag(item) }
                 }.accessibilityIdentifier("settings.appearance")
-                Text(state.t("界面选项仅本次会话生效。保留十种原语言资源；部分新增 Native 文案回退英文。", "Interface choices apply to this session. Ten legacy catalogs are retained; some new Native text falls back to English."))
+                Text(UpdateString.languageRestart.text(state.languageCode))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
             }
             TacticalPanel(number: "B", title: state.t("运行环境", "Runtime environment"), symbol: "cpu") {
@@ -34,6 +34,7 @@ struct SettingsView: View {
                 }
             }
             LegacyOperationsView(state: state, scope: "settings")
+            SoftwareUpdateView(manager: state.updates, language: state.languageCode)
             TacticalPanel(number: "C", title: state.t("高级设置", "Advanced"), symbol: "lock.shield") {
                 TacticalInfoRow(title: state.t("操作权限", "Operations"), value: state.t("默认只读 · 逐操作确认", "Read-only default · Per-action consent"))
                 TacticalInfoRow(title: state.t("配置写入", "Configuration writes"), value: state.t("需预览与确认", "Preview and confirmation required"))
@@ -59,7 +60,7 @@ struct LegacyOperationsView: View {
                 Text(state.t("请刷新以读取后端能力。", "Refresh to read backend capabilities."))
             }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 170))], spacing: 8) {
-                ForEach(state.rows("get_legacy_catalog", "operations").filter { $0["scope"]?.text == scope }, id: \.operationID) { row in
+                ForEach(state.rows("get_legacy_catalog", "operations").filter { $0["scope"]?.text == scope && $0["method"]?.text != "check_updates" }, id: \.operationID) { row in
                     let method = row["method"]?.text ?? ""
                     TacticalButton(title: operationTitle(method, state), symbol: row["confirmation"]?.boolean == true ? "lock.open" : "doc.text.magnifyingglass") {
                         state.operationSelection = NativeOperation(method: method)

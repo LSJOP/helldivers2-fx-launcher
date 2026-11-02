@@ -1,0 +1,6 @@
+// No live feed or public key is configured. Enable only after a signed feed is published.
+HD2_UPDATE_ENABLED = NO
+HD2_UPDATE_CHANNEL = preview
+HD2_UPDATE_FEED_URL =
+HD2_UPDATE_PUBLIC_KEY =
+#include? "UpdateSigning.local.xcconfig"

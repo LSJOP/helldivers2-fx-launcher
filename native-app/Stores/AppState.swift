@@ -3,7 +3,14 @@ import SwiftUI
 @MainActor
 final class AppState: ObservableObject {
     @Published var selection: Page? = .dashboard
-    @Published var languageCode = NativeLocalization.initialLanguage
+    @Published var languageCode = NativeLocalization.initialLanguage {
+        didSet {
+            UserDefaults.standard.set(languageCode, forKey: "NativeLanguage")
+            let systemLanguage = languageCode.hasPrefix("zh") ? "zh-Hans" : languageCode
+            UserDefaults.standard.set([systemLanguage, "en"], forKey: "AppleLanguages")
+        }
+    }
+    let updates = AppUpdateManager()
     var chinese: Bool {
         get { languageCode.hasPrefix("zh") }
         set { languageCode = newValue ? "zh-CN" : "en" }
@@ -15,7 +22,15 @@ final class AppState: ObservableObject {
     @Published private(set) var operationEvents: [[String: JSONValue]] = []
     @Published private(set) var runtimeLogs: [[String: JSONValue]] = []
     @Published var appearance: Appearance = .dark
-    @Published var pythonURL = URL(fileURLWithPath: "/usr/bin/python3")
+    @Published var pythonURL = AppState.savedPythonURL {
+        didSet { UserDefaults.standard.set(pythonURL.path, forKey: "NativePythonPath") }
+    }
+    private static var savedPythonURL: URL {
+        if let path = UserDefaults.standard.string(forKey: "NativePythonPath"), FileManager.default.isExecutableFile(atPath: path) {
+            return URL(fileURLWithPath: path)
+        }
+        return URL(fileURLWithPath: "/usr/bin/python3")
+    }
     @Published private(set) var results: [String: [String: JSONValue]] = [:]
     @Published private(set) var observedAt: String?
     @Published private(set) var error: ErrorState?

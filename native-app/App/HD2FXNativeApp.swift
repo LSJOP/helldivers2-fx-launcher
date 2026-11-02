@@ -55,11 +55,26 @@ struct HD2FXNativeApp: App {
                 }
         }
         .defaultSize(width: 1060, height: 720)
-        .commands { NavigationCommands(state: state) }
+        .commands {
+            NavigationCommands(state: state)
+            AppUpdateCommands(state: state, manager: state.updates)
+        }
         Settings {
-            SettingsView(state: state)
-                .padding(24).frame(width: 500)
+            ScrollView { SettingsView(state: state).padding(24) }
+                .frame(width: 650, height: 700)
                 .preferredColorScheme(state.appearance.scheme)
+        }
+    }
+}
+
+struct AppUpdateCommands: Commands {
+    @ObservedObject var state: AppState
+    @ObservedObject var manager: AppUpdateManager
+    var body: some Commands {
+        CommandGroup(after: .appInfo) {
+            Button(UpdateString.checkNow.text(state.languageCode)) { manager.checkForUpdates() }
+                .disabled(!manager.canCheck)
+                .id(state.languageCode)
         }
     }
 }

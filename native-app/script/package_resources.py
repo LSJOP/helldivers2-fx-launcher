@@ -42,3 +42,5 @@ shutil.copyfile(archive/wrapper, destination/'legacy'/wrapper)
 shutil.copytree(archive/'launcher-20261026/locales',destination/'locales',dirs_exist_ok=True)
 
 shutil.copyfile(app/'bridge/native-locales.json',destination/'native-locales.json')
+for language in ['en','zh-Hans']:
+    shutil.copytree(app/'Localization'/(language+'.lproj'),destination/(language+'.lproj'),dirs_exist_ok=True)

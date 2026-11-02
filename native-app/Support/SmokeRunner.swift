@@ -8,6 +8,11 @@ import ApplicationServices
     private static var started = false
     static func runIfRequested(state: AppState) async {
         let args = ProcessInfo.processInfo.arguments
+        if !started, let i = args.firstIndex(of: "--update-menu-smoke"), args.count > i + 1 {
+            started = true
+            await updateMenuReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
+            return
+        }
         if !started, let i = args.firstIndex(of: "--migration-smoke"), args.count > i + 1 {
             started = true
             await migrationReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
@@ -136,6 +141,49 @@ import ApplicationServices
         }
     }
     // One focused check after the user's menu-label feedback; no five-page sweep.
+    private static func updateMenuReview(_ state: AppState, directory: URL) async {
+        var result: [String: Any] = [:]
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try await waitForTask(state)
+            let zh = state.languageCode.hasPrefix("zh")
+            state.selection = .settings
+            try await Task.sleep(nanoseconds: 500_000_000)
+            guard let menu = NSApp.mainMenu else { throw ErrorState("MENU_UNAVAILABLE") }
+            menu.update()
+            for submenu in menu.items.compactMap(\.submenu) {
+                submenu.delegate?.menuNeedsUpdate?(submenu); submenu.update()
+            }
+            let titles = menu.items.map(\.title)
+            let appItems = menu.items.first?.submenu?.items ?? []
+            result["top_menus"] = titles
+            result["app_menu"] = appItems.map(\.title)
+            result["bundle_name"] = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
+            guard titles.contains(zh ? "编辑" : "Edit"), titles.contains(zh ? "窗口" : "Window"),
+                  !zh || !titles.contains("Help"),
+                  Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String == "HELLDIVERS 2 FX Launcher",
+                  let check = appItems.first(where: { $0.title == UpdateString.checkNow.text(state.languageCode) }),
+                  !check.isEnabled else { throw ErrorState("MENU_LOCALIZATION_FAILED") }
+            guard !state.updates.isConfigured, !state.updates.canCheck, state.updates.status == .unconfigured else { throw ErrorState("UPDATE_CONFIG_GUARD_FAILED") }
+            state.updates.checkForUpdates()
+            state.updates.setAutomaticChecks(true)
+            guard !state.updates.automaticChecks, state.updates.status == .unconfigured else { throw ErrorState("UNCONFIGURED_ACTION_FAILED") }
+            let valid: [String: Any] = ["HD2UpdateServiceEnabled":"YES", "SUFeedURL":"https://lsjop.github.io/helldivers2-fx-launcher/updates/stable/appcast.xml", "SUPublicEDKey":Data(repeating: 1, count: 32).base64EncodedString()]
+            guard UpdateConfiguration(info: valid).isValid else { throw ErrorState("CONFIG_VALIDATION_FAILED") }
+            for patch in [["SUFeedURL":"http://lsjop.github.io/helldivers2-fx-launcher/updates/stable/appcast.xml"], ["SUPublicEDKey":"invalid"], ["HD2UpdateServiceEnabled":"NO"], ["SUFeedURL":"https://example.invalid/appcast.xml"]] {
+                guard !UpdateConfiguration(info: valid.merging(patch) { _, v in v }).isValid else { throw ErrorState("CONFIG_VALIDATION_FAILED") }
+            }
+            result["result"] = "PASS"
+            result["service"] = "unconfigured_disabled_no_network"
+            result["configuration_guards"] = "HTTPS_feed_host_public_key_and_enable_flag"
+            result["language"] = state.languageCode
+            result["settings_page"] = state.selection?.rawValue
+        } catch { result["result"] = "FAIL"; result["error"] = (error as? ErrorState)?.code ?? "UPDATE_REVIEW_FAILED" }
+        if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted,.sortedKeys]) {
+            try? data.write(to: directory.appendingPathComponent("updates-menu.json"), options: .atomic)
+        }
+        NSApp.terminate(nil)
+    }
     private static func migrationReview(_ state: AppState, directory: URL) async {
         var result: [String: Any] = [:]
         do {
