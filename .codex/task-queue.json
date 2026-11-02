@@ -87,7 +87,7 @@
       "id": "TASK-005",
       "instruction": "HD2_NATIVE_APP_UX_REFINEMENT_V2",
       "version": "2.1.0",
-      "status": "RUNNING",
+      "status": "COMPLETED",
       "execution_authorized_in_this_merge": false,
       "scheduling": "USER_WILL_SCHEDULE; not configured by this merge",
       "suggested_branch": "feature/native-app-ux-v2",
@@ -95,7 +95,7 @@
       "requirements": "Read original UX v2.1.0 instructions when the future task starts; not implemented or rewritten by this merge",
       "execution_authorized_now": "User explicitly requested execution in scheduled-task chat",
       "branch": "feature/native-app-ux-v2",
-      "stage": "All required verification passed; commit/push and completion record pending",
+      "stage": "Verified implementation committed and pushed",
       "verification": {
         "debug_build": "PASS",
         "existing_and_new_core_checks": 157,
@@ -105,8 +105,12 @@
         "page_language_renders": 60,
         "automatic_target_guard": "PASS",
         "live_game_guest_eac_multiplayer": "NOT_TESTED",
-        "source_fingerprint": "823a8dbc534415c2a26cd423261bae56c55a340c3b662242dbf3064c0907717c"
-      }
+        "source_fingerprint": "a61da84497f11e82a5e0ae4fb65127b050dabfe412b541fe98f22c4b5ffafddc",
+        "fingerprint_note": "Final source includes fixture-only credential label correction; 24 Bridge checks rerun PASS; runtime sources match final successful Debug build and GUI smoke."
+      },
+      "commit": "331e7f55a32ccea9ba9187ebc0f74e63c8ecdf02",
+      "push": "VERIFIED: origin/feature/native-app-ux-v2 equals implementation commit",
+      "remaining": "Human translation/style review and optional live validation; no required UX implementation remains. Main merge is outside this task."
     }
   ],
   "recovery_runs": [
@@ -132,10 +136,15 @@
       "recovered_task": "HD2_PROJECT_LOCALIZATION_AND_DOCUMENTATION_POLICY",
       "recovery_result": "COMPLETED at c346f9a; record 543739c; pushed",
       "current_task": "TASK-005",
-      "status": "RUNNING",
+      "status": "COMPLETED",
       "branch": "feature/native-app-ux-v2",
-      "tests": "pending for UX changes",
-      "delete_automation_after_verified_completion": true
+      "tests": "165 checks PASS; Debug PASS; 60 page/language renders PASS; localization and paired README checks PASS",
+      "delete_automation_after_verified_completion": true,
+      "commit": "331e7f55a32ccea9ba9187ebc0f74e63c8ecdf02",
+      "push": "VERIFIED",
+      "completed_at": "2026-11-03T05:52:42.033312+08:00",
+      "next": "Delete explicitly authorized automation after saving this completion record",
+      "automation_cleanup": "PENDING final cleanup"
     }
   ]
 }
