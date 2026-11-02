@@ -18,7 +18,7 @@ Baseline: pinned `legacy-script` commit f6dfb4c (original launcher 0205aca; sepa
 | Logs/errors `say`, `PROGRESS_HOOK`, Bridge service | Real streamed stages/errors, search/filter/copy, bounded/redacted logs; cancellation and foreign-progress rejection checked | 已迁移 |
 | Successful network snapshot `network_records.capture/save` | Explicit original collection/save, potentially SSH | 需要进一步验证 |
 | Environment/report `menu.collect_status/export_report` | Structured local/runtime report; bounded response/export | 部分迁移 |
-| Update check/channel/notes `update_checker.check` | Read-only official release query; no install | 部分迁移 |
+| Update check/channel/notes `update_checker.check` | Original query retained in Core; Native settings/menu now use separate Sparkle 2 manager. Real signed feed/release not configured; no update installation acceptance | 部分迁移 |
 | Automatic update install | Original `INSTALL_ENABLED=False` | 不适用 |
 | FX version switching | Original archived menu has no selection/switch implementation; metadata snapshot is not proof of such a legacy UI capability | 不适用 |
 | Ten locales `i18n.LANGUAGES`, `locales/*.json` | zh-CN, en, ja, ko, ru, es, de, fr, pt-BR, zh-TW; preserve catalogs; Native-only text coverage tracked separately | 部分迁移 |

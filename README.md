@@ -53,7 +53,7 @@ A native macOS command interface for HELLDIVERS 2 FX Launcher, built with **Swif
 
 **Ten original locales:** zh-CN, en, ja, ko, ru, es, de, fr, pt-BR, zh-TW. Missing Native translations fall back to English.
 
-An explicit official stable/preview release query is available; automatic installation is unavailable. The archived menu did not implement FX version switching, so it is not presented as a migrated capability.
+Sparkle 2.10.1 is integrated for Launcher-only updates, with shared menu/settings controls and automatic-check preferences. The signed feed and release service are not configured, so checks are disabled and online installation is unverified. See [release preparation](docs/NATIVE_UPDATES.md). The archived menu did not implement FX version switching, so it is not presented as a migrated capability.
 
 <a id="en-screenshots"></a>
 
@@ -105,7 +105,7 @@ For an existing clone, select the intended branch and run `git submodule update 
 ### Usage
 
 1. Open the App and refresh local metadata. Refresh remains read-only.
-2. In Settings, select language, appearance and an existing Python interpreter (default `/usr/bin/python3`). UI preferences and runtime-root selection are session-only.
+2. In Settings, select language, appearance and an existing Python interpreter (default `/usr/bin/python3`). Language and Python selection persist in the App preferences; restart the App to apply its language to standard macOS menus and Sparkle dialogs. Appearance and runtime-root selection remain session-only.
 3. Open the relevant action panel for detailed operations. Select the existing complete legacy directory when requested; verify the target and authentication settings.
 4. Approve writes, SSH or launch explicitly. Specific Guest, performance and Wi-Fi changes require additional approval. Opening a page does not run a live operation.
 
@@ -127,7 +127,9 @@ For an existing clone, select the intended branch and run `git submodule update 
 
 Native bundle version **0.1.0**, build **1**, comes from the [Xcode project](native-app/HD2FXNative.xcodeproj/project.pbxproj). Pinned Core version **0.1.0-preview.4** comes from [Core VERSION](https://github.com/LSJOP/helldivers2-fx-launcher/blob/f6dfb4c9757fe07c176d01e5e3f67cd404d87351/native-app-core-snapshot/VERSION). Neither number implies a published Release. The README instruction version is separate from software versions.
 
-The last functional verification passed an Xcode Debug build, 18 protocol/metadata checks, 14 isolated migration checks, 21 service checks and one focused App smoke. Hero integration subsequently passed a build and a single App session checking two window sizes. These checks did not exercise a real game, live SSH or network/system changes. This README update only reuses that evidence.
+The update module uses official Sparkle UI and signed-feed/archive verification; it does not update FX Runtime or replace the Python Bridge. Release preparation and missing trust conditions are documented in [Native updates](docs/NATIVE_UPDATES.md). English/Chinese standard menu localization requires an App restart after changing the in-App language.
+
+The last functional verification passed an Xcode Debug build, 18 protocol/metadata checks, 14 isolated migration checks, 21 service checks and one focused App smoke. Hero integration subsequently passed a build and a single App session checking two window sizes. These checks did not exercise a real game, live SSH or network/system changes. These earlier functional checks are separate from update integration: the latter passed a Debug build and English/Chinese menu/settings smoke checks, with no live upgrade.
 
 See the [migration checklist](docs/FUNCTION_MIGRATION.md). Full Native translations and runtime acceptance remain incomplete. GitHub Actions is not published because the configured token lacks `workflow` permission; use the local development checks described in [AGENTS.md](AGENTS.md).
 
@@ -197,7 +199,7 @@ No project-wide source license has been selected. Do not assume blanket redistri
 
 **原十种语言：** zh-CN、en、ja、ko、ru、es、de、fr、pt-BR、zh-TW。缺失的 Native 翻译回退英文。
 
-可主动查询官方 stable/preview 版本，不支持自动安装。归档菜单没有实现 FX 版本切换，因此不将其作为已迁移能力展示。
+已集成 Sparkle 2.10.1，提供仅更新启动器的菜单/设置入口及自动检查偏好。签名 Feed 和发行服务尚未配置，检查入口禁用，在线安装未验证。见[发布准备](docs/NATIVE_UPDATES.md)。归档菜单没有实现 FX 版本切换，因此不将其作为已迁移能力展示。
 
 <a id="zh-screenshots"></a>
 
@@ -249,7 +251,7 @@ open build/Debug/HD2FXNative.app
 ### 使用说明
 
 1. 打开 App，刷新本地元数据。刷新保持只读。
-2. 设置页选择语言、外观及已有 Python 解释器（默认 `/usr/bin/python3`）。界面偏好和运行根目录选择仅在本次会话生效。
+2. 设置页选择语言、外观及已有 Python 解释器（默认 `/usr/bin/python3`）。语言和 Python 选择保存在 App 偏好中；重启 App 后标准 macOS 菜单及 Sparkle 对话框应用所选语言。外观和运行根目录选择仍仅在本次会话生效。
 3. 在对应面板主动执行详细操作，需要时选择已有完整旧目录，核对目标与认证设置。
 4. 写入、SSH 和启动均需明确授权；具体 Guest、性能及 Wi-Fi 变更还需额外确认。仅打开页面不会执行实机操作。
 
@@ -271,7 +273,9 @@ open build/Debug/HD2FXNative.app
 
 Native 包版本 **0.1.0**、构建号 **1** 来自 [Xcode 工程](native-app/HD2FXNative.xcodeproj/project.pbxproj)；固定 Core 版本 **0.1.0-preview.4** 来自 [Core VERSION](https://github.com/LSJOP/helldivers2-fx-launcher/blob/f6dfb4c9757fe07c176d01e5e3f67cd404d87351/native-app-core-snapshot/VERSION)。两者均不代表已经发布 Release，README 指令版本与软件版本独立。
 
-最近一次功能验证通过 Xcode Debug 编译、18 项协议/元数据检查、14 项隔离迁移检查、21 项服务检查和一次针对性 App 冒烟验证。随后士兵素材集成通过编译，并在一次 App 会话中检查两种窗口尺寸。这些检查没有执行真实游戏、实机 SSH 或网络/系统变更。本次 README 修改仅复用上述证据。
+更新模块采用官方 Sparkle 界面与 Feed/归档签名验证，不更新 FX Runtime，也不替换 Python Bridge。发布准备和缺少的信任条件见 [Native 更新](docs/NATIVE_UPDATES.md)。在 App 内切换语言后，中英文标准菜单本地化需要重启 App。
+
+最近一次功能验证通过 Xcode Debug 编译、18 项协议/元数据检查、14 项隔离迁移检查、21 项服务检查和一次针对性 App 冒烟验证。随后士兵素材集成通过编译，并在一次 App 会话中检查两种窗口尺寸。这些检查没有执行真实游戏、实机 SSH 或网络/系统变更。上述功能检查与本次更新集成验证分开记录：更新模块通过 Debug 编译及中英文菜单/设置冒烟检查，未执行真实升级。
 
 各项状态见[迁移清单](docs/FUNCTION_MIGRATION.md)。完整 Native 翻译与实机验收仍未完成。当前 token 缺少 `workflow` 权限，尚未发布 GitHub Actions 配置；本地开发检查规则见 [AGENTS.md](AGENTS.md)。
 
