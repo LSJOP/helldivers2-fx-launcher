@@ -68,6 +68,27 @@
         "No App build/start during README task"
       ],
       "commit_subject": "docs: redesign README with visual product showcase"
+    },
+    {
+      "id": "TASK-006",
+      "instruction": "HD2_NATIVE_APP_FX_AUTO_SELECTION_V2.1 + HD2_NATIVE_APP_FX_SELECTION_AND_LAUNCH_V2",
+      "status": "COMPLETED",
+      "branch": "feature/native-fx-selection-v21",
+      "baseline": "b787e9e",
+      "evidence": {
+        "debug": "PASS",
+        "selection_checks": 14,
+        "bridge_checks": 27,
+        "migration_checks": 36,
+        "total_checks": 183,
+        "page_language_renders": 60,
+        "languages": 10,
+        "screenshots": "Four real final Debug windows refreshed; fixture-free host scan, no selected runtime in isolated smoke",
+        "source_fingerprint": "44d24e254336adad8731e66ad7d16ecf9f25cbd78bed79a09471af127773ac91",
+        "live_game_guest_eac_multiplayer": "NOT_TESTED"
+      },
+      "limits": "Bounded scan: two Applications directories (2048 entries each), remembered/manual FX and known runtime dedicated bundle; no full-disk search. Original pinned FX hash still required by launch backend. Human clicks/translation naturalness not tested.",
+      "git": "Implementation commit containing this record; development branch only, no main merge."
     }
   ],
   "status": "COMPLETED",
@@ -87,12 +108,65 @@
       "id": "TASK-005",
       "instruction": "HD2_NATIVE_APP_UX_REFINEMENT_V2",
       "version": "2.1.0",
-      "status": "PENDING",
+      "status": "COMPLETED",
       "execution_authorized_in_this_merge": false,
       "scheduling": "USER_WILL_SCHEDULE; not configured by this merge",
       "suggested_branch": "feature/native-app-ux-v2",
-      "baseline": "Fetch latest origin/main before worktree creation; do not use a stale fixed hash",
-      "requirements": "Read original UX v2.1.0 instructions when the future task starts; not implemented or rewritten by this merge"
+      "baseline": "ed9d893 latest origin/main plus verified localization recovery 543739c",
+      "requirements": "Read original UX v2.1.0 instructions when the future task starts; not implemented or rewritten by this merge",
+      "execution_authorized_now": "User explicitly requested execution in scheduled-task chat",
+      "branch": "feature/native-app-ux-v2",
+      "stage": "Verified implementation committed and pushed",
+      "verification": {
+        "debug_build": "PASS",
+        "existing_and_new_core_checks": 157,
+        "localization_negative_checks": 8,
+        "languages": 10,
+        "keys_per_language": 393,
+        "page_language_renders": 60,
+        "automatic_target_guard": "PASS",
+        "live_game_guest_eac_multiplayer": "NOT_TESTED",
+        "source_fingerprint": "a61da84497f11e82a5e0ae4fb65127b050dabfe412b541fe98f22c4b5ffafddc",
+        "fingerprint_note": "Final source includes fixture-only credential label correction; 24 Bridge checks rerun PASS; runtime sources match final successful Debug build and GUI smoke."
+      },
+      "commit": "331e7f55a32ccea9ba9187ebc0f74e63c8ecdf02",
+      "push": "VERIFIED: origin/feature/native-app-ux-v2 equals implementation commit",
+      "remaining": "Human translation/style review and optional live validation; no required UX implementation remains. Main merge is outside this task."
+    }
+  ],
+  "recovery_runs": [
+    {
+      "triggered_at": "2026-11-03T05:37:06.221362+08:00",
+      "task": "HD2_PROJECT_LOCALIZATION_AND_DOCUMENTATION_POLICY",
+      "previous_status": "PAUSED_QUOTA",
+      "previous_status_evidence": "Prior thread 01a198e0-76dc-7700-9850-85858b8cf179 ended with explicit usage-limit error; 18 tracked modifications uncommitted.",
+      "status": "COMPLETED",
+      "branch": "feature/native-localization-recovery-20261103",
+      "baseline": "ed9d89357e51ca1d4958517f51ae37c221d5dce8",
+      "current_scheduled_task_started": false,
+      "stage": "Recovered localization implementation verified and published",
+      "tests": "Debug build PASS; 151 existing checks PASS; 8 localization negative checks PASS; bundled 10 languages x 386 keys and 10 lproj directories PASS",
+      "next": "Start TASK-005 from latest origin/main and integrate this recovered branch in an isolated UX worktree.",
+      "commit": "c346f9a527c4bc86b5694a8f918d7df3575a7a34",
+      "push": "Verified origin/feature/native-localization-recovery-20261103 matches implementation commit"
+    }
+  ],
+  "scheduled_runs": [
+    {
+      "triggered_at": "2026-11-03T05:42:23.915007+08:00",
+      "recovered_task": "HD2_PROJECT_LOCALIZATION_AND_DOCUMENTATION_POLICY",
+      "recovery_result": "COMPLETED at c346f9a; record 543739c; pushed",
+      "current_task": "TASK-005",
+      "status": "COMPLETED",
+      "branch": "feature/native-app-ux-v2",
+      "tests": "165 checks PASS; Debug PASS; 60 page/language renders PASS; localization and paired README checks PASS",
+      "delete_automation_after_verified_completion": true,
+      "commit": "331e7f55a32ccea9ba9187ebc0f74e63c8ecdf02",
+      "push": "VERIFIED",
+      "completed_at": "2026-11-03T05:52:42.033312+08:00",
+      "next": "None for this scheduled task. Optional future user work: review/merge feature branch and perform live acceptance separately.",
+      "automation_cleanup": "DELETED; automation_update returned deleteStatus=deleted",
+      "automation_deleted_at": "2026-11-03T05:53:06.986712+08:00"
     }
   ]
 }

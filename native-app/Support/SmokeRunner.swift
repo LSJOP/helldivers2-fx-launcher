@@ -8,6 +8,11 @@ import ApplicationServices
     private static var started = false
     static func runIfRequested(state: AppState) async {
         let args = ProcessInfo.processInfo.arguments
+        if !started, let i = args.firstIndex(of: "--ux-refinement-smoke"), args.count > i + 1 {
+            started = true
+            await uxReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
+            return
+        }
         if !started, let i = args.firstIndex(of: "--task-queue-smoke"), args.count > i + 1 {
             started = true
             await queueReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
@@ -84,8 +89,8 @@ import ApplicationServices
                         evidence["menu_items"] = NSApp.mainMenu?.items.map { item in
                             ["title": item.title, "children": item.submenu?.items.map(\.title) ?? []] as [String: Any]
                         }
-                        guard let menu = NSApp.mainMenu?.items.compactMap(\.submenu).first(where: { $0.items.contains(where: { $0.title == page.title(state.chinese) }) }),
-                              let menuIndex = menu.items.firstIndex(where: { $0.title == page.title(state.chinese) }) else { throw ErrorState("MENU_UNAVAILABLE") }
+                        guard let menu = NSApp.mainMenu?.items.compactMap(\.submenu).first(where: { $0.items.contains(where: { $0.title == page.title(state.languageCode) }) }),
+                              let menuIndex = menu.items.firstIndex(where: { $0.title == page.title(state.languageCode) }) else { throw ErrorState("MENU_UNAVAILABLE") }
                         menu.performActionForItem(at: menuIndex)
                         try await Task.sleep(nanoseconds: 1_000_000_000)
                         guard state.selection == page else { throw ErrorState("NAVIGATION_FAILED") }
@@ -93,7 +98,7 @@ import ApplicationServices
                         view.layoutSubtreeIfNeeded()
                         let name = "\(zh ? "zh" : "en")-\(appearance.rawValue)-\(page.rawValue).png"
                         let captured = try await capture(window, name: name, directory: directory, external: externalCapture)
-                        captures.append(["page": page.rawValue, "title": page.title(zh), "language": zh ? "zh" : "en",
+                        captures.append(["page": page.rawValue, "title": page.title(zh ? "zh-CN" : "en"), "language": zh ? "zh" : "en",
                                          "appearance": appearance.rawValue, "captured": captured, "file": name])
                     }
                 }
@@ -109,7 +114,7 @@ import ApplicationServices
                     try await Task.sleep(nanoseconds: 1_000_000_000)
                     let name = "\(zh ? "zh" : "en")-\(appearance.rawValue)-minimum-dashboard.png"
                     let captured = try await capture(window, name: name, directory: directory, external: externalCapture)
-                    captures.append(["page": "dashboard", "title": Page.dashboard.title(zh), "language": zh ? "zh" : "en",
+                    captures.append(["page": "dashboard", "title": Page.dashboard.title(zh ? "zh-CN" : "en"), "language": zh ? "zh" : "en",
                                      "appearance": appearance.rawValue, "captured": captured, "file": name])
                 }
             }
@@ -205,7 +210,7 @@ import ApplicationServices
             result["top_menus"] = titles
             result["app_menu"] = appItems.map(\.title)
             result["bundle_name"] = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
-            guard titles.contains(zh ? "编辑" : "Edit"), titles.contains(zh ? "窗口" : "Window"),
+            guard titles.contains(NativeStrings.text("ui.105", language: state.languageCode)), titles.contains(NativeStrings.text("ui.386", language: state.languageCode)),
                   !zh || !titles.contains("Help"),
                   Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String == "HELLDIVERS 2 FX Launcher",
                   let check = appItems.first(where: { $0.title == UpdateString.checkNow.text(state.languageCode) }),
@@ -262,6 +267,53 @@ import ApplicationServices
             result = ["result":"PASS", "files":files, "navigation_pages":6, "hardware":"real_read_only", "apply_restore":"disabled", "guest_writes":"not_performed", "english_minimum_pages":"rendered"]
         } catch { result = ["result":"FAIL", "code":(error as? ErrorState)?.code ?? "QUEUE_SMOKE_FAILED"] }
         if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted,.sortedKeys]) { try? data.write(to: directory.appendingPathComponent("queue-review.json")) }
+        NSApp.terminate(nil)
+    }
+    private static func uxReview(_ state: AppState, directory: URL) async {
+        var result: [String: Any] = [:]
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try await waitForTask(state)
+            guard state.hasLoaded, state.error == nil,
+                  let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
+            state.runtimeRoot = directory.appendingPathComponent("missing-runtime-fixture").path
+            state.inspectTargetIfNeeded()
+            try await waitForTask(state)
+            guard state.targetInspection["archive_files_match"]?.boolean == false,
+                  state.targetInspection["fx_executable_present"]?.boolean == false else { throw ErrorState("TARGET_GUARD_FAILED") }
+            state.runtimeRoot = ""
+            state.perform(.game)
+            try await waitForTask(state)
+            guard state.pendingAction == nil,
+                  (state.fxSelection.selected != nil ? state.operationSelection?.method == "launch_game" : state.selection == .fx) else { throw ErrorState("LAUNCH_PRESENTATION_FAILED") }
+            try await Task.sleep(nanoseconds: 150_000_000)
+            state.operationSelection = nil
+            var renders = 0
+            for (language, _) in NativeLocalization.languages {
+                state.languageCode = language
+                guard NativeStrings.catalog[language]?.values.allSatisfy({ !$0.contains("⟦") }) == true else { throw ErrorState("LOCALE_MISSING") }
+                window.setContentSize(NSSize(width: language == "en" ? 1180 : 850, height: 850))
+                for page in Page.allCases {
+                    state.selection = page
+                    try await Task.sleep(nanoseconds: 100_000_000)
+                    window.contentView?.layoutSubtreeIfNeeded()
+                    guard !state.pageTitle(page).contains("⟦") else { throw ErrorState("LOCALE_MISSING") }
+                    renders += 1
+                    try await waitForTask(state)
+                    if language == "en" {
+                        try await Task.sleep(nanoseconds: 100_000_000)
+                        guard try await capture(window, name: page.rawValue + ".png", directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
+                    }
+                }
+            }
+            result = ["result": "PASS", "page_language_renders": renders, "languages": 10,
+                      "automatic_preflight_missing_target": "PASS", "single_launch_sheet": "PASS",
+                      "screenshots": "six real English App windows", "preferences_and_keychain": "not modified by isolated smoke",
+                      "live_game_guest_eac_multiplayer": "NOT_TESTED", "human_clicks_and_translation_review": "NOT_TESTED"]
+        } catch { result = ["result": "FAIL", "code": (error as? ErrorState)?.code ?? "SMOKE_FAILED"] }
+        if let bytes = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]) {
+            try? bytes.write(to: directory.appendingPathComponent("ux-review.json"), options: .atomic)
+        }
         NSApp.terminate(nil)
     }
     private static func migrationReview(_ state: AppState, directory: URL) async {
@@ -330,7 +382,7 @@ import ApplicationServices
                 state.chinese = zh
                 try await Task.sleep(nanoseconds: 500_000_000)
                 NSApp.mainMenu?.update()
-                let name = state.t("导航", "Navigate")
+                let name = state.t("ui.193")
                 guard let menu = NSApp.mainMenu?.items.first(where: { $0.title == name })?.submenu else {
                     throw ErrorState("MENU_UNAVAILABLE")
                 }
@@ -339,7 +391,7 @@ import ApplicationServices
                 menu.delegate?.menuWillOpen?(menu)
                 menu.update()
                 let titles = menu.items.filter { !$0.isSeparatorItem && !$0.title.isEmpty }.map(\.title)
-                let expected = Page.allCases.map { $0.title(zh) } + [state.t("刷新", "Refresh")]
+                let expected = Page.allCases.map { $0.title(zh) } + [state.t("ui.262")]
                 result[zh ? "chinese_menu" : "english_menu"] = titles
                 result[zh ? "chinese_expected" : "english_expected"] = expected
                 guard titles == expected else { throw ErrorState("MENU_LABELS_MISMATCH") }
@@ -385,7 +437,7 @@ import ApplicationServices
                 NSApp.mainMenu?.update()
                 guard let menu = NSApp.mainMenu?.items.compactMap(\.submenu).first(where: { $0.title == "导航" }) else { throw ErrorState("MENU_UNAVAILABLE") }
                 menu.delegate?.menuNeedsUpdate?(menu); menu.delegate?.menuWillOpen?(menu); menu.update()
-                guard let index = menu.items.firstIndex(where: { $0.title == page.title(true) }) else { throw ErrorState("MENU_UNAVAILABLE") }
+                guard let index = menu.items.firstIndex(where: { $0.title == page.title("zh-CN") }) else { throw ErrorState("MENU_UNAVAILABLE") }
                 menu.performActionForItem(at: index)
                 try await Task.sleep(nanoseconds: 500_000_000)
                 guard state.selection == page else { throw ErrorState("NAVIGATION_FAILED") }

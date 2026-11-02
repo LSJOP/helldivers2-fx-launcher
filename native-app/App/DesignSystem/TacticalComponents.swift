@@ -1,4 +1,59 @@
 import SwiftUI
+import UniformTypeIdentifiers
+
+/// The selected launch target is separate from shallow installation discovery.
+struct RuntimeTargetPanel: View {
+    @ObservedObject var state: AppState
+    @ObservedObject var tasks: TaskManager
+    @State private var choosing = false
+    private var status: String {
+        if state.runtimeRoot.isEmpty { return state.t("ui.ux.choose") }
+        if state.inspectingTarget { return state.t("ui.053") }
+        if state.targetInspectionError != nil { return state.t("ui.041") }
+        if state.targetInspection["archive_files_match"]?.boolean == true && state.targetInspection["fx_executable_present"]?.boolean == true {
+            return state.t("ui.ux.files")
+        }
+        return state.targetInspection.isEmpty ? state.t("ui.208") : state.t("ui.ux.incomplete")
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let path = state.fxSelection.selectedPath {
+                Text(state.fxVersion + " · " + state.fxStatus).font(TacticalTypography.body)
+                Text(path).font(TacticalTypography.caption).textSelection(.enabled)
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) { summary; Spacer(minLength: 4); if state.runtimeRoot.isEmpty { controls } }
+                VStack(alignment: .leading, spacing: 8) { summary; if state.runtimeRoot.isEmpty { controls } }
+            }
+            DisclosureGroup(state.t("ui.ux.details")) {
+                Text(state.t("ui.fx.resourceHelp")).font(TacticalTypography.caption)
+                if !state.runtimeRoot.isEmpty { controls }
+                Text(state.runtimeRoot.isEmpty ? state.t("ui.062") : state.runtimeRoot).textSelection(.enabled)
+                if let path = state.targetInspection["fx_path"]?.text { Text(path).textSelection(.enabled) }
+                if let error = state.targetInspectionError { Text(error.message(state.languageCode)) }
+                Text(state.t("ui.ux.scope")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+                Button(state.t("ui.262")) { state.inspectTargetIfNeeded(force: true) }.disabled(tasks.busy || state.runtimeRoot.isEmpty)
+            }.font(TacticalTypography.caption)
+        }
+        .padding(10).background(.primary.opacity(0.035))
+        .accessibilityIdentifier("runtime.target")
+        .fileImporter(isPresented: $choosing, allowedContentTypes: [.folder]) { result in
+            if case .success(let url) = result { state.runtimeRoot = url.path; state.scanFX() }
+        }
+    }
+    private var summary: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(state.t("ui.fx.resources")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+            Text(state.runtimeRoot.isEmpty ? state.t("ui.062") : URL(fileURLWithPath: state.runtimeRoot).lastPathComponent)
+                .font(TacticalTypography.body).lineLimit(1).truncationMode(.middle)
+            Text(status).font(TacticalTypography.caption)
+        }
+    }
+    private var controls: some View {
+        Button(state.t("ui.fx.locateResources"), systemImage: "folder") { choosing = true }
+            .disabled(tasks.busy).accessibilityIdentifier("runtime.choose")
+    }
+}
 
 struct TacticalDivider: View {
     @Environment(\.colorScheme) private var scheme
@@ -151,7 +206,7 @@ struct TacticalNavigationItem: View {
             HStack(spacing: 8) {
                 Text(number).font(TacticalTypography.log).frame(width: 22, alignment: .leading)
                 Image(systemName: symbol).frame(width: 16).accessibilityHidden(true)
-                Text(title).font(TacticalTypography.body.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
+                Text(title).font(TacticalTypography.body.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text(shortcut).font(TacticalTypography.log).frame(width: 22, alignment: .trailing)
             }
@@ -238,20 +293,20 @@ struct TacticalMetric: View {
 @MainActor enum TacticalEvidence {
     static func dependency(_ value: String, _ state: AppState) -> String {
         switch value {
-        case "running_bridge": return state.t("本次解释器使用中", "Interpreter in use")
-        case "file_present_unverified": return state.t("文件已发现 · 未验证", "File found · Unverified")
-        case "missing": return state.t("限定路径未找到", "Not found in checked paths")
-        case "invalid": return state.t("文件不可执行", "File is not executable")
-        default: return state.t("未验证", "Unverified")
+        case "running_bridge": return state.t("ui.167")
+        case "file_present_unverified": return state.t("ui.126")
+        case "missing": return state.t("ui.210")
+        case "invalid": return state.t("ui.127")
+        default: return state.t("ui.368")
         }
     }
     static func name(_ name: String, _ state: AppState) -> String {
         switch name {
-        case "Game components": return state.t("游戏组件", "Game components")
-        case "FX runtime": return state.t("FX 运行时", "FX runtime")
-        case "gvproxy runtime": return state.t("gvproxy 运行时", "gvproxy runtime")
-        case "SSH connection": return state.t("SSH 连接", "SSH connection")
-        case "Multiplayer": return state.t("联机", "Multiplayer")
+        case "Game components": return state.t("ui.135")
+        case "FX runtime": return state.t("ui.122")
+        case "gvproxy runtime": return state.t("ui.387")
+        case "SSH connection": return state.t("ui.287")
+        case "Multiplayer": return state.t("ui.191")
         default: return name
         }
     }
@@ -305,7 +360,7 @@ struct TacticalRefreshButton: View {
             HStack(spacing: 6) {
                 if state.refreshing { ProgressView().controlSize(.mini) }
                 else { Image(systemName: "arrow.clockwise") }
-                Text(state.t("刷新", "Refresh"))
+                Text(state.t("ui.262"))
             }.font(TacticalTypography.caption).padding(.horizontal, 9).padding(.vertical, 7)
         }
         .buttonStyle(.plain)
@@ -314,7 +369,7 @@ struct TacticalRefreshButton: View {
         .overlay(Rectangle().stroke(Color(white: 0.38), lineWidth: 1))
         .opacity(tasks.busy ? 0.55 : 1)
         .disabled(tasks.busy)
-        .help(state.t("刷新全部只读快照：本机环境、依赖、FX 安装、会话日志及功能清单；不会启动或修改运行环境。也可按 ⌘R。", "Refresh all read-only snapshots: host environment, dependencies, FX installations, session logs and capabilities. No runtime starts or changes. Also available with ⌘R."))
+        .help(state.t("ui.263"))
         .accessibilityIdentifier("refresh")
     }
 }
@@ -333,12 +388,12 @@ enum InspectionStatus {
     }
     @MainActor func title(_ state: AppState) -> String {
         switch self {
-        case .unchecked: return state.t("未检查", "Not checked")
-        case .checking: return state.t("检查中", "Checking")
-        case .normal: return state.t("正常", "Normal")
-        case .action: return state.t("需要操作", "Action needed")
-        case .failed: return state.t("检查失败", "Check failed")
-        case .uncertain: return state.t("无法确认", "Cannot confirm")
+        case .unchecked: return state.t("ui.208")
+        case .checking: return state.t("ui.053")
+        case .normal: return state.t("ui.206")
+        case .action: return state.t("ui.006")
+        case .failed: return state.t("ui.050")
+        case .uncertain: return state.t("ui.041")
         }
     }
     static func dependency(_ raw: String?) -> Self {
@@ -362,78 +417,78 @@ struct GUIOperationsPanel: View {
         VStack(alignment: .leading, spacing: 16) {
             if environment {
                 HStack {
-                    TacticalButton(title: state.t("一键检测", "Inspect environment"), symbol: "checklist", primary: true,
-                        loading: state.guiRecords[GUIAction.inspect.rawValue]?.status == .running, disabledReason: tasks.busy ? state.t("操作执行中", "Operation in progress") : nil) { state.perform(.inspect) }
+                    TacticalButton(title: state.t("ui.159"), symbol: "checklist", primary: true,
+                        loading: state.guiRecords[GUIAction.inspect.rawValue]?.status == .running, disabledReason: tasks.busy ? state.t("ui.224") : nil) { state.perform(.inspect) }
                     Spacer()
                 }
-                Text(state.t("自动验证所选虚拟机身份与连接，并只读检查运行环境；不会启动虚拟机或修改配置。", "Verify the selected Guest identity and connection, then inspect its environment read-only. Does not start the VM or change configuration."))
+                Text(state.t("ui.379"))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
                 TacticalAdaptiveLayout(minimumWidth: 145, maximumColumns: 4) {
                     TacticalMetric(title: "FX Runtime", value: booleanFact("fx_host_running"), symbol: "shippingbox")
-                    TacticalMetric(title: state.t("虚拟机连接", "Guest connection"), value: booleanFact("ssh_connected"), symbol: "link")
+                    TacticalMetric(title: state.t("ui.144"), value: booleanFact("ssh_connected"), symbol: "link")
                     TacticalMetric(title: "Steam", value: processFact("steam_process_count"), symbol: "play.circle")
-                    TacticalMetric(title: state.t("游戏文件", "Game files"), value: fileFact("game_executable"), symbol: "folder")
+                    TacticalMetric(title: state.t("ui.138"), value: fileFact("game_executable"), symbol: "folder")
                 }
             } else {
                 TacticalAdaptiveLayout(minimumWidth: 245, maximumColumns: 2) {
-                    actionCard(.startFX, description: state.t("使用已验证的原入口；已运行则检查并复用。", "Use the original verified entry; check and reuse a running instance."))
-                    unavailableCard(state.t("停止 FX", "Stop FX"), symbol: "stop.fill")
-                    unavailableCard(state.t("重启 FX", "Restart FX"), symbol: "arrow.clockwise")
-                    actionCard(.steam, description: state.t("后台连接并受控启动 Steam，不请求游戏启动。", "Connect in the background and start Steam through the controlled backend, without launching the game."))
+                    actionCard(.startFX, description: state.t("ui.375"))
+                    unavailableCard(state.t("ui.323"), symbol: "stop.fill")
+                    unavailableCard(state.t("ui.272"), symbol: "arrow.clockwise")
+                    actionCard(.steam, description: state.t("ui.077"))
                 }
             }
             GUIActionFeedback(state: state, methods: methods.map(\.rawValue))
-            DisclosureGroup(state.t("连接与检测详情", "Connection and inspection details")) {
-                TacticalInfoRow(title: state.t("所选环境", "Selected environment"), value: state.runtimeRoot.isEmpty ? state.t("尚未选择，首次操作时选择", "Choose on first action") : URL(fileURLWithPath: state.runtimeRoot).lastPathComponent)
+            DisclosureGroup(state.t("ui.080")) {
+                TacticalInfoRow(title: state.t("ui.302"), value: state.runtimeRoot.isEmpty ? state.t("ui.062") : URL(fileURLWithPath: state.runtimeRoot).lastPathComponent)
                 HStack {
-                    Button(state.t("连接虚拟机", "Connect virtual machine")) { state.perform(.connect) }
-                    Button(state.t("检查 FX 状态", "Check FX status")) { state.perform(.fxState) }
+                    Button(state.t("ui.079")) { state.perform(.connect) }
+                    Button(state.t("ui.048")) { state.perform(.fxState) }
                 }.disabled(tasks.busy)
-                if !environment { Button(state.t("前往游戏启动", "Go to game launch")) { state.selection = .dashboard } }
-                if let os = facts["guest_os"]?.text { TacticalInfoRow(title: state.t("Guest 系统", "Guest system"), value: os) }
+                if !environment { Button(state.t("ui.142")) { state.selection = .dashboard } }
+                if let os = facts["guest_os"]?.text { TacticalInfoRow(title: state.t("ui.149"), value: os) }
                 ForEach(["steam_files","game_manifest","game_directory","game_executable","proton_files","fex_files"], id: \.self) { key in
                     TacticalInfoRow(title: component(key), value: fileFact(key))
                 }
-                Text(state.t("仅表示最近一次检查。文件存在不等于可运行；进程存在不等于进入游戏。", "Last inspection only. File presence does not establish readiness; a process does not prove gameplay."))
+                Text(state.t("ui.172"))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
             }
         }
     }
     private func booleanFact(_ key: String) -> String {
-        guard let value = facts[key]?.boolean else { return state.t("未检查", "Not checked") }
-        return value ? state.t("已验证 · 最近检查", "Verified · Last check") : state.t("未运行／未连接", "Not running / connected")
+        guard let value = facts[key]?.boolean else { return state.t("ui.208") }
+        return value ? state.t("ui.377") : state.t("ui.214")
     }
     private func processFact(_ key: String) -> String {
-        guard let n = facts[key]?.integer else { return state.t("未检查", "Not checked") }
-        return n > 0 ? state.t("进程已观察到", "Process observed") : state.t("未发现进程", "No process found")
+        guard let n = facts[key]?.integer else { return state.t("ui.208") }
+        return n > 0 ? state.t("ui.237") : state.t("ui.201")
     }
     private func fileFact(_ key: String) -> String {
-        guard let value = facts["components"]?.object[key]?.boolean else { return state.t("未检查", "Not checked") }
-        return value ? state.t("已发现 · 文件证据", "Found · File evidence") : state.t("限定位置未发现", "Not found in checked locations")
+        guard let value = facts["components"]?.object[key]?.boolean else { return state.t("ui.208") }
+        return value ? state.t("ui.130") : state.t("ui.209")
     }
     private func actionCard(_ action: GUIAction, description: String) -> some View {
-        TacticalPanel(number: "", title: state.t(action.labels.0, action.labels.1), symbol: "play.circle") {
+        TacticalPanel(number: "", title: state.t(action.labelKey), symbol: "play.circle") {
             Text(description).font(TacticalTypography.caption)
-            Text(state.guiRecords[action.rawValue].map { $0.status.title(state) } ?? state.t("未开始", "Not started")).font(TacticalTypography.caption).foregroundStyle(.secondary)
-            TacticalButton(title: state.t("启动", "Start"), symbol: "play.fill", primary: true, loading: state.guiRecords[action.rawValue]?.status == .running,
-                disabledReason: tasks.busy ? state.t("操作执行中", "Operation in progress") : nil) { state.perform(action) }
+            Text(state.guiRecords[action.rawValue].map { $0.status.title(state) } ?? state.t("ui.216")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+            TacticalButton(title: state.t("ui.315"), symbol: "play.fill", primary: true, loading: state.guiRecords[action.rawValue]?.status == .running,
+                disabledReason: tasks.busy ? state.t("ui.224") : nil) { state.perform(action) }
         }
     }
     private func unavailableCard(_ title: String, symbol: String) -> some View {
         TacticalPanel(number: "", title: title, symbol: symbol) {
-            Text(state.t("暂不可用：尚无经验证的正常退出接口。请在 FX 中正常退出。", "Unavailable: a graceful-exit backend is not verified. Quit normally in FX."))
+            Text(state.t("ui.363"))
                 .font(TacticalTypography.caption).foregroundStyle(.secondary)
-            TacticalButton(title: state.t("不可用", "Unavailable"), symbol: symbol, disabledReason: state.t("等待安全退出后端", "Awaiting a graceful-exit backend")) {}
+            TacticalButton(title: state.t("ui.362"), symbol: symbol, disabledReason: state.t("ui.032")) {}
         }
     }
     private func component(_ key: String) -> String {
         switch key {
-        case "steam_files": return state.t("Steam 安装目录", "Steam installation directory")
-        case "game_manifest": return state.t("游戏安装记录", "Game installation manifest")
-        case "game_directory": return state.t("游戏目录", "Game directory")
-        case "game_executable": return state.t("游戏程序文件", "Game executable file")
-        case "proton_files": return state.t("Proton 工具文件", "Proton tool files")
-        default: return state.t("FEX 组件文件", "FEX component files")
+        case "steam_files": return state.t("ui.321")
+        case "game_manifest": return state.t("ui.139")
+        case "game_directory": return state.t("ui.136")
+        case "game_executable": return state.t("ui.137")
+        case "proton_files": return state.t("ui.238")
+        default: return state.t("ui.115")
         }
     }
 }
@@ -447,25 +502,25 @@ struct GUIActionFeedback: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     if record.status == .running { ProgressView().controlSize(.small) }
-                    Text(GUIAction(rawValue: record.method).map { state.t($0.labels.0, $0.labels.1) } ?? record.method).font(TacticalTypography.body.weight(.semibold))
+                    Text(GUIAction(rawValue: record.method).map { state.t($0.labelKey) } ?? record.method).font(TacticalTypography.body.weight(.semibold))
                     TacticalStatusBadge(text: record.status.title(state), tone: record.status == .succeeded ? .success : record.error == nil ? .neutral : .error)
                     Spacer()
-                    if record.status == .running { Button(state.t("取消", "Cancel")) { state.tasks.cancel() } }
+                    if record.status == .running { Button(state.t("ui.037")) { state.tasks.cancel() } }
                 }
                 if let error = record.error {
-                    Text(error.message(state.chinese)).font(TacticalTypography.body)
-                    DisclosureGroup(state.t("查看原因", "View reason")) {
+                    Text(error.message(state.languageCode)).font(TacticalTypography.body)
+                    DisclosureGroup(state.t("ui.381")) {
                         Text(error.code + " · " + (error.details["summary"]?.text ?? "")).font(TacticalTypography.log).textSelection(.enabled)
-                        Button(state.t("处理此问题", "Resolve this issue")) { state.operationSelection = NativeOperation(method: record.method) }
+                        Button(state.t("ui.271")) { state.operationSelection = NativeOperation(method: record.method) }
                     }
                 } else if record.status == .succeeded {
-                    Text(state.t("操作已完成；请查看对应状态证据。", "Action completed; review the corresponding evidence."))
+                    Text(state.t("ui.004"))
                         .font(TacticalTypography.caption)
                 }
-                DisclosureGroup(state.t("操作详情", "Action details")) {
-                    TacticalInfoRow(title: state.t("开始", "Started"), value: record.startedAt.formatted(date: .omitted, time: .standard))
-                    if let end = record.endedAt { TacticalInfoRow(title: state.t("结束", "Finished"), value: end.formatted(date: .omitted, time: .standard)) }
-                    Button(state.t("查看高级日志", "View advanced logs")) { state.selection = .logs }
+                DisclosureGroup(state.t("ui.005")) {
+                    TacticalInfoRow(title: state.t("ui.319"), value: record.startedAt.formatted(date: .omitted, time: .standard))
+                    if let end = record.endedAt { TacticalInfoRow(title: state.t("ui.128"), value: end.formatted(date: .omitted, time: .standard)) }
+                    Button(state.t("ui.380")) { state.selection = .logs }
                 }
             }.padding(14).background(.primary.opacity(0.035))
         }
@@ -475,12 +530,12 @@ struct GUIActionFeedback: View {
 extension GUIOperationStatus {
     @MainActor func title(_ state: AppState) -> String {
         switch self {
-        case .idle: return state.t("未开始", "Not started")
-        case .running: return state.t("正在执行", "Running")
-        case .succeeded: return state.t("执行成功", "Succeeded")
-        case .failed: return state.t("执行失败", "Failed")
-        case .cancelled: return state.t("已取消", "Cancelled")
-        case .timedOut: return state.t("已超时", "Timed out")
+        case .idle: return state.t("ui.216")
+        case .running: return state.t("ui.281")
+        case .succeeded: return state.t("ui.325")
+        case .failed: return state.t("ui.125")
+        case .cancelled: return state.t("ui.039")
+        case .timedOut: return state.t("ui.359")
         }
     }
 }

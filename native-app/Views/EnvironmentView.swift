@@ -17,24 +17,24 @@ struct EnvironmentView: View {
     private func chainStatus(_ name: String) -> InspectionStatus {
         switch name {
         case "FX": return actionEvidence["fx_host_running"]?.boolean == true ? .normal : actionEvidence["fx_host_running"]?.boolean == false ? .action : .unchecked
-        case "SSH": return actionEvidence["ssh_connected"]?.boolean == true ? .normal : .unchecked
-        case "Guest": return actionEvidence["guest_ready"]?.boolean == true ? .normal : .unchecked
+        case "SSH": return actionEvidence["ssh_connected"]?.boolean == true ? .normal : actionEvidence["ssh_connected"]?.boolean == false ? .action : .unchecked
+        case "Guest": return actionEvidence["guest_ready"]?.boolean == true ? .normal : actionEvidence["guest_ready"]?.boolean == false ? .action : .unchecked
         case "Steam": return actionEvidence["steam_running"]?.boolean == true || (actionEvidence["steam_process_count"]?.integer ?? 0) > 0 ? .normal : actionEvidence["steam_process_count"] != nil ? .action : .unchecked
         default: return .unchecked
         }
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            TacticalPageHeader(title: state.t("运行环境检测", "Environment inspection"), refreshState: state)
+            TacticalPageHeader(title: state.t("ui.108"), refreshState: state)
             GUIOperationsPanel(state: state, tasks: state.tasks)
             TacticalAdaptiveLayout(minimumWidth: 140, maximumColumns: 4) {
                 TacticalMetric(title: "macOS", value: state.value("get_system_info", "os_version"), symbol: "apple.logo")
-                TacticalMetric(title: state.t("架构", "Architecture"), value: state.value("get_system_info", "arch"), symbol: "cpu")
+                TacticalMetric(title: state.t("ui.026"), value: state.value("get_system_info", "arch"), symbol: "cpu")
                 TacticalMetric(title: "Python", value: state.value("get_system_info", "python"), symbol: "terminal")
-                TacticalMetric(title: state.t("检测范围", "Inspection scope"), value: state.t("本机只读快照", "Host read-only snapshot"), symbol: "square.stack.3d.up")
+                TacticalMetric(title: state.t("ui.164"), value: state.t("ui.152"), symbol: "square.stack.3d.up")
             }
             TacticalAdaptiveLayout(minimumWidth: 255, maximumColumns: 2) {
-                TacticalPanel(number: "A", title: state.t("本地依赖", "Local dependencies"), symbol: "shippingbox") {
+                TacticalPanel(number: "A", title: state.t("ui.185"), symbol: "shippingbox") {
                     ForEach(state.rows("get_dependencies", "items"), id: \.selfName) { row in
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(alignment: .top) {
@@ -47,19 +47,19 @@ struct EnvironmentView: View {
                         }
                     }
                     if state.rows("get_dependencies", "items").isEmpty { badge(snapshotStatus("get_dependencies")) }
-                    Text(state.t("正常仅表示该 Python 已执行 Bridge；工具文件存在仍无法确认连接或服务就绪。", "Normal means this Python executed the Bridge. Tool files alone do not confirm connectivity or service readiness."))
+                    Text(state.t("ui.207"))
                         .font(TacticalTypography.caption).foregroundStyle(.secondary)
                 }
-                TacticalPanel(number: "B", title: state.t("运行组件", "Runtime components"), symbol: "cpu") {
-                    TacticalInfoRow(title: state.t("FX 运行时", "FX runtime"), value: state.t("无法确认 · 只读快照未探测进程", "Cannot confirm · Snapshot does not probe processes"))
-                    TacticalInfoRow(title: state.t("gvproxy 运行时", "gvproxy runtime"), value: state.t("无法确认 · 只读快照未探测服务", "Cannot confirm · Snapshot does not probe services"))
-                    TacticalWarningBanner(text: state.t("刷新不会启动 FX 或连接 Guest。使用网络与连接工具主动检查；启动记录不等于当前实时状态。", "Refresh does not start FX or connect to Guest. Use the connection tools for explicit checks; launch history is not current live state."))
+                TacticalPanel(number: "B", title: state.t("ui.283"), symbol: "cpu") {
+                    TacticalInfoRow(title: state.t("ui.122"), value: state.t("ui.045"))
+                    TacticalInfoRow(title: state.t("ui.387"), value: state.t("ui.046"))
+                    TacticalWarningBanner(text: state.t("ui.264"))
                 }
             }
-            DisclosureGroup(state.t("高级检测与维护", "Advanced inspection and maintenance")) {
+            DisclosureGroup(state.t("ui.009")) {
                 LegacyOperationsView(state: state, scope: "environment")
             }
-            TacticalPanel(number: "C", title: state.t("游戏运行链路 · 检测范围", "Game runtime chain · inspection scope"), symbol: "point.3.connected.trianglepath.dotted") {
+            TacticalPanel(number: "C", title: state.t("ui.141"), symbol: "point.3.connected.trianglepath.dotted") {
                 TacticalAdaptiveLayout(minimumWidth: 95, maximumColumns: 6) {
                     ForEach(["FX", "SSH", "Guest", "Steam", "EAC", "Multiplayer"], id: \.self) { name in
                         VStack(spacing: 10) {
@@ -69,7 +69,7 @@ struct EnvironmentView: View {
                         }.frame(maxWidth: .infinity).padding(.vertical, 10)
                     }
                 }
-                Text(state.t("链路显示当前目标最近一次操作的证据。FX 表示宿主进程，连接与 Guest 身份须分别验证；EAC 和联机未执行独立检查。游戏进程不代表已进入主菜单。", "The chain reflects the latest action on the current target. FX means host processes; connection and Guest identity need separate verification. EAC and multiplayer have not been independently checked. A game process does not prove the menu."))
+                Text(state.t("ui.338"))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
             }
         }

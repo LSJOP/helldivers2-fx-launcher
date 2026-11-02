@@ -1,0 +1,14 @@
+"updates.section" = "ソフトウェア更新";
+"updates.currentVersion" = "現在の App バージョン";
+"updates.automaticChecks" = "更新を自動確認";
+"updates.checkNow" = "更新を確認…";
+"updates.unconfigured" = "更新サービス未設定です。更新確認は行っていません。";
+"updates.ready" = "更新サービスは利用準備完了です。";
+"updates.checking" = "更新を確認中…";
+"updates.available" = "更新があります。Sparkle の更新画面に従ってください。";
+"updates.finished" = "更新確認が終了しました。インストール完了を意味しません。";
+"updates.failed" = "更新確認に失敗しました。Sparkle の詳細を確認してください。";
+"updates.scope" = "更新対象はこの起動器のみです。FX Runtime、SteamOS、ゲームファイル、EAC は更新しません。";
+"updates.languageRestart" = "言語と Python の選択はこの App に保存します。macOS／Sparkle メニューへの反映には App 再起動が必要です。外観はセッションのみ、実行フォルダは検証済み資格情報の保存に同意した場合のみ保持します。Native 文言は十言語の統一リソースを使用します。";
+"updates.automaticOff" = "自動確認：オフ。設定後の初回同意は Sparkle が管理します。";
+"updates.automaticOn" = "自動確認：オン（Sparkle 設定）";

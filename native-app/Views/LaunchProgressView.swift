@@ -4,31 +4,31 @@ struct LaunchProgressView: View {
     @ObservedObject var state: AppState
     @ObservedObject var tasks: TaskManager
     var body: some View {
-        TacticalPanel(number: "L", title: state.t("本次启动进度", "Current launch progress"), symbol: "play.rectangle") {
-            Text(state.launchSession.current.title(state.chinese)).font(TacticalTypography.module)
+        TacticalPanel(number: "L", title: state.t("ui.088"), symbol: "play.rectangle") {
+            Text(state.launchSession.current.title(state.languageCode)).font(TacticalTypography.module)
             ForEach([LaunchStage.checkingEnvironment, .checkingFXEntry, .startingFX, .waitingForGuest, .checkingCompatibility, .startingSteam, .gameProcessDetected, .checkingEAC]) { stage in
                 let value = state.launchSession.evidence[stage] ?? "unverified"
                 HStack {
                     Image(systemName: value == "done" || value == "passed" ? "checkmark.circle" : value == "failed" ? "exclamationmark.circle" : "circle.dashed")
-                    Text(stage.title(state.chinese))
+                    Text(stage.title(state.languageCode))
                     Spacer()
-                    Text(value == "done" || value == "passed" ? state.t("本次已观察", "Observed this attempt") : value == "running" ? state.t("进行中", "In progress") : value == "failed" ? state.t("失败", "Failed") : state.t("未验证", "Unverified"))
+                    Text(value == "done" || value == "passed" ? state.t("ui.220") : value == "running" ? state.t("ui.157") : value == "failed" ? state.t("ui.125") : state.t("ui.368"))
                 }.font(TacticalTypography.caption)
             }
             if let failure = state.launchSession.failure {
                 let stage = failure.details["stage"]?.text.flatMap(LaunchStage.init(rawValue:))
-                TacticalWarningBanner(text: (stage?.title(state.chinese) ?? state.t("启动", "Launch")) + " · " + failure.message(state.chinese) + " [" + failure.code + "]", isError: true)
+                TacticalWarningBanner(text: (stage?.title(state.languageCode) ?? state.t("ui.175")) + " · " + failure.message(state.languageCode) + " [" + failure.code + "]", isError: true)
                 if let detail = failure.details["summary"]?.text { Text(detail).font(TacticalTypography.log).textSelection(.enabled) }
             }
-            TacticalInfoRow(title: state.t("进入主菜单", "Main menu"), value: state.launchSession.mainMenuConfirmedAt.map { state.t("用户确认 · ", "User confirmed · ") + $0 } ?? state.t("待用户确认", "Awaiting user confirmation"))
-            TacticalInfoRow(title: state.t("进入单人任务", "Single-player mission"), value: state.launchSession.singlePlayerConfirmedAt.map { state.t("用户确认 · ", "User confirmed · ") + $0 } ?? state.t("待用户确认", "Awaiting user confirmation"))
-            Text(state.t("进程证据是最近一次读数，不代表已进入主菜单。仅在亲自看到相应游戏画面后确认。EAC 独立显示，多人匹配不在本阶段验收范围。", "Process evidence is a last observation, not proof of the main menu. Confirm only after seeing the corresponding game screen. EAC is separate; multiplayer is outside this phase."))
+            TacticalInfoRow(title: state.t("ui.188"), value: state.launchSession.mainMenuConfirmedAt.map { state.t("ui.376") + $0 } ?? state.t("ui.033"))
+            TacticalInfoRow(title: state.t("ui.310"), value: state.launchSession.singlePlayerConfirmedAt.map { state.t("ui.376") + $0 } ?? state.t("ui.033"))
+            Text(state.t("ui.236"))
                 .font(TacticalTypography.caption).foregroundStyle(.secondary)
-            Button(state.t("我已进入主菜单", "I reached the main menu")) { state.confirmMainMenu() }
+            Button(state.t("ui.155")) { state.confirmMainMenu() }
                 .disabled(tasks.busy || !state.launchSession.processDetected || state.launchSession.mainMenuConfirmedAt != nil)
-            Button(state.t("我已进入单人任务", "I entered a single-player mission")) { state.confirmSinglePlayer() }
+            Button(state.t("ui.154")) { state.confirmSinglePlayer() }
                 .disabled(tasks.busy || !state.launchSession.processDetected || state.launchSession.mainMenuConfirmedAt == nil || state.launchSession.singlePlayerConfirmedAt != nil)
-            Button(state.t("只读复查游戏进程", "Recheck game process (read-only)")) { state.runOperation("observe_launch", params: ["confirmed": .bool(true)]) }
+            Button(state.t("ui.259")) { state.runOperation("observe_launch", params: ["confirmed": .bool(true)]) }
                 .disabled(tasks.busy || state.runtimeRoot.isEmpty)
         }
     }

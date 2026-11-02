@@ -5,8 +5,9 @@ final class AppState: ObservableObject {
     @Published var selection: Page? = .dashboard
     @Published var languageCode = NativeLocalization.initialLanguage {
         didSet {
+            guard !NativeLocalization.isolatedUXSmoke else { return }
             UserDefaults.standard.set(languageCode, forKey: "NativeLanguage")
-            let systemLanguage = languageCode.hasPrefix("zh") ? "zh-Hans" : languageCode
+            let systemLanguage = languageCode == "zh-CN" ? "zh-Hans" : languageCode == "zh-TW" ? "zh-Hant" : languageCode
             UserDefaults.standard.set([systemLanguage, "en"], forKey: "AppleLanguages")
         }
     }
@@ -18,8 +19,91 @@ final class AppState: ObservableObject {
     @Published var operationSelection: NativeOperation?
     @Published var pendingAction: GUIAction?
     let credentials = SessionCredentialManager()
-    @Published var runtimeRoot = UserDefaults.standard.string(forKey: "NativeRememberedRuntimeRoot") ?? "" {
-        didSet { if oldValue != runtimeRoot { credentials.clear(); guiSnapshots = [:] } }
+    @Published private(set) var fxSelection = FXSelectionManager(defaults: NativeLocalization.isolatedUXSmoke ? nil : .standard)
+    @Published private(set) var fxSelectionIssue = false
+    var fxStatus: String {
+        guard fxSelection.selected != nil else {
+            return t(!fxSelection.scanned ? "ui.208" : fxSelection.candidates.isEmpty ? "ui.fx.none" : "ui.fx.choose")
+        }
+        return t(fxSelection.automatic ? "ui.fx.autoPending" : "ui.fx.defaultPending")
+    }
+    var fxVersion: String { fxSelection.selected?["version"]?.text ?? t("ui.366") }
+    private func applyFXScan(_ result: [String: JSONValue]) {
+        let previous = fxSelection.selectedPath
+        fxSelection.reconcile(result["candidates"]?.array.map(\.object) ?? [], incomplete: result["scan_incomplete"]?.boolean != false)
+        if previous != fxSelection.selectedPath { credentials.clear(); guiSnapshots = [:]; inspectedTarget = nil }
+        if let root = fxSelection.selected?["runtime_root"]?.text { runtimeRoot = root }
+    }
+    func selectFX(_ path: String) {
+        guard !tasks.busy else { return }
+        if fxSelection.selectedPath != path { credentials.clear(); guiSnapshots = [:] }
+        fxSelection.select(path)
+        if let root = fxSelection.selected?["runtime_root"]?.text { runtimeRoot = root }
+        inspectedTarget = nil
+    }
+    func scanFX(manualPath: String? = nil, openingLaunch: Bool = false) {
+        guard !tasks.busy else { return }
+        fxSelectionIssue = false
+        tasks.start { [weak self] in
+            guard let self else { return }
+            do {
+                let config = try BridgeConfiguration.bundled(python: self.pythonURL)
+                let paths = self.fxSelection.scanPaths + (manualPath.map { [.string($0)] } ?? [])
+                let reply = try await self.bridge.request("list_fx_versions", configuration: config, params: ["selected_paths": .array(paths), "runtime_root": .string(self.runtimeRoot)])
+                self.results["list_fx_versions"] = reply.result
+                self.applyFXScan(reply.result)
+                if let rawPath = manualPath {
+                    let manualPath = URL(fileURLWithPath: rawPath).resolvingSymlinksInPath().path
+                    self.fxSelectionIssue = !self.fxSelection.candidates.contains { $0["path"]?.text == manualPath }
+                    if self.fxSelection.selectedPath != manualPath { self.credentials.clear(); self.guiSnapshots = [:] }
+                    self.fxSelection.select(manualPath)
+                    if let root = self.fxSelection.selected?["runtime_root"]?.text { self.runtimeRoot = root }
+                }
+                if openingLaunch {
+                    if self.fxSelection.selected == nil { self.selection = .fx }
+                    else { self.operationSelection = NativeOperation(method: "launch_game") }
+                }
+            } catch {
+                self.operationError = error as? ErrorState ?? ErrorState("CORE_UNAVAILABLE")
+            }
+        }
+    }
+    @Published var runtimeRoot = NativeLocalization.isolatedUXSmoke ? "" : (UserDefaults.standard.string(forKey: "NativeLaunchResourcesRoot") ?? UserDefaults.standard.string(forKey: "NativeRememberedRuntimeRoot") ?? "") {
+        didSet {
+            if oldValue != runtimeRoot {
+                credentials.clear(); guiSnapshots = [:]; targetInspection = [:]; targetInspectionError = nil; inspectedTarget = nil
+                if !NativeLocalization.isolatedUXSmoke { UserDefaults.standard.set(runtimeRoot, forKey: "NativeLaunchResourcesRoot") }
+            }
+        }
+    }
+    @Published private(set) var targetInspection: [String: JSONValue] = [:]
+    @Published private(set) var targetInspectionError: ErrorState?
+    @Published private(set) var inspectingTarget = false
+    private var inspectedTarget: String?
+    var targetInspectionIdentity: String { runtimeRoot + "|" + pythonURL.path + "|" + (fxSelection.selectedPath ?? "") + "|" + fxVersion }
+    func inspectTargetIfNeeded(force: Bool = false) {
+        let root = runtimeRoot, identity = targetInspectionIdentity
+        guard (hasLoaded || error != nil), !root.isEmpty, !tasks.busy, force || inspectedTarget != identity else { return }
+        inspectingTarget = true
+        targetInspection = [:]; targetInspectionError = nil
+        tasks.start { [weak self] in
+            guard let self else { return }
+            defer { self.inspectingTarget = false }
+            do {
+                let config = try BridgeConfiguration.bundled(python: self.pythonURL)
+                let reply = try await self.bridge.request("inspect_launch_target", configuration: config, params: ["runtime_root": .string(root), "fx_path": .string(self.fxSelection.selectedPath ?? "")])
+                guard self.targetInspectionIdentity == identity else { return }
+                guard reply.result["scope"]?.text == "selected_target_file_metadata_only",
+                      reply.result["archive_files_match"]?.boolean != nil,
+                      reply.result["fx_executable_present"]?.boolean != nil else { throw ErrorState("PROTOCOL_ERROR") }
+                self.targetInspection = reply.result
+                self.inspectedTarget = identity
+            } catch {
+                guard self.targetInspectionIdentity == identity else { return }
+                self.targetInspectionError = error as? ErrorState ?? ErrorState("CORE_UNAVAILABLE")
+                self.inspectedTarget = identity
+            }
+        }
     }
     @Published private(set) var performanceSnapshot: [String: JSONValue] = [:]
     @Published private(set) var guiRecords: [String: GUIOperationRecord] = [:]
@@ -35,6 +119,7 @@ final class AppState: ObservableObject {
         didSet { UserDefaults.standard.set(pythonURL.path, forKey: "NativePythonPath") }
     }
     private static var savedPythonURL: URL {
+        if NativeLocalization.isolatedUXSmoke { return URL(fileURLWithPath: "/usr/bin/python3") }
         if let path = UserDefaults.standard.string(forKey: "NativePythonPath"), FileManager.default.isExecutableFile(atPath: path) {
             return URL(fileURLWithPath: path)
         }
@@ -50,8 +135,8 @@ final class AppState: ObservableObject {
     let tasks = TaskManager()
     private let bridge = BridgeService()
 
-    func t(_ zh: String, _ en: String) -> String { NativeLocalization.text(zh, en, language: languageCode) }
-    func pageTitle(_ page: Page) -> String { t(page.title(true), page.title(false)) }
+    func t(_ key: String) -> String { NativeStrings.text(key, language: languageCode) }
+    func pageTitle(_ page: Page) -> String { page.title(languageCode) }
     func runOperation(_ method: String, params: [String: JSONValue] = [:]) {
         guard !tasks.busy else { return }
         let generation = UUID(); operationGeneration = generation
@@ -68,6 +153,9 @@ final class AppState: ObservableObject {
                 let config = try BridgeConfiguration.bundled(python: self.pythonURL)
                 var input = params.filter { !["password","passphrase","sudo_password"].contains($0.key) }
                 if !selectedRoot.isEmpty { input["runtime_root"] = .string(selectedRoot) }
+                if ["launch_game", "preflight_launch", "observe_launch", "connect_fx", "inspect_guest_environment", "check_fx_state", "start_fx", "start_steam"].contains(method), let path = self.fxSelection.selectedPath {
+                    input["fx_path"] = .string(path)
+                }
                 if let note = input["note"]?.text { input["note"] = .string(redactor.text(note)) }
                 if method == "save_configuration", let value = input["configuration"], redactor.containsSecret(value) { throw ErrorState("SENSITIVE_CONFIGURATION") }
                 if ["launch_game","test_ssh","test_guest_sudo","connect_fx","inspect_guest_environment","start_steam","inspect_guest","apply_performance","save_network_snapshot"].contains(method) {
@@ -132,6 +220,8 @@ final class AppState: ObservableObject {
     }
     func perform(_ action: GUIAction) {
         guard !tasks.busy else { return }
+        operationError = nil; operationResult = [:]; operationEvents = []
+        if action == .game { scanFX(openingLaunch: true); return }
         if runtimeRoot.isEmpty { operationSelection = NativeOperation(method: action.rawValue) }
         else if action.needsReview { pendingAction = action }
         else { runOperation(action.rawValue, params: ["confirmed": .bool(true)]) }
@@ -155,6 +245,7 @@ final class AppState: ObservableObject {
         }
     }
     func prepareCredentials(interactive: Bool = false) async {
+        guard !NativeLocalization.isolatedUXSmoke else { return }
         do {
             let config = try BridgeConfiguration.bundled(python: pythonURL)
             let metadata = try await bridge.request("read_configuration", configuration: config)
@@ -176,9 +267,10 @@ final class AppState: ObservableObject {
     func confirmMainMenu() { launchSession.confirmMainMenu(); recordLaunch() }
     func confirmSinglePlayer() { launchSession.confirmSinglePlayer(); recordLaunch() }
     func endSession() { tasks.cancel(); credentials.clear() }
-    func value(_ method: String, _ key: String) -> String { results[method]?[key]?.text ?? t("未知", "Unknown") }
+    func value(_ method: String, _ key: String) -> String { results[method]?[key]?.text ?? t("ui.366") }
     func rows(_ method: String, _ key: String) -> [[String: JSONValue]] { results[method]?[key]?.array.map(\.object) ?? [] }
     func refresh() {
+        inspectedTarget = nil
         tasks.start { [weak self] in await self?.load() }
     }
     private func load() async {
@@ -192,12 +284,14 @@ final class AppState: ObservableObject {
             var snapshotTime: String?
             for method in ["handshake", "get_launcher_version", "get_system_info", "get_environment_status", "get_dependencies", "list_fx_versions", "get_logs", "get_legacy_catalog"] {
                 try Task.checkCancellation()
-                let reply = try await bridge.request(method, configuration: config)
+                let scanParams: [String: JSONValue] = method == "list_fx_versions" ? ["selected_paths": .array(fxSelection.scanPaths), "runtime_root": .string(runtimeRoot)] : [:]
+                let reply = try await bridge.request(method, configuration: config, params: scanParams)
                 try validate(method, result: reply.result)
                 snapshot[method] = reply.result
                 snapshotTime = reply.observedAt
                 appendLog("\(method): OK [\(reply.requestID)]")
             }
+            if let scan = snapshot["list_fx_versions"] { applyFXScan(scan) }
             results = snapshot; observedAt = snapshotTime; hasLoaded = true; stale = false
         } catch {
             let failure = error as? ErrorState ?? ErrorState(error is CancellationError ? "CANCELLED" : "PROTOCOL_ERROR")

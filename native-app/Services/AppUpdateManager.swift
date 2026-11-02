@@ -6,9 +6,8 @@ enum UpdateString: String {
     case section, currentVersion, automaticChecks, checkNow, unconfigured, ready, checking
     case available, finished, failed, scope, languageRestart, automaticOff, automaticOn
     func text(_ language: String) -> String {
-        let code = language.hasPrefix("zh") ? "zh-Hans" : "en"
-        let bundle = Bundle.main.path(forResource: code, ofType: "lproj").flatMap(Bundle.init(path:)) ?? .main
-        return bundle.localizedString(forKey: "updates." + rawValue, value: rawValue, table: "Localizable")
+        let keys: [String: String] = ["section":"ui.312","currentVersion":"ui.085","automaticChecks":"ui.031","checkNow":"ui.051","unconfigured":"ui.372","ready":"ui.373","checking":"ui.056","available":"ui.015","finished":"ui.369","failed":"ui.370","scope":"ui.374","languageRestart":"ui.171","automaticOff":"ui.029","automaticOn":"ui.030"]
+        return keys[rawValue].map { NativeStrings.text($0, language: language) } ?? "⟦updates." + rawValue + "⟧"
     }
 }
 

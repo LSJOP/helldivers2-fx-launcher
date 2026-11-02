@@ -7,20 +7,21 @@ enum LaunchStage: String, CaseIterable, Identifiable {
     case startingSteam = "StartingSteam", launchingGame = "LaunchingGame", waitingForGame = "WaitingForGame"
     case gameProcessDetected = "GameProcessDetected", checkingEAC = "CheckingEAC", failed = "Failed"
     var id: String { rawValue }
-    func title(_ zh: Bool) -> String {
+    func title(_ zh: Bool) -> String { title(zh ? "zh-CN" : "en") }
+    func title(_ language: String) -> String {
         switch self {
-        case .idle: return zh ? "尚未启动" : "Idle"
-        case .checkingEnvironment: return zh ? "检查本地环境" : "Checking local environment"
-        case .startingFX: return zh ? "FX 宿主进程（非 Guest 就绪）" : "FX host processes (not Guest readiness)"
-        case .checkingFXEntry: return zh ? "FX 启动入口检查" : "FX launch entry check"
-        case .waitingForGuest: return zh ? "等待 Guest / SSH" : "Waiting for Guest / SSH"
-        case .checkingCompatibility: return zh ? "检查兼容性配置" : "Checking compatibility"
-        case .startingSteam: return zh ? "启动 Steam" : "Starting Steam"
-        case .launchingGame: return zh ? "发送游戏启动请求" : "Requesting game launch"
-        case .waitingForGame: return zh ? "等待游戏进程" : "Waiting for game process"
-        case .gameProcessDetected: return zh ? "已检测到游戏进程" : "Game process detected"
-        case .checkingEAC: return zh ? "EAC 独立检测" : "Separate EAC check"
-        case .failed: return zh ? "启动操作需要处理" : "Launch needs attention"
+        case .idle: return NativeStrings.text("ui.156", language: language)
+        case .checkingEnvironment: return NativeStrings.text("ui.057", language: language)
+        case .startingFX: return NativeStrings.text("ui.120", language: language)
+        case .checkingFXEntry: return NativeStrings.text("ui.121", language: language)
+        case .waitingForGuest: return NativeStrings.text("ui.384", language: language)
+        case .checkingCompatibility: return NativeStrings.text("ui.054", language: language)
+        case .startingSteam: return NativeStrings.text("ui.320", language: language)
+        case .launchingGame: return NativeStrings.text("ui.269", language: language)
+        case .waitingForGame: return NativeStrings.text("ui.385", language: language)
+        case .gameProcessDetected: return NativeStrings.text("ui.140", language: language)
+        case .checkingEAC: return NativeStrings.text("ui.303", language: language)
+        case .failed: return NativeStrings.text("ui.179", language: language)
         }
     }
 }
@@ -76,7 +77,7 @@ struct LaunchSession {
          "fx_version": .string(fxVersion ?? "unverified"), "stage": .string(current.rawValue),
          "stages": .object(evidence.reduce(into: [:]) { $0[$1.key.rawValue] = .string($1.value) }),
          "error_code": .string(failure?.code ?? "none"),
-         "error_summary": .string(failure?.details["summary"]?.text ?? failure?.message(false) ?? ""),
+         "error_summary": .string(failure?.details["summary"]?.text ?? failure?.message("en") ?? ""),
          "game_process_detected": .bool(processDetected), "game_window": .string("unverified"),
          "main_menu": .string(mainMenuConfirmedAt == nil ? "unverified" : "user_confirmed"),
          "main_menu_confirmed_at": .string(mainMenuConfirmedAt ?? "unverified")]

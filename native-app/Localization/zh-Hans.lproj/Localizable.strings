@@ -9,6 +9,6 @@
 "updates.finished" = "更新检查周期已结束，不代表安装成功。";
 "updates.failed" = "更新检查失败，详情见 Sparkle 提示。";
 "updates.scope" = "仅更新启动器本身，不更新 FX Runtime、SteamOS、游戏文件或 EAC。";
-"updates.languageRestart" = "语言和 Python 选择保存在本 App 中。请重启 App，使标准 macOS 菜单及 Sparkle 对话框应用所选语言。外观仅本次会话生效；仅在选择保存已验证凭据后记住运行目录。保留十种原语言资源，部分 Native 文案回退英文。";
+"updates.languageRestart" = "语言和 Python 选择保存在本 App。重启后应用到 macOS 和 Sparkle 菜单／弹窗。外观仅限本次会话；仅在主动保存已验证凭据后保留运行目录。Native 文案统一维护十种语言。";
 "updates.automaticOff" = "自动检查：关闭。服务配置完成后，由 Sparkle 管理首次运行授权。";
 "updates.automaticOn" = "自动检查：开启（Sparkle 偏好）。";

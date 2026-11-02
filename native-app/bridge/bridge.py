@@ -13,7 +13,7 @@ import sys
 PROTOCOL = 1
 MAX_LINE = 65536
 METHODS = ('handshake', 'get_launcher_version', 'get_system_info', 'get_environment_status',
-           'get_dependencies', 'list_fx_versions', 'get_logs')
+           'get_dependencies', 'list_fx_versions', 'get_logs', 'inspect_launch_target')
 
 
 class Deadline(Exception):
@@ -72,8 +72,19 @@ class Bridge:
         method = request.get('method')
         timeout = request.get('timeout_ms', 3000)
         operation = isinstance(method,str) and method in self.operations_module.OPERATIONS
-        if not isinstance(method, str) or not isinstance(params, dict) or (params and not operation) or type(timeout) is not int or not 1 <= timeout <= (900000 if operation else 5000):
+        target_inspection = method == 'inspect_launch_target'
+        fx_scan = method == 'list_fx_versions'
+        if not isinstance(method, str) or not isinstance(params, dict) or (params and not operation and not target_inspection and not fx_scan) or type(timeout) is not int or not 1 <= timeout <= (900000 if operation else 5000):
             return error(rid, 'INVALID_ARGUMENT', 'Invalid method, parameters or timeout')
+        if target_inspection and ((set(params) - {'runtime_root', 'fx_path'} or 'runtime_root' not in params) or not isinstance(params['runtime_root'], str) or not params['runtime_root'] or len(params['runtime_root']) > 4096 or '\x00' in params['runtime_root'] or not isinstance(params.get('fx_path', ''), str) or len(params.get('fx_path', '')) > 4096 or '\x00' in params.get('fx_path', '')):
+            return error(rid, 'INVALID_ARGUMENT', 'A selected runtime directory is required')
+        if fx_scan:
+            paths = params.get('selected_paths', [])
+            root = params.get('runtime_root', '')
+            if (set(params) - {'selected_paths', 'runtime_root'} or not isinstance(paths, list) or len(paths) > 8
+                    or not isinstance(root, str) or len(root) > 4096 or '\x00' in root
+                    or any(not isinstance(p, str) or not p or len(p) > 4096 or '\x00' in p for p in paths)):
+                return error(rid, 'INVALID_ARGUMENT', 'Invalid FX scan paths')
         if method not in METHODS and not operation:
             return error(rid, 'NOT_IMPLEMENTED', 'Method is unavailable')
         self.active_rid=rid
@@ -84,6 +95,10 @@ class Bridge:
             with contextlib.redirect_stdout(sys.stderr):
                 if method == 'handshake':
                     result = {'protocol_min': 1, 'protocol_max': 1, 'capabilities': list(METHODS)+list(self.operations_module.OPERATIONS), 'read_only': False, 'permission_model':'explicit_actions', 'read_only_default':True}
+                elif fx_scan:
+                    result = self.adapter.fx_versions(params.get('selected_paths'), params.get('runtime_root'))
+                elif target_inspection:
+                    result = self.adapter.launch_target(params['runtime_root'], params.get('fx_path'))
                 elif operation:
                     result=self.operations.run(method,params)
                     # Normalize Path results without publishing raw exception messages.

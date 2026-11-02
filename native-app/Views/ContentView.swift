@@ -10,14 +10,15 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 210, ideal: 210, max: 250)
         } detail: {
             VStack(alignment: .leading, spacing: 16) {
+                RuntimeTargetPanel(state: state, tasks: tasks)
                 if let error = state.error, state.selection != .dashboard {
-                    Label(error.message(state.chinese), systemImage: "exclamationmark.triangle")
+                    Label(error.message(state.languageCode), systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red).textSelection(.enabled)
                         .accessibilityIdentifier("bridge.error")
                     Text("\(error.code) · \(error.method)").font(.caption.monospaced()).foregroundStyle(.secondary)
                 }
                 if state.stale && state.selection != .dashboard {
-                    Label(state.t("以下是上次读取的数据；本次尚未完成。", "Showing the previous snapshot; this refresh has not completed."), systemImage: "clock.badge.exclamationmark")
+                    Label(state.t("ui.309"), systemImage: "clock.badge.exclamationmark")
                         .font(.callout).foregroundStyle(.orange)
                 }
                 ScrollView {
@@ -37,14 +38,14 @@ struct ContentView: View {
                 if tasks.busy {
                     HStack(spacing: 10) {
                         ProgressView().controlSize(.small)
-                        Text(state.refreshing ? state.t("正在读取全部只读快照…", "Reading all read-only snapshots…") : state.t("操作执行中…", "Operation in progress…"))
+                        Text(state.inspectingTarget ? state.t("ui.ux.checking") : state.refreshing ? state.t("ui.255") : state.t("ui.225"))
                             .font(TacticalTypography.caption)
                         Spacer()
-                        Button(state.t("取消当前操作", "Cancel current operation")) { tasks.cancel() }
+                        Button(state.t("ui.038")) { tasks.cancel() }
                     }
                 }
                 if let time = state.observedAt, state.selection != .dashboard {
-                    Text(state.t("快照时间：", "Snapshot: ") + time)
+                    Text(state.t("ui.311") + time)
                         .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 }
             }
@@ -55,13 +56,16 @@ struct ContentView: View {
             .tint(TacticalColors(scheme: scheme).accent)
 
         }
-        .confirmationDialog(state.t("确认启动操作", "Confirm start action"), isPresented: Binding(get: { state.pendingAction != nil }, set: { if !$0 { state.pendingAction = nil } }), titleVisibility: .visible) {
+        .task(id: state.targetInspectionIdentity + (tasks.busy ? "|busy" : "|idle")) {
+            state.inspectTargetIfNeeded()
+        }
+        .confirmationDialog(state.t("ui.075"), isPresented: Binding(get: { state.pendingAction != nil }, set: { if !$0 { state.pendingAction = nil } }), titleVisibility: .visible) {
             if let action = state.pendingAction {
-                Button(state.t(action.labels.0, action.labels.1)) { state.confirmPendingAction(action) }
+                Button(state.t(action.labelKey)) { state.confirmPendingAction(action) }
             }
-            Button(state.t("取消", "Cancel"), role: .cancel) { state.pendingAction = nil }
+            Button(state.t("ui.037"), role: .cancel) { state.pendingAction = nil }
         } message: {
-            Text(state.t("将在所选环境执行此启动操作。游戏启动会自动执行原有必要检查；具体配置变更仍需单独核对确认，不会强制停止已运行的 FX 或游戏。", "This starts the selected action in your chosen environment. Game launch runs the original required checks automatically. Exact configuration changes still need separate approval; running FX or games are never forcibly stopped."))
+            Text(state.t("ui.358"))
         }
         .sheet(item: $state.operationSelection) { item in
             LegacyOperationSheet(state: state, operation: item.method)

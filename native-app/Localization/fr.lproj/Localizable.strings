@@ -1,0 +1,14 @@
+"updates.section" = "Mise à jour logicielle";
+"updates.currentVersion" = "Version actuelle de l’application";
+"updates.automaticChecks" = "Rechercher automatiquement les mises à jour";
+"updates.checkNow" = "Rechercher des mises à jour…";
+"updates.unconfigured" = "Service de mise à jour non configuré. Aucune vérification effectuée.";
+"updates.ready" = "Service de mise à jour prêt.";
+"updates.checking" = "Recherche de mises à jour…";
+"updates.available" = "Une mise à jour est disponible. Suivez la fenêtre Sparkle.";
+"updates.finished" = "Cycle de vérification terminé. Cela ne confirme pas l’installation.";
+"updates.failed" = "Échec de la recherche de mises à jour. Voir Sparkle.";
+"updates.scope" = "Mises à jour de ce lanceur uniquement, pas de FX Runtime, SteamOS, fichiers du jeu ni EAC.";
+"updates.languageRestart" = "Langue et Python sont enregistrés pour cette application. Redémarrez pour les menus macOS/Sparkle. Apparence limitée à la session ; dossier conservé seulement avec l’enregistrement volontaire d’identifiants vérifiés. Les textes Native utilisent des ressources communes en dix langues.";
+"updates.automaticOff" = "Vérifications automatiques désactivées. Sparkle gère l’accord initial après configuration du service.";
+"updates.automaticOn" = "Vérifications automatiques activées (préférence Sparkle).";

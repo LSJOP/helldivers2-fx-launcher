@@ -41,7 +41,7 @@ A native **SwiftUI + AppKit** interface over the original Python Core: launch th
 
 </details>
 
-Four actual Debug App window captures, taken on 2026-11-03 with real host metadata. Only proportional resizing was applied; no status or interface was composited. The FX image shows the operation area; additional content is accessible by scrolling. The supplied icon/illustrations are generated artwork rendered in the real App, not generated UI screenshots. These images do not prove Guest, game or multiplayer readiness.
+Four actual Debug App window captures refreshed for FX automatic selection V2.1 on 2026-11-03 with real host metadata and no selected launch target. No status or interface was composited. The FX image shows the shared selection controls and operation area; additional content is accessible by scrolling. The supplied icon/illustrations are generated artwork rendered in the real App, not generated UI screenshots. These images do not prove Guest, game or multiplayer readiness.
 
 <a id="en-features"></a>
 
@@ -54,7 +54,7 @@ Four actual Debug App window captures, taken on 2026-11-03 with real host metada
 | 🟢 Implemented | Searchable, filtered, bounded and redacted logs; diagnostic reports |
 | 🟢 Implemented · Read-only | Real chip/CPU/GPU/memory detection, current FX preferences and baseline differences in Game Performance |
 | 🟠 In development | One-click environment inspection and background SSH operations; original-entry FX/Steam starts, independent SSH/sudo credential reuse; fresh live acceptance remains pending |
-| 🟠 In development | Ten original locale catalogs retained; new Native translations are partial, with English fallback |
+| 🟢 Implemented · Static coverage checked | Ten original Python catalogs retained separately; unified Native resources cover all ten languages. Missing Native text is shown as an explicit missing key, without English fallback. Translation naturalness still needs human review |
 | ⚪ Planned / unavailable | Safe FX stop/restart, writable inferred performance profiles with scoped restore, signed/notarized installer |
 
 Performance rules are local and reproducible. The recorded **M4 Pro / 24 GiB** settings are a candidate baseline, not comprehensive performance validation. Other hardware has no inferred writable profile. Apply/restore are disabled with visible reasons. [Parameter sources and limits](docs/GAME_PERFORMANCE.md).
@@ -123,3 +123,7 @@ Existing clones need the intended branch and `git submodule update --init --recu
 ## Disclaimer and license
 
 Unofficial project; no endorsement or compatibility guarantee. HELLDIVERS 2 and related marks belong to their respective owners. A project-wide source license has **not been selected**; do not assume redistribution rights. See [rights and provenance](THIRD_PARTY_NOTICES.md), including the separate Sparkle license and supplied artwork notes.
+
+Development checks: `python3 native-app/script/check_localization.py` reports ten-language key/format coverage and README review candidates; `native-app/script/run_checks.sh` and the pre-commit hook include this gate. UI changes require a review of both READMEs and their real screenshots. The English screenshots were refreshed after UX verification; non-English screenshot variants and translation naturalness still need human review. No CI workflow is configured.
+
+FX selection V2 + automatic selection V2.1: the FX page, overview and launch panel share one persisted default. One identity/path-verified FX is selected automatically from the scan results; multiple installations preserve an existing valid choice or require selection. Missing/moved/updated defaults are revalidated. Selection remains **launch capability unverified** and never starts the game. Every game launch rescans the default and retains the original executable hash, identity, configuration and preflight guards. Other builds may be selected but can be blocked by those compatibility checks. FX application selection is separate from the helper/gvproxy resource directory: resolve it from the selected app’s bounded ancestors or the existing resource directory when possible, otherwise explicitly locate **launch resources** once. Repeated FX-directory selection is not required. Refresh and automatic inspection do not start FX, SSH or the game. Stop/restart and performance Apply/Restore remain unavailable.

@@ -3,6 +3,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 mkdir -p build evidence
+/usr/bin/python3 -I -B script/check_localization.py >evidence/localization-checks.json
+/usr/bin/python3 -I -B checks/localization_checks.py >evidence/localization-negative-checks.txt 2>&1
 /usr/bin/python3 -I -B checks/bridge_checks.py >evidence/python-checks.txt 2>&1
 /usr/bin/python3 -I -B checks/migration_checks.py >evidence/migration-checks.txt 2>&1
 /usr/bin/python3 -I -B checks/credential_checks.py >evidence/credential-python-checks.txt 2>&1
@@ -14,6 +16,8 @@ mkdir -p build evidence
 ./build/CredentialChecks >evidence/credential-swift-checks.txt 2>&1
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Services/GamePerformanceInferenceService.swift checks/PerformanceChecks.swift -o build/PerformanceChecks >evidence/performance-compile.txt 2>&1
 ./build/PerformanceChecks >evidence/performance-checks.txt 2>&1
+/usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Services/FXSelectionManager.swift checks/FXSelectionChecks.swift -o build/FXSelectionChecks >evidence/fx-selection-compile.txt 2>&1
+./build/FXSelectionChecks >evidence/fx-selection-checks.txt 2>&1
 /usr/bin/python3 -I -B checks/safety_guard.py >evidence/safety-guard.txt 2>&1
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift checks/VisualChecks.swift -o build/VisualChecks >evidence/visual-compile.txt 2>&1
 /usr/bin/plutil -lint HD2FXNative.xcodeproj/project.pbxproj >evidence/project-lint.txt
