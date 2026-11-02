@@ -26,7 +26,7 @@ xcodebuild -project "$APP_ROOT/HD2FXNative.xcodeproj" -scheme HD2FXNative -confi
     -derivedDataPath "$STAGING/DerivedData" \
     MARKETING_VERSION="$RELEASE_VERSION" CURRENT_PROJECT_VERSION="$RELEASE_BUILD" \
     DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_IDENTITY="$IDENTITY" CODE_SIGNING_ALLOWED=YES \
-    ENABLE_HARDENED_RUNTIME=YES HD2_UPDATE_CHANNEL="$CHANNEL" archive
+    ENABLE_HARDENED_RUNTIME=YES HD2_UPDATE_CHANNEL=stable HD2_UPDATE_DISTRIBUTION_READY=YES archive
 APP="$STAGING/Launcher.xcarchive/Products/Applications/HD2FXNative.app"
 /usr/bin/python3 - "$APP/Contents/Info.plist" "$CHANNEL" "$RELEASE_VERSION" "$RELEASE_BUILD" <<'PY'
 import base64,plistlib,sys
@@ -34,7 +34,9 @@ with open(sys.argv[1],'rb') as f:p=plistlib.load(f)
 assert p['CFBundleIdentifier']=='com.lsjop.helldivers2fx.native.phase1'
 assert p['CFBundleShortVersionString']==sys.argv[3] and p['CFBundleVersion']==sys.argv[4]
 assert p['HD2UpdateServiceEnabled']=='YES', 'Configure the actual public feed and EdDSA public key first'
-assert p['SUFeedURL']=='https://lsjop.github.io/helldivers2-fx-launcher/updates/'+sys.argv[2]+'/appcast.xml'
+assert p['SUFeedURL']=='https://lsjop.github.io/helldivers2-fx-launcher/updates/stable/appcast.xml'
+assert p['HD2UpdateDistributionReady']=='YES'
+assert p['SUAllowsAutomaticUpdates'] is False and p['SUSignedFeedFailureExpirationInterval']==0
 assert len(base64.b64decode(p['SUPublicEDKey'],validate=True))==32
 PY
 codesign --verify --deep --strict "$APP"
@@ -63,6 +65,10 @@ assert p['SURequireSignedFeed'] is True and p['SUVerifyUpdateBeforeExtraction'] 
 PY
 SIGNATURE="$("$TOOLS/sign_update" -p "$ARCHIVES/$ARCHIVE_NAME")"
 "$TOOLS/sign_update" --verify "$ARCHIVES/$ARCHIVE_NAME" "$SIGNATURE"
+/usr/bin/python3 -I -B "$APP_ROOT/script/make_update_manifest.py" "$APP/Contents/Info.plist" "$ARCHIVES/$ARCHIVE_NAME" "$CHANNEL" "$ARCHIVES/native-update.json"
+"$TOOLS/sign_update" -p "$ARCHIVES/native-update.json" > "$ARCHIVES/native-update.json.sig"
+MANIFEST_SIGNATURE="$(cat "$ARCHIVES/native-update.json.sig")"
+"$TOOLS/sign_update" --verify "$ARCHIVES/native-update.json" "$MANIFEST_SIGNATURE"
 CHANNEL_ARGS=()
 if [[ "$CHANNEL" == preview ]]; then CHANNEL_ARGS=(--channel preview); fi
 "$TOOLS/generate_appcast" --maximum-deltas 0 --maximum-versions 10000 --versions "$RELEASE_BUILD" \

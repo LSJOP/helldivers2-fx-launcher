@@ -209,9 +209,9 @@ import ApplicationServices
                   !zh || !titles.contains("Help"),
                   Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String == "HELLDIVERS 2 FX Launcher",
                   let check = appItems.first(where: { $0.title == UpdateString.checkNow.text(state.languageCode) }),
-                  !check.isEnabled else { throw ErrorState("MENU_LOCALIZATION_FAILED") }
-            guard !state.updates.isConfigured, !state.updates.canCheck, state.updates.status == .unconfigured else { throw ErrorState("UPDATE_CONFIG_GUARD_FAILED") }
-            state.updates.checkForUpdates()
+                  check.isEnabled else { throw ErrorState("MENU_LOCALIZATION_FAILED") }
+            guard !state.updates.isConfigured, state.updates.canCheck, state.updates.status == .unconfigured else { throw ErrorState("UPDATE_CONFIG_GUARD_FAILED") }
+            // Manual release checks now work without a feed; never issue real network requests in this smoke.
             state.updates.setAutomaticChecks(true)
             guard !state.updates.automaticChecks, state.updates.status == .unconfigured else { throw ErrorState("UNCONFIGURED_ACTION_FAILED") }
             let valid: [String: Any] = ["HD2UpdateServiceEnabled":"YES", "SUFeedURL":"https://lsjop.github.io/helldivers2-fx-launcher/updates/stable/appcast.xml", "SUPublicEDKey":Data(repeating: 1, count: 32).base64EncodedString()]
