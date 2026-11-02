@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct TacticalEyebrow: View {
     let text: String
@@ -102,5 +103,34 @@ struct TacticalStatusLayout: Layout {
             }
             y += height + gap
         }
+    }
+}
+
+// Reserved for a separately licensed, standalone soldier asset. Never uses a UI screenshot.
+struct SoldierBackdrop: View {
+    let chinese: Bool
+    @Environment(\.colorScheme) private var scheme
+    private var assetURL: URL? { Bundle.main.url(forResource: "dashboard-soldier", withExtension: "png") }
+    var body: some View {
+        let c = TacticalColors(scheme: scheme)
+        ZStack {
+            if let url = assetURL, let image = NSImage(contentsOf: url) {
+                GeometryReader { geometry in
+                    Image(nsImage: image).resizable().scaledToFill()
+                        .frame(width: geometry.size.width, height: geometry.size.height).clipped()
+                        .mask(LinearGradient(colors: [.clear, .white], startPoint: .leading, endPoint: .trailing))
+                }
+            } else {
+                VStack(spacing: 14) {
+                    Image(systemName: "person.crop.rectangle").font(.system(size: 52, weight: .ultraLight))
+                    Text(chinese ? "人物视觉区" : "PERSONNEL VISUAL").font(TacticalTypography.module)
+                    Text(chinese ? "等待独立授权素材" : "Standalone licensed asset required")
+                        .font(TacticalTypography.caption).multilineTextAlignment(.center)
+                }.foregroundStyle(c.muted)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(c.accent.opacity(0.035))
+                    .overlay(Rectangle().stroke(c.accent.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [4, 5])))
+            }
+        }.accessibilityHidden(true).allowsHitTesting(false)
     }
 }

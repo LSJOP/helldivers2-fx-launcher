@@ -34,7 +34,7 @@ struct TacticalPanel<Content: View>: View {
             content
         }
         .padding(TacticalSpacing.panel).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(c.panel)
+        .background(c.panel, in: RoundedRectangle(cornerRadius: TacticalSpacing.corner))
         .overlay(RoundedRectangle(cornerRadius: TacticalSpacing.corner).stroke(c.line, lineWidth: 1))
         .overlay(alignment: .topLeading) { Rectangle().fill(c.accent).frame(width: 24, height: 2) }
     }
@@ -65,10 +65,10 @@ struct TacticalInfoRow: View {
         let c = TacticalColors(scheme: scheme)
         ViewThatFits(in: .horizontal) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(title).foregroundStyle(c.muted)
+                Text(title).foregroundStyle(c.muted).fixedSize(horizontal: true, vertical: false)
                 Spacer(minLength: 6)
-                Text(value).foregroundStyle(c.text).multilineTextAlignment(.trailing)
-            }.fixedSize(horizontal: true, vertical: false)
+                Text(value).foregroundStyle(c.text).multilineTextAlignment(.trailing).fixedSize(horizontal: true, vertical: false)
+            }
             VStack(alignment: .leading, spacing: 4) {
                 Text(title).foregroundStyle(c.muted)
                 Text(value).foregroundStyle(c.text)
@@ -164,5 +164,123 @@ struct TacticalNavigationItem: View {
             .contentShape(Rectangle())
         }.buttonStyle(.plain).onHover { hovered = $0 }
             .accessibilityLabel(title).accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+struct SuperEarthGlobeDecoration: View {
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        Canvas { context, size in
+            let rect = CGRect(x: 10, y: 3, width: 80, height: 80)
+            let color = TacticalColors(scheme: scheme).accent.opacity(0.28)
+            context.stroke(Path(ellipseIn: rect), with: .color(color), lineWidth: 1)
+            for fraction in [0.25, 0.55] {
+                context.stroke(Path(ellipseIn: CGRect(x: 50 - 40 * fraction, y: 3, width: 80 * fraction, height: 80)), with: .color(color), lineWidth: 0.7)
+                context.stroke(Path(ellipseIn: CGRect(x: 10, y: 43 - 40 * fraction, width: 80, height: 80 * fraction)), with: .color(color), lineWidth: 0.7)
+            }
+        }.frame(width: 100, height: 86).accessibilityHidden(true)
+    }
+}
+
+struct TacticalPageHeader: View {
+    let number: String
+    let title: String
+    let section: String
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        let c = TacticalColors(scheme: scheme)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 10) {
+                    TacticalEyebrow(text: number + " / " + section)
+                    Text(title).font(TacticalTypography.page).foregroundStyle(c.text)
+                        .accessibilityIdentifier("page.title").accessibilityAddTraits(.isHeader)
+                }.frame(maxWidth: .infinity, alignment: .leading)
+                SuperEarthGlobeDecoration()
+            }
+            Rectangle().fill(c.yellow).frame(height: 2)
+        }
+    }
+}
+
+struct TacticalMetric: View {
+    let title: String
+    let value: String
+    let symbol: String
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        let c = TacticalColors(scheme: scheme)
+        HStack(spacing: 10) {
+            Image(systemName: symbol).font(.system(size: 21)).foregroundStyle(c.accent).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title).font(TacticalTypography.caption).foregroundStyle(c.muted)
+                Text(value).font(TacticalTypography.body.weight(.semibold)).foregroundStyle(c.text)
+            }
+        }.padding(14).frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+            .background(c.panel, in: RoundedRectangle(cornerRadius: 5))
+            .overlay(RoundedRectangle(cornerRadius: 5).stroke(c.line, lineWidth: 1))
+            .accessibilityElement(children: .combine)
+    }
+}
+
+// Presentation of existing evidence only. File presence never becomes runtime health.
+@MainActor enum TacticalEvidence {
+    static func dependency(_ value: String, _ state: AppState) -> String {
+        switch value {
+        case "running_bridge": return state.t("本次解释器使用中", "Interpreter in use")
+        case "file_present_unverified": return state.t("文件已发现 · 未验证", "File found · Unverified")
+        case "missing": return state.t("限定路径未找到", "Not found in checked paths")
+        case "invalid": return state.t("文件不可执行", "File is not executable")
+        default: return state.t("未验证", "Unverified")
+        }
+    }
+    static func name(_ name: String, _ state: AppState) -> String {
+        switch name {
+        case "Game components": return state.t("游戏组件", "Game components")
+        case "FX runtime": return state.t("FX 运行时", "FX runtime")
+        case "gvproxy runtime": return state.t("gvproxy 运行时", "gvproxy runtime")
+        case "SSH connection": return state.t("SSH 连接", "SSH connection")
+        case "Multiplayer": return state.t("联机", "Multiplayer")
+        default: return name
+        }
+    }
+}
+
+/// Keeps complete rows across the proposed width; never reserves empty grid slots.
+struct TacticalAdaptiveLayout: Layout {
+    var minimumWidth: CGFloat
+    var maximumColumns: Int
+    private let gap: CGFloat = 12
+    private func columns(_ width: CGFloat, count: Int) -> Int {
+        let n = min(count, maximumColumns, max(1, Int((width + gap) / (minimumWidth + gap))))
+        if count == 4 && n == 3 { return 2 }
+        if count == 5 && n == 4 { return 3 }
+        if count == 6 && n > 3 && n < 6 { return 3 }
+        return max(1, n)
+    }
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? 700
+        let cols = columns(width, count: subviews.count)
+        var height: CGFloat = 0
+        for start in stride(from: 0, to: subviews.count, by: cols) {
+            let row = start..<min(start+cols, subviews.count)
+            let w = (width - gap * CGFloat(row.count-1)) / CGFloat(row.count)
+            let h = row.map { subviews[$0].sizeThatFits(ProposedViewSize(width: w, height: nil)).height }.max() ?? 0
+            height += h + (start == 0 ? 0 : gap)
+        }
+        return CGSize(width: width, height: height)
+    }
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let cols = columns(bounds.width, count: subviews.count)
+        var y = bounds.minY
+        for start in stride(from: 0, to: subviews.count, by: cols) {
+            let row = start..<min(start+cols, subviews.count)
+            let w = (bounds.width-gap*CGFloat(row.count-1))/CGFloat(row.count)
+            let h = row.map { subviews[$0].sizeThatFits(ProposedViewSize(width: w, height: nil)).height }.max() ?? 0
+            for i in row {
+                subviews[i].place(at: CGPoint(x: bounds.minX+CGFloat(i-start)*(w+gap), y: y), anchor: .topLeading, proposal: ProposedViewSize(width: w, height: h))
+            }
+            y += h+gap
+        }
     }
 }

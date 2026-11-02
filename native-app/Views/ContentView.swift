@@ -22,10 +22,6 @@ struct ContentView: View {
                 }
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        if state.selection != .dashboard {
-                            Text((state.selection ?? .dashboard).title(state.chinese)).font(.largeTitle.bold())
-                                .accessibilityIdentifier("page.title")
-                        }
                         switch state.selection ?? .dashboard {
                         case .dashboard: DashboardView(state: state, tasks: tasks)
                         case .environment: EnvironmentView(state: state)
@@ -44,7 +40,7 @@ struct ContentView: View {
             }
             .padding(TacticalSpacing.page)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(state.selection == .dashboard ? TacticalColors(scheme: scheme).background : Color(nsColor: .windowBackgroundColor))
+            .background(TacticalColors(scheme: scheme).background)
             .navigationTitle(state.selection == .dashboard ? "HELLDIVERS 2 / FX LAUNCHER" : (state.selection ?? .dashboard).title(state.chinese))
             .tint(TacticalColors(scheme: scheme).accent)
             .toolbar {

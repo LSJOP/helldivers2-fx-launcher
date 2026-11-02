@@ -4,9 +4,9 @@ A macOS tactical terminal for HELLDIVERS 2 FX Launcher, built with SwiftUI and n
 
 ## Current capabilities
 
-- Tactical Sidebar and Dashboard; dark by default, optional light/system appearance.
+- Unified tactical Sidebar, Dashboard, Environment, FX Manager, Logs and Settings; dark by default, optional light/system appearance. The Dashboard soldier-art container currently awaits a separately licensed standalone asset.
 - Chinese/English interface with single-language functional labels and native navigation shortcuts (Cmd+1…5, Cmd+R).
-- Real host metadata, bounded FX version metadata, dependency file presence and session logs through a supervised Python JSONL bridge.
+- Real host metadata, bounded FX version metadata, dependency file presence and searchable/filterable/copyable session logs through a supervised Python JSONL bridge. Unclassified logs retain their actual lack of severity metadata.
 - Game launch remains disabled with an explicit reason. FX runtime, Guest, SSH, EAC and multiplayer remain unverified. No installation, update, game launch or settings writes are performed by Phase 1.
 
 ## Requirements and installation

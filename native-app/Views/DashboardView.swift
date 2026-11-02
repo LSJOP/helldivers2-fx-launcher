@@ -20,12 +20,18 @@ struct DashboardView: View {
             if state.stale {
                 TacticalWarningBanner(text: state.t("以下是上次读取的数据；本次尚未完成。", "Showing the previous snapshot; this refresh has not completed."))
             }
+            TacticalAdaptiveLayout(minimumWidth: 120, maximumColumns: 5) {
+                TacticalMetric(title: "FX", value: unverified, symbol: "shippingbox")
+                TacticalMetric(title: state.t("运行环境", "Environment"), value: state.hasLoaded ? state.t("本机元数据", "Host metadata") : unverified, symbol: "desktopcomputer")
+                TacticalMetric(title: state.t("网络", "Network"), value: unverified, symbol: "network")
+                TacticalMetric(title: "EAC", value: unverified, symbol: "shield.lefthalf.filled")
+                TacticalMetric(title: state.t("联机", "Multiplayer"), value: unverified, symbol: "person.2")
+            }
             TacticalStatusLayout {
                 runtimeCard
                 environmentCard
-                networkCard
+                report
             }
-            report
         }.foregroundStyle(c.text).font(TacticalTypography.body)
     }
     private var commandBar: some View {
@@ -58,7 +64,7 @@ struct DashboardView: View {
                     Text(state.t("为了超级地球 · 为了民主", "FOR SUPER EARTH / FOR DEMOCRACY"))
                         .font(TacticalTypography.caption).foregroundStyle(c.muted)
                 }.frame(maxWidth: .infinity, alignment: .leading).layoutPriority(1)
-                TacticalGlobe(chinese: state.chinese).frame(width: 184, height: 156)
+                SoldierBackdrop(chinese: state.chinese).frame(width: 190, height: 180)
             }.padding(.horizontal, 20).padding(.top, 16)
             HStack(spacing: 10) {
                 TacticalEyebrow(text: state.t("行动状态", "OPERATION STATUS"))
@@ -82,7 +88,7 @@ struct DashboardView: View {
     }
     private var inspectButton: some View {
         TacticalButton(title: tasks.busy ? state.t("正在检查环境…", "Checking environment…") : state.t("检查环境", "Check environment"),
-                       symbol: "arrow.clockwise", primary: true, loading: tasks.busy) { state.refresh() }
+                       symbol: "arrow.clockwise", primary: false, loading: tasks.busy) { state.refresh() }
             .accessibilityIdentifier("dashboard.inspect")
     }
     private var runtimeCard: some View {
@@ -149,7 +155,7 @@ struct DashboardView: View {
         return formatter.string(from: date)
     }
     private var report: some View {
-        TacticalPanel(number: "05", title: state.t("系统报告", "SYSTEM REPORT"), symbol: "doc.text") {
+        TacticalPanel(number: "04", title: state.t("系统报告", "SYSTEM REPORT"), symbol: "doc.text") {
             TacticalInfoRow(title: state.t("启动器版本", "Launcher version"), value: state.value("get_launcher_version", "version"))
             TacticalInfoRow(title: state.t("最近刷新 · 北京时间", "Last refresh · UTC+08"), value: refreshTime)
             TacticalInfoRow(title: state.t("检测范围", "Inspection scope"), value: state.t("本机元数据 / 依赖文件 / 限定 FX 目录", "Host metadata / dependency files / bounded FX directories"))

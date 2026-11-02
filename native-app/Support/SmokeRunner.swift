@@ -8,6 +8,11 @@ import ApplicationServices
     private static var started = false
     static func runIfRequested(state: AppState) async {
         let args = ProcessInfo.processInfo.arguments
+        if !started, let i = args.firstIndex(of: "--ui-refinement-smoke"), args.count > i + 1 {
+            started = true
+            await refinementReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
+            return
+        }
         if !started, let index = args.firstIndex(of: "--ui-v2-menu-review"), args.count > index + 1 {
             started = true
             await menuReview(state, directory: URL(fileURLWithPath: args[index + 1], isDirectory: true))
@@ -164,6 +169,52 @@ import ApplicationServices
         } catch { result["result"] = "FAIL"; result["error"] = (error as? ErrorState)?.code ?? "REVIEW_FAILED" }
         if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]) {
             try? data.write(to: directory.appendingPathComponent("menu-review.json"))
+        }
+    }
+    private static func refinementReview(_ state: AppState, directory: URL) async {
+        var result: [String: Any] = ["kind": "five_page_ui_refinement", "physical_keyboard_voiceover": "NOT_TESTED"]
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try await waitForTask(state)
+            guard state.hasLoaded, state.error == nil, let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) else { throw ErrorState("BRIDGE_OR_WINDOW_UNAVAILABLE") }
+            let snapshot = state.observedAt
+            state.chinese = true; state.appearance = .dark
+            window.setContentSize(NSSize(width: 1180, height: 850))
+            try await Task.sleep(nanoseconds: 300_000_000)
+            var files: [String] = []
+            for page in Page.allCases {
+                NSApp.mainMenu?.update()
+                guard let menu = NSApp.mainMenu?.items.compactMap(\.submenu).first(where: { $0.title == "导航" }) else { throw ErrorState("MENU_UNAVAILABLE") }
+                menu.delegate?.menuNeedsUpdate?(menu); menu.delegate?.menuWillOpen?(menu); menu.update()
+                guard let index = menu.items.firstIndex(where: { $0.title == page.title(true) }) else { throw ErrorState("MENU_UNAVAILABLE") }
+                menu.performActionForItem(at: index)
+                try await Task.sleep(nanoseconds: 500_000_000)
+                guard state.selection == page else { throw ErrorState("NAVIGATION_FAILED") }
+                let file = "zh-dark-" + page.rawValue + ".png"
+                guard try await capture(window, name: file, directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
+                files.append(file)
+            }
+            state.selection = .dashboard
+            for variant in ["en-dark-dashboard", "zh-light-dashboard", "zh-dark-minimum-dashboard"] {
+                state.chinese = !variant.hasPrefix("en")
+                state.appearance = variant.contains("light") ? .light : .dark
+                if variant.contains("minimum") { window.setContentSize(NSSize(width: 850, height: 560)) }
+                try await Task.sleep(nanoseconds: 500_000_000)
+                let file = variant + ".png"
+                guard try await capture(window, name: file, directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
+                files.append(file)
+            }
+            result["files"] = files
+            result["native_menu_pages"] = 5
+            result["snapshot_preserved"] = state.observedAt == snapshot
+            result["runtime_evidence"] = state.results["get_environment_status"]?["status"]?.text ?? "unknown"
+            result["soldier_asset"] = Bundle.main.url(forResource: "dashboard-soldier", withExtension: "png") == nil ? "UNAVAILABLE_PLACEHOLDER" : "PRESENT"
+            result["result"] = state.observedAt == snapshot ? "PASS" : "FAIL"
+            window.setContentSize(NSSize(width: 1180, height: 850))
+            state.chinese = true; state.appearance = .dark
+        } catch { result["result"] = "FAIL"; result["error"] = (error as? ErrorState)?.code ?? "UI_CHECK_FAILED" }
+        if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]) {
+            try? data.write(to: directory.appendingPathComponent("refinement-review.json"))
         }
     }
     private static func waitForTask(_ state: AppState) async throws {
