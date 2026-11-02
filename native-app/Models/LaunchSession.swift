@@ -2,6 +2,7 @@ import Foundation
 
 enum LaunchStage: String, CaseIterable, Identifiable {
     case idle = "Idle", checkingEnvironment = "CheckingEnvironment", startingFX = "StartingFX"
+    case checkingFXEntry = "CheckingFXEntry"
     case waitingForGuest = "WaitingForGuest", checkingCompatibility = "CheckingCompatibility"
     case startingSteam = "StartingSteam", launchingGame = "LaunchingGame", waitingForGame = "WaitingForGame"
     case gameProcessDetected = "GameProcessDetected", checkingEAC = "CheckingEAC", failed = "Failed"
@@ -10,7 +11,8 @@ enum LaunchStage: String, CaseIterable, Identifiable {
         switch self {
         case .idle: return zh ? "尚未启动" : "Idle"
         case .checkingEnvironment: return zh ? "检查本地环境" : "Checking local environment"
-        case .startingFX: return zh ? "FX 虚拟机" : "FX virtual machine"
+        case .startingFX: return zh ? "FX 宿主进程（非 Guest 就绪）" : "FX host processes (not Guest readiness)"
+        case .checkingFXEntry: return zh ? "FX 启动入口检查" : "FX launch entry check"
         case .waitingForGuest: return zh ? "等待 Guest / SSH" : "Waiting for Guest / SSH"
         case .checkingCompatibility: return zh ? "检查兼容性配置" : "Checking compatibility"
         case .startingSteam: return zh ? "启动 Steam" : "Starting Steam"

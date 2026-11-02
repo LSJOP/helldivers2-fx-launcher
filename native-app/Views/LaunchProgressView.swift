@@ -6,7 +6,7 @@ struct LaunchProgressView: View {
     var body: some View {
         TacticalPanel(number: "L", title: state.t("本次启动进度", "Current launch progress"), symbol: "play.rectangle") {
             Text(state.launchSession.current.title(state.chinese)).font(TacticalTypography.module)
-            ForEach([LaunchStage.checkingEnvironment, .startingFX, .waitingForGuest, .checkingCompatibility, .startingSteam, .gameProcessDetected, .checkingEAC]) { stage in
+            ForEach([LaunchStage.checkingEnvironment, .checkingFXEntry, .startingFX, .waitingForGuest, .checkingCompatibility, .startingSteam, .gameProcessDetected, .checkingEAC]) { stage in
                 let value = state.launchSession.evidence[stage] ?? "unverified"
                 HStack {
                     Image(systemName: value == "done" || value == "passed" ? "checkmark.circle" : value == "failed" ? "exclamationmark.circle" : "circle.dashed")

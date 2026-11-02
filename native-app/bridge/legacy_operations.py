@@ -350,6 +350,10 @@ class Operations:
         def progress(stage,status='running',detail=None):
             mapped=stages.get(stage,stage)
             if stage=='game' and status in ('done','passed'):mapped='GameProcessDetected'
+            if stage=='fx' and status in ('done','passed'):
+                # A listening SSH port is not proof that the selected FX entry ran.
+                self.launch_stage='CheckingFXEntry'
+                self.check_fx_entry(helper,require_running=True)
             self.launch_stage=mapped
             sequence[0]+=1
             self.event('ERROR' if status=='failed' else 'INFO',mapped,stage=mapped,status=status,sequence=sequence[0])
@@ -357,6 +361,9 @@ class Operations:
             progress('CheckingEnvironment')
             helper=self.runtime(params)
             self.read_config()  # Reject malformed settings instead of legacy fallback to defaults.
+            progress('CheckingFXEntry')
+            self.check_fx_entry(helper)
+            progress('CheckingFXEntry','done')
             if method=='observe_launch':
                 progress('WaitingForGuest')
                 helper.safety.Session(helper).bind()  # Read-only target identity, not merely a reachable port.
@@ -383,6 +390,15 @@ class Operations:
                 return {'host_ready':True,'items':report['items'],'fx_version':version,
                         'guest':'unverified','main_menu':'unverified','single_player':'unverified','eac':'unverified','multiplayer':'unverified'}
             helper.PROGRESS_HOOK=progress
+            original_state=helper.state
+            def checked_state():
+                current=original_state()
+                if current.get('verified_network') is not True:
+                    self.launch_stage='CheckingFXEntry'
+                    self.check_fx_entry(helper,require_running=True)
+                    raise OperationError('FX_ENTRY_MISMATCH',{'stage':'CheckingFXEntry','source':'legacy state().verified_network','reason':'legacy_transport_readiness_not_verified','action':'inspect_entry_and_relaunch_normally'})
+                return current
+            helper.state=checked_state
             original_wait=helper.wait_for_game
             def wait_for_game():
                 progress('WaitingForGame')
@@ -417,6 +433,21 @@ class Operations:
                     details['stderr']=self.scrub(text)
             self.event('ERROR',code,stage=self.launch_stage,status='failed')
             raise OperationError(code,details) from None
+
+    def check_fx_entry(self, helper, require_running=False):
+        rows=helper.safety.process_table(helper.safety.output(['ps','-ww','-axo','pid=,ppid=,lstart=,comm=']))
+        executable=str(Path(helper.APP)/'Contents/MacOS/steamac-vm')
+        active={pid:row for pid,row in rows.items() if Path(row[2]).name=='steamac-vm'}
+        foreign=[row[2] for row in active.values() if row[2]!=executable]
+        if foreign:
+            names=sorted({next((p.name for p in Path(value).parents if p.suffix=='.app'),'unknown FX') for value in foreign})
+            raise OperationError('FX_INSTANCE_MISMATCH',{'stage':'CheckingFXEntry','running_apps':names,'reason':'different_fx_copy','action':'quit_other_fx_normally_then_retry'})
+        if require_running:
+            selected={pid:row for pid,row in active.items() if row[2]==executable}
+            if not selected:raise OperationError('FX_INSTANCE_MISMATCH',{'stage':'CheckingFXEntry','reason':'selected_fx_process_not_observed','action':'inspect_fx_window_then_retry'})
+            fx_process_view(rows,executable)
+            if not helper.network_ready():
+                raise OperationError('FX_ENTRY_MISMATCH',{'stage':'CheckingFXEntry','source':'legacy network_ready() on host','reason':'expected_gvproxy_not_verified','action':'quit_selected_fx_normally_then_relaunch_from_native'})
 
     def apply_performance(self, profile, helper, before):
         # The archive handles ordinary preference failures. Extend recovery to

@@ -72,6 +72,8 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
         case "FX_PROFILE_MISMATCH": return zh ? "FX 当前配置与原验证组合不符；未自动修改。" : "The FX profile differs from the verified combination; nothing was changed automatically."
         case "FX_START_FAILED": return zh ? "FX 启动或虚拟机等待阶段失败。" : "FX startup or VM readiness failed."
         case "FX_IDENTITY_UNVERIFIED": return zh ? "FX 进程拓扑不明确；未获准写入 Guest。" : "The FX process topology is ambiguous; Guest writes are blocked."
+        case "FX_INSTANCE_MISMATCH": return zh ? "当前 FX 实例与选定专用副本不一致。请先检查现有工作，正常退出其他 FX，再通过 Native App 重试；不会自动退出或重置虚拟机。" : "The running FX instance differs from the selected copy. Preserve existing work, quit the other FX normally, then retry from this App. No VM is stopped or reset automatically."
+        case "FX_ENTRY_MISMATCH": return zh ? "未验证到原启动入口要求的 gvproxy-eim 进程；这不是 EAC 检测结果。请正常退出该 FX 后由 Native App 按原参数重新启动。" : "The gvproxy-eim process required by the recorded entry was not verified; this is not an EAC result. Quit this FX normally and relaunch through the Native App with the original arguments."
         case "SSH_CONNECTION_FAILED", "AUTH_REQUIRED": return zh ? "Guest / SSH 连接需要处理；可在启动面板输入本次认证信息。" : "Guest / SSH needs attention; enter session credentials in the launch panel if required."
         case "COMPATIBILITY_CHECK_FAILED": return zh ? "兼容组件或目标身份检查未通过；现有环境未被重置。" : "Compatibility or target identity checks failed; the existing environment was not reset."
         case "STEAM_START_FAILED": return zh ? "Steam 启动或登录等待失败。" : "Steam startup or login readiness failed."

@@ -126,8 +126,9 @@ class MigrationChecks(unittest.TestCase):
         helper.dependencies=types.SimpleNamespace(inspect_runtime=lambda h:{'items':rows,'ready':not invalid_fx},launcher_problems=lambda:[])
         helper.verify_fx_profile=lambda:None
         helper.wait_for_game=lambda:None
-        helper.state=lambda:{'game_pids':[123] if game else [],'steam_pids':[456]}
-        helper.safety=types.SimpleNamespace(Session=lambda h:types.SimpleNamespace(bind=lambda:None))
+        helper.state=lambda:{'game_pids':[123] if game else [],'steam_pids':[456],'verified_network':True}
+        helper.network_ready=lambda:True
+        helper.safety=types.SimpleNamespace(Session=lambda h:types.SimpleNamespace(bind=lambda:None),output=lambda args:'fixture',process_table=lambda text:{10:(1,'fixture',str(Path(helper.APP)/'Contents/MacOS/steamac-vm'))})
         def main():
             helper.PROGRESS_HOOK('fx','done');helper.PROGRESS_HOOK('ssh','running')
             if fail:raise fail
@@ -183,5 +184,22 @@ class MigrationChecks(unittest.TestCase):
         app='/fixture/fx'
         for rows in [{},{1:(0,'s',app),2:(0,'s',app)}, {1:(2,'s',app),2:(1,'s',app)}, {1:(0,'s',app),2:(1,'s',app),3:(1,'s',app)}]:
             with self.assertRaises(m.OperationError):m.fx_process_view(rows,app)
+    def test_foreign_fx_is_rejected_before_ssh_or_vm_start(self):
+        helper=self.fake_launch_helper()
+        helper.safety.process_table=lambda text:{20:(1,'fixture','/Applications/Other FX.app/Contents/MacOS/steamac-vm')}
+        with patch.object(self.ops,'runtime',return_value=helper),patch.object(helper,'main',side_effect=AssertionError('must not start')):
+            with self.assertRaises(m.OperationError) as error:self.ops.run('launch_game',{'confirmed':True})
+        self.assertEqual(error.exception.code,'FX_INSTANCE_MISMATCH');self.assertEqual(error.exception.details['stage'],'CheckingFXEntry')
+        self.assertEqual(error.exception.details['running_apps'],['Other FX.app'])
+    def test_host_fx_done_requires_selected_process_and_expected_transport(self):
+        helper=self.fake_launch_helper();helper.network_ready=lambda:False
+        with patch.object(self.ops,'runtime',return_value=helper),self.assertRaises(m.OperationError) as error:self.ops.run('launch_game',{'confirmed':True})
+        self.assertEqual(error.exception.code,'FX_ENTRY_MISMATCH')
+        self.assertFalse(any(x.get('stage')=='StartingFX' and x.get('status')=='done' for x in self.events))
+    def test_legacy_negative_transport_result_is_not_overridden_by_a_later_positive_probe(self):
+        helper=self.fake_launch_helper();helper.state=lambda:{'game_pids':[123],'verified_network':False}
+        with patch.object(self.ops,'runtime',return_value=helper),self.assertRaises(m.OperationError) as error:self.ops.run('launch_game',{'confirmed':True})
+        self.assertEqual(error.exception.code,'FX_ENTRY_MISMATCH')
+        self.assertEqual(error.exception.details['source'],'legacy state().verified_network')
 
 if __name__=='__main__':unittest.main(verbosity=2)
