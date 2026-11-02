@@ -9,7 +9,7 @@
       "name": "GUI 交互简化",
       "priority": "P0",
       "status": "COMPLETED",
-      "commit": null,
+      "commit": "e87e27c",
       "evidence": [
         "Debug build PASS",
         "Bundled App GUI entry/root guards and Environment/FX zh/en rendering PASS",
@@ -21,15 +21,27 @@
       "id": "TASK-002",
       "name": "正式 App 图标集成",
       "priority": "P1",
-      "status": "IN_PROGRESS",
+      "status": "COMPLETED",
       "commit": null,
-      "evidence": []
+      "evidence": [
+        "Debug build PASS",
+        "Debug and Release target both reference AppIcon",
+        "Bundle AppIcon.icns and icon plist keys verified",
+        "Finder/Dock/switcher/Launchpad manual verification not performed"
+      ],
+      "source": {
+        "sha256": "3c132be0ba8fc268e6222c10bc2273f17e5053a12b38314122030b22638b9b7b",
+        "pixels": "1254x1254",
+        "format": "PNG RGB no alpha",
+        "processing": "sips proportional resize; no mask/crop"
+      },
+      "commit_subject": "feat(native-app): integrate official launcher app icon"
     },
     {
       "id": "TASK-003",
       "name": "游戏性能配置",
       "priority": "P1",
-      "status": "PENDING",
+      "status": "IN_PROGRESS",
       "commit": null,
       "evidence": []
     },
