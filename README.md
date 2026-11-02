@@ -1,313 +1,41 @@
-# HELLDIVERS 2 · Mac 启动助手 / Mac Launcher
+# HELLDIVERS 2 FX Launcher — Native App
 
-[简体中文](#简体中文) · [English](#english) · [更新日志 / Changelog](CHANGELOG.md)
+A macOS tactical terminal for HELLDIVERS 2 FX Launcher, built with SwiftUI and narrowly scoped AppKit integration. **Native Phase 1: read-only developer preview.** This repository is not an official game product.
 
-> [!TIP]
-> **🤖 AI 辅助安装 / Install with AI** · [中文指南与完整提示词](docs/AI_INSTALL.md#简体中文) · [English guide & copyable prompt](docs/AI_INSTALL.md#english)
+## Current capabilities
 
-<!-- launcher-version:start -->
-**当前源码版本 / Current source version: `0.1.0-preview.2`** · [VERSION](VERSION) · [CHANGELOG](CHANGELOG.md)
-源码技术预览；尚无完整安装包，版本号不代表已创建 GitHub Release。 / Source technical preview; no complete installer or GitHub Release is implied.
-<!-- launcher-version:end -->
+- Tactical Sidebar and Dashboard; dark by default, optional light/system appearance.
+- Chinese/English interface with single-language functional labels and native navigation shortcuts (Cmd+1…5, Cmd+R).
+- Real host metadata, bounded FX version metadata, dependency file presence and session logs through a supervised Python JSONL bridge.
+- Game launch remains disabled with an explicit reason. FX runtime, Guest, SSH, EAC and multiplayer remain unverified. No installation, update, game launch or settings writes are performed by Phase 1.
 
-<table>
-  <tr>
-    <th width="50%">简体中文 UI</th>
-    <th width="50%">English UI</th>
-  </tr>
-  <tr>
-    <td><a href="docs/images/launcher-zh-CN.png"><img src="docs/images/launcher-zh-CN.png" alt="简体中文启动器 UI：受限模式离线预览，运行状态均未检查" width="100%"></a></td>
-    <td><a href="docs/images/launcher-en.png"><img src="docs/images/launcher-en.png" alt="English launcher UI: offline limited-mode preview, all runtime states unchecked" width="100%"></a></td>
-  </tr>
-</table>
+## Requirements and installation
 
-<details>
-<summary>📱 手机或小屏幕：展开大图 / Small screen: expand full-width previews</summary>
+Apple Silicon Mac, macOS 14+, complete Xcode with a macOS SDK, and an existing Python 3.9+ interpreter. No ready-to-install, signed/notarized Native release is published. Build locally:
 
-**简体中文 UI**
-
-[![简体中文启动器 UI，点击查看原图](docs/images/launcher-zh-CN.png)](docs/images/launcher-zh-CN.png)
-
-**English UI**
-
-[![English launcher UI — click for original size](docs/images/launcher-en.png)](docs/images/launcher-en.png)
-
-</details>
-
-*可点击图片查看原图。两图为此前源码版本的离线渲染预览，新增菜单项以当前代码为准，不是游戏运行或联机成功截图。 / Click either image for its original size. Both are offline previews from the earlier source version; consult current code for newly added menu items; no game, EAC or multiplayer success is implied.* [截图来源 / Image provenance](docs/images/README.md)
-
-> [!WARNING]
-> **源码技术预览：尚未提供完整运行环境或安装包。** 本项目兼顾开发者交流与玩家体验，完整安装流程仍未完成。
->
-> **Source technical preview: the complete runtime environment and installer are not available.** The project serves developers and players; full setup for new players is unfinished.
-
-| 下载类型 / Download | 当前提供什么 / What it contains | 适用对象 / Audience |
-| --- | --- | --- |
-| 源码技术预览 / Source Preview | 本仓库源码、双语教程和启动入口；不含完整虚拟机或兼容组件 / Source, bilingual guide and shortcuts; no complete VM or compatibility package | 开发者及体验菜单的玩家；运行游戏需匹配环境 / Developers and players exploring the UI; gameplay needs a matching environment |
-| 完整可安装版本 / Complete installer | **尚未提供 / Not available**；自动准备依赖与跨机器安装仍待实现 / Automated setup and fresh-machine installation are unfinished | 未来面向新玩家 / Intended for new players in a future release |
-
-[依赖 / Dependencies](docs/DEPENDENCIES.md) · [已测试环境 / Compatibility](docs/COMPATIBILITY.md) · [架构 / Architecture](docs/ARCHITECTURE.md) · [贡献 / Contributing](CONTRIBUTING.md) · [发布计划 / Roadmap](docs/ROADMAP.md) · [第三方与许可证 / Third-party review](THIRD_PARTY_NOTICES.md)
-
-## 简体中文
-
-### 本地帮助与更新检查
-
-**[6] 使用说明**现为可离线阅读的 UI 2.1 帮助中心，包含启动、性能、环境、SSH、联机、更新及外观说明；长页支持方向键和 Page Up/Down 滚动，Esc 返回。
-
-**[2] 应用性能配置**可浏览 M1～M5 芯片目录、自动识别和现有预设；多数型号暂无预设，历史已验证配置范围及固定 FX 启动参数的限制见[性能菜单说明](docs/PERFORMANCE_MENU.md)。
-
-**[11] 检查更新**打开时不联网；选择 [1] 查询官方 Releases，[3] 查看日志，[4] 临时切换 Preview / Stable 后再按 [1]，[5] 打开 Releases。不保存通道设置；**下载安装尚未开放**，不会覆盖用户配置。详见[更新说明](docs/UPDATES.md)和[用户数据保护](docs/USER_DATA.md)。
-
-### 安装与部署检查
-
-**新设备先打开 [3] 运行环境检查**：默认是只读本机检查，可查看九项安装指引、重新检测及导出脱敏安装报告。FEX／Proton／Steam 等 Guest 项目保持未验证；原有可能连接 SSH 的检查需另外主动确认。引导无状态，不写入设置或完成标记。
-
-Python 缺失时入口会在 Shell 显示安装说明；Node 缺失仍可进菜单。**已有组件跳过，不重装可用环境。** 详见[安装流程与验证分级](docs/SETUP.md)和[完整依赖清单](docs/DEPENDENCIES.md)。完整游戏组件自动安装仍未提供。
-
-**已有组件却仍提示缺失？** 打开 `[3] 运行环境检查 → [5] 定位已有依赖`，自动发现或手动定位 Node／FX／gvproxy，并比较发现路径与实际启动路径。**找到组件不会自动更改启动路径**，手动定位仅在本次会话有效。详见[依赖发现与路径说明](docs/DEPENDENCY_DISCOVERY.md)。
-
-### 项目状态与参与方式
-
-现有源码包括终端菜单、十种界面语言、SSH 连接与可选钥匙串密码存储、本地依赖检查、运行状态和网络诊断。自动安装兼容组件、自动 FX 运行路径接管、直连／自定义代理适配尚未实现。
-
-| 项目 | 证据与状态 |
-| --- | --- |
-| 当前入口与界面 | 本地离线检查通过；不是游戏启动验证。 |
-| M4 Pro / 24 GiB / macOS 27.2，专用补丁环境 | 历史单机启动记录与用户联机反馈；不是当前下载包的全新安装验证。 |
-| 其他 Mac、其他系统、普通 FX 全新安装 | 未验证；不标记为支持。 |
-
-完整范围见[兼容性表](docs/COMPATIBILITY.md)。开发者请先读[架构](docs/ARCHITECTURE.md)和[贡献指南](CONTRIBUTING.md)；玩家可按[安装、启动、联机或功能建议分类](https://github.com/LSJOP/helldivers2-fx-launcher/issues/new/choose)提交问题。Preview → Beta → Stable 的验收门槛见[发布计划](docs/ROADMAP.md)，这些阶段不代表已经发布了安装包。
-
-### 先看这里：现在能直接玩吗？
-
-**当前下载包还不能让一台全新的 Mac 直接运行游戏。** 它需要匹配的 FX 虚拟机和兼容组件，而完整组件包及自动安装流程还在准备中。只下载普通 FX 并不够。
-
-第一次安装也可以直接打开 UI 2.1 主菜单。缺少 FX、虚拟机网络组件、Node.js 或 SSH 时进入受限模式，语言切换、外观设置、使用说明、本地环境检查和报告导出仍可使用。启动游戏或一键环境配置时会重新检查；完整游戏环境仍需匹配组件。
-
-已有相同兼容环境的玩家，可以继续下面的步骤。这里不包含游戏，需使用自己的 Steam 账号与游戏。
-
-### 第 1 步：下载完整文件夹
-
-1. 在本页上方点击绿色的 **Code** 按钮。
-2. 选择 **Download ZIP**，下载完成后双击 ZIP 解压。
-3. 把解压后的整个文件夹放到你方便找到的位置，例如“文稿”。
-
-请保留整个文件夹；启动文件需要用到旁边的其他文件。
-
-### Python / Node.js 一键准备
-
-**先让终端进入你实际保存的项目文件夹。** 无论下载 ZIP、使用 Git Clone，还是把文件夹移动到“文稿”等位置，都按以下方式操作，不必改回默认名称：
-
-1. 打开 macOS 的“终端”。输入 `cd`，再按一次空格，**暂时不要回车**。
-2. 从 Finder 把整个项目文件夹拖到终端中，再按回车。拖入的是包含 `Start.command`、`README.md` 和 `tools` 的文件夹，不是 ZIP、父文件夹或单个脚本；空格、中文名称会由 Finder 处理。
-3. 在**同一个终端窗口**复制下面的安装命令：
-
-```bash
-/bin/bash tools/install_dependencies.sh
+```sh
+git clone --recurse-submodules https://github.com/LSJOP/helldivers2-fx-launcher.git
+cd helldivers2-fx-launcher/native-app
+./script/build_and_run.sh --xcode-only
+open build/Debug/HD2FXNative.app
 ```
 
-> [!IMPORTANT]
-> **Python 3.9+** 与完整启动器文件是进入菜单的基础条件。安装脚本还检查 **Node.js 22.0.0+ 及原生 fetch / WebSocket**；Node 或游戏组件缺失时仍可进入受限模式，本地检查通过不代表游戏可运行。
+For an existing clone, first run `git submodule update --init --recursive` at the repository root. The CoreSnapshot submodule is pinned to the archive commit; updating its remote branch does not silently change the build input. The build copies only the seven allowlisted compatibility modules plus VERSION into the app. It never executes legacy launch scripts. No dependencies are downloaded or installed by the build script.
 
-已满足的依赖会跳过；缺失时优先使用已有原生 Homebrew，**经你确认后安装**。没有 Homebrew 会提供官方安装方式供你选择，不自动安装它。
+Settings choices are session-only. The default interpreter is `/usr/bin/python3`; select an existing suitable interpreter if unavailable. Finding a dependency or FX candidate does not prove a working game environment.
 
-只检查或安装后复查，也在该项目目录执行：
+## Repository workflow
 
-```bash
-/bin/bash tools/install_dependencies.sh --check
-```
+- [`main`](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main): Native App mainline.
+- [`feature/macos-native-app`](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app): daily Native development.
+- [`legacy-script`](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script): complete original FX Launcher scripts and history, plus the pinned read-only Native compatibility snapshot.
 
-如果出现 `No such file or directory`，先确认拖入的是包含 `tools/install_dependencies.sh` 的项目文件夹。每次新开终端窗口，都需要先进入实际项目目录；已用 Git Clone 下载的用户可跳过 ZIP 下载步骤，直接从自己的仓库目录开始。
+Follow [AGENTS.md](AGENTS.md) for batched changes and minimal necessary verification. Run `native-app/script/run_checks.sh` when Bridge/packaging/service behavior changes; static text or style edits do not require repeated full sweeps. GitHub Actions is not enabled yet: the current OAuth token lacks the workflow permission required to publish a workflow file. Use the documented local checks; no gameplay success or published binary is implied.
 
-安装器和启动入口使用相同的 Python 路径规则，检查结果会显示版本、功能和所选路径。此步骤只处理 Python/Node，不准备游戏组件。[Python 官方安装包](https://www.python.org/downloads/macos/) · [Node.js 官方安装包](https://nodejs.org/en/download)
+## Original script downloads
 
-### 🤖 使用 AI 助手安装
+Use the [archived script README](https://github.com/LSJOP/helldivers2-fx-launcher/blob/legacy-script/README.md) and [script ZIP](https://github.com/LSJOP/helldivers2-fx-launcher/archive/refs/heads/legacy-script.zip). Old `main.zip` links now download Native App source, and old raw/main script paths no longer resolve. Replace `main` with `legacy-script` for script-specific links. The original pre-migration commit remains [0205aca](https://github.com/LSJOP/helldivers2-fx-launcher/tree/0205acaec3b32024df180a6dfb8ecc587e2f1914). No existing Release or Tag was removed.
 
-打开[中文 AI 安装指南与完整提示词](docs/AI_INSTALL.md#简体中文)，将提示词复制给 ChatGPT、Codex 或 Claude Code。没有本地工具权限的助手可以逐步指导你操作；安装或修改设置前仍需你确认。当前仅可辅助准备基础依赖，完整游戏环境尚未提供。
+The script archive ZIP includes its compatibility snapshot. The Native source ZIP does **not** include submodule contents; use the recursive clone instructions above. Existing script installations are not modified by this migration.
 
-[统一版本与更新记录](docs/VERSIONING.md)
-
-### 第 2 步：双击启动入口
-
-打开刚解压的文件夹，双击 **`启动绝地潜兵2.command`**。
-
-英文名 **`Start.command`** 也可以，两者打开同一个启动器，只需选一个。你不需要打开 `.py` 文件，也不需要运行测试。
-
-会弹出“终端”窗口，先检查 Python 和启动器自身文件；基础条件满足后就会进入菜单，运行依赖的缺失不会让启动器退出：
-
-| 提示 | 怎么做 |
-| --- | --- |
-| `OK / 已就绪` | 这项本地检查通过，继续看下一项。 |
-| `NEEDED / 需要准备`，提到 Python | 到 [Python 官方 macOS 下载页](https://www.python.org/downloads/macos/)下载并安装 Python 3.9 或更新版本，然后再次双击入口。 |
-| 提到 Node.js 或 SSH | 不影响打开菜单；运行游戏前按[依赖说明](docs/DEPENDENCIES.md)准备。Node.js 可从[官方页面](https://nodejs.org/en/download)安装。 |
-| 提到 FX 或虚拟机网络组件 | 继续体验受限模式；启动游戏仍需匹配组件，详见[依赖说明](docs/DEPENDENCIES.md)。 |
-
-只有 Python 或启动器基础文件缺失／损坏才会阻止菜单。受限模式不会自动连接虚拟机或启动游戏；无法读取的 Guest 组件保持“未验证”，不计入缺失数量。补齐组件后按 R 或再次选择启动，会重新检查。
-
-这套方案面向搭载 Apple 芯片（M 系列）的 Mac；Intel Mac 与不同 macOS 版本的适配尚未验证。通过本地检查也不代表游戏已能运行。
-
-### 第 3 步：第一次进入菜单
-
-基础依赖检查通过后进入菜单，游戏环境不完整时会显示受限模式提示。
-
-1. 首次启动自动匹配 macOS 首选语言；无法匹配或检测失败时使用 English。菜单 7 可手动切换，保存的手动选择优先于系统设置。
-2. 体验菜单不需要配置 SSH。准备游戏环境后，在菜单 8 填写自己的 **SSH 连接信息**，或由启动操作在本地运行依赖齐全后引导配置。
-3. 默认显示 `127.0.0.1`、端口 `2222`、用户名 `steamos`。请以自己的 FX 设置为准。密码输入时不显示字符，输入完按回车即可。
-4. 是否记住密码由你选择。选择记住时使用 macOS 钥匙串保存。
-5. 在 FX 的 Steam 窗口中用自己的账号登录，并确认已安装 HELLDIVERS 2。
-6. 回到脚本菜单，选择 **1「启动游戏」**，根据提示在 FX 窗口继续操作。
-
-菜单常用项：**1 启动游戏、3 检查运行环境、7 切换语言、8 修改 SSH、0 退出菜单**。选择 0 退出菜单不会关闭正在运行的游戏。
-
-启动或配置环境时，脚本可能打开 FX、调整虚拟机网络、重启虚拟机里的 Steam、更新游戏启动项。菜单 2 会调整 FX 性能设置；网络菜单中的有线方案可能关闭 Wi-Fi，请先看清具体提示。
-
-### 网络需要怎么设置？
-
-**每位玩家使用自己的网络、代理和节点，不需要复制作者的网络配置。**
-
-不过，当前预览版代码仍依赖代理端口 `7890`，还没有完成直连和自定义代理的通用适配。遇到相关提示时，请先查看[当前限制](docs/DEPENDENCIES.md)，不要为了通过检查而随意关闭 Wi-Fi、IPv6 或切换节点。
-
-游戏成功打开和多人联机成功是两项不同的结果；“未确认”表示脚本还没有取得足够证据。
-
-### 遇到问题怎么办？
-
-- **提示缺少文件：**重新下载并解压整个 ZIP，再从新文件夹打开入口。
-- **提示兼容组件缺失：**可以继续使用受限模式；补齐组件后按 R 或再次选择启动重新检查。
-- **双击提示没有执行权限：**打开“终端”，输入 `zsh` 后留一个空格，把 `Start.command` 拖进窗口，再按回车。
-- **SSH 连接失败：**确认 FX 虚拟机已启动，在菜单 8 核对自己的连接信息。
-- **游戏已启动但无法联机：**先检查自己的 Steam 连接与网络；启动成功不代表联机已经验证。
-- **需要求助：**到本仓库上方的 [Issues](https://github.com/LSJOP/helldivers2-fx-launcher/issues) 页面，点击 **New issue**。说明 Mac 型号、macOS 版本、停在哪一步和错误文字，遮住密码、账号和代理订阅。
-
-## English
-
-### Local help and update checks
-
-**[6] Instructions** opens an offline UI 2.1 help center covering launch, performance, environment, SSH, networking, updates and appearance. Long pages scroll with arrows or Page Up/Down; Esc returns.
-
-**[2] Apply performance settings** browses M1–M5 models, automatic detection and actual presets. Most models have no preset; see [profile scope and fixed FX launch limitations](docs/PERFORMANCE_MENU.md).
-
-**[11] Check for updates** opens offline. Use [1] to check official Releases, [3] for notes, [4] to select Preview / Stable before checking, and [5] to open Releases. Channel choices are not saved; **download/installation remains unavailable** and user settings are untouched. See [updates](docs/UPDATES.md) and [user data protection](docs/USER_DATA.md).
-
-### Setup and deployment checks
-
-**Start with [3] Environment check on a new device**: local read-only checks, nine guide topics, refresh and sanitized report export. Guest FEX/Proton/Steam remain unverified. The existing SSH-capable runtime check needs a separate explicit confirmation. Guidance is stateless and never saves settings or a completion flag.
-
-Missing Python shows Shell instructions; missing Node still permits the menu. **Existing components are skipped; keep a working environment intact.** See the [setup workflow and verification levels](docs/SETUP.md#english) and [full dependency inventory](docs/DEPENDENCIES.md). Automatic installation of the complete game environment remains unavailable.
-
-**Already installed a component that is reported missing?** Open `[3] Environment check → [5] Locate existing dependencies` to discover or manually locate Node/FX/gvproxy and compare candidate paths with runtime paths. **Finding a component does not change the launch path**; manual locations last only for this session. See [dependency discovery and path rules](docs/DEPENDENCY_DISCOVERY.md#english).
-
-### Project status and participation
-
-The existing source includes the terminal menu, ten interface languages, SSH and optional Keychain storage, local dependency checks, status reporting and network diagnostics. Automatic compatibility-component installation, automatic FX runtime-path adoption and direct/custom-proxy setup are unfinished.
-
-| Area | Evidence and status |
-| --- | --- |
-| Current shortcuts and UI | Local offline checks passed; game startup is not established by those checks. |
-| M4 Pro / 24 GiB / macOS 27.2 with a dedicated patched environment | Historical startup observations and user-reported multiplayer; no fresh-install validation of this download. |
-| Other Macs, other operating systems, fresh ordinary FX installation | Unverified; not marked supported. |
-
-See the full [compatibility matrix](docs/COMPATIBILITY.md#english). Developers can start with the [architecture](docs/ARCHITECTURE.md#english) and [contribution guide](CONTRIBUTING.md#english). Players can report [installation, startup, multiplayer or feature requests](https://github.com/LSJOP/helldivers2-fx-launcher/issues/new/choose). The [Preview → Beta → Stable plan](docs/ROADMAP.md#english) defines future release gates; it does not claim an installer has shipped.
-
-### Can I play with this download right now?
-
-**A complete setup for a fresh Mac is not available yet.** This launcher needs a matching FX virtual machine and compatibility components. The full component package and automatic setup are still being prepared. Installing ordinary FX alone is not enough.
-
-You can explore UI 2.1 on a first installation. Missing FX, VM networking, Node.js or SSH enables limited mode, keeping language, appearance, help, local checks and report export available. Starting the game or configuring its environment rechecks the requirements. Actual gameplay still needs the matching components.
-
-Players who already have the matching environment can follow the steps below. You need your own Steam account and game installation.
-
-### Step 1: Download the whole folder
-
-1. Click the green **Code** button near the top of this page.
-2. Choose **Download ZIP**. When it finishes, double-click the ZIP to extract it.
-3. Move the entire extracted folder somewhere easy to find, such as Documents.
-
-Keep the folder together. The shortcut needs the other files beside it.
-
-### Prepare Python and Node.js
-
-**First open Terminal in your actual project folder.** These steps work for ZIP downloads, Git clones and folders moved to Documents or any other location. No particular folder name is required:
-
-1. Open macOS Terminal. Type `cd`, followed by one space. **Do not press Return yet.**
-2. Drag the whole project folder from Finder into Terminal, then press Return. Choose the folder containing `Start.command`, `README.md` and `tools`, rather than the ZIP, its parent folder or a single script. Finder handles spaces and Chinese characters in the path.
-3. Copy this command into **the same Terminal window**:
-
-```bash
-/bin/bash tools/install_dependencies.sh
-```
-
-> [!IMPORTANT]
-> **Python 3.9+** and intact launcher files are the basics required to open the menu. The installer also checks **Node.js 22.0.0+ with native fetch / WebSocket**. Missing Node or game components still permits limited mode; passing local checks does not establish gameplay readiness.
-
-Suitable tools are skipped. Existing native Homebrew installs missing tools **only after your confirmation**; without Homebrew, the script offers official installation choices instead of installing it automatically.
-
-Check only, or verify after installation, from that same project directory:
-
-```bash
-/bin/bash tools/install_dependencies.sh --check
-```
-
-If you see `No such file or directory`, check that you dragged the project folder containing `tools/install_dependencies.sh`. Enter your actual project directory again whenever you open a new Terminal window. Git clone users can skip the ZIP download steps and start from their own repository folder.
-
-The installer and shortcut share Python selection rules. Results show versions, features and selected paths. This prepares only Python/Node. [Official Python installers](https://www.python.org/downloads/macos/) · [Official Node.js installers](https://nodejs.org/en/download)
-
-### 🤖 Install with AI
-
-Open the [English AI installation guide and complete prompt](docs/AI_INSTALL.md#english), then copy the prompt into ChatGPT, Codex or Claude Code. Assistants without local tools can guide you step by step. Installation and setting changes still need your approval; the complete game environment is not available yet.
-
-[Versioning and changelog](docs/VERSIONING.md)
-
-### Step 2: Open the shortcut
-
-Open the extracted folder and double-click **`Start.command`**.
-
-The Chinese shortcut, **`启动绝地潜兵2.command`**, opens the same launcher. Use either one. You do not need to open any `.py` files or run tests.
-
-A Terminal window checks Python and the launcher files first. Once those basics are present, the menu opens even when game components are missing:
-
-| Message | What to do |
-| --- | --- |
-| `OK / 已就绪` | This local check passed. Read the next line. |
-| Python is needed | Download Python 3.9 or newer from the [official Python macOS page](https://www.python.org/downloads/macos/), install it, and open the shortcut again. |
-| Node.js or SSH is needed | Menus remain available. Prepare the tools before running the game; install Node.js from its [official page](https://nodejs.org/en/download) and read the [dependency details](docs/DEPENDENCIES.md#english). |
-| FX or the virtual-machine network component is needed | Explore limited mode; game startup still needs the matching components. See the [dependency details](docs/DEPENDENCIES.md#english). |
-
-Only missing/broken launcher basics block the menu. Limited mode does not automatically connect to the VM or start the game. Unverified Guest components are not counted as missing. After restoring dependencies, press R or choose Start game to recheck.
-
-This project targets Macs with Apple silicon (M-series chips). Intel Macs and compatibility across macOS versions are unverified. Passing local checks does not verify game compatibility.
-
-### Step 3: Use the launcher for the first time
-
-The menu opens after launcher-only checks pass. An incomplete game environment shows the limited-mode notice.
-
-1. First launch matches the first supported macOS preferred language, falling back to English on failure. Menu 7 lets you switch manually; a saved manual choice takes priority over system preferences.
-2. Exploring the menu needs no SSH setup. When ready, enter your VM’s **SSH connection details** in menu 8, or follow setup after the launch action confirms local runtime requirements.
-3. The initial values are `127.0.0.1`, port `2222`, and username `steamos`. Check these against your own FX setup. Password characters are hidden while typing; press Return when finished.
-4. Choose whether to remember the password. Opting in stores it in macOS Keychain.
-5. Sign in to Steam inside FX with your own account and make sure HELLDIVERS 2 is installed.
-6. Return to the launcher and choose **1: Start game**. Follow any further prompts in the FX window.
-
-Common menu items: **1 Start game, 3 Check environment, 7 Language, 8 SSH settings, 0 Exit menu**. Exiting the menu with 0 leaves a running game open.
-
-Launching or preparing the environment can open FX, adjust guest networking, restart Steam inside the virtual machine and update game launch options. Menu 2 changes FX performance settings. The wired-network action in the network menu can turn off Wi-Fi; read its prompts before using it.
-
-### What about my network?
-
-**Use your own network, proxy and node selection. You do not need the author’s personal network configuration.**
-
-The preview code still requires proxy port `7890`; support for direct connections and custom proxy settings is unfinished. Read the [current limitations](docs/DEPENDENCIES.md#english) if this blocks you. Changing Wi-Fi, IPv6 or proxy nodes just to pass a check is not part of the beginner setup.
-
-Starting the game and successfully joining multiplayer are separate outcomes. “Unverified” means the launcher has not obtained enough evidence.
-
-### Troubleshooting
-
-- **Missing project files:** download and extract the whole ZIP again, then use the shortcut in the new folder.
-- **Missing compatibility components:** keep exploring limited mode. Restore them and press R or choose Start game to recheck.
-- **No execution permission:** open Terminal, type `zsh` followed by a space, drag `Start.command` into the window, and press Return.
-- **SSH connection failed:** make sure FX is running and check your connection details in menu 8.
-- **Game opens but multiplayer fails:** check your Steam connection and network. Game startup does not verify multiplayer.
-- **Need help:** open [Issues](https://github.com/LSJOP/helldivers2-fx-launcher/issues), click **New issue**, and include your Mac model, macOS version, the step you reached and the error text. Hide passwords, account details and proxy subscriptions.
-
----
-
-[第三方说明 / Third-party notices](THIRD_PARTY_NOTICES.md) · No project-wide open-source license has been selected yet. / 项目源码的开源许可证尚未确定。
+See [rights and provenance](THIRD_PARTY_NOTICES.md). Core launch integration, restored ten-language coverage, CrossOver support, distribution signing/notarization and runtime/gameplay validation are future work.

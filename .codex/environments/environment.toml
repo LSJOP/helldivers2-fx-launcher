@@ -1,0 +1,8 @@
+version = 1
+name = "HELLDIVERS 2 Native App"
+[setup]
+script = ""
+[[actions]]
+name = "Run"
+icon = "run"
+command = "./native-app/script/build_and_run.sh"

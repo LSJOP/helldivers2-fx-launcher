@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+MODE="${1:-run}"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+APP_NAME="HD2FXNative"
+BUNDLE_ID="com.lsjop.helldivers2fx.native.phase1"
+APP_BUNDLE="$ROOT_DIR/build/Debug/$APP_NAME.app"
+case "$MODE" in run|--verify|--build-only|--xcode-only|--debug|--logs|--telemetry|--smoke) ;; *) echo "usage: $0 [run|--verify|--build-only|--xcode-only|--debug|--logs|--telemetry|--smoke]" >&2; exit 2 ;; esac
+mkdir -p "$ROOT_DIR/build" "$ROOT_DIR/evidence"
+# Stop only this exact app binary, never FX/Steam/Python or another checkout.
+/usr/bin/pkill -f "^${APP_BUNDLE}/Contents/MacOS/${APP_NAME}([[:space:]]|$)" >/dev/null 2>&1 || true
+if /usr/bin/xcodebuild -version >"$ROOT_DIR/evidence/xcode-toolchain.txt" 2>&1; then
+    /usr/bin/xcodebuild -project "$ROOT_DIR/HD2FXNative.xcodeproj" -scheme HD2FXNative -configuration Debug -destination 'platform=macOS,arch=arm64' -derivedDataPath "$ROOT_DIR/build/DerivedData" CONFIGURATION_BUILD_DIR="$ROOT_DIR/build/Debug" CODE_SIGNING_ALLOWED=NO build >"$ROOT_DIR/evidence/xcode-debug.txt" 2>&1
+    echo "Xcode Debug build completed: $APP_BUNDLE"
+else
+    # Preserve a real attempted Xcode build failure as evidence.
+    /usr/bin/xcodebuild -project "$ROOT_DIR/HD2FXNative.xcodeproj" -scheme HD2FXNative -configuration Debug build >"$ROOT_DIR/evidence/xcode-debug.txt" 2>&1 || true
+    if [[ "$MODE" == --xcode-only ]]; then cat "$ROOT_DIR/evidence/xcode-debug.txt" >&2; exit 69; fi
+    echo "Xcode unavailable; compiling Debug app with installed Command Line Tools." >&2
+    mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
+    /usr/bin/python3 -I -B "$ROOT_DIR/script/package_resources.py" "$APP_BUNDLE/Contents/Resources"
+    /usr/bin/python3 -I -B - "$APP_BUNDLE/Contents/Info.plist" <<'PY'
+import plistlib,sys
+with open(sys.argv[1],'wb') as f:
+    plistlib.dump({'CFBundleExecutable':'HD2FXNative','CFBundleIdentifier':'com.lsjop.helldivers2fx.native.phase1',
+                  'CFBundleName':'HD2 FX Launcher','CFBundleDisplayName':'HELLDIVERS 2 FX Launcher',
+                  'CFBundlePackageType':'APPL','CFBundleShortVersionString':'0.1.0','CFBundleVersion':'1',
+                  'LSMinimumSystemVersion':'14.0','NSPrincipalClass':'NSApplication',
+                  'NSHighResolutionCapable':True,'CFBundleDevelopmentRegion':'en',
+                  'CFBundleLocalizations':['en','zh-Hans']},f)
+PY
+    SOURCES=()
+    while IFS= read -r -d '' source; do SOURCES+=("$source"); done < <(/usr/bin/find "$ROOT_DIR/App" "$ROOT_DIR/Models" "$ROOT_DIR/Services" "$ROOT_DIR/Stores" "$ROOT_DIR/Views" "$ROOT_DIR/Support" -name '*.swift' -print0)
+    /usr/bin/xcrun swiftc -swift-version 5 -D DEBUG -g -Onone -target arm64-apple-macos14.0 -sdk "$(/usr/bin/xcrun --sdk macosx --show-sdk-path)" -module-cache-path "$ROOT_DIR/build/ModuleCache" "${SOURCES[@]}" -o "$APP_BUNDLE/Contents/MacOS/$APP_NAME" >"$ROOT_DIR/evidence/swift-debug.txt" 2>&1
+    /usr/bin/codesign --force --sign - "$APP_BUNDLE" >"$ROOT_DIR/evidence/adhoc-sign.txt" 2>&1
+    echo "CLT Debug build completed: $APP_BUNDLE"
+fi
+case "$MODE" in
+ --build-only|--xcode-only) ;;
+ --debug) /usr/bin/lldb -- "$APP_BUNDLE/Contents/MacOS/$APP_NAME" ;;
+ --smoke) /usr/bin/python3 -I -B "$ROOT_DIR/script/capture_smoke.py" "$APP_BUNDLE" "$ROOT_DIR/evidence/gui" ;;
+ --verify) /usr/bin/open -n "$APP_BUNDLE"; sleep 2; /usr/bin/pgrep -f "^${APP_BUNDLE}/Contents/MacOS/${APP_NAME}([[:space:]]|$)" ;;
+ --logs) /usr/bin/open -n "$APP_BUNDLE"; /usr/bin/log stream --info --style compact --predicate 'process == "HD2FXNative"' ;;
+ --telemetry) /usr/bin/open -n "$APP_BUNDLE"; /usr/bin/log stream --info --style compact --predicate 'subsystem == "com.lsjop.helldivers2fx.native.phase1"' ;;
+ run) /usr/bin/open -n "$APP_BUNDLE" ;;
+esac

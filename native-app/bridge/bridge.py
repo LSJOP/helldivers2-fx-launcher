@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""JSONL v1 read-only bridge. No arbitrary commands, settings, network or Guest."""
+import contextlib
+from datetime import datetime, timezone
+import importlib.util
+import json
+from pathlib import Path
+import re
+import signal
+import sys
+
+PROTOCOL = 1
+MAX_LINE = 65536
+METHODS = ('handshake', 'get_launcher_version', 'get_system_info', 'get_environment_status',
+           'get_dependencies', 'list_fx_versions', 'get_logs')
+
+
+class Deadline(Exception):
+    pass
+
+
+def alarm_handler(signum, frame):
+    raise Deadline()
+
+
+def stamp():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def error(rid, code, message):
+    return {'protocol': PROTOCOL, 'request_id': rid, 'ok': False,
+            'error': {'code': code, 'message': message}}
+
+
+def unique_pairs(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('Duplicate field')
+        result[key] = value
+    return result
+
+
+class Bridge:
+    def __init__(self, adapter):
+        self.adapter = adapter
+        self.logs = [{'at': stamp(), 'message': 'Read-only bridge started'}]
+
+    def reply(self, request):
+        rid = request.get('request_id')
+        if not isinstance(rid, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}', rid):
+            return error(None, 'INVALID_ARGUMENT', 'A valid request_id is required')
+        if type(request.get('protocol')) is not int or request['protocol'] != PROTOCOL:
+            return error(rid, 'PROTOCOL_MISMATCH', 'Only protocol version 1 is supported')
+        if set(request) - {'request_id', 'protocol', 'method', 'params', 'timeout_ms'}:
+            return error(rid, 'INVALID_ARGUMENT', 'Unexpected request fields')
+        params = request.get('params', {})
+        method = request.get('method')
+        timeout = request.get('timeout_ms', 3000)
+        if not isinstance(method, str) or not isinstance(params, dict) or params or type(timeout) is not int or not 1 <= timeout <= 5000:
+            return error(rid, 'INVALID_ARGUMENT', 'Invalid method, parameters or timeout')
+        if method not in METHODS:
+            return error(rid, 'NOT_IMPLEMENTED', 'Method is unavailable in read-only Phase 1')
+        try:
+            signal.signal(signal.SIGALRM, alarm_handler)
+            signal.setitimer(signal.ITIMER_REAL, timeout / 1000)
+            # Audited legacy imports/prints may never contaminate protocol stdout.
+            with contextlib.redirect_stdout(sys.stderr):
+                if method == 'handshake':
+                    result = {'protocol_min': 1, 'protocol_max': 1, 'capabilities': list(METHODS), 'read_only': True}
+                elif method == 'get_logs':
+                    result = {'entries': self.logs[-100:], 'source': 'bridge_process_session',
+                              'game_logs': 'NOT_IMPLEMENTED', 'next_cursor': None}
+                else:
+                    name = {'get_launcher_version': 'launcher_version',
+                            'get_system_info': 'system_info',
+                            'get_environment_status': 'environment',
+                            'get_dependencies': 'dependency_info',
+                            'list_fx_versions': 'fx_versions'}[method]
+                    result = getattr(self.adapter, name)()
+            response = {'protocol': PROTOCOL, 'request_id': rid, 'ok': True, 'result': result,
+                        'observed_at': stamp()}
+        except Deadline:
+            response = error(rid, 'TIMEOUT', 'Read-only operation timed out')
+        except (OSError, ValueError, RuntimeError, AttributeError, TypeError):
+            # Never serialize raw paths, configuration contents or exception strings.
+            print('Read-only Core operation unavailable', file=sys.stderr, flush=True)
+            response = error(rid, 'CORE_UNAVAILABLE', 'Read-only Core data is unavailable')
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+        self.logs.append({'at': stamp(), 'message': method + ': ' + ('OK' if response['ok'] else response['error']['code'])})
+        self.logs = self.logs[-100:]
+        return response
+
+
+def serve(adapter, input_stream, output_stream):
+    bridge = Bridge(adapter)
+    while True:
+        line = input_stream.readline(MAX_LINE + 1)
+        if not line:
+            return
+        if len(line) > MAX_LINE:
+            response = error(None, 'PROTOCOL_ERROR', 'Request exceeds frame limit')
+            output_stream.write(json.dumps(response) + '\n'); output_stream.flush()
+            return  # Do not drain an unbounded malicious frame.
+        try:
+            request = json.loads(line, object_pairs_hook=unique_pairs,
+                                 parse_constant=lambda value: (_ for _ in ()).throw(ValueError('Nonfinite number')))
+            if not isinstance(request, dict):
+                raise ValueError('Expected object')
+            response = bridge.reply(request)
+        except (ValueError, UnicodeError, RecursionError):
+            response = error(None, 'PROTOCOL_ERROR', 'Malformed JSON request')
+        payload = json.dumps(response, ensure_ascii=False, separators=(',', ':'), allow_nan=False)
+        if len(payload.encode('utf-8')) > MAX_LINE:
+            payload = json.dumps(error(response['request_id'], 'OUTPUT_LIMIT', 'Response exceeds frame limit'))
+        output_stream.write(payload + '\n'); output_stream.flush()
+
+
+def main():
+    here = Path(__file__).resolve().parent
+    # Dev layout is native-app/bridge; bundled layout is Resources/bridge + Resources/core.
+    root = here.parent / 'core' if (here.parent / 'core').is_dir() else here.parent / 'CoreSnapshot/native-app-core-snapshot'
+    try:
+        spec = importlib.util.spec_from_file_location('native_core_adapter', here / 'core_adapter.py')
+        module = importlib.util.module_from_spec(spec)
+        with contextlib.redirect_stdout(sys.stderr):
+            spec.loader.exec_module(module)
+            adapter = module.CoreAdapter(root)
+        serve(adapter, sys.stdin.buffer, sys.stdout)
+    except (OSError, ImportError, ValueError, RuntimeError):
+        print('Read-only bridge could not initialize Core', file=sys.stderr, flush=True)
+        return 70
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

@@ -1,0 +1,4 @@
+[submodule "native-app/CoreSnapshot"]
+	path = native-app/CoreSnapshot
+	url = https://github.com/LSJOP/helldivers2-fx-launcher.git
+	branch = legacy-script
