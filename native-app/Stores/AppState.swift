@@ -18,8 +18,10 @@ final class AppState: ObservableObject {
     @Published var operationSelection: NativeOperation?
     let credentials = SessionCredentialManager()
     @Published var runtimeRoot = UserDefaults.standard.string(forKey: "NativeRememberedRuntimeRoot") ?? "" {
-        didSet { if oldValue != runtimeRoot { credentials.clear() } }
+        didSet { if oldValue != runtimeRoot { credentials.clear(); guiSnapshots = [:] } }
     }
+    @Published private(set) var guiRecords: [String: GUIOperationRecord] = [:]
+    @Published private(set) var guiSnapshots: [String: [String: JSONValue]] = [:]
     @Published private(set) var operationResult: [String: JSONValue] = [:]
     @Published private(set) var operationError: ErrorState?
     @Published private(set) var operationEvents: [[String: JSONValue]] = []
@@ -55,6 +57,8 @@ final class AppState: ObservableObject {
         var redactor = credentials.redactor
         if method == "launch_game" { launchSession.begin(root: selectedRoot); recordLaunch() }
         if method == "observe_launch", selectedRoot != launchSession.root { launchSession.begin(root: selectedRoot) }
+        guiRecords[method] = GUIOperationRecord(method: method, target: selectedRoot)
+        if GUIAction(rawValue: method) != nil { guiSnapshots = [:] }
         operationError = nil; operationResult = [:]; operationEvents = []
         tasks.start { [weak self] in
             guard let self else { return }
@@ -64,7 +68,7 @@ final class AppState: ObservableObject {
                 if !selectedRoot.isEmpty { input["runtime_root"] = .string(selectedRoot) }
                 if let note = input["note"]?.text { input["note"] = .string(redactor.text(note)) }
                 if method == "save_configuration", let value = input["configuration"], redactor.containsSecret(value) { throw ErrorState("SENSITIVE_CONFIGURATION") }
-                if ["launch_game","test_ssh","test_guest_sudo","inspect_guest","apply_performance","save_network_snapshot"].contains(method) {
+                if ["launch_game","test_ssh","test_guest_sudo","connect_fx","inspect_guest_environment","start_steam","inspect_guest","apply_performance","save_network_snapshot"].contains(method) {
                     let metadata = try await self.bridge.request("read_configuration", configuration: config)
                     guard let revision = metadata.result["revision"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
                     await self.credentials.prepare(for: selectedRoot + "|" + revision)
@@ -96,7 +100,12 @@ final class AppState: ObservableObject {
                         if self.operationEvents.count > 200 { self.operationEvents.removeFirst(self.operationEvents.count - 200) }
                     }
                 }
+                if let action = GUIAction(rawValue: method), !action.accepts(reply.result) { throw ErrorState("PROTOCOL_ERROR", method: method) }
+                if reply.result["fx_host_running"]?.boolean == false { self.guiSnapshots = [:] }
                 self.operationResult = reply.result
+                if GUIAction(rawValue: method) != nil, self.runtimeRoot == selectedRoot { self.guiSnapshots[method] = reply.result }
+                self.guiRecords[method]?.finish()
+                self.recordGUIOperation(method)
                 if method == "launch_game" || method == "observe_launch" { self.launchSession.complete(reply.result, at: reply.observedAt); self.recordLaunch() }
                 self.appendLog(method + ": COMPLETED")
             } catch {
@@ -109,8 +118,28 @@ final class AppState: ObservableObject {
                     self.launchSession.fail(failure)
                     self.recordLaunch()
                 }
+                self.guiRecords[method]?.finish(self.operationError)
+                self.recordGUIOperation(method)
+                if GUIAction(rawValue: method) != nil, ["AUTH_REQUIRED","SSH_AUTH_FAILED","SUDO_AUTH_FAILED"].contains(failure.code), self.operationSelection == nil {
+                    self.operationSelection = NativeOperation(method: method)
+                }
                 self.appendLog(method + ": " + (self.operationError?.code ?? "UNKNOWN"))
             }
+        }
+    }
+    func perform(_ action: GUIAction) {
+        guard !tasks.busy else { return }
+        if runtimeRoot.isEmpty || action.needsReview { operationSelection = NativeOperation(method: action.rawValue) }
+        else { runOperation(action.rawValue, params: ["confirmed": .bool(true)]) }
+    }
+    private func recordGUIOperation(_ method: String) {
+        guard let record = guiRecords[method] else { return }
+        let details: [String: JSONValue] = ["operation": .string(method), "started_at": .string(ISO8601DateFormatter().string(from: record.startedAt)),
+            "ended_at": .string(ISO8601DateFormatter().string(from: record.endedAt ?? Date())), "status": .string(record.status.rawValue),
+            "error_code": .string(record.error?.code ?? "none")]
+        if let data = try? JSONEncoder().encode(JSONValue.object(details)), let text = String(data: data, encoding: .utf8) {
+            runtimeLogs.append(["at": .string(ISO8601DateFormatter().string(from: Date())), "source": .string("Native action"), "level": .string(record.error == nil ? "INFO" : "ERROR"), "message": .string(credentials.redactor.text(text))])
+            if runtimeLogs.count > 500 { runtimeLogs.removeFirst(runtimeLogs.count - 500) }
         }
     }
     func prepareCredentials(interactive: Bool = false) async {

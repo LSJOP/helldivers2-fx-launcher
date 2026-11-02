@@ -47,7 +47,7 @@ A native macOS command interface for HELLDIVERS 2 FX Launcher, built with **Swif
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) | Configuration protection | Real read/edit/save, validation, revision conflicts, existing unknown-field preservation, backup and atomic replacement; checked with isolated data |
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) | Logs and diagnostics | Real progress/error streaming, bounded/redacted logs, search/filter/copy, user-reported match history and report export |
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) | Game launch · Recorded profile | Dedicated FX 1.9.4: Native → FX/Guest/SSH → Steam → game; user confirmed the main menu/controllable ship on 2026-11-03. This does not establish support for other FX environments |
-| ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) | Legacy operation integration | 23 Core interfaces, including launch, SSH/Guest/Steam checks, performance profile, network tests and profile/recovery; real backends are wired, live acceptance is pending |
+| ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) | Legacy operation integration | 28 Core interfaces, including launch, SSH/Guest/Steam checks, performance profile, network tests and profile/recovery; real backends are wired, live acceptance is pending |
 | ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) | Localization and help | All ten original catalogs retained and selectable; new Native strings, full help/changelog presentation and broader reports remain partial |
 | ![Planned](https://img.shields.io/badge/STATUS-Planned-808080?style=flat-square&labelColor=171A1F) | Distribution and integration | Signed/notarized distribution and CrossOver integration; no complete installer |
 | ![Unverified](https://img.shields.io/badge/STATUS-Unverified-808080?style=flat-square&labelColor=171A1F) | Runtime and compatibility | Single-player missions, independent EAC acceptance, multiplayer and other FX environments remain unverified |
@@ -71,7 +71,7 @@ Sparkle 2.10.1 is integrated for Launcher-only updates, with shared menu/setting
 | [![Logs](docs/images/logs.png)](docs/images/logs.png) | [![Settings](docs/images/settings.png)](docs/images/settings.png) |
 
 > [!NOTE]
-> All five images were captured from the running Debug App on 2026-11-02 during `HD2_NATIVE_APP_HEADER_ASSET_REFINEMENT_v1.0.0`, using its real read-only snapshot. They show the shared space-artwork headers on the four secondary pages and the unchanged Dashboard hero, with one main content heading per page, not generated UI mockups. Lower sections remain accessible by scrolling. The Settings capture predates optional credential management and is pending refresh. Images were proportionally reduced for the README; no status or UI was composited. No FX/game launch, EAC or multiplayer success is implied.
+> All five images were captured from the running Debug App on 2026-11-02 during `HD2_NATIVE_APP_HEADER_ASSET_REFINEMENT_v1.0.0`, using its real read-only snapshot. They show the shared space-artwork headers on the four secondary pages and the unchanged Dashboard hero, with one main content heading per page, not generated UI mockups. Lower sections remain accessible by scrolling. The Environment/FX Manager captures predate the GUI action cards, and Settings predates optional credential management; these captures are pending refresh. Images were proportionally reduced for the README; no status or UI was composited. No FX/game launch, EAC or multiplayer success is implied.
 
 <a id="en-requirements"></a>
 
@@ -119,6 +119,8 @@ For an existing clone, select the intended branch and run `git submodule update 
 - Cancellation attempts supported recovery. Already started FX/Steam/game processes may continue; recheck actual state after interruption.
 
 </details>
+
+GUI actions are available in Environment (Connect FX, Inspect environment, Inspect again) and FX Manager (Start FX, Check FX status, Check Guest connection, Start Steam, and the existing game launch). Checks use the selected target and identity guards; Steam/game starts require confirmation. SSH and sudo reuse the independent session/opt-in remembered credentials. Missing or rejected credentials open the existing secure panel. Stop/restart are unavailable until a verified graceful backend exists. File discovery is separate from runtime readiness. This change passed 33 isolated migration checks, 17 launch/GUI state checks, 30 service checks and 17 credential checks. The live host check rejected a different running FX copy, so fresh SSH/Guest inspection through the new actions remains unverified; it was not stopped or modified.
 
 <a id="en-development"></a>
 
@@ -198,7 +200,7 @@ No project-wide source license has been selected. Do not assume blanket redistri
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) 已实现 | 配置保护 | 真实读取/编辑/保存，验证、修订冲突检查、已有未知字段保留、备份及原子替换；使用隔离数据验证 |
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) 已实现 | 日志与诊断 | 真实进度/错误流、有容量限制且脱敏的日志、搜索/筛选/复制、用户报告的匹配历史和报告导出 |
 | ![Implemented](https://img.shields.io/badge/STATUS-Implemented-2EA043?style=flat-square&labelColor=171A1F) 已实现 | 游戏启动 · 记录中的配置 | 专用 FX 1.9.4：Native → FX/Guest/SSH → Steam → 游戏；2026-11-03 用户确认已进入主菜单／飞船且可操作。不代表支持其他 FX 环境 |
-| ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) 开发中 | 原脚本操作集成 | 23 个 Core 接口，包含启动、SSH/Guest/Steam 检查、性能配置、网络测试及方案/恢复；已连接真实后端，仍待实机验收 |
+| ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) 开发中 | 原脚本操作集成 | 28 个 Core 接口，包含启动、SSH/Guest/Steam 检查、性能配置、网络测试及方案/恢复；已连接真实后端，仍待实机验收 |
 | ![In Development](https://img.shields.io/badge/STATUS-In%20Development-F29D38?style=flat-square&labelColor=171A1F) 开发中 | 多语言与帮助 | 保留并可选择原十种语言资源；新增 Native 文案、完整帮助/更新日志及更全面报告仍不完整 |
 | ![Planned](https://img.shields.io/badge/STATUS-Planned-808080?style=flat-square&labelColor=171A1F) 计划中 | 发行与集成 | 签名/公证发行、CrossOver 集成；没有完整安装包 |
 | ![Unverified](https://img.shields.io/badge/STATUS-Unverified-808080?style=flat-square&labelColor=171A1F) 未验证 | 运行环境与兼容性 | 单人任务、独立 EAC 验收、多人联机及其他 FX 环境仍未验证 |
@@ -222,7 +224,7 @@ No project-wide source license has been selected. Do not assume blanket redistri
 | [![Logs](docs/images/logs.png)](docs/images/logs.png) | [![Settings](docs/images/settings.png)](docs/images/settings.png) |
 
 > [!NOTE]
-> 五张均于 2026-11-02 的 `HD2_NATIVE_APP_HEADER_ASSET_REFINEMENT_v1.0.0` 检查中，从运行中的 Debug App 及其真实只读快照采集，展示四个次级页面共享的太空横幅及保留的首页人物主视觉，每页仅保留一个主标题，不是生成式 UI 预览图。下方区域可通过滚动查看；设置截图早于可选凭据管理功能，待更新。图片仅按比例缩小用于 README，没有合成界面或运行状态，不证明 FX／游戏启动、EAC 或联机成功。
+> 五张均于 2026-11-02 的 `HD2_NATIVE_APP_HEADER_ASSET_REFINEMENT_v1.0.0` 检查中，从运行中的 Debug App 及其真实只读快照采集，展示四个次级页面共享的太空横幅及保留的首页人物主视觉，每页仅保留一个主标题，不是生成式 UI 预览图。下方区域可通过滚动查看；运行环境／FX 管理截图早于 GUI 操作卡片，设置截图早于可选凭据管理功能，均待更新。图片仅按比例缩小用于 README，没有合成界面或运行状态，不证明 FX／游戏启动、EAC 或联机成功。
 
 <a id="zh-requirements"></a>
 
@@ -270,6 +272,8 @@ open build/Debug/HD2FXNative.app
 - 取消会尝试支持的恢复。已经启动的 FX/Steam/游戏进程可能继续运行，中断后请重新核对实际状态。
 
 </details>
+
+运行环境页提供“连接 FX／检测环境／重新检测”，FX 管理页提供“启动 FX／检查 FX 状态／检查 Guest 连接／启动 Steam”及已有游戏启动入口。检查遵守所选目标与身份校验；启动 Steam／游戏需确认。SSH 与 sudo 分别复用会话或主动记住的凭据，缺失或失效时打开已有安全输入面板。停止／重启尚无经验证的安全退出后端，保持不可用。文件发现与运行就绪分别展示。本次通过 33 项隔离迁移检查、17 项启动／GUI 状态检查、30 项服务检查及 17 项凭据检查。实际宿主检查因另一份 FX 正在运行而拒绝连接，新入口的实时 SSH／Guest 检测仍未验证；没有停止或修改该 FX。
 
 <a id="zh-development"></a>
 

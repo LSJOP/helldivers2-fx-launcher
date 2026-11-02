@@ -25,6 +25,36 @@ class OperationError(Exception):
         self.code, self.details = code, details or {}
         super().__init__(code)
 
+GUEST_ENVIRONMENT_READ = r"""
+import json,pathlib,platform,re,subprocess
+steam=pathlib.Path.home()/'.local/share/Steam'
+roots=[steam]
+folders=steam/'steamapps/libraryfolders.vdf'
+if folders.is_file():
+ for value in re.findall(r'"path"\s*"([^"\n]+)"',folders.open('rb').read(262144).decode(errors='replace'))[:8]:
+  candidate=pathlib.Path(value)
+  if candidate.is_absolute() and candidate not in roots:roots.append(candidate)
+manifest=None;game=None
+for root in roots:
+ p=root/'steamapps/appmanifest_553850.acf'
+ if p.is_file():
+  text=p.open('rb').read(65536).decode(errors='replace')
+  match=re.search(r'"installdir"\s*"([^"\n]+)"',text)
+  if match and 0<len(match[1])<=128 and pathlib.Path(match[1]).name==match[1] and '/' not in match[1] and '\\' not in match[1]:
+   manifest=p;game=root/'steamapps/common'/match[1];break
+components={'steam_files':steam.is_dir(),'game_manifest':manifest is not None,'game_directory':bool(game and game.is_dir()),
+ 'game_executable':bool(game and (game/'bin/helldivers2.exe').is_file()),
+ 'proton_files':(steam/'compatibilitytools.d/proton-je-11.0-20261014-3/proton').is_file(),
+ 'fex_files':(steam/'steamapps/common/FEX-Emu/usr/bin/FEX').is_file()}
+def count(name):
+ r=subprocess.run(['pgrep','-x',name],capture_output=True,text=True,timeout=5)
+ if r.returncode not in (0,1):raise RuntimeError('Unable to inspect process state')
+ return len(r.stdout.split())
+print(json.dumps({'guest_os':platform.system()+' '+platform.release(),'guest_arch':platform.machine(),'guest_python':platform.python_version(),
+ 'components':components,'steam_process_count':count('steam'),'game_process_count':count('helldivers2.exe'),
+ 'scope':'read_only_file_presence_and_processes','eac':'unverified','multiplayer':'unverified','main_menu':'unverified'}))
+"""
+
 OPERATIONS = {
     'read_configuration': ('settings', False, False),
     'save_configuration': ('settings', True, False),
@@ -33,6 +63,11 @@ OPERATIONS = {
     'test_network': ('environment', False, True),
     'test_ssh': ('environment', True, True),
     'test_guest_sudo': ('settings', True, True),
+    'connect_fx': ('environment', True, True),
+    'inspect_guest_environment': ('environment', True, True),
+    'check_fx_state': ('fx', False, True),
+    'start_fx': ('fx', True, True),
+    'start_steam': ('fx', True, True),
     'inspect_guest': ('environment', True, True),
     'launch_game': ('dashboard', True, True),
     'preflight_launch': ('dashboard', False, True),
@@ -271,6 +306,8 @@ class Operations:
             if key in params and (not isinstance(params[key],str) or len(params[key])>4096 or '\x00' in params[key]):raise OperationError('INVALID_ARGUMENT')
         if any(self.secret_values) and params.get('credential_revision')!=self.read_config()[2]:raise OperationError('CREDENTIAL_SCOPE_CHANGED')
         self.event('INFO',method+' started')
+        if method in ('connect_fx','inspect_guest_environment','check_fx_state','start_fx','start_steam'):
+            return self.gui_operation(method,params)
         if method in ('launch_game','preflight_launch','observe_launch'):
             return self.launch_operation(method,params)
         if method=='read_configuration':
@@ -483,6 +520,73 @@ class Operations:
                     details['stderr']=self.scrub(text)
             self.event('ERROR',code,stage=self.launch_stage,status='failed')
             raise OperationError(code,details) from None
+
+    def fx_host_state(self,helper):
+        self.check_fx_entry(helper)
+        rows=helper.safety.process_table(helper.safety.output(['ps','-ww','-axo','pid=,ppid=,lstart=,comm=']))
+        executable=str(Path(helper.APP)/'Contents/MacOS/steamac-vm')
+        selected=[pid for pid,row in rows.items() if row[2]==executable]
+        if selected:fx_process_view(rows,executable)
+        info=Path(helper.APP)/'Contents/Info.plist'
+        version=plistlib.loads(info.read_bytes()).get('CFBundleShortVersionString','unknown') if info.is_file() else 'unknown'
+        return {'fx_host_running':bool(selected),'fx_process_count':len(selected),'fx_path':helper.APP,'fx_version':version,'transport_verified':bool(selected) and helper.network_ready(),
+                'guest':'unverified','ssh_connected':False,'main_menu':'unverified','eac':'unverified','multiplayer':'unverified'}
+
+    def gui_operation(self,method,params):
+        stage='CheckingFXEntry'
+        try:
+            helper=self.runtime(params)
+            if not helper.prefs.local_host(helper.SETTINGS['ssh']['host']):raise OperationError('LOCAL_FX_REQUIRED')
+            host=self.fx_host_state(helper)
+            if method=='check_fx_state':return host
+            if method=='start_fx':
+                with helper.safety.target_lock(helper.SETTINGS):
+                    host=self.fx_host_state(helper)
+                    helper.verify_fx_profile()
+                    if host['fx_host_running']:
+                        self.check_fx_entry(helper,require_running=True)
+                        return dict(host,already_running=True)
+                    report=helper.dependencies.inspect_runtime(helper)
+                    if not report['ready']:raise OperationError('ENVIRONMENT_CHECK_FAILED')
+                    stage='StartingFX'
+                    # Same verified entry/wrapper and arguments as archived start-hd2.py.
+                    helper.subprocess.run(['open',helper.APP,'--args','--no-wmtr','--vulkan-driver','kosmickrisp','--gvproxy',str(helper.GVPROXY_WRAPPER),'--ssh-port',str(helper.SETTINGS['ssh']['port']),'--cpus','8','--mem','8192','--cmdline','console=hvc0 loglevel=4 rootwait steamac.gpu_mib=6144','--perf-stats'],check=True,timeout=15)
+                    deadline=time.monotonic()+30
+                    while time.monotonic()<deadline:
+                        current=self.fx_host_state(helper)
+                        if current['fx_host_running'] and helper.network_ready():
+                            self.check_fx_entry(helper,require_running=True)
+                            return dict(current,already_running=False)
+                        time.sleep(.25)
+                    raise OperationError('TIMEOUT',{'stage':stage})
+            if not host['fx_host_running']:raise OperationError('FX_NOT_RUNNING')
+            self.check_fx_entry(helper,require_running=True)
+            stage='WaitingForGuest'
+            helper.connect()
+            session=helper.safety.Session(helper)
+            plan=session.bind()  # Original host/listener/SSH-peer/Guest-boot identity guard.
+            connected=dict(host,ssh_connected=True,guest_ready=True,guest_service=plan['service'])
+            if method=='connect_fx':return connected
+            if method=='start_steam':
+                stage='StartingSteam'
+                with helper.safety.target_lock(helper.SETTINGS):
+                    session.verify()
+                    result=session.steam()  # Original idle/managed-service check, one controlled start.
+                    final=session.verify()
+                    if final['service']!='running':raise OperationError('STEAM_START_FAILED')
+                    return dict(connected,steam_running=True,steam_started=bool(result.get('started')))
+            stage='ReadingGuest'
+            facts=json.loads(helper.remote(GUEST_ENVIRONMENT_READ,timeout=25))
+            session.verify()  # Do not publish a snapshot after target/boot replacement.
+            facts.update(connected)
+            return facts
+        except OperationError as error:
+            error.details.setdefault('stage',stage)
+            raise
+        except Exception as error:
+            code='TIMEOUT' if type(error).__name__=='Deadline' or isinstance(error,subprocess.TimeoutExpired) else 'GUEST_INSPECTION_FAILED' if stage=='ReadingGuest' else 'STEAM_START_FAILED' if stage=='StartingSteam' else 'FX_START_FAILED' if stage=='StartingFX' else 'SSH_CONNECTION_FAILED'
+            if isinstance(error,getattr(getattr(locals().get('helper'),'prefs',None),'AuthenticationError',())) and str(error).startswith('SSH authentication failed.'):code='SSH_AUTH_FAILED'
+            raise OperationError(code,{'stage':stage,'summary':self.scrub(str(error))}) from None
 
     def check_fx_entry(self, helper, require_running=False):
         rows=helper.safety.process_table(helper.safety.output(['ps','-ww','-axo','pid=,ppid=,lstart=,comm=']))

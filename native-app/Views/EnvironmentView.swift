@@ -11,9 +11,22 @@ struct EnvironmentView: View {
     private func badge(_ status: InspectionStatus) -> some View {
         TacticalStatusBadge(text: status.title(state), tone: status.tone)
     }
+    private var actionEvidence: [String: JSONValue] {
+        state.guiRecords.values.filter { $0.target == state.runtimeRoot && $0.status == .succeeded && state.guiSnapshots[$0.method] != nil }.max { $0.startedAt < $1.startedAt }.flatMap { state.guiSnapshots[$0.method] } ?? [:]
+    }
+    private func chainStatus(_ name: String) -> InspectionStatus {
+        switch name {
+        case "FX": return actionEvidence["fx_host_running"]?.boolean == true ? .normal : actionEvidence["fx_host_running"]?.boolean == false ? .action : .unchecked
+        case "SSH": return actionEvidence["ssh_connected"]?.boolean == true ? .normal : .unchecked
+        case "Guest": return actionEvidence["guest_ready"]?.boolean == true ? .normal : .unchecked
+        case "Steam": return actionEvidence["steam_running"]?.boolean == true || (actionEvidence["steam_process_count"]?.integer ?? 0) > 0 ? .normal : actionEvidence["steam_process_count"] != nil ? .action : .unchecked
+        default: return .unchecked
+        }
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             TacticalPageHeader(title: state.t("运行环境检测", "Environment inspection"), refreshState: state)
+            GUIOperationsPanel(state: state, tasks: state.tasks)
             TacticalAdaptiveLayout(minimumWidth: 140, maximumColumns: 4) {
                 TacticalMetric(title: "macOS", value: state.value("get_system_info", "os_version"), symbol: "apple.logo")
                 TacticalMetric(title: state.t("架构", "Architecture"), value: state.value("get_system_info", "arch"), symbol: "cpu")
@@ -50,11 +63,11 @@ struct EnvironmentView: View {
                         VStack(spacing: 10) {
                             Image(systemName: name == "EAC" ? "shield.lefthalf.filled" : "shippingbox").font(.title2)
                             Text(TacticalEvidence.name(name, state)).font(TacticalTypography.body.weight(.semibold))
-                            badge(.unchecked)
+                            badge(chainStatus(name))
                         }.frame(maxWidth: .infinity).padding(.vertical, 10)
                     }
                 }
-                Text(state.t("只读快照不检查此链路。连接工具的检测结果在操作面板显示；游戏启动的阶段证据在总览显示。安装文件、进程、Guest 就绪、游戏主菜单、EAC 与联机均为独立证据。", "The read-only snapshot does not probe this chain. Connection results appear in the operation panel; launch-stage evidence appears on Dashboard. Installation files, processes, Guest readiness, the game menu, EAC and multiplayer require separate evidence."))
+                Text(state.t("链路显示当前目标最近一次操作的证据。FX 表示宿主进程，连接与 Guest 身份须分别验证；EAC 和联机未执行独立检查。游戏进程不代表已进入主菜单。", "The chain reflects the latest action on the current target. FX means host processes; connection and Guest identity need separate verification. EAC and multiplayer have not been independently checked. A game process does not prove the menu."))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
             }
         }

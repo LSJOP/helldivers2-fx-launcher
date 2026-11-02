@@ -123,8 +123,9 @@ actor BridgeService {
             let codes = ["TIMEOUT", "CORE_UNAVAILABLE", "NOT_IMPLEMENTED", "PROTOCOL_ERROR", "PROTOCOL_MISMATCH", "INVALID_ARGUMENT", "OUTPUT_LIMIT"]
             let operationCodes = ["CONFIRMATION_REQUIRED", "CHANGE_CONFIRMATION_REQUIRED", "CONFIG_CHANGED", "AUTH_REQUIRED", "SOURCE_MISMATCH", "RUNTIME_ROOT_REQUIRED", "UNSAFE_PATH", "CANCELLED", "UNSUPPORTED_CONFIGURATION", "PROFILE_NOT_APPLICABLE"]
             let launchCodes = ["LAUNCHER_FILES_MISSING", "FX_UNAVAILABLE", "GVPROXY_UNAVAILABLE", "NODE_UNAVAILABLE", "SSH_UNAVAILABLE", "FX_PROFILE_MISMATCH", "ENVIRONMENT_CHECK_FAILED", "FX_START_FAILED", "SSH_CONNECTION_FAILED", "COMPATIBILITY_CHECK_FAILED", "STEAM_START_FAILED", "GAME_START_FAILED", "GAME_EXITED", "EAC_CHECK_FAILED", "LAUNCH_FAILED", "FX_IDENTITY_UNVERIFIED", "FX_INSTANCE_MISMATCH", "FX_ENTRY_MISMATCH"]
-            let credentialCodes = ["CREDENTIAL_SCOPE_CHANGED", "SENSITIVE_CONFIGURATION", "SENSITIVE_CHANGE_BLOCKED"]
-            throw ErrorState((codes + operationCodes + launchCodes + credentialCodes).contains(failure.code) ? failure.code : "PROTOCOL_ERROR", method: method, details: redactor.diagnostic(failure.details ?? [:]))
+            let credentialCodes = ["CREDENTIAL_SCOPE_CHANGED", "SENSITIVE_CONFIGURATION", "SENSITIVE_CHANGE_BLOCKED", "SSH_AUTH_FAILED", "SUDO_AUTH_FAILED", "GUEST_TRANSACTION_FAILED"]
+            let guiCodes = ["FX_NOT_RUNNING", "LOCAL_FX_REQUIRED", "GUEST_INSPECTION_FAILED"]
+            throw ErrorState((codes + operationCodes + launchCodes + credentialCodes + guiCodes).contains(failure.code) ? failure.code : "PROTOCOL_ERROR", method: method, details: redactor.diagnostic(failure.details ?? [:]))
         }
         guard let result = response.result, response.error == nil,
               let observed = response.observed_at, !observed.isEmpty else { throw ErrorState("PROTOCOL_ERROR", method: method) }

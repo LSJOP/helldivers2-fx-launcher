@@ -36,6 +36,14 @@ import Foundation
         session.fail(ErrorState("SUDO_AUTH_FAILED", details: ["stage": .string("CheckingCompatibility")]))
         let failure = session.diagnostic(appVersion: "fixture")
         try check(failure["error_code"]?.text == "SUDO_AUTH_FAILED" && !(failure["error_summary"]?.text ?? "").isEmpty && failure["main_menu"]?.text == "unverified", "sudo refusal has an actionable summary without menu success")
-        print("11 launch state checks PASS")
+        try check(!GUIAction.connect.accepts(["fx_host_running":.bool(true)]) && !GUIAction.connect.accepts(["ssh_connected":.bool(false), "guest_ready":.bool(true)]), "host existence and negative SSH are never connected")
+        try check(GUIAction.connect.accepts(["ssh_connected":.bool(true),"guest_ready":.bool(true)]) && !GUIAction.inspect.accepts(["ssh_connected":.bool(true),"guest_ready":.bool(true),"guest_os":.string("Linux"),"components":.array([])]), "connection needs identity and inspection needs typed component evidence")
+        try check(GUIAction.fxState.accepts(["fx_host_running":.bool(false)]) && !GUIAction.startFX.accepts(["fx_host_running":.bool(false)]) && !GUIAction.steam.accepts(["ssh_connected":.bool(true),"steam_running":.bool(false)]), "successful status query can report stopped without start success")
+        for (code, expected) in [("CANCELLED", GUIOperationStatus.cancelled),("TIMEOUT",.timedOut),("SSH_AUTH_FAILED",.failed)] {
+            var record=GUIOperationRecord(method:"connect_fx",target:"fixture")
+            record.finish(ErrorState(code))
+            try check(record.status == expected && record.endedAt! >= record.startedAt, "terminal action status and actual timing: " + code)
+        }
+        print("17 launch and GUI state checks PASS")
     }
 }

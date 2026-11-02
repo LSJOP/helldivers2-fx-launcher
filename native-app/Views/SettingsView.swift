@@ -76,7 +76,7 @@ struct LegacyOperationsView: View {
             Text(state.t("锁标记表示执行前需要确认；打开面板不会执行操作。只读功能无需变更授权。", "A lock marks actions requiring confirmation before execution. Opening a panel runs nothing. Read-only tools need no change approval."))
                 .font(TacticalTypography.caption).foregroundStyle(.secondary)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 10)], alignment: .leading, spacing: 10) {
-                ForEach(state.rows("get_legacy_catalog", "operations").filter { $0["scope"]?.text == scope && !["check_updates","test_guest_sudo"].contains($0["method"]?.text ?? "") }, id: \.operationID) { row in
+                ForEach(state.rows("get_legacy_catalog", "operations").filter { $0["scope"]?.text == scope && !(["check_updates","test_guest_sudo"] + GUIAction.allCases.map(\.rawValue)).contains($0["method"]?.text ?? "") }, id: \.operationID) { row in
                     let method = row["method"]?.text ?? ""
                     let requiresConsent = row["confirmation"]?.boolean == true
                     TacticalButton(title: operationTitle(method, state), symbol: requiresConsent ? "lock" : "doc.text.magnifyingglass",
@@ -103,6 +103,11 @@ private extension Dictionary where Key == String, Value == JSONValue {
         "test_network": ("运行网络测试", "Run network test"),
         "test_ssh": ("测试 SSH 连接", "Test SSH connection"),
         "test_guest_sudo": ("验证 Guest sudo 密码", "Verify Guest sudo password"),
+        "connect_fx": ("连接 FX", "Connect FX"),
+        "inspect_guest_environment": ("检测环境", "Inspect environment"),
+        "check_fx_state": ("检查 FX 状态", "Check FX status"),
+        "start_fx": ("启动 FX", "Start FX"),
+        "start_steam": ("启动 Steam", "Start Steam"),
         "inspect_guest": ("读取 Guest / Steam", "Inspect Guest / Steam"),
         "launch_game": ("启动 HELLDIVERS 2", "Launch HELLDIVERS 2"),
         "preflight_launch": ("启动前只读检查", "Read-only launch preflight"),
@@ -143,7 +148,7 @@ struct LegacyOperationSheet: View {
     @State private var note = ""
     @State private var channel = "preview"
     @State private var inputError = false
-    private var needsRoot: Bool { ["inspect_legacy_runtime","test_ssh","test_guest_sudo","inspect_guest","launch_game","preflight_launch","observe_launch","apply_performance","save_network_snapshot"].contains(operation) }
+    private var needsRoot: Bool { ["connect_fx","inspect_guest_environment","check_fx_state","start_fx","start_steam","inspect_legacy_runtime","test_ssh","test_guest_sudo","inspect_guest","launch_game","preflight_launch","observe_launch","apply_performance","save_network_snapshot"].contains(operation) }
     private var needsConsent: Bool {
         state.rows("get_legacy_catalog", "operations").first { $0["method"]?.text == operation }?["confirmation"]?.boolean ?? true
     }
@@ -153,12 +158,22 @@ struct LegacyOperationSheet: View {
         if needsConsent && !confirmed { return state.t("请先核对影响范围并勾选授权", "Review the scope and grant authorization first") }
         return nil
     }
+    private var effect: String {
+        switch GUIAction(rawValue: operation) {
+        case .connect: return state.t("检查所选 FX 并连接、验证 Guest 身份。不会启动 FX 或修改 Guest 配置。", "Inspect the selected FX and connect/verify Guest identity. Does not start FX or change Guest configuration.")
+        case .inspect: return state.t("只读检查 Guest 系统、Steam、游戏和兼容工具文件；不会自动修复。", "Read-only inspection of Guest, Steam, game and compatibility-tool files. No automatic repair.")
+        case .fxState: return state.t("只读检查所选 FX 的版本与宿主进程；不会连接 Guest。", "Read-only check of the selected FX version and host processes; no Guest connection.")
+        case .startFX: return state.t("使用原脚本验证过的入口与参数启动专用 FX。宿主启动后，Guest 就绪状态需点击连接检查。取消不会强制关闭已启动的 FX。", "Start the dedicated FX using the original verified entry and arguments. Connect afterwards to check Guest readiness. Cancellation does not force-quit FX.")
+        case .steam: return state.t("连接目标 Guest，通过原 Core 受控启动 Steam；已运行则复用，不请求启动游戏。", "Connect to the target Guest and use the original controlled Steam start; reuse a running service without requesting game launch.")
+        default: return state.t("只读是默认模式。仅执行主动选择的操作；启动或配置可能连接 Guest、启动应用或修改配置。具体变更需要单独预览与确认，取消不会强制关闭已启动的游戏。", "Read-only is the default. Only the selected action runs. Starts/configuration may connect Guest, open apps or change configuration. Exact changes require separate review and consent; cancellation does not force-quit a running game.")
+        }
+    }
     private var jsonResult: String { pretty(.object(state.operationResult)) }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Text(operationTitle(operation, state)).font(TacticalTypography.page)
-                TacticalWarningBanner(text: state.t("只读是默认模式。此处仅执行你主动选择的功能；启动或配置可能启动 FX/Steam、连接 SSH、写入配置或修改系统网络。取消只停止当前操作，不承诺关闭已启动的游戏。", "Read-only is the default. This panel runs only your selected action. Launch/configuration can start FX/Steam, connect SSH, write configuration or change host networking. Cancellation stops the current operation; it does not promise to close a running game."))
+                TacticalWarningBanner(text: effect)
                 if operation == "apply_network_profile" {
                     TacticalWarningBanner(text: state.t("该原脚本方案会在确认有线网络与代理可用后关闭 Wi-Fi，并保存恢复记录。请先核对下方具体变更。", "The legacy profile disables Wi-Fi after checking wired connectivity and the proxy, and records recovery state. Review the exact change below."))
                 }
@@ -173,7 +188,7 @@ struct LegacyOperationSheet: View {
                     TacticalButton(title: state.t("先做只读预检", "Run read-only preflight"), symbol: "checklist") { state.runOperation("preflight_launch") }
                         .disabled(tasks.busy || state.runtimeRoot.isEmpty)
                 }
-                if ["test_ssh","test_guest_sudo","inspect_guest","launch_game","apply_performance","save_network_snapshot"].contains(operation) {
+                if ["connect_fx","inspect_guest_environment","start_steam","test_ssh","test_guest_sudo","inspect_guest","launch_game","apply_performance","save_network_snapshot"].contains(operation) {
                     CredentialInputFields(state: state, credentials: credentials, tasks: tasks, operation: operation)
                 }
                 if operation == "save_configuration" {
@@ -200,7 +215,7 @@ struct LegacyOperationSheet: View {
                     Toggle(state.t("我允许本次明确选择的操作，并知悉上方影响范围", "I authorize this selected action and understand the effects above"), isOn: $confirmed)
                 }
                 if let error = state.operationError {
-                    TacticalWarningBanner(text: error.code + " · " + (error.details["summary"]?.text ?? error.message(state.chinese)), isError: true)
+                    TacticalWarningBanner(text: error.message(state.chinese), isError: true)
                     if let change = error.details["change"] {
                         Text(pretty(change)).font(TacticalTypography.log).textSelection(.enabled)
                         TacticalButton(title: state.t("确认这项具体变更并继续", "Approve this exact change and continue"), symbol: "checkmark.shield") {
@@ -209,16 +224,17 @@ struct LegacyOperationSheet: View {
                     }
                 }
                 if inputError { TacticalWarningBanner(text: state.t("配置必须为有效 JSON 对象，且已读取当前修订。", "Configuration must be a valid JSON object with a loaded revision."), isError: true) }
-                if !state.operationResult.isEmpty {
-                    Text(jsonResult).font(TacticalTypography.log).textSelection(.enabled)
+                if let record = state.guiRecords[operation] {
+                    TacticalInfoRow(title: state.t("执行状态", "Execution status"), value: record.status == .running ? state.t("正在执行", "Running") : record.status == .succeeded ? state.t("已完成；结果见详情或对应页面", "Completed; see details or the related page") : record.status == .cancelled ? state.t("已取消", "Cancelled") : record.status == .timedOut ? state.t("已超时", "Timed out") : state.t("执行失败", "Failed"))
                 }
-                ForEach(Array(state.operationEvents.enumerated()), id: \.offset) { _, event in
-                    HStack {
-                        Text(event["level"]?.text ?? "INFO").font(TacticalTypography.log)
-                        Text(event["message"]?.text ?? "")
-                        Text(event["status"]?.text ?? "").font(TacticalTypography.log)
+                DisclosureGroup(state.t("查看详情 · 高级日志", "Details · Advanced logs")) {
+                    if !state.operationResult.isEmpty { Text(jsonResult).font(TacticalTypography.log).textSelection(.enabled) }
+                    if let error = state.operationError { Text(error.code + " · " + (error.details["summary"]?.text ?? "")).font(TacticalTypography.log).textSelection(.enabled) }
+                    ForEach(Array(state.operationEvents.enumerated()), id: \.offset) { _, event in
+                        HStack { Text(event["level"]?.text ?? "INFO"); Text(event["message"]?.text ?? ""); Text(event["status"]?.text ?? "") }.font(TacticalTypography.log)
                     }
                 }
+
 
             }.padding(24)
         }

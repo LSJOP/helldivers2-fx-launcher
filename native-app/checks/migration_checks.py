@@ -20,6 +20,69 @@ class MigrationChecks(unittest.TestCase):
         self.config=self.directory/'settings.json'
         self.events=[]
         self.ops=m.Operations(APP/'CoreSnapshot',settings_file=self.config,data_dir=self.directory/'data',emit=self.events.append)
+    def gui_fixture(self, running=True):
+        from unittest.mock import Mock
+        from contextlib import nullcontext
+        session=Mock()
+        session.bind.return_value={'service':'stopped'}
+        session.verify.return_value={'service':'running'}
+        session.steam.return_value={'ok':True,'started':True}
+        helper=types.SimpleNamespace(APP='/fixture/FX.app',GVPROXY_WRAPPER='/fixture/wrapper',
+            SETTINGS={'ssh':{'host':'127.0.0.1','port':2222}},
+            prefs=types.SimpleNamespace(local_host=lambda host:True),
+            connect=Mock(),remote=Mock(),network_ready=lambda:True,verify_fx_profile=Mock(),
+            subprocess=types.SimpleNamespace(run=Mock()),
+            dependencies=types.SimpleNamespace(inspect_runtime=lambda h:{'ready':True}),
+            safety=types.SimpleNamespace(Session=Mock(return_value=session),target_lock=lambda settings:nullcontext()))
+        host={'fx_host_running':running,'ssh_connected':False}
+        return helper,session,host
+    def test_gui_connect_refuses_stopped_fx_before_ssh(self):
+        helper,session,host=self.gui_fixture(False)
+        with patch.object(self.ops,'runtime',return_value=helper),patch.object(self.ops,'fx_host_state',return_value=host):
+            with self.assertRaises(m.OperationError) as error:self.ops.run('connect_fx',{'confirmed':True})
+        self.assertEqual(error.exception.code,'FX_NOT_RUNNING');helper.connect.assert_not_called()
+        helper.subprocess.run.assert_not_called()
+    def test_gui_connect_requires_identity_and_never_starts_apps(self):
+        helper,session,host=self.gui_fixture()
+        with patch.object(self.ops,'runtime',return_value=helper),patch.object(self.ops,'fx_host_state',return_value=host),patch.object(self.ops,'check_fx_entry'):
+            result=self.ops.run('connect_fx',{'confirmed':True})
+            self.assertTrue(result['ssh_connected']);self.assertTrue(result['guest_ready'])
+            session.bind.side_effect=RuntimeError('Guest identity changed')
+            with self.assertRaises(m.OperationError):self.ops.run('connect_fx',{'confirmed':True})
+        helper.connect.assert_called();helper.subprocess.run.assert_not_called();session.steam.assert_not_called()
+    def test_gui_guest_read_preserves_negative_evidence_and_rechecks_identity(self):
+        helper,session,host=self.gui_fixture()
+        helper.remote.return_value=json.dumps({'components':{'game_executable':False},'steam_process_count':0})
+        with patch.object(self.ops,'runtime',return_value=helper),patch.object(self.ops,'fx_host_state',return_value=host),patch.object(self.ops,'check_fx_entry'):
+            result=self.ops.run('inspect_guest_environment',{'confirmed':True})
+            self.assertFalse(result['components']['game_executable']);self.assertEqual(result['steam_process_count'],0)
+            session.verify.assert_called_once()
+            session.verify.side_effect=RuntimeError('Guest replaced')
+            with self.assertRaises(m.OperationError):self.ops.run('inspect_guest_environment',{'confirmed':True})
+        helper.remote.assert_called_with(m.GUEST_ENVIRONMENT_READ,timeout=25)
+        self.assertNotIn('sudo',m.GUEST_ENVIRONMENT_READ);self.assertNotIn('write_text',m.GUEST_ENVIRONMENT_READ)
+        session.steam.assert_not_called()
+    def test_gui_steam_reuses_controlled_core_and_does_not_launch_game(self):
+        helper,session,host=self.gui_fixture()
+        with patch.object(self.ops,'runtime',return_value=helper),patch.object(self.ops,'fx_host_state',return_value=host),patch.object(self.ops,'check_fx_entry'):
+            result=self.ops.run('start_steam',{'confirmed':True})
+            self.assertTrue(result['steam_running']);session.steam.assert_called_once()
+            session.verify.return_value={'service':'stopped'}
+            with self.assertRaises(m.OperationError) as error:self.ops.run('start_steam',{'confirmed':True})
+        self.assertEqual(error.exception.code,'STEAM_START_FAILED');helper.subprocess.run.assert_not_called()
+    def test_gui_start_fx_preserves_original_entry_and_never_uses_ssh(self):
+        helper,session,host=self.gui_fixture(False)
+        with patch.object(self.ops,'runtime',return_value=helper),patch.object(self.ops,'fx_host_state',side_effect=[host,host,dict(host,fx_host_running=True)]),patch.object(self.ops,'check_fx_entry'):
+            result=self.ops.run('start_fx',{'confirmed':True})
+        self.assertTrue(result['fx_host_running']);helper.connect.assert_not_called()
+        helper.subprocess.run.assert_called_once_with(['open','/fixture/FX.app','--args','--no-wmtr','--vulkan-driver','kosmickrisp','--gvproxy','/fixture/wrapper','--ssh-port','2222','--cpus','8','--mem','8192','--cmdline','console=hvc0 loglevel=4 rootwait steamac.gpu_mib=6144','--perf-stats'],check=True,timeout=15)
+    def test_gui_existing_fx_never_duplicate_starts_and_unavailable_actions_rejected(self):
+        helper,session,host=self.gui_fixture()
+        with patch.object(self.ops,'runtime',return_value=helper),patch.object(self.ops,'fx_host_state',return_value=host),patch.object(self.ops,'check_fx_entry'):
+            result=self.ops.run('start_fx',{'confirmed':True})
+        self.assertTrue(result['already_running']);helper.subprocess.run.assert_not_called()
+        for method,params in [('stop_fx',{}),('restart_fx',{}),('connect_fx',{'confirmed':True,'command':'id'})]:
+            with self.assertRaises(m.OperationError):self.ops.run(method,params)
     def test_guest_sudo_refusal_is_not_component_incompatibility(self):
         from types import SimpleNamespace
         class NotWrittenError(RuntimeError): pass

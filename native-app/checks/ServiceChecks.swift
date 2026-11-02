@@ -56,6 +56,10 @@ import Foundation
         try await expect("PROTOCOL_ERROR", config: fixture("foreign_progress", prefix + "print(json.dumps(dict(protocol=1,request_id='foreign',event={})))\nprint(json.dumps(" + good + "))\n"))
         try await expect("FX_IDENTITY_UNVERIFIED", config: fixture("launch_identity_error", prefix + "print(json.dumps(dict(protocol=1,request_id=r['request_id'],ok=False,error=dict(code='FX_IDENTITY_UNVERIFIED',message='blocked',details=dict(stage='CheckingCompatibility')))))\n"), method: "launch_game")
         try await expect("FX_INSTANCE_MISMATCH", config: fixture("launch_foreign_error", prefix + "print(json.dumps(dict(protocol=1,request_id=r['request_id'],ok=False,error=dict(code='FX_INSTANCE_MISMATCH',message='blocked',details=dict(stage='CheckingFXEntry')))))\n"), method: "launch_game")
+        for code in ["SSH_AUTH_FAILED","SUDO_AUTH_FAILED","GUEST_TRANSACTION_FAILED","FX_NOT_RUNNING","LOCAL_FX_REQUIRED","GUEST_INSPECTION_FAILED"] {
+            let failure = prefix + "print(json.dumps(dict(protocol=1,request_id=r['request_id'],ok=False,error=dict(code='" + code + "',message='blocked',details=dict(stage='WaitingForGuest')))))\n"
+            try await expect(code, config: fixture("gui_" + code, failure), method: "connect_fx")
+        }
         try await expect("OUTPUT_LIMIT", config: fixture("stdout_flood", "import sys\nsys.stdout.write('x'*100000)\nsys.stdout.flush()\n"))
         try await expect("OUTPUT_LIMIT", config: fixture("stderr_flood", "import sys\nsys.stderr.write('x'*100000)\nsys.stderr.flush()\n"))
         try await expect("CONFIRMATION_REQUIRED", config: real, method: "launch_game")

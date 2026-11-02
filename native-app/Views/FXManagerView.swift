@@ -5,6 +5,7 @@ struct FXManagerView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             TacticalPageHeader(title: state.t("FX 版本管理", "FX version management"), refreshState: state)
+            GUIOperationsPanel(state: state, tasks: state.tasks, environment: false)
             if state.results["list_fx_versions"]?["scan_incomplete"]?.boolean == true {
                 TacticalWarningBanner(text: scanWarning + " " + state.t("这是扫描范围限制，不代表安装异常。", "This limits scan coverage; it does not indicate a damaged installation."))
             }

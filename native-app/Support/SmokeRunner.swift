@@ -232,7 +232,7 @@ import ApplicationServices
             try await waitForTask(state)
             guard state.hasLoaded, state.error == nil else { throw ErrorState("BRIDGE_UNAVAILABLE") }
             guard state.rows("get_legacy_catalog", "languages").count == 10,
-                  state.rows("get_legacy_catalog", "operations").count == 23 else { throw ErrorState("CATALOG_MISSING") }
+                  state.rows("get_legacy_catalog", "operations").count == 28 else { throw ErrorState("CATALOG_MISSING") }
             guard let base = Bundle.main.resourceURL else { throw ErrorState("CORE_UNAVAILABLE") }
             for (code, _) in NativeLocalization.languages {
                 guard FileManager.default.fileExists(atPath: base.appendingPathComponent("locales/" + code + ".json").path) else { throw ErrorState("LOCALE_MISSING") }
@@ -240,6 +240,7 @@ import ApplicationServices
                 guard !state.pageTitle(.dashboard).isEmpty else { throw ErrorState("LOCALE_MISSING") }
             }
             state.languageCode = "zh-CN"
+            state.runtimeRoot = "" // Smoke must never use a remembered real launch target.
             state.runOperation("read_configuration"); try await waitForTask(state)
             guard state.operationError == nil, state.operationResult["revision"]?.text != nil else { throw ErrorState("CONFIG_READ_FAILED") }
             state.runOperation("launch_game"); try await waitForTask(state)
@@ -250,8 +251,26 @@ import ApplicationServices
             try await Task.sleep(nanoseconds: 300_000_000)
             guard NSApp.windows.contains(where: { $0.isVisible }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
             state.operationSelection = nil
-            result = ["result":"PASS", "catalog_operations":23, "bundled_original_locales":10,
-                      "configuration":"read_only", "launch_guards":"consent_and_root_rejected",
+            state.perform(.connect)
+            guard state.operationSelection?.method == "connect_fx" else { throw ErrorState("GUI_ENTRY_FAILED") }
+            state.operationSelection = nil
+            for method in ["connect_fx", "inspect_guest_environment", "check_fx_state"] {
+                state.runOperation(method, params: ["confirmed": .bool(true)]); try await waitForTask(state)
+                guard state.operationError?.code == "RUNTIME_ROOT_REQUIRED", state.guiRecords[method]?.status == .failed else { throw ErrorState("GUI_ROOT_GUARD_FAILED") }
+            }
+            if let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) {
+                for zh in [true, false] {
+                    state.chinese = zh
+                    window.setContentSize(NSSize(width: zh ? 1180 : 850, height: 750))
+                    for page in [Page.environment, .fx] {
+                        state.selection = page
+                        try await Task.sleep(nanoseconds: 150_000_000)
+                        window.contentView?.layoutSubtreeIfNeeded()
+                    }
+                }
+            } else { throw ErrorState("WINDOW_UNAVAILABLE") }
+            result = ["result":"PASS", "catalog_operations":28, "bundled_original_locales":10,
+                      "configuration":"read_only", "gui_entry_and_root_errors":"PASS", "gui_pages":"environment_fx_zh_en_rendered", "launch_guards":"consent_and_root_rejected",
                       "live_game_network_writes":"not_performed", "native_translation":"partial"]
         } catch { result = ["result":"FAIL", "code":(error as? ErrorState)?.code ?? "SMOKE_FAILED"] }
         if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]) {

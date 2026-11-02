@@ -78,8 +78,11 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
         case "AUTH_REQUIRED":
             if details["credential_kind"]?.text == "sudo_password" { return zh ? "需要 Guest 账户的 sudo 密码。请填第三个安全输入框；这不是 macOS 密码。" : "The Guest account sudo password is required in the third secure field; this is not your macOS password." }
             if details["credential_kind"]?.text == "passphrase" { return zh ? "需要 SSH 私钥口令，请填写本次密钥口令。" : "The SSH private-key passphrase is required for this session." }
-            return zh ? "需要本次 SSH 密码；Native App 不会读取钥匙串。" : "A session SSH password is required; Native App does not read Keychain."
+            return zh ? "需要 Guest 的 SSH 密码；当前没有可用的会话或已保存凭据。" : "The Guest SSH password is required; no usable session or saved credential is available."
         case "GUEST_TRANSACTION_FAILED": return zh ? "Guest 事务失败，结果尚未确认；已停止后续变更。请核对原值备份与实际状态后再决定恢复或重试。" : "The Guest transaction failed and its outcome is unverified. Further changes stopped. Inspect the original backup and actual state before recovery or retry."
+        case "FX_NOT_RUNNING": return zh ? "选定的 FX 尚未运行。请先点击“启动 FX”，再连接。" : "The selected FX is not running. Start FX, then connect."
+        case "LOCAL_FX_REQUIRED": return zh ? "此操作只支持已选择的本机 FX，请检查连接配置。" : "This action requires the selected local FX. Check its connection configuration."
+        case "GUEST_INSPECTION_FAILED": return zh ? "Guest 只读检测失败。请查看详情并确认 Steam 环境已准备好。" : "Guest read-only inspection failed. Review details and ensure its Steam environment is ready."
         case "SSH_AUTH_FAILED": return zh ? "SSH 密码认证失败，已停止自动尝试。请重新输入 Guest 的 SSH 密码。" : "SSH password authentication failed; automatic attempts stopped. Re-enter the Guest SSH password."
         case "SUDO_AUTH_FAILED": return zh ? "Guest 拒绝 sudo 授权，本项配置未写入。请核对第三个安全输入框中的 Guest 用户 sudo 密码及其 sudo 权限；不是 macOS 密码。" : "Guest rejected sudo authorization; this configuration change was not written. Check the Guest user sudo password in the third secure field and its sudo permissions; this is not the macOS password."
         case "CREDENTIAL_SCOPE_CHANGED": return zh ? "连接目标或配置已变化，会话凭据未发送。请核对目标后重新输入。" : "The target or configuration changed; credentials were not sent. Verify the target and re-enter them."
@@ -94,5 +97,49 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
         case "ENVIRONMENT_CHECK_FAILED", "LAUNCH_FAILED": return zh ? "启动检查失败，请查看具体阶段和错误详情。" : "Launch checks failed; see the stage and error details."
         default: return zh ? "读取失败。请重试或检查 App 文件。" : "The read failed. Retry or check the app files."
         }
+    }
+}
+
+
+enum GUIAction: String, CaseIterable, Identifiable {
+    case connect = "connect_fx", inspect = "inspect_guest_environment", fxState = "check_fx_state"
+    case startFX = "start_fx", steam = "start_steam", game = "launch_game"
+    var id: String { rawValue }
+    var labels: (String, String) {
+        switch self {
+        case .connect: return ("连接 FX", "Connect FX")
+        case .inspect: return ("检测环境", "Inspect environment")
+        case .fxState: return ("检查 FX 状态", "Check FX status")
+        case .startFX: return ("启动 FX", "Start FX")
+        case .steam: return ("启动 Steam", "Start Steam")
+        case .game: return ("启动 HELLDIVERS 2", "Launch HELLDIVERS 2")
+        }
+    }
+    var needsReview: Bool { self == .startFX || self == .steam || self == .game }
+    func accepts(_ result: [String: JSONValue]) -> Bool {
+        switch self {
+        case .connect: return result["ssh_connected"]?.boolean == true && result["guest_ready"]?.boolean == true
+        case .inspect:
+            guard case .object(let components) = result["components"] else { return false }
+            return result["ssh_connected"]?.boolean == true && result["guest_ready"]?.boolean == true && result["guest_os"]?.text != nil && ["steam_files","game_manifest","game_directory","game_executable","proton_files","fex_files"].allSatisfy { components[$0]?.boolean != nil }
+        case .fxState: return result["fx_host_running"]?.boolean != nil
+        case .startFX: return result["fx_host_running"]?.boolean == true
+        case .steam: return result["ssh_connected"]?.boolean == true && result["steam_running"]?.boolean == true
+        case .game: return result["game_process_detected"]?.boolean != nil
+        }
+    }
+}
+
+enum GUIOperationStatus: String { case idle, running, succeeded, failed, cancelled, timedOut }
+struct GUIOperationRecord {
+    let method: String
+    let target: String
+    let startedAt = Date()
+    var endedAt: Date?
+    var status: GUIOperationStatus = .running
+    var error: ErrorState?
+    mutating func finish(_ failure: ErrorState? = nil) {
+        endedAt = Date(); error = failure
+        status = failure == nil ? .succeeded : failure?.code == "CANCELLED" ? .cancelled : failure?.code == "TIMEOUT" ? .timedOut : .failed
     }
 }
