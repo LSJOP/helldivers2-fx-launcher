@@ -31,12 +31,12 @@ final class AppState: ObservableObject {
     private func applyFXScan(_ result: [String: JSONValue]) {
         let previous = fxSelection.selectedPath
         fxSelection.reconcile(result["candidates"]?.array.map(\.object) ?? [], incomplete: result["scan_incomplete"]?.boolean != false)
-        if previous != fxSelection.selectedPath { credentials.clear(); guiSnapshots = [:]; inspectedTarget = nil }
+        if previous != fxSelection.selectedPath { credentials.clear(); guiSnapshots = [:]; performanceConfigurationState = PerformanceConfigurationState(); inspectedTarget = nil }
         if let root = fxSelection.selected?["runtime_root"]?.text { runtimeRoot = root }
     }
     func selectFX(_ path: String) {
         guard !tasks.busy else { return }
-        if fxSelection.selectedPath != path { credentials.clear(); guiSnapshots = [:] }
+        if fxSelection.selectedPath != path { credentials.clear(); guiSnapshots = [:]; performanceConfigurationState = PerformanceConfigurationState() }
         fxSelection.select(path)
         if let root = fxSelection.selected?["runtime_root"]?.text { runtimeRoot = root }
         inspectedTarget = nil
@@ -55,7 +55,7 @@ final class AppState: ObservableObject {
                 if let rawPath = manualPath {
                     let manualPath = URL(fileURLWithPath: rawPath).resolvingSymlinksInPath().path
                     self.fxSelectionIssue = !self.fxSelection.candidates.contains { $0["path"]?.text == manualPath }
-                    if self.fxSelection.selectedPath != manualPath { self.credentials.clear(); self.guiSnapshots = [:] }
+                    if self.fxSelection.selectedPath != manualPath { self.credentials.clear(); self.guiSnapshots = [:]; self.performanceConfigurationState = PerformanceConfigurationState() }
                     self.fxSelection.select(manualPath)
                     if let root = self.fxSelection.selected?["runtime_root"]?.text { self.runtimeRoot = root }
                 }
@@ -71,7 +71,7 @@ final class AppState: ObservableObject {
     @Published var runtimeRoot = NativeLocalization.isolatedUXSmoke ? "" : (UserDefaults.standard.string(forKey: "NativeLaunchResourcesRoot") ?? UserDefaults.standard.string(forKey: "NativeRememberedRuntimeRoot") ?? "") {
         didSet {
             if oldValue != runtimeRoot {
-                credentials.clear(); guiSnapshots = [:]; targetInspection = [:]; targetInspectionError = nil; inspectedTarget = nil
+                credentials.clear(); guiSnapshots = [:]; performanceConfigurationState = PerformanceConfigurationState(); targetInspection = [:]; targetInspectionError = nil; inspectedTarget = nil
                 if !NativeLocalization.isolatedUXSmoke { UserDefaults.standard.set(runtimeRoot, forKey: "NativeLaunchResourcesRoot") }
             }
         }
@@ -104,6 +104,13 @@ final class AppState: ObservableObject {
                 self.inspectedTarget = identity
             }
         }
+    }
+    @Published private(set) var performanceConfigurationState = PerformanceConfigurationState()
+    var performanceConfiguration: [String: JSONValue] { performanceConfigurationState.snapshot }
+    var performancePreview: [String: JSONValue] { performanceConfigurationState.preview }
+    var editedPerformance: [String: JSONValue] {
+        get { performanceConfigurationState.edited }
+        set { performanceConfigurationState.edited = newValue; performanceConfigurationState.preview = [:] }
     }
     @Published private(set) var performanceSnapshot: [String: JSONValue] = [:]
     @Published private(set) var guiRecords: [String: GUIOperationRecord] = [:]
@@ -147,6 +154,7 @@ final class AppState: ObservableObject {
         guiRecords[method] = GUIOperationRecord(method: method, target: selectedRoot)
         if GUIAction(rawValue: method) != nil { guiSnapshots = [:] }
         operationError = nil; operationResult = [:]; operationEvents = []
+        if method.hasPrefix("performance_") { performanceConfigurationState.preview = [:] }
         tasks.start { [weak self] in
             guard let self else { return }
             do {
@@ -194,6 +202,10 @@ final class AppState: ObservableObject {
                 if reply.result["fx_host_running"]?.boolean == false { self.guiSnapshots = [:] }
                 self.operationResult = reply.result
                 if method == "read_performance" { self.performanceSnapshot = reply.result }
+                if ["performance_read", "performance_apply", "performance_restore"].contains(method), self.runtimeRoot == selectedRoot {
+                    self.performanceConfigurationState.acceptSnapshot(reply.result)
+                }
+                if ["performance_preview", "performance_restore_preview"].contains(method), self.runtimeRoot == selectedRoot { self.performanceConfigurationState.acceptPreview(reply.result) }
                 if GUIAction(rawValue: method) != nil, self.runtimeRoot == selectedRoot { self.guiSnapshots[method] = reply.result }
                 self.guiRecords[method]?.finish()
                 self.recordGUIOperation(method)
@@ -217,6 +229,20 @@ final class AppState: ObservableObject {
                 self.appendLog(method + ": " + (self.operationError?.code ?? "UNKNOWN"))
             }
         }
+    }
+    func discardPerformancePreview() { performanceConfigurationState.preview = [:] }
+    func previewPerformance(restore: Bool = false) {
+        guard let revision = performanceConfiguration["revision"]?.text else { return }
+        runOperation(restore ? "performance_restore_preview" : "performance_preview", params: [
+            "expected_revision": .string(revision), "values": .object(editedPerformance)])
+    }
+    func confirmPerformance() {
+        guard let plan = performancePreview["plan"]?.object,
+              let token = performancePreview["token"]?.text,
+              let revision = plan["revision"]?.text,
+              let after = plan["after"] else { return }
+        runOperation(plan["restore"]?.boolean == true ? "performance_restore" : "performance_apply", params: [
+            "confirmed": .bool(true), "expected_revision": .string(revision), "values": after, "preview_token": .string(token)])
     }
     func perform(_ action: GUIAction) {
         guard !tasks.busy else { return }
