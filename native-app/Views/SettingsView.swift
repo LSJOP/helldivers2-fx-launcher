@@ -34,7 +34,7 @@ struct SettingsView: View {
     }
 }
 
-// One native operation surface; all execution is delegated to AppState/BridgeService.
+// One native operation surface; all execution is delegated to AppState/NativeCoreService.
 struct LegacyOperationsView: View {
     @ObservedObject var state: AppState
     let scope: String

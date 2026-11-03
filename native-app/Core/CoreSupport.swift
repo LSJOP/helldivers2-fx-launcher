@@ -473,7 +473,7 @@ func sha256_final(_ context: inout SHA256Context, _ digest: inout [UInt8]) {
 
 
 // Tracks owned native workers during AppKit's nested termination loop.
-enum BridgeWorkerStatus {
+enum CoreWorkerStatus {
     private static let lock = NSLock()
     private static var count = 0
     static func enter() { lock.lock(); count += 1; lock.unlock() }

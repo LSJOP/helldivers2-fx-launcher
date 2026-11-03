@@ -160,7 +160,7 @@ import ApplicationServices
     }
     // One focused check after the user's menu-label feedback; no five-page sweep.
     private static func phase2Live(_ state: AppState, directory: URL, root: String) async {
-        var result: [String: Any] = ["entry":"Native AppState -> supervised Bridge -> pinned legacy Core", "kind":"explicit_live_launch", "main_menu":"unverified", "single_player":"unverified", "multiplayer":"not_requested"]
+        var result: [String: Any] = ["entry":"Native AppState -> Swift Native Core", "kind":"explicit_live_launch", "main_menu":"unverified", "single_player":"unverified", "multiplayer":"not_requested"]
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             try await waitForTask(state)

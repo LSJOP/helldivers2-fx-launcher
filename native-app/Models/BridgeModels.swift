@@ -29,17 +29,8 @@ indirect enum JSONValue: Codable, Sendable, Equatable {
     var object: [String: JSONValue] { if case .object(let v) = self { return v }; return [:] }
 }
 
-struct BridgeResponse: Decodable, Sendable {
-    struct Failure: Decodable, Sendable { let code: String; let message: String; let details: [String: JSONValue]? }
-    let `protocol`: Int
-    let request_id: String
-    let ok: Bool
-    let result: [String: JSONValue]?
-    let error: Failure?
-    let observed_at: String?
-}
 
-struct BridgeReply: Sendable {
+struct CoreReply: Sendable {
     let result: [String: JSONValue]
     let observedAt: String
     let requestID: String

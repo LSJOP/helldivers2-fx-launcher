@@ -19,6 +19,12 @@ SDK="$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
   -o build/NativeCoreChecks >evidence/native-core-compile.txt 2>&1
 ./build/NativeCoreChecks >evidence/native-core-checks.txt 2>&1
 
+/usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" \
+  -module-cache-path "$ROOT_DIR/build/ModuleCache" \
+  Models/BridgeModels.swift Core/*.swift checks/NativeCoreIntegrationChecks.swift \
+  -o build/NativeCoreIntegrationChecks >evidence/native-integration-compile.txt 2>&1
+./build/NativeCoreIntegrationChecks >evidence/native-integration-checks.txt 2>&1
+
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Models/LaunchSession.swift checks/LaunchChecks.swift -o build/LaunchChecks >evidence/launch-compile.txt 2>&1
 ./build/LaunchChecks >evidence/launch-checks.txt 2>&1
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Services/SessionCredentialManager.swift checks/CredentialChecks.swift -o build/CredentialChecks >evidence/credential-compile.txt 2>&1
@@ -28,4 +34,4 @@ SDK="$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Services/FXSelectionManager.swift checks/FXSelectionChecks.swift -o build/FXSelectionChecks >evidence/fx-selection-compile.txt 2>&1
 ./build/FXSelectionChecks >evidence/fx-selection-checks.txt 2>&1
 /usr/bin/plutil -lint HD2FXNative.xcodeproj/project.pbxproj >evidence/project-lint.txt
-cat evidence/native-core-checks.txt
+cat evidence/native-core-checks.txt evidence/native-integration-checks.txt

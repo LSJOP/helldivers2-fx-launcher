@@ -60,7 +60,7 @@ actor NativeCoreService {
 
     func request(_ method: String, timeout: TimeInterval = 5,
                  params: [String: JSONValue] = [:],
-                 onEvent: (@Sendable ([String: JSONValue]) -> Void)? = nil) async throws -> BridgeReply {
+                 onEvent: (@Sendable ([String: JSONValue]) -> Void)? = nil) async throws -> CoreReply {
         guard !inFlight else { throw ErrorState("BUSY", method: method) }
         inFlight = true
         defer { inFlight = false }
@@ -77,7 +77,7 @@ actor NativeCoreService {
         }
     }
 
-    private func appendReplyLog(_ method: String, reply: BridgeReply) {
+    private func appendReplyLog(_ method: String, reply: CoreReply) {
         logRing.append(["at": .string(reply.observedAt), "source": .string("native_core"),
                         "level": .string("INFO"), "message": .string(method + ": OK")])
         if logRing.count > 200 { logRing.removeFirst(logRing.count - 200) }
@@ -86,7 +86,7 @@ actor NativeCoreService {
     // MARK: - Dispatch
 
     nonisolated static func perform(_ method: String, params: [String: JSONValue], context: CoreContext,
-                                    onEvent: (@Sendable ([String: JSONValue]) -> Void)?) throws -> BridgeReply {
+                                    onEvent: (@Sendable ([String: JSONValue]) -> Void)?) throws -> CoreReply {
         let requestID = UUID().uuidString
         let secrets = ["password", "passphrase", "sudo_password"].compactMap { params[$0]?.text }
         func emit(_ level: String, _ message: String, _ extra: [String: JSONValue] = [:]) {
@@ -107,7 +107,7 @@ actor NativeCoreService {
                 throw CoreError("CONFIRMATION_REQUIRED")
             }
             let result = try dispatch(method, params: params, context: context, emit: emit)
-            return BridgeReply(result: result, observedAt: CoreClock.stamp(), requestID: requestID)
+            return CoreReply(result: result, observedAt: CoreClock.stamp(), requestID: requestID)
         } catch let error as CoreError {
             throw ErrorState(error.code, method: method,
                              details: CoreRedaction.container(.object(error.details)).object)
@@ -384,8 +384,13 @@ actor NativeCoreService {
             stageEmit("CheckingFXEntry", "running")
             var host = try LaunchService.fxState(request: request, fx: fx)
             if host["fx_host_running"]?.boolean != true {
-                if method == "start_fx" {
+                // The game-launch path auto-handles the prerequisite: start the
+                // verified FX once, then continue. Connection-only actions still
+                // require an already-running FX so a surprise start is never forced.
+                if method == "launch_game" || method == "start_steam" {
+                    stageEmit("StartingFX", "running")
                     try LaunchService.startFX(request: request, fx: fx)
+                    stageEmit("StartingFX", "done")
                     host = try LaunchService.fxState(request: request, fx: fx)
                 } else {
                     throw CoreError("FX_NOT_RUNNING")
@@ -523,6 +528,28 @@ printf '{"guest_os":"%s","guest_arch":"%s","components":{"steam_files":%s,"game_
         advance("StartingSteam", "running")
         let steamResult = try GuestService.steam(transport, session: session, context: context)
         if steamResult["started"]?.boolean == true { emit("INFO", "Steam started once; not stopped by this app", [:]) }
+        // Wait for Steam to finish network login before sending the launch request;
+        // a reachable process is not a logged-in session.
+        var loggedOn = false
+        for _ in 0..<120 {
+            try context.check()
+            Thread.sleep(forTimeInterval: 1)
+            let current = try GuestService.state(transport, context: context)
+            if current["steam_logged_on"]?.boolean == true { loggedOn = true; break }
+            if let count = current["game_count"]?.integer, count > 0 {
+                var value = connected
+                value["game_process_detected"] = .bool(true)
+                value["game_process_count"] = .number(Double(count))
+                value["main_menu"] = .string("unverified")
+                value["single_player"] = .string("unverified")
+                value["eac"] = .string("unverified")
+                value["multiplayer"] = .string("unverified")
+                return value
+            }
+        }
+        guard loggedOn else {
+            throw CoreError("STEAM_START_FAILED", ["reason": .string("steam_not_logged_in")])
+        }
         advance("StartingSteam", "done")
         advance("LaunchingGame", "running")
         let before = try GuestService.state(transport, context: context)

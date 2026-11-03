@@ -8,6 +8,19 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+### Fixed
+
+- Repair `PROTOCOL_ERROR · get_logs`: the native core now reports the `native_core_session` log source that the UI validates, and environment detection runs per method so one failed probe no longer blanks macOS/architecture/native-runtime and every other panel.
+- Restore the App icon and asset catalog in Debug and Release: the resource-copy build phase no longer deletes the compiled `AppIcon.icns`/`Assets.car` and now also restores the ten `.lproj` bundles.
+- Game launch no longer fails immediately with "FX not running": the launch path now auto-starts the verified FX once, waits for Guest, waits for Steam login, then sends the game request, with cancellation and stage reporting. Connection-only actions still require an already-running FX.
+- Remove legacy Python Bridge wording (Bridge status, latest Bridge error, "Python executed the Bridge", "requires Python 3.9", Node runtime requirement) from the ten-language resources and the Logs source label.
+
+### Added
+
+- Release resource-integrity gate (`native-app/script/check_release_bundle.sh`): icon, asset catalog, ten languages, bundled gvproxy SHA-256, Sparkle, bundle identifier, version, architecture, no Python/Bridge, and code-signature verification.
+- SwiftUI ↔ Native Core integration checks covering the log source contract, system info, environment, dependencies, FX discovery, catalog, configuration and fail-closed launch without a selection.
+
+
 ### Changed
 
 - Replace the Python Bridge with a **Swift Native Core**. FX discovery, launch-resource integrity, launcher settings, scoped CPU/memory/Vulkan preferences, diagnostics, logging and the FX/Guest/Steam/game launch path are implemented in Swift. The original script directory and Node.js are no longer required at runtime.

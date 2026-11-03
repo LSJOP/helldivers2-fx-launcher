@@ -25,7 +25,7 @@ struct LogsView: View {
         let bridge = state.rows("get_logs", "entries").enumerated().map { index, row in
             let raw = row["level"]?.text?.uppercased() ?? "UNCLASSIFIED"
             let severity = ["INFO", "SUCCESS", "WARNING", "ERROR", "DEBUG"].contains(raw) ? raw : "UNCLASSIFIED"
-            return SessionLogLine(id: "bridge-\(index)", time: row["at"]?.text ?? "—", source: "Bridge", message: state.credentials.redactor.text(row["message"]?.text ?? ""), level: severity)
+            return SessionLogLine(id: "core-\(index)", time: row["at"]?.text ?? "—", source: "Core", message: state.credentials.redactor.text(row["message"]?.text ?? ""), level: severity)
         }
         let runtime = state.runtimeLogs.enumerated().map { index, row in
             SessionLogLine(id: "runtime-\(index)", time: row["at"]?.text ?? "—", source: row["source"]?.text ?? "Core", message: state.credentials.redactor.text((row["message"]?.text ?? "") + " " + (row["status"]?.text ?? "")), level: row["level"]?.text ?? "UNCLASSIFIED")

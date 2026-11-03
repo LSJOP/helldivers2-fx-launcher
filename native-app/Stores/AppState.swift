@@ -129,6 +129,7 @@ final class AppState: ObservableObject {
     @Published private(set) var hasLoaded = false
     @Published private(set) var stale = false
     @Published private(set) var refreshing = false
+    @Published private(set) var fieldErrors: [String: String] = [:]
     let tasks = TaskManager()
     private let core = NativeCoreService()
 
@@ -293,10 +294,11 @@ final class AppState: ObservableObject {
         defer { refreshing = false }
         error = nil
         stale = !results.isEmpty
-        do {
-            var snapshot: [String: [String: JSONValue]] = [:]
-            var snapshotTime: String?
-            for method in ["handshake", "get_launcher_version", "get_system_info", "get_environment_status", "get_dependencies", "list_fx_versions", "get_logs", "get_legacy_catalog"] {
+        var snapshot: [String: [String: JSONValue]] = [:]
+        var snapshotTime: String?
+        var failures: [String: String] = [:]
+        for method in ["handshake", "get_launcher_version", "get_system_info", "get_environment_status", "get_dependencies", "list_fx_versions", "get_logs", "get_legacy_catalog"] {
+            do {
                 try Task.checkCancellation()
                 let scanParams: [String: JSONValue] = method == "list_fx_versions" ? ["selected_paths": .array(fxSelection.scanPaths), "runtime_root": .string(runtimeRoot)] : [:]
                 let reply = try await core.request(method, params: scanParams)
@@ -304,24 +306,31 @@ final class AppState: ObservableObject {
                 snapshot[method] = reply.result
                 snapshotTime = reply.observedAt
                 appendLog("\(method): OK [\(reply.requestID)]")
+            } catch is CancellationError {
+                appendLog("load: CANCELLED")
+                return
+            } catch {
+                let failure = error as? ErrorState ?? ErrorState("PROTOCOL_ERROR", method: method)
+                failures[method] = failure.code
+                appendLog("\(method): \(failure.code)")
             }
-            if let scan = snapshot["list_fx_versions"] { applyFXScan(scan) }
-            results = snapshot; observedAt = snapshotTime; hasLoaded = true; stale = false
-        } catch {
-            let failure = error as? ErrorState ?? ErrorState(error is CancellationError ? "CANCELLED" : "PROTOCOL_ERROR")
-            self.error = failure
-            appendLog("\(failure.method): \(failure.code)")
         }
+        if let scan = snapshot["list_fx_versions"] { applyFXScan(scan) }
+        results = snapshot
+        observedAt = snapshotTime
+        fieldErrors = failures
+        hasLoaded = true
+        if snapshot.isEmpty { self.error = ErrorState("CORE_UNAVAILABLE"); stale = true } else { stale = false }
     }
     private func validate(_ method: String, result: [String: JSONValue]) throws {
         let valid: Bool
         switch method {
         case "get_launcher_version": valid = result["version"]?.text != nil
-        case "get_system_info": valid = ["os", "os_version", "arch", "python"].allSatisfy { result[$0]?.text != nil }
+        case "get_system_info": valid = ["os", "os_version", "arch", "native_runtime"].allSatisfy { result[$0]?.text != nil }
         case "get_environment_status": valid = result["status"]?.text == "unverified" && result["checks"] != nil
         case "get_dependencies": valid = result["items"] != nil
         case "list_fx_versions": valid = result["candidates"] != nil && result["scan_incomplete"]?.boolean != nil
-        case "get_logs": valid = result["entries"] != nil && result["source"]?.text == "bridge_process_session"
+        case "get_logs": valid = result["entries"] != nil && ["native_core_session", "bridge_process_session"].contains(result["source"]?.text ?? "")
         default: valid = true
         }
         if !valid { throw ErrorState("PROTOCOL_ERROR", method: method) }
