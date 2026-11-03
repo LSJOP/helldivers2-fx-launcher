@@ -26,6 +26,8 @@ A fully native **SwiftUI + AppKit** app with a **Swift Native Core**: launch the
 
 <a id="en-screenshots"></a>
 
+All six pages open directly into their content; the repeated global FX status bar has been removed. FX detection, versions, running state and resource diagnostics remain in FX Manager and Environment.
+
 ## Screenshots
 
 **Native takeover preview:** Guest SSH now uses a controlling terminal and corrected OpenSSH arguments, with a dedicated read-only **Test Guest SSH connection** action in Environment. Enter credentials only in App secure fields. Settings → About displays bundled build identity and can copy it. Live Guest password authentication and gameplay still require user acceptance; isolated checks are not live validation. Environment and Settings screenshots were refreshed from the real Debug App on 2026-11-04; offscreen About values are checked separately during Release acceptance. Other screenshots remain historical previews. The SSH-only check can inspect an already-running stock FX network process after publisher-signature and ancestry verification; game launch still requires the pinned bundled backend.
