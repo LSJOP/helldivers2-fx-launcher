@@ -41,25 +41,74 @@ enum LaunchService {
     struct ProcessRow { let pid: Int; let ppid: Int; let start: String; let command: String }
 
     static func processTable(context: CoreContext?) throws -> [Int: ProcessRow] {
-        let text = try CoreProcess.psCommandTable(context: context)
+        parseProcessTable(try CoreProcess.psCommandTable(context: context))
+    }
+
+    /// Pure parser for `ps -ww -axo pid=,ppid=,lstart=,comm=`; kept separate for testing.
+    static func parseProcessTable(_ text: String) -> [Int: ProcessRow] {
         var rows: [Int: ProcessRow] = [:]
         for line in text.split(separator: "\n") {
+            // `ps` right-aligns columns, so the command field carries leading padding;
+            // split at most 7 times (pid, ppid, 5 lstart tokens) and trim the remainder.
             let fields = line.split(separator: " ", maxSplits: 7, omittingEmptySubsequences: true)
             guard fields.count == 8, let pid = Int(fields[0]), let ppid = Int(fields[1]) else { continue }
             let start = fields[2..<7].joined(separator: " ")
-            rows[pid] = ProcessRow(pid: pid, ppid: ppid, start: start, command: String(fields[7]))
+            let command = String(fields[7]).trimmingCharacters(in: .whitespaces)
+            rows[pid] = ProcessRow(pid: pid, ppid: ppid, start: start, command: command)
         }
         return rows
     }
 
+    /// Canonical executable path: resolves symlinks and standardizes, so the same FX
+    /// bundle reached through a symlink or App Translocation is not misread as foreign.
+    static func normalizedExecutable(_ fx: URL) -> String {
+        fx.appendingPathComponent("Contents/MacOS/steamac-vm")
+            .resolvingSymlinksInPath().standardizedFileURL.path
+    }
+    static func normalizedCommand(_ command: String) -> String {
+        URL(fileURLWithPath: command).resolvingSymlinksInPath().standardizedFileURL.path
+    }
+
+    /// FX legitimately runs as one supervisor plus one direct VM child (both share the
+    /// same executable path). Normalize that topology to the supervisor PID; anything
+    /// else stays unverified.
+    static func fxSupervisorPID(rows: [Int: ProcessRow], executable: String) throws -> Int {
+        let matches = rows.values.filter { normalizedCommand($0.command) == executable }.map(\.pid).sorted()
+        switch matches.count {
+        case 1: return matches[0]
+        case 2:
+            let children = matches.filter { pid in
+                guard let row = rows[pid] else { return false }
+                return matches.contains(row.ppid)
+            }
+            guard children.count == 1 else {
+                throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("fx_topology_unverified")])
+            }
+            let child = children[0]
+            let parent = rows[child]!.ppid
+            guard matches.contains(parent), rows[parent]?.ppid != child else {
+                throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("fx_topology_unverified")])
+            }
+            return parent
+        case 0:
+            throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("selected_fx_not_running")])
+        default:
+            throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("duplicate_fx_processes")])
+        }
+    }
+
+    /// steamac-vm processes whose canonical executable path differs from the selected FX.
+    static func foreignProcesses(rows: [Int: ProcessRow], executable: String) -> [ProcessRow] {
+        rows.values.filter {
+            URL(fileURLWithPath: normalizedCommand($0.command)).lastPathComponent == "steamac-vm"
+                && normalizedCommand($0.command) != executable
+        }
+    }
+
     static func hostIdentity(fx: URL, gvproxy: URL, transport: SSHTransport, context: CoreContext?) throws -> String {
         let rows = try processTable(context: context)
-        let executable = fx.appendingPathComponent("Contents/MacOS/steamac-vm").path
-        let matches = rows.values.filter { $0.command == executable }.map(\.pid).sorted()
-        guard matches.count == 1 else {
-            throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string(matches.isEmpty ? "selected_fx_not_running" : "duplicate_fx_processes")])
-        }
-        let fxPID = matches[0]
+        let executable = normalizedExecutable(fx)
+        let fxPID = try fxSupervisorPID(rows: rows, executable: executable)
         func belongs(_ pid: Int) -> Bool {
             var seen = Set<Int>(); var current = pid
             while let row = rows[current], !seen.contains(current) {
@@ -113,22 +162,25 @@ enum LaunchService {
 
     static func checkFXEntry(request: LaunchRequest, fx: URL, requireRunning: Bool) throws -> [Int: ProcessRow] {
         let rows = try processTable(context: request.context)
-        let executable = fx.appendingPathComponent("Contents/MacOS/steamac-vm").path
-        let active = rows.values.filter { URL(fileURLWithPath: $0.command).lastPathComponent == "steamac-vm" }
-        let foreign = active.filter { $0.command != executable }
+        let executable = normalizedExecutable(fx)
+        let active = rows.values.filter { URL(fileURLWithPath: normalizedCommand($0.command)).lastPathComponent == "steamac-vm" }
+        let foreign = foreignProcesses(rows: rows, executable: executable)
         if !foreign.isEmpty {
             let names = foreign.map { row -> String in
                 URL(fileURLWithPath: row.command).pathComponents.first(where: { $0.hasSuffix(".app") }) ?? "unknown FX"
             }
             throw CoreError("FX_INSTANCE_MISMATCH", ["stage": .string("CheckingFXEntry"),
+                                                     "selected_fx": .string(fx.path),
+                                                     "running_fx": .array(foreign.map { .string($0.command) }),
                                                      "running_apps": .array(Set(names).sorted().map { .string($0) }),
                                                      "reason": .string("different_fx_copy"),
                                                      "action": .string("quit_other_fx_normally_then_retry")])
         }
         if requireRunning {
-            guard active.contains(where: { $0.command == executable }) else {
+            guard active.contains(where: { normalizedCommand($0.command) == executable }) else {
                 throw CoreError("FX_INSTANCE_MISMATCH", ["stage": .string("CheckingFXEntry"),
-                                                        "reason": .string("selected_fx_process_not_observed")])
+                                                         "selected_fx": .string(fx.path),
+                                                         "reason": .string("selected_fx_process_not_observed")])
             }
             guard networkReady(context: request.context) else {
                 throw CoreError("FX_ENTRY_MISMATCH", ["stage": .string("CheckingFXEntry"),
@@ -195,13 +247,17 @@ enum LaunchService {
         request.emit("StartingFX", "running", [:])
         let open = try CoreProcess.run("/usr/bin/open", [fx.path, "--args"] + arguments, timeout: 20, context: request.context)
         guard open.status == 0 else { throw CoreError("FX_START_FAILED", ["exit_code": .number(Double(open.status))]) }
+        request.emit("WaitingForFXReady", "running", [:])
         let deadline = CoreClock.monotonic + 30
         while CoreClock.monotonic < deadline {
             try request.context.check()
             Thread.sleep(forTimeInterval: 0.25)
             let state = try fxState(request: request, fx: fx)
             if state["fx_host_running"]?.boolean == true, networkReady(context: request.context) {
+                request.emit("VerifyingFXIdentity", "running", [:])
                 _ = try checkFXEntry(request: request, fx: fx, requireRunning: true)
+                request.emit("VerifyingFXIdentity", "done", [:])
+                request.emit("WaitingForFXReady", "done", [:])
                 return
             }
         }

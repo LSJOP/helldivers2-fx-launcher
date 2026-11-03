@@ -8,6 +8,11 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+### Fixed
+
+- FX instance identity false positive: trim the `ps` command-column padding and normalize the one-supervisor/one-VM-child FX topology, so the selected FX is recognized as the same instance instead of `FX_INSTANCE_MISMATCH (different_fx_copy)`. Genuinely different copies still fail closed and now report the selected and running paths.
+
+
 ### Changed
 
 - Replace the tall global FX info block with a compact FX status bar (name, version, detected/running state, Manage FX) and move path, gvproxy, SHA-256 and preflight diagnostics into FX Manager → Details & resource verification. Remove the duplicated FX version/path/status from the Dashboard runtime card and reorder the page around the hero and launch actions.

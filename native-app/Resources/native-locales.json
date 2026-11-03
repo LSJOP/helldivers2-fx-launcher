@@ -473,7 +473,9 @@
   "ui.fx.preflight": "Preflight",
   "ui.fx.entryPoint": "Launch entry",
   "ui.fx.version": "FX version",
-  "ui.fx.title": "FX Steam Launcher"
+  "ui.fx.title": "FX Steam Launcher",
+  "ui.fx.waitReady": "Waiting for FX ready",
+  "ui.fx.verifyIdentity": "Verifying FX identity"
  },
  "zh-CN": {
   "ui.193": "导航",
@@ -949,7 +951,9 @@
   "ui.fx.preflight": "预检结果",
   "ui.fx.entryPoint": "启动入口",
   "ui.fx.version": "FX 版本",
-  "ui.fx.title": "FX Steam Launcher"
+  "ui.fx.title": "FX Steam Launcher",
+  "ui.fx.waitReady": "等待 FX 就绪",
+  "ui.fx.verifyIdentity": "验证 FX 身份"
  },
  "ja": {
   "ui.193": "移動",
@@ -1425,7 +1429,9 @@
   "ui.fx.preflight": "事前確認",
   "ui.fx.entryPoint": "起動エントリ",
   "ui.fx.version": "FX バージョン",
-  "ui.fx.title": "FX Steam Launcher"
+  "ui.fx.title": "FX Steam Launcher",
+  "ui.fx.waitReady": "FX の準備を待機中",
+  "ui.fx.verifyIdentity": "FX の同一性を検証中"
  },
  "ko": {
   "ui.193": "탐색",
@@ -1901,7 +1907,9 @@
   "ui.fx.preflight": "사전 점검",
   "ui.fx.entryPoint": "실행 진입점",
   "ui.fx.version": "FX 버전",
-  "ui.fx.title": "FX Steam Launcher"
+  "ui.fx.title": "FX Steam Launcher",
+  "ui.fx.waitReady": "FX 준비 대기 중",
+  "ui.fx.verifyIdentity": "FX 신원 확인 중"
  },
  "ru": {
   "ui.193": "Навигация",
@@ -2377,7 +2385,9 @@
   "ui.fx.preflight": "Предпроверка",
   "ui.fx.entryPoint": "Точка запуска",
   "ui.fx.version": "Версия FX",
-  "ui.fx.title": "FX Steam Launcher"
+  "ui.fx.title": "FX Steam Launcher",
+  "ui.fx.waitReady": "Ожидание готовности FX",
+  "ui.fx.verifyIdentity": "Проверка подлинности FX"
  },
  "es": {
   "ui.193": "Navegación",
@@ -2853,7 +2863,9 @@
   "ui.fx.preflight": "Preflight",
   "ui.fx.entryPoint": "Punto de lanzamiento",
   "ui.fx.version": "Versión de FX",
-  "ui.fx.title": "FX Steam Launcher"
+  "ui.fx.title": "FX Steam Launcher",
+  "ui.fx.waitReady": "Esperando FX listo",
+  "ui.fx.verifyIdentity": "Verificando identidad de FX"
  },
  "de": {
   "ui.193": "Navigation",
@@ -3329,7 +3341,9 @@
   "ui.fx.preflight": "Vorprüfung",
   "ui.fx.entryPoint": "Starteinstieg",
   "ui.fx.version": "FX-Version",
-  "ui.fx.title": "FX Steam Launcher"
+  "ui.fx.title": "FX Steam Launcher",
+  "ui.fx.waitReady": "Warte auf FX-Bereitschaft",
+  "ui.fx.verifyIdentity": "FX-Identität wird geprüft"
  },
  "fr": {
   "ui.193": "Navigation",
@@ -3805,7 +3819,9 @@
   "ui.fx.preflight": "Pré-vérification",
   "ui.fx.entryPoint": "Point de lancement",
   "ui.fx.version": "Version FX",
-  "ui.fx.title": "FX Steam Launcher"
+  "ui.fx.title": "FX Steam Launcher",
+  "ui.fx.waitReady": "En attente de FX",
+  "ui.fx.verifyIdentity": "Vérification de l’identité FX"
  },
  "pt-BR": {
   "ui.193": "Navegação",
@@ -4281,7 +4297,9 @@
   "ui.fx.preflight": "Pré-verificação",
   "ui.fx.entryPoint": "Ponto de inicialização",
   "ui.fx.version": "Versão do FX",
-  "ui.fx.title": "FX Steam Launcher"
+  "ui.fx.title": "FX Steam Launcher",
+  "ui.fx.waitReady": "Aguardando FX pronto",
+  "ui.fx.verifyIdentity": "Verificando identidade do FX"
  },
  "zh-TW": {
   "ui.270": "無需外部執行環境；檢測後按 ⌘R 重新讀取全部唯讀快照。",
@@ -4757,6 +4775,8 @@
   "ui.fx.preflight": "預檢結果",
   "ui.fx.entryPoint": "啟動入口",
   "ui.fx.version": "FX 版本",
-  "ui.fx.title": "FX Steam Launcher"
+  "ui.fx.title": "FX Steam Launcher",
+  "ui.fx.waitReady": "等待 FX 就緒",
+  "ui.fx.verifyIdentity": "驗證 FX 身份"
  }
 }
