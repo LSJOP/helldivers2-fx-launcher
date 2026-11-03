@@ -105,19 +105,47 @@ enum LaunchService {
         }
     }
 
-    static func hostIdentity(fx: URL, gvproxy: URL, transport: SSHTransport, context: CoreContext?, requireCDP: Bool = true) throws -> String {
+    /// Diagnostic-only stock FX transport. Accept it only inside the selected,
+    /// publisher-sealed bundle, with stable bytes across signature verification.
+    static func diagnosticNetworkExecutable(fx: URL, context: CoreContext?) throws -> String {
+        let network = fx.appendingPathComponent("Contents/Resources/gvproxy")
+        let canonicalFX = fx.resolvingSymlinksInPath().standardizedFileURL.path
+        let canonicalNetwork = network.resolvingSymlinksInPath().standardizedFileURL.path
+        guard canonicalNetwork.hasPrefix(canonicalFX + "/Contents/Resources/"),
+              CoreFS.isRegularExecutable(network),
+              let before = try? CoreHash.sha256File(network) else {
+            throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("diagnostic_network_path_untrusted")])
+        }
+        let signature = try CoreProcess.run("/usr/bin/codesign",
+            ["--verify", "--deep", "--strict", "-R=" + LaunchResources.fxPublisherRequirement, fx.path],
+            timeout: 20, context: context)
+        guard signature.status == 0, let after = try? CoreHash.sha256File(network), before == after else {
+            throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("diagnostic_network_signature_untrusted")])
+        }
+        return canonicalNetwork
+    }
+
+    static func descendant(_ pid: Int, of supervisor: Int, rows: [Int: ProcessRow]) -> Bool {
+        var seen = Set<Int>(); var current = pid
+        while let row = rows[current], !seen.contains(current) {
+            if current == supervisor { return true }
+            seen.insert(current); current = row.ppid
+        }
+        return false
+    }
+
+    static func hostIdentity(fx: URL, gvproxy: URL, transport: SSHTransport, context: CoreContext?, requireCDP: Bool = true,
+                             allowPublisherNetwork: Bool = false) throws -> String {
         let rows = try processTable(context: context)
         let executable = normalizedExecutable(fx)
         let fxPID = try fxSupervisorPID(rows: rows, executable: executable)
-        func belongs(_ pid: Int) -> Bool {
-            var seen = Set<Int>(); var current = pid
-            while let row = rows[current], !seen.contains(current) {
-                if current == fxPID { return true }
-                seen.insert(current); current = row.ppid
-            }
-            return false
+        func belongs(_ pid: Int) -> Bool { descendant(pid, of: fxPID, rows: rows) }
+        var networkExecutable = normalizedCommand(gvproxy.path)
+        if !requireCDP && allowPublisherNetwork,
+           !rows.values.contains(where: { normalizedCommand($0.command) == networkExecutable && belongs($0.pid) }) {
+            networkExecutable = try diagnosticNetworkExecutable(fx: fx, context: context)
         }
-        let network = rows.values.filter { $0.command == gvproxy.path && belongs($0.pid) }
+        let network = rows.values.filter { normalizedCommand($0.command) == networkExecutable && belongs($0.pid) }
         guard !network.isEmpty else { throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("gvproxy_not_child_of_fx")]) }
         let listeners = try fileDescriptors(arguments: ["-nP", "-iTCP:\(transport.settings.port)", "-sTCP:LISTEN", "-Fpn"], context: context)
         let owners = listeners.compactMap { pid, names in names.contains { $0.hasSuffix(":\(transport.settings.port)") } ? pid : nil }

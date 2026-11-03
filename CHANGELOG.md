@@ -4,9 +4,11 @@
 
 All notable changes to the HELLDIVERS 2 FX Launcher Native App are recorded here, newest first. Unreleased entries have no release date. This file is the single source of truth for user-facing release notes; the README summary, GitHub Release notes and the future Sparkle appcast reuse this reviewed text. Do not paste raw, unreviewed Git commit messages into it.
 
-No official release has been published yet. The current Native App version `0.1.0` (build `2026110401`) is a development preview, not a downloadable package.
+No official release has been published yet. The current Native App version `0.1.0` (build `2026110402`) is a development preview, not a downloadable package.
 
 ## Unreleased
+
+- Read-only SSH diagnostics also recognize the selected FX publisher-sealed stock gvproxy after signature, stable-content and process-ancestry verification. Game launch continues to require the pinned bundled networking backend.
 
 ### Added
 

@@ -358,13 +358,13 @@ actor NativeCoreService {
             }
             progress("VerifyingGuestIdentity")
             let before = try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!,
-                transport: transport, context: context, requireCDP: false)
-            let probe = try transport.run("id -un; cat /proc/sys/kernel/random/boot_id; grep '^ID=steamos$' /etc/os-release\n", timeout: 15, context: context)
+                transport: transport, context: context, requireCDP: false, allowPublisherNetwork: true)
+            let probe = try transport.run("id -un; cat /proc/sys/kernel/random/boot_id; grep '^ID=' /etc/os-release\n", timeout: 15, context: context)
             let lines = probe.stdout.split(whereSeparator: \.isNewline).map(String.init)
             guard probe.status == 0, lines.count == 3, lines[0] == transport.settings.username,
-                  UUID(uuidString: lines[1]) != nil, lines[2] == "ID=steamos" else { throw CoreError("SSH_GUEST_NOT_READY") }
+                  UUID(uuidString: lines[1]) != nil, ["ID=steamos", "ID=\"steamos\""].contains(lines[2]) else { throw CoreError("SSH_GUEST_NOT_READY") }
             let after = try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!,
-                transport: transport, context: context, requireCDP: false)
+                transport: transport, context: context, requireCDP: false, allowPublisherNetwork: true)
             guard before == after else { throw CoreError("FX_IDENTITY_UNVERIFIED") }
             result["guest_identity"] = .string("verified")
             result["stage"] = .string("Complete")

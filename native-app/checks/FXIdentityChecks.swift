@@ -70,6 +70,22 @@ struct FXIdentityChecks {
            "normalizedCommand resolves symlink")
         try? FileManager.default.removeItem(at: tmp)
 
+        let networkRows = [10: row(10, 1, fxExe), 12: row(12, 10, "/bin/sh"),
+                           13: row(13, 12, "/selected/Contents/Resources/gvproxy"),
+                           14: row(14, 1, "/selected/Contents/Resources/gvproxy")]
+        ok(LaunchService.descendant(13, of: 10, rows: networkRows), "network descendant through launcher shell")
+        ok(!LaunchService.descendant(14, of: 10, rows: networkRows), "same network path with foreign parent rejected")
+        ok(!LaunchService.descendant(30, of: 10, rows: cycle), "cyclic ancestry terminates without trust")
+        let spoof = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("fx-network-spoof-\(UUID().uuidString).app")
+        try! FileManager.default.createDirectory(at: spoof.appendingPathComponent("Contents/Resources"), withIntermediateDirectories: true)
+        let fake = spoof.appendingPathComponent("Contents/Resources/gvproxy")
+        try! Data("#!/bin/sh\nexit 0\n".utf8).write(to: fake)
+        try! FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: fake.path)
+        do { _ = try LaunchService.diagnosticNetworkExecutable(fx: spoof, context: nil); ok(false, "unsigned diagnostic network rejected") }
+        catch let e as CoreError { ok(e.code == "FX_IDENTITY_UNVERIFIED", "unsigned diagnostic network rejected") }
+        catch { ok(false, "unsigned diagnostic network unexpected error") }
+        try? FileManager.default.removeItem(at: spoof)
+
         print("TOTAL \(passed) passed, \(failed) failed")
         exit(failed == 0 ? 0 : 1)
     }
