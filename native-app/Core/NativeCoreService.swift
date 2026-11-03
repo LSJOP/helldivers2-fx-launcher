@@ -396,17 +396,18 @@ actor NativeCoreService {
             try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!,
                                            transport: transport, context: context)
         }
-        let probe = try transport.run("sudo -n -v >/dev/null 2>&1 && printf 'OK\\n' || printf 'FAILED\\n'\n",
-                                      timeout: 15, context: context)
-        if probe.stdout.contains("OK") {
+        let probe = try CoreProcess.run("/usr/bin/ssh", transport.commandArgs(), input: "LC_ALL=C sudo -n -v\n", timeout: 15, context: context)
+        if probe.status == 0 {
             return ["sudo": .string("available_without_password_prompt"), "password_verified": .bool(false),
                     "configuration_changed": .bool(false), "guest_boot": .string(session.boot)]
         }
+        let probeFailure = LaunchService.sudoFailure(probe)
+        guard probeFailure == "AUTH_REQUIRED" else { throw CoreError(probeFailure) }
         guard let password = request.sudoPassword, !password.isEmpty, !password.contains("\n") else {
             throw CoreError("AUTH_REQUIRED", ["credential_kind": .string("sudo_password")])
         }
         let verify = try CoreProcess.run("/usr/bin/ssh", transport.sudoVerifyArgs(), input: password + "\n", timeout: 20, context: context)
-        guard verify.status == 0 else { throw CoreError("SUDO_AUTH_FAILED") }
+        guard verify.status == 0 else { throw CoreError(LaunchService.sudoFailure(verify)) }
         emit("INFO", "Guest sudo authenticated", ["kind": .string("credential_status"),
                                                   "credential_kind": .string("sudo"), "status": .string("authenticated")])
         return ["sudo": .string("authenticated"), "password_verified": .bool(true),

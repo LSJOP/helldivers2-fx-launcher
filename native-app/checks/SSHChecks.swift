@@ -41,6 +41,19 @@ import Darwin
                      ("kex_exchange_identification: closed", "SSH_PROTOCOL_ERROR")]
         for (text, code) in cases { check(SSHTransport.failureCode(text) == code, code) }
         check(SSHTransport.failureCode("", timedOut: true) == "SSH_CONNECTION_TIMEOUT", "deadline classification")
+        check(transport.sudoVerifyArgs().last == "LC_ALL=C sudo -S -p '' -v", "remote shell preserves empty sudo prompt")
+        let sudoCases: [(Int32, String, Bool, String)] = [
+            (1, "sudo: a password is required", false, "AUTH_REQUIRED"),
+            (1, "sudo: no password was provided", false, "AUTH_REQUIRED"),
+            (1, "Sorry, try again.", false, "SUDO_AUTH_FAILED"),
+            (1, "not in the sudoers file", false, "SUDO_PERMISSION_DENIED"),
+            (1, "usage: sudo -v", false, "SUDO_COMMAND_FAILED"),
+            (255, "Connection refused", false, "SSH_CONNECTION_REFUSED"),
+            (-1, "", true, "SSH_CONNECTION_TIMEOUT"),
+            (1, "unexpected remote failure", false, "SUDO_COMMAND_FAILED")]
+        for (status, stderr, timedOut, expected) in sudoCases {
+            check(LaunchService.sudoFailure(CoreProcessResult(status: status, stdout: "", stderr: stderr, timedOut: timedOut)) == expected, "sudo distinguishes \(expected)")
+        }
         // Run the same native controlling-terminal wrapper against a synthetic password
         // challenge. No real Guest, password, known_hosts or SSH server is used.
         let child = SSHTransport.interactiveCommand(["--tty-child"], executable: URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL.path)

@@ -71,7 +71,7 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
             if details["credential_kind"]?.text == "sudo_password" { return NativeStrings.text("ui.333", language: language) }
             if details["credential_kind"]?.text == "passphrase" { return NativeStrings.text("ui.335", language: language) }
             return NativeStrings.text("ui.332", language: language)
-        case "GUEST_TRANSACTION_FAILED": return NativeStrings.text("ui.334", language: language)
+        case "GUEST_TRANSACTION_FAILED", "SUDO_PERMISSION_DENIED", "SUDO_COMMAND_FAILED", "SUDO_CREDENTIAL_INVALID": return NativeStrings.text("ui.334", language: language)
         case "FX_NOT_RUNNING": return NativeStrings.text("ui.353", language: language)
         case "LOCAL_FX_REQUIRED": return NativeStrings.text("ui.355", language: language)
         case "GUEST_INSPECTION_FAILED": return NativeStrings.text("ui.146", language: language)

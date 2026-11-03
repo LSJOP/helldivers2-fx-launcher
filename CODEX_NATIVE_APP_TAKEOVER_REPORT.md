@@ -108,3 +108,19 @@ This final update supersedes the earlier pending-publication statements above. T
 - Latest complete resource/signature/metadata gate: PASS. LaunchServices start and actual Latest process path: VERIFIED (PID 69864 at verification).
 - Final clean-source Debug 60 page/language renders: PASS. Final About visual reinspection: NOT_TESTED after computer-use tooling became unavailable.
 - First-build live password authentication: VERIFIED. Full Guest identity on final build, Steam start, game launch and multiplayer: UNVERIFIED. No further live authentication is inferred from the successful build or publication.
+
+## Sudo startup investigation - 2026-11-04
+
+Current Latest remains build 2026110402, source 365dfad, executable da03aba2d101ee85a3c21eed84d2cf31e81a5effba999b918d1a75adaa05014d. PID 70018 was confirmed at the actual Latest path. Two additional UI-simplification App copies were observed at distinct paths (PIDs 71195 and 71213); they were preserved. They may share user defaults/control sockets, but no evidence establishes them as the cause.
+
+Call chain: runGUI -> LaunchService.connect -> GuestService.connect/hostIdentity -> launchGame -> CheckingCompatibility -> compatibility/proxy/launch-option checks -> ensureIPv4 -> sudo validation. SessionCredentialManager passes a nonempty sudoPassword as sudo_password; launchRequest maps it into request.sudoPassword. No password values were read or logged during this audit, so whether a particular failed GUI request contained the credential remains unverified.
+
+Live read-only audit using the existing authenticated SSH master passed complete FX/gvproxy/peer and Guest boot/marker identity checks. The original sudoVerifyArgs returned sudo usage output, not a password rejection: OpenSSH joins remote arguments with spaces, so the empty -p argument disappeared and -v was consumed as its prompt. ensureIPv4 then collapsed all validation failures into AUTH_REQUIRED. The same quoting defect affected standalone sudo verification.
+
+Minimal fix: use the fixed remote command `LC_ALL=C sudo -S -p '' -v`; preserve the SSH master, timeout and safety checks. Classify timeout/SSH status 255 separately; AUTH_REQUIRED only for missing input/challenge, SUDO_AUTH_FAILED for explicit authentication rejection, SUDO_PERMISSION_DENIED for policy denial, and SUDO_COMMAND_FAILED for malformed or other failed commands. Do not expose raw remote stderr or credentials in UI. Existing localized transaction-failure prose is reused with distinct diagnostic codes; all ten catalogs are preserved. Standalone sudo probing no longer masks transport failures.
+
+Corrected command was executed on the real identity-checked Guest without a password: it now returns the expected no-password/password-required diagnostic and no usage error. This proves quoting correction, NOT correct-password authentication or root privileges. No Guest settings, password, Steam, game or sudoers changes were made. Only sudo validation probes were run. IPv6 write was not executed.
+
+Targeted SSH/sudo checks: 26 PASS, including original SSH regression cases. Final targeted compilation, localization and documentation gates are recorded under native-app/evidence/sudo-investigation. No full App rebuild was repeated. README/changelog status updated in both languages; no visible layout or screenshots changed.
+
+Remaining: user-entered password validation through a secure interactive flow, sudo policy, authorization-cache behavior between separate remote commands, CheckingCompatibility completion and subsequent launch stages. No final acceptance is inferred from the reported correct password. Replacement build and publication are NOT approved yet; preserve current Latest and rollback. Next step is a scoped secure interactive sudo validation without Guest configuration writes; only then evaluate a candidate Debug App and a new Release. No merge into main or duplicate PR.

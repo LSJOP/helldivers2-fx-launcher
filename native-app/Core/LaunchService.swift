@@ -380,19 +380,35 @@ enum LaunchService {
         }
     }
 
+    static func sudoFailure(_ result: CoreProcessResult) -> String {
+        if result.timedOut { return "SSH_CONNECTION_TIMEOUT" }
+        if result.status == 255 { return SSHTransport.failureCode(result.stderr) }
+        let text = result.stderr.lowercased()
+        if text.contains("not in the sudoers") || text.contains("not allowed") || text.contains("may not run sudo") { return "SUDO_PERMISSION_DENIED" }
+        if text.contains("usage: sudo") || text.contains("command not found") { return "SUDO_COMMAND_FAILED" }
+        if text.contains("sorry, try again") || text.contains("incorrect password") || text.contains("authentication failure") { return "SUDO_AUTH_FAILED" }
+        if text.contains("a password is required") || text.contains("no password was provided") { return "AUTH_REQUIRED" }
+        return "SUDO_COMMAND_FAILED"
+    }
+
     static func ensureIPv4(_ transport: SSHTransport, session: GuestSession, sudoPassword: String?, context: CoreContext) throws -> Bool {
         let plan = try GuestService.inspect(transport, context: context)
         let ipv6 = plan["ipv6"]?.object ?? [:]
         if ["all", "default", "eth0", "lo"].allSatisfy({ ipv6[$0]?.text == "1" }) { return false }
-        // Passwordless sudo first; a supplied password is verified once and never echoed.
-        let probe = try CoreProcess.run("/usr/bin/ssh", transport.commandArgs(), input: "sudo -n -v\n", timeout: 15, context: context)
-        var authorized = probe.status == 0
-        if !authorized, let password = sudoPassword, !password.isEmpty, !password.contains("\n") {
+        // Keep transport/protocol/policy failures distinct from missing credentials.
+        let probe = try CoreProcess.run("/usr/bin/ssh", transport.commandArgs(), input: "LC_ALL=C sudo -n -v\n", timeout: 15, context: context)
+        if probe.status != 0 {
+            let failure = sudoFailure(probe)
+            guard failure == "AUTH_REQUIRED" else { throw CoreError(failure) }
+            guard let password = sudoPassword, !password.isEmpty else {
+                throw CoreError("AUTH_REQUIRED", ["credential_kind": .string("sudo_password")])
+            }
+            guard !password.contains("\n"), !password.contains("\r") else { throw CoreError("SUDO_CREDENTIAL_INVALID") }
             let verify = try CoreProcess.run("/usr/bin/ssh", transport.sudoVerifyArgs(), input: password + "\n", timeout: 20, context: context)
-            authorized = verify.status == 0
+            if verify.status != 0 { throw CoreError(sudoFailure(verify)) }
         }
-        guard authorized else { throw CoreError("AUTH_REQUIRED", ["credential_kind": .string("sudo_password")]) }
         let result = try CoreProcess.run("/usr/bin/ssh", transport.sudoCommandArgs(), input: GuestScripts.ipv6(boot: session.boot), timeout: 30, context: context)
+        if result.status != 0 { throw CoreError(sudoFailure(result)) }
         guard result.status == 0, let value = try? GuestService.parse(result.stdout, expected: "COMPATIBILITY_CHECK_FAILED"),
               value["ok"]?.boolean == true else {
             throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("ipv6_write_failed")])
@@ -408,7 +424,7 @@ extension SSHTransport {
     }
     func sudoVerifyArgs() -> [String] {
         ["-S", settings.socketPath, "-p", String(settings.port), "-l", settings.username,
-         "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", settings.host, "sudo", "-S", "-p", "", "-v"]
+         "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", settings.host, "LC_ALL=C sudo -S -p '' -v"]
     }
     func sudoCommandArgs() -> [String] {
         ["-S", settings.socketPath, "-p", String(settings.port), "-l", settings.username,
