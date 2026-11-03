@@ -76,7 +76,7 @@ Sparkle 2.10.1 remains embedded and unmodified. No Developer ID identity, notari
 Both READMEs now describe the Swift Native Core, remove Python/legacy-directory requirements and mark pre-migration screenshots as pending recapture (manifest updated). CHANGELOGs list migration changes and known issues.
 
 ## 17. Git commits and PR
-See final commit hashes in the session report. Branch pushed to `origin/feature/full-swift-native-migration`; a PR is created if GitHub CLI authentication permits.
+Commit `bf4e7eb` on `feature/full-swift-native-migration` (isolated worktree). Push and PR are **BLOCKED by the environment**: all HTTPS Git operations fail with `LibreSSL SSL_connect: SSL_ERROR_SYSCALL` (direct and via the local proxy), although `gh api` works. No force-push or history rewrite was attempted; the branch remains local.
 
 ## 18. Final App path
 `/Volumes/Thunderbolt2TB/HD2-App-Builds/Latest/HD2FXNative.app` after validation; historical copies under `Releases/`.
@@ -111,7 +111,7 @@ AUTOMATED TESTS: PASS
 DEBUG BUILD: PASS
 RELEASE BUILD: PASS (ad-hoc signed; not notarized)
 APP STARTUP: VERIFIED
-GIT STATUS: feature/full-swift-native-migration pushed; main untouched pending PR
+GIT STATUS: local commit bf4e7eb; push/PR BLOCKED by network (SSL_ERROR_SYSCALL); main untouched
 FINAL APP PATH: /Volumes/Thunderbolt2TB/HD2-App-Builds/Latest/HD2FXNative.app
 OVERALL STATUS: PARTIAL (implementation complete; live launch/multiplayer and distribution unverified)
 ```
