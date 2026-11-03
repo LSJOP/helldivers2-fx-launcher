@@ -96,3 +96,15 @@ Bundle 摘要使用既有发布工具的路径、文件内容、权限、符号�
 真实环境首轮（Build 2026110401）：用户在 App 安全输入框中输入凭据并主动勾选授权执行。端口可达、协议协商、密码认证均成功；FX 运行状态为 true。随后在 VerifyingGuestIdentity 因 gvproxy_not_child_of_fx 停止，未宣称 Guest 身份通过。该问题已在后续代码中修复，等待 Build 2026110402 复验。没有通过命令行传递聊天中的密码，也没有执行 sudo。
 
 真实 SSH 密码认证已由首轮 App 诊断证实，但完整 Guest 身份仍未通过；Steam 启动、游戏启动、EAC 与多人联机未因端口、进程、哈希或隔离测试而标记通过。已在新版 App 打开独立诊断；真实密码应仅由用户在安全输入框内输入并明确执行，未使用聊天中的密码进行命令行认证。下一步先完成该只读诊断，确认具体失败阶段；保持 FX/Guest 身份检查。Steam/游戏和任何真实配置变更另按授权范围验收。
+
+## Final publication update - 2026-11-04 04:18:49 Asia/Shanghai
+
+This final update supersedes the earlier pending-publication statements above. The user normally exited FX; read-only process checks confirmed App, FX and gvproxy had all exited. Build 2026110402 / Core 1.0.2 / source 365dfadd9e297676d9f5f29315193c92d6b0fd8d was then published atomically to Latest using the existing publisher. No process was force-stopped.
+
+- Latest executable SHA256: da03aba2d101ee85a3c21eed84d2cf31e81a5effba999b918d1a75adaa05014d
+- Release executable SHA256: da03aba2d101ee85a3c21eed84d2cf31e81a5effba999b918d1a75adaa05014d
+- Latest and Release bundle SHA256: 598f81140ecb7c8351189ac2151f9b4caf277bfb3c313d3b26c08da563b7217f
+- Rollback of first takeover build: /Volumes/Thunderbolt2TB/HD2-App-Builds/Releases/Rollback-20261104-041849-522899/HD2FXNative.app
+- Latest complete resource/signature/metadata gate: PASS. LaunchServices start and actual Latest process path: VERIFIED (PID 69864 at verification).
+- Final clean-source Debug 60 page/language renders: PASS. Final About visual reinspection: NOT_TESTED after computer-use tooling became unavailable.
+- First-build live password authentication: VERIFIED. Full Guest identity on final build, Steam start, game launch and multiplayer: UNVERIFIED. No further live authentication is inferred from the successful build or publication.
