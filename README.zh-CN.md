@@ -14,7 +14,7 @@
 ![状态](https://img.shields.io/badge/Status-Development%20Preview-F29D38?style=flat-square&labelColor=171A1F)
 ![版本](https://img.shields.io/badge/Native-0.1.0-FFD600?style=flat-square&labelColor=171A1F)
 
-[软件截图](#zh-screenshots) · [主要功能](#zh-features) · [下载安装](#zh-installation) · [快速开始](#zh-usage) · [兼容性](#zh-development) · [原脚本](#zh-legacy)
+[软件截图](#zh-screenshots) · [主要功能](#zh-features) · [下载安装](#zh-installation) · [快速开始](#zh-usage) · [兼容性](#zh-development) · [更新日志](#zh-changelog) · [原脚本](#zh-legacy)
 
 <a id="zh-overview"></a>
 
@@ -100,6 +100,18 @@ open build/Debug/HD2FXNative.app
 
 > [!WARNING]
 > 发现安装 ≠ 运行就绪 ≠ 游戏进程已启动 ≠ 进入主菜单 ≠ EAC 验证成功 ≠ 多人联机成功。不提供反作弊绕过。
+
+<a id="zh-changelog"></a>
+
+## 更新日志
+
+尚未发布任何正式版本；当前原生版本 `0.1.0` 为开发预览。近期未发布改动：
+
+- 原生六页界面、限定范围 FX 发现、带校验的配置编辑、脱敏日志与只读性能比较。
+- GUI 化 FX／SSH 操作与可选 SSH／sudo 凭据记忆。
+- Sparkle 2 更新集成（Feed／签名服务尚未配置）。
+
+完整历史见 [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md)。
 
 ## 常见问题
 

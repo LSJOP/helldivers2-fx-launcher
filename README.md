@@ -15,7 +15,7 @@
 ![Status](https://img.shields.io/badge/Status-Development%20Preview-F29D38?style=flat-square&labelColor=171A1F)
 ![Version](https://img.shields.io/badge/Native-0.1.0-FFD600?style=flat-square&labelColor=171A1F)
 
-[Screenshots](#en-screenshots) · [Features](#en-features) · [Installation](#en-installation) · [Quick start](#en-usage) · [Compatibility](#en-development) · [Legacy script](#en-legacy)
+[Screenshots](#en-screenshots) · [Features](#en-features) · [Installation](#en-installation) · [Quick start](#en-usage) · [Compatibility](#en-development) · [Changelog](#en-changelog) · [Legacy script](#en-legacy)
 
 <a id="en-overview"></a>
 
@@ -101,6 +101,18 @@ Existing clones need the intended branch and `git submodule update --init --recu
 
 > [!WARNING]
 > Installation found ≠ runtime ready ≠ game process started ≠ main menu reached ≠ EAC accepted ≠ multiplayer working. No anti-cheat bypass is provided.
+
+<a id="en-changelog"></a>
+
+## Changelog
+
+No official release has been published yet; the current Native version `0.1.0` is a development preview. Recent unreleased changes:
+
+- Native six-page interface, bounded FX discovery, validated configuration editing, redacted logs and read-only performance comparison.
+- GUI-driven FX/SSH actions and optional SSH/sudo credential remembering.
+- Sparkle 2 update integration (feed/signing service not configured).
+
+See the full history in [CHANGELOG.md](CHANGELOG.md).
 
 ## FAQ
 
