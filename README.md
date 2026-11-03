@@ -28,20 +28,31 @@ A native **SwiftUI + AppKit** interface over the original Python Core: launch th
 
 ## Screenshots
 
-[![Dashboard](docs/images/dashboard.png)](docs/images/dashboard.png)
+[![Dashboard](docs/images/en/dashboard.png)](docs/images/en/dashboard.png)
 
 | Environment | FX Manager |
 | --- | --- |
-| [![Environment](docs/images/environment.png)](docs/images/environment.png) | [![FX Manager](docs/images/fx-manager.png)](docs/images/fx-manager.png) |
+| [![Environment](docs/images/en/environment.png)](docs/images/en/environment.png) | [![FX Manager](docs/images/en/fx-manager.png)](docs/images/en/fx-manager.png) |
 
 <details>
 <summary>Game Performance</summary>
 
-[![Game Performance](docs/images/performance.png)](docs/images/performance.png)
+[![Game Performance](docs/images/en/performance.png)](docs/images/en/performance.png)
+
+[![Performance actions](docs/images/en/performance-actions.png)](docs/images/en/performance-actions.png)
+
+</details>
+<details>
+<summary>Logs, Settings and Software Update</summary>
+
+[![Logs](docs/images/en/logs.png)](docs/images/en/logs.png)
+[![Settings](docs/images/en/settings.png)](docs/images/en/settings.png)
+[![Software Update](docs/images/en/settings-updates.png)](docs/images/en/settings-updates.png)
 
 </details>
 
-Four actual Debug App window captures refreshed for FX automatic selection V2.1 on 2026-11-03 with real host metadata and no selected launch target. No status or interface was composited. The FX image shows the shared selection controls and operation area; additional content is accessible by scrolling. The supplied icon/illustrations are generated artwork rendered in the real App, not generated UI screenshots. These images do not prove Guest, game or multiplayer readiness.
+
+Eight English screenshots captured from the current real Native Debug App (0.1.0, build 1) on 2026-11-03, with read-only host metadata. Pixels are unmodified; no UI/status was composited. Scrolled views show performance actions and software update. Capture copies isolate App preferences and disable credential autoload; no FX/Guest action or configuration write was performed. Supplied artwork is rendered inside the real App. Screenshots do not prove gameplay, performance gains or installation readiness. [Capture provenance and limitations](docs/images/README.md).
 
 <a id="en-features"></a>
 
@@ -52,12 +63,12 @@ Four actual Debug App window captures refreshed for FX automatic selection V2.1 
 | 🟢 Implemented | Six-page native interface, Cmd+1…6 navigation, dark/light/system appearance, bundled official project icon |
 | 🟢 Implemented | Bounded host/FX discovery; validated configuration editing with revision checks, backup and atomic replacement |
 | 🟢 Implemented | Searchable, filtered, bounded and redacted logs; diagnostic reports |
-| 🟢 Implemented · Read-only | Real chip/CPU/GPU/memory detection, current FX preferences and baseline differences in Game Performance |
+| 🟢 Implemented · Guarded writes | Hardware/current FX preferences and reference differences; scoped performance editing/backup/restore for the pinned FX 1.9.4 build |
 | 🟠 In development | One-click environment inspection and background SSH operations; original-entry FX/Steam starts, independent SSH/sudo credential reuse; fresh live acceptance remains pending |
 | 🟢 Implemented · Static coverage checked | Ten original Python catalogs retained separately; unified Native resources cover all ten languages. Missing Native text is shown as an explicit missing key, without English fallback. Translation naturalness still needs human review |
-| ⚪ Planned / unavailable | Safe FX stop/restart, writable inferred performance profiles with scoped restore, signed/notarized installer |
+| ⚪ Planned / unavailable | Safe FX stop/restart, verified performance recommendations, signed/notarized installer |
 
-Performance rules are local and reproducible. The recorded **M4 Pro / 24 GiB** settings are a candidate baseline, not comprehensive performance validation. Other hardware has no inferred writable profile. Apply/restore are disabled with visible reasons. [Parameter sources and limits](docs/GAME_PERFORMANCE.md).
+Performance rules are local and reproducible. The recorded **M4 Pro / 24 GiB** settings are a candidate baseline, not comprehensive performance validation. Other hardware has no inferred writable profile. FX 1.9.4 with the pinned build supports a conservative CPU/memory/Vulkan/Metal HUD editor with preview, consent, verified backups and conflict-guarded restore. FX must be stopped; saved preferences need a fresh FX/Guest start and remain unverified. The original launch path overrides values and may reject custom settings: restore before using it. Super resolution and the 6144 MiB GPU budget remain read-only. Current localized screenshots include the new performance and update surfaces. [Parameter sources and limits](docs/GAME_PERFORMANCE.md).
 
 <a id="en-requirements"></a>
 <a id="en-installation"></a>
@@ -97,7 +108,7 @@ Existing clones need the intended branch and `git submodule update --init --recu
 | Main menu / controllable ship | Explicitly confirmed by the user on 2026-11-03 in that recorded environment |
 | Current GUI SSH / Guest read | Real backends wired; latest host check rejected a different running FX copy before connecting. Fresh success through the new actions remains pending |
 | Single-player mission / independent EAC / multiplayer | **Unverified**, separately |
-| Performance | Read-only candidate comparison; no measured performance guarantee or automatic tuning |
+| Performance | Guarded saved-preference editing with backup/restore; no measured performance guarantee or automatic tuning |
 
 > [!WARNING]
 > Installation found ≠ runtime ready ≠ game process started ≠ main menu reached ≠ EAC accepted ≠ multiplayer working. No anti-cheat bypass is provided.
@@ -116,9 +127,9 @@ See the full history in [CHANGELOG.md](CHANGELOG.md).
 
 ## FAQ
 
-- **Why are stop/restart or Apply disabled?** A verified graceful-exit backend and safe inferred-profile write/restore bounds are not available. The App does not force-stop or silently reconfigure FX.
+- **Why are stop/restart or some Apply actions disabled?** Graceful exit is unverified. Performance editing requires the pinned FX 1.9.4 build, valid preferences, stopped FX and explicit preview/consent. Invalid backups or external changes block restore. The App does not force-stop FX.
 - **Must I retype passwords?** Session reuse is the default. Optional remembering stores independently verified SSH/sudo credentials in a new App-owned macOS Keychain namespace; automatic reads suppress authorization dialogs. Locked/access-restricted storage falls back to secure input. Explicit access or App identity/signature changes may still require system authorization. Old script items are untouched.
-- **Are automatic updates ready?** Sparkle 2 is integrated, but a signed feed/release service is not configured. Update checks remain disabled; installation is unverified.
+- **Are automatic updates ready?** Manual GitHub Native-release checks work in Settings → Software Update. Stable is the default; Preview and automatic checks remain closed until verified service setup. A verified-download backend requires a trusted Ed25519 key and signed manifest; installation remains disabled without the signed Appcast, Developer ID and notarization/distribution conditions. Manual checks never install automatically. The automatic-check toggle stays disabled until the signed service is ready. Download verification includes signature, size and SHA-256; installation stays with official Sparkle. No production update package is published yet. Failures leave the current App intact; no installed/relaunched success is inferred. Release preparation verifies signed feed history before reusing it. [Setup and release gates](docs/NATIVE_UPDATES.md).
 
 <a id="en-legacy"></a>
 
@@ -136,6 +147,6 @@ See the full history in [CHANGELOG.md](CHANGELOG.md).
 
 Unofficial project; no endorsement or compatibility guarantee. HELLDIVERS 2 and related marks belong to their respective owners. A project-wide source license has **not been selected**; do not assume redistribution rights. See [rights and provenance](THIRD_PARTY_NOTICES.md), including the separate Sparkle license and supplied artwork notes.
 
-Development checks: `python3 native-app/script/check_localization.py` reports ten-language key/format coverage and README review candidates; `native-app/script/run_checks.sh` and the pre-commit hook include this gate. UI changes require a review of both READMEs and their real screenshots. The English screenshots were refreshed after UX verification; non-English screenshot variants and translation naturalness still need human review. No CI workflow is configured.
+Development checks: `python3 native-app/script/check_localization.py` reports ten-language key/format coverage and README review candidates; `native-app/script/run_checks.sh` and the pre-commit hook include this gate. UI changes require a review of both READMEs and their real screenshots. Both English and Simplified Chinese screenshots are refreshed for the integrated UI. Translation naturalness still needs human review. The release-check Actions template remains inactive; no CI workflow is configured.
 
-FX selection V2 + automatic selection V2.1: the FX page, overview and launch panel share one persisted default. One identity/path-verified FX is selected automatically from the scan results; multiple installations preserve an existing valid choice or require selection. Missing/moved/updated defaults are revalidated. Selection remains **launch capability unverified** and never starts the game. Every game launch rescans the default and retains the original executable hash, identity, configuration and preflight guards. Other builds may be selected but can be blocked by those compatibility checks. FX application selection is separate from the helper/gvproxy resource directory: resolve it from the selected app’s bounded ancestors or the existing resource directory when possible, otherwise explicitly locate **launch resources** once. Repeated FX-directory selection is not required. Refresh and automatic inspection do not start FX, SSH or the game. Stop/restart and performance Apply/Restore remain unavailable.
+FX selection V2 + automatic selection V2.1: the FX page, overview and launch panel share one persisted default. One identity/path-verified FX is selected automatically from the scan results; multiple installations preserve an existing valid choice or require selection. Missing/moved/updated defaults are revalidated. Selection remains **launch capability unverified** and never starts the game. Every game launch rescans the default and retains the original executable hash, identity, configuration and preflight guards. Other builds may be selected but can be blocked by those compatibility checks. FX application selection is separate from the helper/gvproxy resource directory: resolve it from the selected app’s bounded ancestors or the existing resource directory when possible, otherwise explicitly locate **launch resources** once. Repeated FX-directory selection is not required. Refresh and automatic inspection do not start FX, SSH or the game. Stop/restart remain unavailable. Parameter-scoped performance editing and backup restore require a stopped, pinned FX 1.9.4 and explicit preview/confirmation; inferred recommendations remain read-only.

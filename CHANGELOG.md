@@ -21,11 +21,13 @@ No official release has been published yet. The current Native App version `0.1.
 - Read-only hardware detection (chip/CPU/GPU/memory/macOS) and current FX preference baseline comparison in Game Performance.
 - GUI-driven FX/SSH actions: connect, read-only Guest inspection, original-entry FX/Steam start and the existing game-launch panel.
 - Optional SSH/sudo credential remembering in a new App-owned Keychain namespace (session memory by default; old script Keychain items are untouched).
-- Sparkle 2 update integration for the Launcher only (feed/signing service not configured; checks remain disabled).
+- Manual anonymous Native-release checks and a guarded signed-manifest download backend; official Sparkle remains the only installer. Appcast history is signature-verified before release preparation. Production automatic update installation remains unavailable without trusted distribution setup.
+- Scoped, preview-confirmed FX 1.9.4 preference editing, verified backup/restore and external-change protection; stopped pinned FX required. Inferred recommendations remain read-only.
+- Real English and Simplified Chinese screenshot sets, provenance hashes and documentation checks; the release-check Actions code is preserved as an inactive template under docs/ci.
 - Native resources cover all ten original languages; translation naturalness still needs human review.
 
 ### Known limitations
 
 - No signed/notarized installer or GitHub Release exists; `0.1.0` is a development preview.
-- Safe FX stop/restart and writable inferred performance profiles are not implemented (Apply/Restore are disabled).
+- Safe FX stop/restart and validated automatic performance recommendations remain unavailable. Saved settings are not proof of runtime adoption; the original launch preflight may reject custom values.
 - Ground missions, independent EAC acceptance and multiplayer remain unverified.

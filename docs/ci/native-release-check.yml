@@ -1,0 +1,68 @@
+name: Native release readiness
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Explicit Native semantic version'
+        required: true
+      build:
+        description: 'Positive monotonically increasing build number'
+        required: true
+      channel:
+        type: choice
+        options: [stable, preview]
+        default: stable
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: native-release-readiness
+  cancel-in-progress: false
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-15
+    timeout-minutes: 40
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      RELEASE_BUILD: ${{ inputs.build }}
+      RELEASE_CHANNEL: ${{ inputs.channel }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Validate explicit release identity
+        run: |
+          python3 - <<'PY'
+          import os,re
+          version,build,channel=(os.environ[k] for k in ['RELEASE_VERSION','RELEASE_BUILD','RELEASE_CHANNEL'])
+          assert re.fullmatch(r'(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?',version)
+          assert re.fullmatch(r'[1-9]\d*',build)
+          assert (channel=='preview')==('-' in version)
+          PY
+      - name: Select Xcode 26
+        run: |
+          python3 - <<'PYCODE'
+          import glob,os,pathlib
+          choices=sorted(glob.glob('/Applications/Xcode_26*.app'))
+          assert choices, 'Xcode 26 is required; nothing will be published'
+          assert os.uname().machine=='arm64', 'Apple Silicon runner required'
+          with open(os.environ['GITHUB_ENV'],'a') as env:
+              env.write('DEVELOPER_DIR='+choices[-1]+'/Contents/Developer\n')
+          PYCODE
+      - name: Debug build and isolated checks
+        run: |
+          bash native-app/script/build_and_run.sh --build-only
+          bash native-app/script/run_checks.sh
+          bash native-app/script/run_update_checks.sh
+      - name: Scan tracked sources for accidental secrets
+        run: python3 -I -B native-app/script/check_release_secrets.py --tracked
+      - name: Record release gate
+        run: |
+          python3 - <<'PY'
+          import os
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as report:
+              report.write('## Native release readiness\n\nBuild and isolated checks passed. **Nothing signed or published.**\n\n')
+              report.write('Next: operator-reviewed Developer ID archive, notarization/stapling, Ed25519 signed ZIP/manifest/Appcast, isolated upgrade validation, then explicit publication approval.\n')
+          PY

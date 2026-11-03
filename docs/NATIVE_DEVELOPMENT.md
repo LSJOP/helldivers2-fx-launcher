@@ -24,7 +24,7 @@ SwiftUI pages use one AppState, TaskManager and supervised JSONL Bridge. Views d
 
 The earlier recorded dedicated FX 1.9.4 environment reached the main menu/controllable ship with explicit user confirmation on 2026-11-03. This is separate from current GUI-action acceptance, other FX versions, performance validation, independent EAC acceptance, ground missions and multiplayer. Fresh connection testing was blocked by another running FX copy; no instance was forcibly terminated.
 
-Nine new performance inference checks and 35 migration checks passed, along with Debug builds and the six-page real-hardware smoke. Inference remains read-only because no validated portable tuning bounds or scoped restore backend exist. [Parameter audit](GAME_PERFORMANCE.md) · [Migration evidence](FUNCTION_MIGRATION.md).
+Historical task-queue acceptance included nine inference checks and 35 migration checks, Debug builds and a six-page real-hardware smoke. That read-only baseline is superseded by the separately committed performance V2 scoped writer/restore backend; live adoption remains unverified. [Parameter audit](GAME_PERFORMANCE.md) · [Migration evidence](FUNCTION_MIGRATION.md).
 
 The ten original locale catalogs are zh-CN, en, ja, ko, ru, es, de, fr, pt-BR and zh-TW. Native-only translations are partial; missing strings fall back to English. Sparkle code integration is separate from signed-feed/release/installation acceptance: [Native updates](NATIVE_UPDATES.md).
 
@@ -32,11 +32,13 @@ The ten original locale catalogs are zh-CN, en, ja, ko, ru, es, de, fr, pt-BR an
 
 Maintain equivalent `README.md` / `README.zh-CN.md` with relative language links, per HD2_NATIVE_APP_UNIFIED_TASK_QUEUE v1.0.0. Homepage organization takes inspiration from [FlClash](https://github.com/chen08209/FlClash); no FlClash brand assets or copy are used.
 
-Screenshots in `docs/images/` were captured from the actual Debug App window on 2026-11-03 during task-queue acceptance, after reading real hardware/preferences. They are proportionally reduced only. They contain no entered credentials or personal paths. Older Logs/Settings captures remain historical and are not used to represent this iteration's interface.
+Current screenshots reuse `docs/images/en/` and `docs/images/zh-CN/`, with actual Native Debug window captures for all six pages plus performance actions/software update. English/Chinese READMEs reference only their own language directory. Source/build/date, hashes, privacy scope and visual review are recorded in [image provenance](images/README.md) and `docs/images/manifest.json`. Legacy flat files are historical and are never referenced as current screenshots.
+
+For every new page/important setting/launch/performance/update UI change, review ten-language strings, both READMEs, corresponding images and documented capabilities together. Capture the target language in the real App, inspect text and sensitive data, then update the manifest. If real capture is unavailable, record missing/pending images explicitly; no generated UI or cross-language fallback. Run `python3 -I -B native-app/script/check_readme_screenshots.py`; Native checks include it automatically. It checks paths/language directories/hashes, not the image language itself. Visual review is mandatory.
 
 `.codex/task-queue.json` and `.codex/progress.md` persist task evidence and resume points. They do not wake Codex automatically. Check actual Git/source before resuming; completed tasks must not be regenerated. No scheduled continuation was created.
 
-中文要点：开发分支继续沿用，Core 固定且不修改；普通刷新仅本机元数据，性能页读取硬件／偏好，Guest 检查需主动点击。凭据默认内存、可选独立 Keychain 保存；原脚本钥匙串项目不动。取消后需核对真实状态，不能把进程／主菜单／EAC／联机当作同一证据。性能写入／恢复尚不可用。中英文 README 同步维护，断点文件不会自动唤醒 Codex。
+中文要点：开发分支继续沿用，Core 固定且不修改；普通刷新仅本机元数据，性能页读取硬件／偏好，Guest 检查需主动点击。凭据默认内存、可选独立 Keychain 保存；原脚本钥匙串项目不动。取消后需核对真实状态，不能把进程／主菜单／EAC／联机当作同一证据。性能写入／恢复仅支持固定构建并受安全门槛保护，实机生效仍未验证。中英文 README 同步维护，断点文件不会自动唤醒 Codex。
 
 ## Archive access retained from the earlier main README
 

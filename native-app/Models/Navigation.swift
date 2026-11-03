@@ -49,14 +49,14 @@ struct NativeOperation: Identifiable {
 @MainActor enum NativeLocalization {
     static var isolatedUXSmoke: Bool {
         #if DEBUG
-        return ProcessInfo.processInfo.arguments.contains("--ux-refinement-smoke")
+        return ProcessInfo.processInfo.arguments.contains("--ux-refinement-smoke") || ProcessInfo.processInfo.arguments.contains("--readme-screenshots")
         #else
         return false
         #endif
     }
     static let languages: [(String, String)] = [("zh-CN","简体中文"),("en","English"),("ja","日本語"),("ko","한국어"),("ru","Русский"),("es","Español"),("de","Deutsch"),("fr","Français"),("pt-BR","Português (Brasil)"),("zh-TW","繁體中文")]
     static var initialLanguage: String {
-        if isolatedUXSmoke { return "en" }
+        if isolatedUXSmoke && !ProcessInfo.processInfo.arguments.contains("--readme-screenshots") { return "en" }
         if let saved = UserDefaults.standard.string(forKey: "NativeLanguage"), languages.contains(where: { $0.0 == saved }) { return saved }
         let value = Locale.preferredLanguages.first ?? "en"
         if value.hasPrefix("zh") { return value.contains("Hant") || value.contains("TW") ? "zh-TW" : "zh-CN" }

@@ -27,22 +27,35 @@
 
 ## 软件截图
 
-[![总览](docs/images/dashboard.png)](docs/images/dashboard.png)
+[![总览](docs/images/zh-CN/dashboard.png)](docs/images/zh-CN/dashboard.png)
 
 | 运行环境 | FX 管理 |
 | --- | --- |
-| [![运行环境](docs/images/environment.png)](docs/images/environment.png) | [![FX 管理](docs/images/fx-manager.png)](docs/images/fx-manager.png) |
+| [![运行环境](docs/images/zh-CN/environment.png)](docs/images/zh-CN/environment.png) | [![FX 管理](docs/images/zh-CN/fx-manager.png)](docs/images/zh-CN/fx-manager.png) |
 
 <details>
 <summary>游戏性能配置</summary>
 
-[![游戏性能配置](docs/images/performance.png)](docs/images/performance.png)
+[![游戏性能配置](docs/images/zh-CN/performance.png)](docs/images/zh-CN/performance.png)
+
+[![性能配置操作区](docs/images/zh-CN/performance-actions.png)](docs/images/zh-CN/performance-actions.png)
+
+</details>
+<details>
+<summary>日志、设置与软件更新</summary>
+
+[![日志](docs/images/zh-CN/logs.png)](docs/images/zh-CN/logs.png)
+[![设置](docs/images/zh-CN/settings.png)](docs/images/zh-CN/settings.png)
+[![软件更新](docs/images/zh-CN/settings-updates.png)](docs/images/zh-CN/settings-updates.png)
 
 </details>
 
-四张均为 2026-11-03 的真实 Debug App 窗口截图；界面没有合成。图标与插画为 App 内展示的素材，不是生成的软件截图。截图不证明 Guest、游戏或联机就绪。FX 自动选择界面在本次验证后更新。
+
+八张简体中文截图均于 2026-11-03 从当前真实 Native Debug App（0.1.0，构建 1）采集，使用只读本机元数据，原始像素未改动，没有合成界面或状态；滚动视图展示性能操作和软件更新。截图副本隔离偏好并禁用凭据自动读取，未执行 FX／Guest 操作或配置写入。插画是在真实 App 内渲染的素材。截图不证明游戏、性能提升或安装已就绪。[采集来源与限制](docs/images/README.md)。
 
 <a id="zh-features"></a>
+
+性能编辑现支持已固定构建的 **FX 1.9.4**：CPU、Guest 内存、实际可用的 Vulkan 驱动、Metal HUD。流程为读取 → 编辑 → 预览确认 → 自动备份并验证 → 写入并重新读取；恢复使用本系统的真实备份，外部修改会阻止覆盖。FX 运行时禁止写入，不会自动停止或重启。保存后需重新启动 FX／Guest，仍显示运行中配置未验证。原启动命令会覆盖参数，固定预检可能拒绝自定义值，使用原路径前应恢复备份。超分辨率与 6144 MiB GPU 预算保持只读，无性能提升保证。对应语言的当前截图已同步。[机制、范围与风险](docs/GAME_PERFORMANCE.md)。
 
 ## 主要功能
 
@@ -51,12 +64,12 @@
 | 🟢 已实现 | 六页原生界面、Cmd+1…6 导航、深色／浅色／跟随系统、正式项目图标 |
 | 🟢 已实现 | 限定范围本机／FX 发现；带校验、修订检查、备份和原子替换的配置编辑 |
 | 🟢 已实现 | 可搜索、筛选、有容量限制且脱敏的日志与诊断报告 |
-| 🟢 已实现 · 只读 | 游戏性能配置页的真实芯片／CPU／GPU／内存检测、当前 FX 偏好和基准差异 |
+| 🟢 已实现 · 受保护写入 | 硬件／FX 偏好与参考对比；固定 FX 1.9.4 构建的限定参数编辑、备份与恢复 |
 | 🟠 开发中 | 一键检测与 SSH 后台操作；原入口 FX／Steam 启动、SSH／sudo 独立凭据复用；新入口实机验收仍待完成 |
 | 🟢 已实现 · 静态覆盖检查通过 | 原 Python 十语言资源单独保留；Native 统一资源覆盖全部十语言。缺失文案明确显示缺失键，不回退英文；译文自然度仍需人工审校 |
-| ⚪ 计划中／不可用 | 安全停止／重启 FX、可写推算配置与限定参数恢复、签名／公证安装包 |
+| ⚪ 计划中／不可用 | 安全停止／重启 FX、经过验证的性能推荐、签名／公证安装包 |
 
-性能规则完全本地、可复现。原记录中的 **M4 Pro／24 GiB** 配置仅是候选基准，不代表全面性能验收。其他硬件不生成可写推算配置；应用／恢复明确禁用并显示原因。见[参数来源与限制](docs/GAME_PERFORMANCE.md)。
+性能规则完全本地、可复现。原记录中的 **M4 Pro／24 GiB** 配置仅是候选基准，不代表全面性能验收。其他硬件不生成可写推算配置；限定参数支持预览确认、备份写入与冲突保护恢复；原启动参数覆盖及其他限制见下文。见[参数来源与限制](docs/GAME_PERFORMANCE.md)。
 
 <a id="zh-requirements"></a>
 <a id="zh-installation"></a>
@@ -96,7 +109,7 @@ open build/Debug/HD2FXNative.app
 | 主菜单／可操作飞船 | 2026-11-03 用户明确确认，限定于该记录环境 |
 | 当前 GUI SSH／Guest 读取 | 已连接真实后端；最近宿主检查因另一份 FX 正在运行，在连接前拒绝。新入口的成功实测仍待完成 |
 | 单人任务／独立 EAC 验收／多人联机 | 分别保持**未验证** |
-| 性能 | 只读候选比较，没有实测性能保证，也不自动调优 |
+| 性能 | 受保护的偏好编辑与备份恢复，没有实测性能保证，也不自动调优 |
 
 > [!WARNING]
 > 发现安装 ≠ 运行就绪 ≠ 游戏进程已启动 ≠ 进入主菜单 ≠ EAC 验证成功 ≠ 多人联机成功。不提供反作弊绕过。
@@ -115,9 +128,9 @@ open build/Debug/HD2FXNative.app
 
 ## 常见问题
 
-- **为什么停止／重启或应用按钮禁用？** 尚无经验证的正常退出后端，以及安全推算／写入／恢复边界。App 不强制停止或静默重配 FX。
+- **为什么停止／重启或部分应用按钮禁用？** 正常退出后端尚未验证。性能编辑只支持固定 FX 1.9.4 构建，需读取合法配置、FX 停止并预览确认；无有效备份或外部修改会阻止恢复。App 不强制停止 FX。
 - **每次都要输入密码吗？** 默认会话内复用。主动选择记住后，经实际验证的 SSH／sudo 凭据分别保存在本 App 新建的 macOS Keychain namespace；自动读取禁止授权弹窗。钥匙串锁定／访问受限时回退安全输入，主动授权访问或 App 身份／签名变化时仍可能出现系统授权。旧脚本钥匙串项目保持不动。
-- **自动更新能用了吗？** 已集成 Sparkle 2，但签名 Feed／发行服务尚未配置，更新检查禁用，安装未验证。
+- **自动更新能用了吗？** 在「设置 → 软件更新」可手动检查 GitHub Native 发布。默认稳定版；正式服务未就绪前，预览渠道及自动检查保持关闭。安全下载需要可信 Ed25519 公钥与签名清单；缺少签名 Appcast、Developer ID、公证及分发条件时禁止安装。手动检查不会自动安装；自动检查开关需签名服务就绪才可启用。下载校验包含签名、大小与 SHA-256，安装仅由官方 Sparkle 执行。目前尚无正式更新包，失败保留当前 App，不把下载成功视为安装或重启成功。发布准备复用历史更新源前会先验证其签名。[配置和发布条件](docs/NATIVE_UPDATES.md)。
 
 <a id="zh-legacy"></a>
 
@@ -135,6 +148,6 @@ open build/Debug/HD2FXNative.app
 
 本项目非官方，不宣称获得官方认可，不保证兼容性。HELLDIVERS 2 及相关标识归各权利人所有。项目统一源码许可证**尚未选定**，不应推定均可自由再分发。见[权利与来源说明](THIRD_PARTY_NOTICES.md)，其中保留 Sparkle 的独立许可证和用户提供素材的来源。
 
-开发检查：`python3 native-app/script/check_localization.py` 报告十语言键／格式覆盖和 README 待审范围；`native-app/script/run_checks.sh` 及提交钩子包含此门槛。界面变更必须审查中英文 README 及真实截图。英语截图已在 UX 验证后更新；非英语截图和译文自然度仍需人工审校。尚未配置 CI 工作流。
+开发检查：`python3 native-app/script/check_localization.py` 报告十语言键／格式覆盖和 README 待审范围；`native-app/script/run_checks.sh` 及提交钩子包含此门槛。界面变更必须审查中英文 README 及真实截图。中英文截图均针对整合后的界面更新；译文自然度仍需人工审校。发布检查 Actions 模板保持未启用，尚未配置 CI 工作流。
 
-FX 选择 V2 + 自动选择 V2.1：FX 管理、总览和启动窗口共享并持久化同一个默认 FX。扫描结果中只有一个通过身份和路径验证的 FX 时自动选择；多个 FX 时保留有效默认，否则请用户选择。默认 FX 删除、移动或更新后重新验证。选择后仍显示**启动能力待验证**，不会自动启动游戏。每次启动游戏先重扫默认 FX，再执行原有可执行文件哈希、身份、配置和启动预检；其他构建可以被选中，但仍可能被兼容性检查阻止。FX 应用和辅助脚本／gvproxy 的启动资源目录明确区分：优先从所选应用的有限上级目录或已有资源目录解析，无法解析时才请用户定位一次**启动资源**，不再重复选择 FX 目录。刷新与自动检查不会启动 FX、SSH 或游戏。停止／重启和性能应用／恢复仍不可用。
+FX 选择 V2 + 自动选择 V2.1：FX 管理、总览和启动窗口共享并持久化同一个默认 FX。扫描结果中只有一个通过身份和路径验证的 FX 时自动选择；多个 FX 时保留有效默认，否则请用户选择。默认 FX 删除、移动或更新后重新验证。选择后仍显示**启动能力待验证**，不会自动启动游戏。每次启动游戏先重扫默认 FX，再执行原有可执行文件哈希、身份、配置和启动预检；其他构建可以被选中，但仍可能被兼容性检查阻止。FX 应用和辅助脚本／gvproxy 的启动资源目录明确区分：优先从所选应用的有限上级目录或已有资源目录解析，无法解析时才请用户定位一次**启动资源**，不再重复选择 FX 目录。刷新与自动检查不会启动 FX、SSH 或游戏。停止／重启仍不可用。限定参数的性能编辑与备份恢复要求固定版本 FX 1.9.4 已停止，并需明确预览和确认；推算推荐仍只读。
