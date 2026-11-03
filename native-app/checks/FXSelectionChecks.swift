@@ -44,6 +44,13 @@ import Foundation
         manager.reconcile([row("/fixture/A.app")], incomplete: false)
         manager.reconcile([], incomplete: false)
         try check(FXSelectionManager(defaults: defaults).selectedPath == nil, "invalid default cleared persistently")
+        manager.reconcile([row("/fixture/194.app", "1.9.4"), row("/fixture/198.app", "1.9.8")], incomplete: false)
+        manager.select("/fixture/194.app")
+        let captured = manager.launchParameters(runtimeRoot: "/fixture/resources")
+        try check(captured["fx_path"]?.text == "/fixture/194.app" && captured["runtime_root"]?.text == "/fixture/resources", "1.9.4 uses selected app separately from resources")
+        manager.select("/fixture/198.app")
+        try check(manager.launchParameters(runtimeRoot: "/fixture/resources")["fx_path"]?.text == "/fixture/198.app", "switch to 1.9.8 never reuses old app path")
+        try check(captured["fx_path"]?.text == "/fixture/194.app", "in-flight launch context is an immutable selection snapshot")
         print("PASS: \(checks) FX selection checks; no processes or game started")
     }
 }

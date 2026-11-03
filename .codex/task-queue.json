@@ -89,6 +89,26 @@
       },
       "limits": "Bounded scan: two Applications directories (2048 entries each), remembered/manual FX and known runtime dedicated bundle; no full-disk search. Original pinned FX hash still required by launch backend. Human clicks/translation naturalness not tested.",
       "git": "Implementation commit containing this record; development branch only, no main merge."
+    },
+    {
+      "id": "TASK-007-LAUNCH-FIX",
+      "name": "Shared launch resources and multi-version FX path/integrity repair",
+      "status": "COMPLETED",
+      "branch": "fix/native-launch-resources-20261103",
+      "implementation_commit": "edeaa0caeaaa6de978777977d6df8de5ea78256f",
+      "verification": {
+        "isolated_checks": 318,
+        "installed_fx_host_preflight": {
+          "1.9.4": "PASS",
+          "1.9.8": "PASS"
+        },
+        "packaged_bridge_preflight": "PASS for both actual selected paths with validated independent resources",
+        "debug_runtime": "PASS: standalone history via LaunchServices, 60 page/language renders",
+        "release_build": "PASS; pre-existing unsigned Sparkle Hardened Runtime startup limitation remains",
+        "latest": "validated Debug published with prior user authorization; rollback preserved",
+        "game_guest_steam_start": "NOT_PERFORMED"
+      },
+      "remaining": "User must locate the original resource folder instead of /Applications; no real game/Guest acceptance; formal signing/notarization remains separate."
     }
   ],
   "status": "COMPLETED",

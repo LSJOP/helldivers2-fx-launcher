@@ -102,7 +102,7 @@ class MigrationChecks(unittest.TestCase):
     def test_guest_sudo_refusal_is_not_component_incompatibility(self):
         from types import SimpleNamespace
         class NotWrittenError(RuntimeError): pass
-        helper=SimpleNamespace(APP=str(self.directory/'FX.app'),safety=SimpleNamespace(NotWrittenError=NotWrittenError))
+        helper=SimpleNamespace(APP=str(self.directory/'FX.app'),ROOT=self.directory,safety=SimpleNamespace(NotWrittenError=NotWrittenError))
         with patch.object(self.ops,'runtime',return_value=helper),patch.object(self.ops,'check_fx_entry',side_effect=NotWrittenError('Guest sudo authorization failed; no configuration was written')):
             with self.assertRaises(m.OperationError) as failure:self.ops.run('launch_game',{'confirmed':True})
         self.assertEqual(failure.exception.code,'SUDO_AUTH_FAILED')
@@ -210,7 +210,7 @@ class MigrationChecks(unittest.TestCase):
         self.assertFalse(self.config.exists())
     def fake_launch_helper(self, fail=None, game=True, invalid_fx=False):
         rows=[{'id':'fx','state':'invalid' if invalid_fx else 'ready'}]
-        helper=types.SimpleNamespace(APP=str(self.directory/'FX.app'))
+        helper=types.SimpleNamespace(APP=str(self.directory/'FX.app'),ROOT=self.directory)
         helper.dependencies=types.SimpleNamespace(inspect_runtime=lambda h:{'items':rows,'ready':not invalid_fx},launcher_problems=lambda:[])
         helper.verify_fx_profile=lambda:None
         helper.wait_for_game=lambda:None
@@ -237,7 +237,7 @@ class MigrationChecks(unittest.TestCase):
         with patch.object(self.ops,'runtime',return_value=helper),self.assertRaises(m.OperationError) as error:self.ops.run('launch_game',{'confirmed':True})
         self.assertEqual(error.exception.code,'SSH_CONNECTION_FAILED');self.assertEqual(error.exception.details['stage'],'WaitingForGuest')
         self.assertNotIn('fixture-secret',json.dumps(error.exception.details))
-    def test_selected_fx_path_reaches_pinned_backend_and_rejects_other_build(self):
+    def test_selected_fx_path_rejects_unsigned_other_build_before_launch(self):
         import plistlib
         import subprocess
         runtime = self.directory / 'runtime'
@@ -251,16 +251,14 @@ class MigrationChecks(unittest.TestCase):
         executable.write_bytes(b'not executable code; wrong pinned hash')
         executable.chmod(0o700)
         (app / 'Contents/Info.plist').write_bytes(plistlib.dumps({'CFBundleIdentifier':'es.fxgam.steamac','CFBundleExecutable':'steamac-vm','CFBundleShortVersionString':'1.9.8'}))
-        with patch.object(subprocess, 'run', side_effect=AssertionError('No processes')), patch.object(subprocess, 'Popen', side_effect=AssertionError('No processes')):
-            helper = self.ops.runtime({'runtime_root':str(runtime),'fx_path':str(app)})
-            self.assertEqual(helper.APP, str(app.resolve()))
-            with self.assertRaisesRegex(RuntimeError, 'verified FX performance copy'):
-                helper.verify_fx_profile()
-        # The read-only preflight must stop on this exact hash failure before any launch.
-        with patch.object(self.ops, 'runtime', return_value=helper), patch.object(self.ops, 'check_fx_entry'), patch.object(helper.dependencies, 'inspect_runtime', return_value={'ready':True,'items':[]}), patch.object(helper.dependencies, 'launcher_problems', return_value=[]), patch.object(helper, 'main', side_effect=AssertionError('Game launch forbidden')):
+        # A foreign build is rejected before importing/starting any target code.
+        with patch.object(m.launch_resources.subprocess, 'run', return_value=types.SimpleNamespace(returncode=1)) as signature, patch.object(subprocess, 'Popen', side_effect=AssertionError('No processes')):
             with self.assertRaises(m.OperationError) as error:
                 self.ops.run('preflight_launch', {'runtime_root':str(runtime),'fx_path':str(app)})
         self.assertEqual(error.exception.code, 'FX_PROFILE_MISMATCH')
+        self.assertEqual(error.exception.details['fx_path'],str(app.resolve()))
+        self.assertEqual(error.exception.details['state'],'signature_invalid')
+        self.assertEqual(signature.call_args.args[0][0],'/usr/bin/codesign')
 
     def test_launch_preflight_rejects_changed_fx_without_starting(self):
         helper=self.fake_launch_helper(invalid_fx=True)

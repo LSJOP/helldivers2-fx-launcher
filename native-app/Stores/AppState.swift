@@ -82,7 +82,7 @@ final class AppState: ObservableObject {
     private var inspectedTarget: String?
     var targetInspectionIdentity: String { runtimeRoot + "|" + pythonURL.path + "|" + (fxSelection.selectedPath ?? "") + "|" + fxVersion }
     func inspectTargetIfNeeded(force: Bool = false) {
-        let root = runtimeRoot, identity = targetInspectionIdentity
+        let root = runtimeRoot, identity = targetInspectionIdentity, launchParameters = fxSelection.launchParameters(runtimeRoot: runtimeRoot)
         guard (hasLoaded || error != nil), !root.isEmpty, !tasks.busy, force || inspectedTarget != identity else { return }
         inspectingTarget = true
         targetInspection = [:]; targetInspectionError = nil
@@ -91,7 +91,7 @@ final class AppState: ObservableObject {
             defer { self.inspectingTarget = false }
             do {
                 let config = try BridgeConfiguration.bundled(python: self.pythonURL)
-                let reply = try await self.bridge.request("inspect_launch_target", configuration: config, params: ["runtime_root": .string(root), "fx_path": .string(self.fxSelection.selectedPath ?? "")])
+                let reply = try await self.bridge.request("inspect_launch_target", configuration: config, params: launchParameters)
                 guard self.targetInspectionIdentity == identity else { return }
                 guard reply.result["scope"]?.text == "selected_target_file_metadata_only",
                       reply.result["archive_files_match"]?.boolean != nil,
@@ -148,6 +148,7 @@ final class AppState: ObservableObject {
         guard !tasks.busy else { return }
         let generation = UUID(); operationGeneration = generation
         let selectedRoot = runtimeRoot
+        let launchParameters = fxSelection.launchParameters(runtimeRoot: selectedRoot)
         var redactor = credentials.redactor
         if method == "launch_game" { launchSession.begin(root: selectedRoot); recordLaunch() }
         if method == "observe_launch", selectedRoot != launchSession.root { launchSession.begin(root: selectedRoot) }
@@ -161,8 +162,8 @@ final class AppState: ObservableObject {
                 let config = try BridgeConfiguration.bundled(python: self.pythonURL)
                 var input = params.filter { !["password","passphrase","sudo_password"].contains($0.key) }
                 if !selectedRoot.isEmpty { input["runtime_root"] = .string(selectedRoot) }
-                if ["launch_game", "preflight_launch", "observe_launch", "connect_fx", "inspect_guest_environment", "check_fx_state", "start_fx", "start_steam"].contains(method), let path = self.fxSelection.selectedPath {
-                    input["fx_path"] = .string(path)
+                if ["launch_game", "preflight_launch", "observe_launch", "connect_fx", "inspect_guest_environment", "check_fx_state", "start_fx", "start_steam"].contains(method) {
+                    input.merge(launchParameters) { _, selected in selected }
                 }
                 if let note = input["note"]?.text { input["note"] = .string(redactor.text(note)) }
                 if method == "save_configuration", let value = input["configuration"], redactor.containsSecret(value) { throw ErrorState("SENSITIVE_CONFIGURATION") }

@@ -6,6 +6,12 @@ struct RuntimeTargetPanel: View {
     @ObservedObject var state: AppState
     @ObservedObject var tasks: TaskManager
     @State private var choosing = false
+    private var resourceDiagnostics: String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(JSONValue.array(state.targetInspection["resource_files"]?.array ?? [])) else { return "" }
+        return String(data: data, encoding: .utf8) ?? ""
+    }
     private var status: String {
         if state.runtimeRoot.isEmpty { return state.t("ui.ux.choose") }
         if state.inspectingTarget { return state.t("ui.053") }
@@ -30,6 +36,11 @@ struct RuntimeTargetPanel: View {
                 if !state.runtimeRoot.isEmpty { controls }
                 Text(state.runtimeRoot.isEmpty ? state.t("ui.062") : state.runtimeRoot).textSelection(.enabled)
                 if let path = state.targetInspection["fx_path"]?.text { Text(path).textSelection(.enabled) }
+                if state.targetInspection["archive_files_match"]?.boolean == false {
+                    Text(state.t("ui.178")).foregroundStyle(.orange)
+                    Text(resourceDiagnostics)
+                        .font(TacticalTypography.log).textSelection(.enabled)
+                }
                 if let error = state.targetInspectionError { Text(error.message(state.languageCode)) }
                 Text(state.t("ui.ux.scope")).font(TacticalTypography.caption).foregroundStyle(.secondary)
                 Button(state.t("ui.262")) { state.inspectTargetIfNeeded(force: true) }.disabled(tasks.busy || state.runtimeRoot.isEmpty)
@@ -44,7 +55,7 @@ struct RuntimeTargetPanel: View {
     private var summary: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(state.t("ui.fx.resources")).font(TacticalTypography.caption).foregroundStyle(.secondary)
-            Text(state.runtimeRoot.isEmpty ? state.t("ui.062") : URL(fileURLWithPath: state.runtimeRoot).lastPathComponent)
+            Text(state.runtimeRoot.isEmpty ? state.t("ui.062") : state.runtimeRoot)
                 .font(TacticalTypography.body).lineLimit(1).truncationMode(.middle)
             Text(status).font(TacticalTypography.caption)
         }
