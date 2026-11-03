@@ -25,15 +25,15 @@ The running FX networking backend originates in Latest. For this validation proc
 | Quoted empty prompt | PASS | Prior live comparison: original argv produced sudo usage; fixed command produced expected no-password challenge; fixed exact command retained in 1188d59 |
 | SSH/sudo classification | PASS (targeted tests) | 26 checks include SSH regression, missing credentials, explicit authentication rejection, policy denial, malformed command and timeout; no full suite repeated |
 | Full Guest identity, previous investigation | PASS (previous live evidence) | Exact host/FX/gvproxy/peer plus Guest boot/marker verified before this task |
-| Full Guest identity, current candidate session | NOT TESTED | Existing SSH master absent; current read-only harness stopped with ssh_master_unverified before any Guest command |
-| Candidate secure password entry/authentication | NOT TESTED | Requires user interaction with candidate secure fields; user terminal success is not candidate UI proof |
-| Sudo reuse across separate SSH commands | NOT TESTED | Same-session TTY success does not establish non-TTY cross-command timestamp reuse |
-| Credential status UI | NOT TESTED | Source emits authenticated after successful validation, but actual candidate display is unverified |
-| CheckingCompatibility complete | NOT TESTED | Read-only live preflight could not run without a current authenticated identity-bound master |
-| Game launch | NOT TESTED | No candidate game launch requested while configuration/identity preflight was incomplete |
+| Full Guest identity, current live master | PASS | After user App authentication, exact FX/gvproxy/SSH peer and Guest boot/marker checks passed; initial absent-master attempt remains recorded |
+| App secure password entry/authentication | PASS (user screenshot); candidate attribution pending About confirmation | Details show password_verified=true, sudo=authenticated, configuration_changed=false |
+| Sudo reuse across separate SSH commands | FAIL | Two independent sudo -n -v probes require a password; exact production sudoCommandArgs with harmless id -u also fails status 1 requiring a password |
+| Credential status UI | PASS for authentication detail; storage restricted | Screenshot shows authenticated; Keychain access restriction is separate from sudo authentication, no saved-password success inferred |
+| CheckingCompatibility complete | NOT TESTED; prerequisite read-only checks PASS | Hash checks, host proxy and launch options pass. IPv6 flags are all 0, so full stage would write Guest networking settings; not authorized/executed |
+| Game launch | NOT TESTED | Existing game count 0; Steam service reported stopped. No start requested beyond the configuration boundary |
 | Game menu/playability/EAC/multiplayer | NOT TESTED | No inference from Steam or game processes |
 
-The current fresh live harness failure is an absent/unverified SSH master, not a sudo password rejection. The harness was run without passwords and did not attempt to bypass authentication. It did not execute compatibility transactions, sudo, Steam start or game launch.
+The initial live harness stopped at an absent/unverified SSH master. After user App authentication, the same harness passed full identity and all read-only compatibility probes. It ran authorization-only sudo probes without password input; it did not execute IPv6 writes, Steam start or game launch. Raw Guest boot identifiers are not copied into this report.
 
 ## Configuration boundary and remaining issues
 
@@ -54,3 +54,15 @@ Next user action: in the candidate, verify About commit/path, open Settings cred
 During validation an external/concurrent UI-simplification task replaced Latest. Its embedded source is now 918db0affdcf079ebfebd310b04223d3798dcb6f (still build 2026110402), executable SHA256 50d176122baf1d7fec1c06770151c69208f708b62c0704d18120a27968012f45. This task did not run the publisher or modify Latest. Both App processes were preserved. Candidate source/path/hash remain unchanged. Never treat the shared build number as proof of candidate identity.
 
 User screenshot shows completed SSH diagnostics with Guest identity, but explicitly states no sudo execution. It does not show the About commit/path, so it is not accepted as candidate sudo success. Remember checkboxes were selected in the screenshot; user was instructed to uncheck them for this validation. No agent action persisted credentials, but the screenshot alone cannot establish that no earlier user action saved an SSH item. Do not delete existing Keychain items to make that claim.
+
+## Final live findings
+
+A second user screenshot shows password_verified=true, sudo=authenticated, configuration_changed=false and the Guest sudo authenticated event. It establishes actual App password verification success, distinct from the prior terminal-only success. The screenshot still lacks About commit/path; exact candidate UI attribution awaits user confirmation. Both candidate and a concurrently updated Latest App remained open.
+
+Immediately afterward, full identity verification over the current master passed. Compatibility hashes, local proxy and launch options passed. Read-only values: IPv6 disable flags all/default/eth0/lo = 0/0/0/0; Steam service stopped; game process count 0. A Steam login log observation was true but does not establish a currently running Steam session.
+
+Two separate SSH sudo -n -v checks returned AUTH_REQUIRED. A further check using the exact production sudoCommandArgs with harmless id -u input returned status 1 and a-password-is-required, with no root execution observed. Thus sudo validation in one session does not provide usable authorization for the subsequent independent invocation in this environment. The current evidence does not identify the precise sudo timestamp policy, so none is asserted. The candidate fails this integration requirement despite the quoting fix succeeding. Do not classify this as an incorrect password.
+
+Four IPv6 original values are now recorded as 0. The proposed compatibility transaction would set all four to 1 for this Guest boot, disabling IPv6. No such write was performed. A future explicitly authorized test would need same-boot identity checks and restoration of precisely these four original 0 values; no sudoers, persistent sysctl file or user password changes are justified.
+
+Formal publication conditions remain NOT MET. The next implementation step is to make the privileged transaction authenticate within its own controlled SSH execution, without relying on cross-session sudo timestamps, while keeping secrets out of command arguments/environment/logs and preserving the Guest boot/consent guards. This task built and evaluated exactly 1188d59; it did not silently replace that candidate with another implementation. Revalidate a follow-up candidate before any game or release acceptance.
