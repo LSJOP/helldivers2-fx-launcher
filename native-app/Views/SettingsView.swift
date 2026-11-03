@@ -154,6 +154,7 @@ struct LegacyOperationSheet: View {
         if tasks.busy { return state.t("ui.014") }
         if operation == "launch_game" && state.fxSelection.selected == nil { return state.t("ui.fx.choose") }
         if needsRoot && state.runtimeRoot.isEmpty { return state.t("ui.059") }
+        if operation == "launch_game" && state.targetInspection["archive_files_match"]?.boolean == false { return state.t("ui.178") }
         if needsConsent && !confirmed { return state.t("ui.276") }
         return nil
     }
@@ -225,7 +226,7 @@ struct LegacyOperationSheet: View {
                 }
                 DisclosureGroup(state.t("ui.094")) {
                     if !state.operationResult.isEmpty { Text(jsonResult).font(TacticalTypography.log).textSelection(.enabled) }
-                    if let error = state.operationError { Text(error.code + " · " + (error.details["summary"]?.text ?? "")).font(TacticalTypography.log).textSelection(.enabled) }
+                    if let error = state.operationError { Text(error.code + " · " + pretty(.object(error.details))).font(TacticalTypography.log).textSelection(.enabled) }
                     ForEach(Array(state.operationEvents.enumerated()), id: \.offset) { _, event in
                         HStack { Text(event["level"]?.text ?? "INFO"); Text(event["message"]?.text ?? ""); Text(event["status"]?.text ?? "") }.font(TacticalTypography.log)
                     }

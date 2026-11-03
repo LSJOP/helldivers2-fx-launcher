@@ -9,6 +9,9 @@ struct FXSelectionManager {
     private(set) var scanned = false
     var selected: [String: JSONValue]? { candidates.first { $0["path"]?.text == selectedPath } }
     var scanPaths: [JSONValue] { selectedPath.map { [.string($0)] } ?? [] }
+    func launchParameters(runtimeRoot: String) -> [String: JSONValue] {
+        ["runtime_root": .string(runtimeRoot), "fx_path": .string(selectedPath ?? "")]
+    }
 
     init(defaults: UserDefaults? = .standard) {
         self.defaults = defaults

@@ -8,6 +8,10 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+### Fixed
+
+- Share launch-resource validation between inspection and execution, with exact paths and expected/actual SHA-256. Freeze the selected FX path throughout launch. Accept intact bundles signed by the verified FX publisher while retaining all original profile/process/Guest guards. FX 1.9.4/1.9.8 path and integrity checks do not establish gameplay compatibility.
+
 ### Added
 
 - Integrate FX selection V2 and automatic selection V2.1: one shared, persisted default for FX management, overview and launch. Auto-select a sole identity/path-verified candidate; preserve valid manual choices; revalidate missing, moved and updated installations.

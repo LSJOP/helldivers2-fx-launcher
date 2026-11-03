@@ -44,6 +44,10 @@ import Foundation
             record.finish(ErrorState(code))
             try check(record.status == expected && record.endedAt! >= record.startedAt, "terminal action status and actual timing: " + code)
         }
-        print("17 launch and GUI state checks PASS")
+        session.begin(root: "fixture")
+        session.consume(["stage": .string("StartingFX"), "status": .string("done"), "sequence": .number(1)])
+        session.complete(["fx_host_running": .bool(true), "game_process_detected": .bool(false)], at: "fixture")
+        try check(!session.processDetected && session.mainMenuConfirmedAt == nil && session.current == .waitingForGame, "opened FX without a game is never game launch success")
+        print("18 launch and GUI state checks PASS")
     }
 }

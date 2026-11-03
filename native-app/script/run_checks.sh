@@ -11,6 +11,7 @@ mkdir -p build evidence
 /usr/bin/python3 -I -B checks/performance_configuration_checks.py >evidence/performance-configuration-checks.txt 2>&1
 /usr/bin/python3 -I -B checks/bridge_checks.py >evidence/python-checks.txt 2>&1
 /usr/bin/python3 -I -B checks/migration_checks.py >evidence/migration-checks.txt 2>&1
+/usr/bin/python3 -I -B checks/launch_resource_checks.py >evidence/launch-resource-checks.txt 2>&1
 /usr/bin/python3 -I -B checks/credential_checks.py >evidence/credential-python-checks.txt 2>&1
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$(/usr/bin/xcrun --sdk macosx --show-sdk-path)" -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Services/SessionCredentialManager.swift Services/BridgeService.swift Services/TaskManager.swift checks/ServiceChecks.swift -o build/ServiceChecks >evidence/service-compile.txt 2>&1
 ./build/ServiceChecks "$ROOT_DIR/bridge/bridge.py" >evidence/service-checks.txt 2>&1

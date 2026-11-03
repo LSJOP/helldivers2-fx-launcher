@@ -11,6 +11,9 @@ import stat
 import sys
 
 CORE_NAMES = ('launcher_version', 'dependencies', 'dependency_discovery', 'fx_versions')
+_resources_spec = importlib.util.spec_from_file_location('native_launch_resources_readonly', Path(__file__).with_name('launch_resources.py'))
+resources = importlib.util.module_from_spec(_resources_spec)
+_resources_spec.loader.exec_module(resources)
 
 
 def load_module(root, name):
@@ -67,8 +70,6 @@ class CoreAdapter:
         archive = self.root.parent / 'legacy'
         if not archive.is_dir():
             archive = self.root.parent
-        required = ['launcher-20261026/steam-cdp.mjs', 'tools/check_node.cjs',
-                    'goal-fx-multiplayer-20261026/gvproxy-eim-wrapper']
 
         def regular(base, relative, limit):
             path = base
@@ -82,12 +83,7 @@ class CoreAdapter:
             except OSError:
                 return None
 
-        matches = []
-        for relative in required:
-            actual = regular(root, relative, 2 * 1024 * 1024)
-            expected = regular(archive, relative, 2 * 1024 * 1024)
-            matches.append(bool(actual and expected and
-                                hashlib.sha256(actual.read_bytes()).digest() == hashlib.sha256(expected.read_bytes()).digest()))
+        resource_report = resources.inspect_resources(root, archive)
         bundle = 'performance-stutter-20261027/FX HUD隔离诊断.app'
         fx = self.validated_fx(selected_fx) if selected_fx else None
         fx_base = Path(fx['path']) if fx and fx['identity_valid'] else root / bundle
@@ -103,7 +99,9 @@ class CoreAdapter:
             except (ValueError, plistlib.InvalidFileException):
                 pass
         return {'target_root': str(root), 'target_kind': 'fx_app_bundle' if root.suffix.casefold() == '.app' else 'runtime_directory',
-                'archive_files_match': all(matches), 'fx_executable_present': bool(executable and os.access(executable, os.X_OK)),
+                'archive_files_match': resource_report['archive_files_match'],
+                'resource_files': resource_report['resource_files'], 'archive_root': str(archive),
+                'fx_executable_present': bool(executable and os.access(executable, os.X_OK)),
                 'fx_path': str(fx_base), 'fx_version': version if isinstance(version, str) else 'unknown',
                 'scope': 'selected_target_file_metadata_only', 'guest': 'unverified', 'eac': 'unverified',
                 'multiplayer': 'unverified', 'launch': 'unverified'}

@@ -22,6 +22,8 @@ security=importlib.util.module_from_spec(_security_spec);_security_spec.loader.e
 
 _perf_spec=importlib.util.spec_from_file_location('native_performance_configuration',Path(__file__).with_name('performance_configuration.py'))
 performance_configuration=importlib.util.module_from_spec(_perf_spec);_perf_spec.loader.exec_module(performance_configuration)
+_resource_spec=importlib.util.spec_from_file_location('native_launch_resources',Path(__file__).with_name('launch_resources.py'))
+launch_resources=importlib.util.module_from_spec(_resource_spec);_resource_spec.loader.exec_module(launch_resources)
 
 class OperationError(Exception):
     def __init__(self, code, details=None):
@@ -204,15 +206,15 @@ class Operations:
         finally:os.close(fd)
 
     def runtime(self, params):
+        if 'fx_path' in params and not params['fx_path']:
+            raise OperationError('FX_UNAVAILABLE')
         text=params.get('runtime_root')
         if not isinstance(text,str) or not text or len(text)>4096: raise OperationError('RUNTIME_ROOT_REQUIRED')
-        root=Path(text).expanduser().resolve(strict=True)
-        if not root.is_dir():raise OperationError('INVALID_ARGUMENT')
+        root=Path(text).expanduser().resolve()
         # Execute only bundled Python. Root-dependent JS/wrapper must match the pinned archive.
-        for relative in ['launcher-20261026/steam-cdp.mjs','tools/check_node.cjs','goal-fx-multiplayer-20261026/gvproxy-eim-wrapper']:
-            p=root/relative;expected=self.root/relative
-            if p.is_symlink() or not p.is_file() or hashlib.sha256(p.read_bytes()).digest()!=hashlib.sha256(expected.read_bytes()).digest():
-                raise OperationError('SOURCE_MISMATCH',{'file':relative})
+        resources=launch_resources.inspect_resources(root,self.root)
+        if not resources['archive_files_match']:
+            raise OperationError('SOURCE_MISMATCH',resources)
         path=self.root/'goal-dxmt-20261026/start-hd2.py'
         spec=importlib.util.spec_from_file_location('native_guarded_start',path)
         helper=importlib.util.module_from_spec(spec);sys.modules[spec.name]=helper;spec.loader.exec_module(helper)
@@ -228,7 +230,21 @@ class Operations:
             if not selected or not selected['identity_valid']:
                 raise OperationError('FX_UNAVAILABLE')
             helper.APP=selected['path']
-        # Original verify_fx_profile() still enforces the pinned executable hash.
+        # Reuse every original guard, but do not apply one historical build hash
+        # to all officially signed FX builds. Untrusted replacement files fail.
+        if params.get('fx_path'):
+            integrity=launch_resources.fx_integrity(helper.APP,helper.APP_EXECUTABLE_SHA256)
+            if integrity['state']!='verified':raise OperationError('FX_PROFILE_MISMATCH',integrity)
+            historical_hash=helper.APP_EXECUTABLE_SHA256
+            helper.APP_EXECUTABLE_SHA256=integrity['actual_sha256']
+            original_profile=helper.verify_fx_profile
+            def verify_profile():
+                fresh=launch_resources.fx_integrity(helper.APP,historical_hash)
+                if fresh['state']!='verified' or fresh['actual_sha256']!=integrity['actual_sha256']:
+                    raise OperationError('FX_PROFILE_MISMATCH',fresh)
+                return original_profile()
+            helper.verify_fx_profile=verify_profile
+            helper.NATIVE_FX_INTEGRITY=integrity
         helper.GVPROXY=root/'goal-fx-multiplayer-20261026/gvproxy-eim'
         helper.GVPROXY_WRAPPER=root/'goal-fx-multiplayer-20261026/gvproxy-eim-wrapper'
         helper.NETWORK_DIR=helper.GVPROXY.parent
@@ -485,7 +501,7 @@ class Operations:
             self.read_config()  # Reject malformed settings instead of legacy fallback to defaults.
             info=Path(helper.APP)/'Contents/Info.plist'
             version=plistlib.loads(info.read_bytes()).get('CFBundleShortVersionString') if info.is_file() else None
-            self.event('INFO','Selected FX launch target',kind='launch_context',fx_path=helper.APP,fx_version=version or 'unknown')
+            self.event('INFO','Selected FX launch target',kind='launch_context',fx_path=helper.APP,fx_version=version or 'unknown',runtime_root=str(helper.ROOT))
             progress('CheckingFXEntry')
             self.check_fx_entry(helper)
             progress('CheckingFXEntry','done')
