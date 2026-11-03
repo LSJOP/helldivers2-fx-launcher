@@ -11,7 +11,7 @@ from urllib.parse import unquote,urlparse
 ROOT=Path(__file__).resolve().parents[2]
 
 def ui_fingerprint(root):
-    files=sorted([*(root/'native-app/Views').rglob('*.swift'),*(root/'native-app/App').rglob('*.swift'),root/'native-app/Models/Navigation.swift',root/'native-app/bridge/native-locales.json'])
+    files=sorted([*(root/'native-app/Views').rglob('*.swift'),*(root/'native-app/App').rglob('*.swift'),root/'native-app/Models/Navigation.swift',root/'native-app/Resources/native-locales.json'])
     return hashlib.sha256(''.join(str(p.relative_to(root))+':'+hashlib.sha256(p.read_bytes()).hexdigest()+'\n' for p in files if p.is_file()).encode()).hexdigest()
 
 def check(root):

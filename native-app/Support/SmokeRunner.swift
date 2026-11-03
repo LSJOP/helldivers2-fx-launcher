@@ -138,12 +138,10 @@ import ApplicationServices
             window.setFrame(original, display: true)
             // Exercise a genuine client failure and successful recovery; no Core mutation.
             state.selection = .dashboard
-            let python = state.pythonURL
-            state.pythonURL = directory.appendingPathComponent("missing-python")
+            state.runOperation("preflight_launch"); try await waitForTask(state)
+            evidence["error_propagation"] = state.operationError?.code == "FX_UNAVAILABLE" ? "PASS" : "FAIL"
+            _ = try await capture(window, name: "error-native.png", directory: directory, external: externalCapture)
             state.refresh(); try await waitForTask(state)
-            evidence["error_propagation"] = state.error?.code == "PYTHON_UNAVAILABLE" && state.stale ? "PASS" : "FAIL"
-            _ = try await capture(window, name: "error-python.png", directory: directory, external: externalCapture)
-            state.pythonURL = python; state.refresh(); try await waitForTask(state)
             evidence["error_recovery"] = state.error == nil && !state.stale ? "PASS" : "FAIL"
             evidence["native_menu_actions"] = menuActions
             evidence["captures"] = captures

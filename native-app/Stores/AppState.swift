@@ -32,13 +32,13 @@ final class AppState: ObservableObject {
         let previous = fxSelection.selectedPath
         fxSelection.reconcile(result["candidates"]?.array.map(\.object) ?? [], incomplete: result["scan_incomplete"]?.boolean != false)
         if previous != fxSelection.selectedPath { credentials.clear(); guiSnapshots = [:]; performanceConfigurationState = PerformanceConfigurationState(); inspectedTarget = nil }
-        if let root = fxSelection.selected?["runtime_root"]?.text { runtimeRoot = root }
+        runtimeRoot = fxSelection.selectedPath ?? ""
     }
     func selectFX(_ path: String) {
         guard !tasks.busy else { return }
         if fxSelection.selectedPath != path { credentials.clear(); guiSnapshots = [:]; performanceConfigurationState = PerformanceConfigurationState() }
         fxSelection.select(path)
-        if let root = fxSelection.selected?["runtime_root"]?.text { runtimeRoot = root }
+        runtimeRoot = fxSelection.selectedPath ?? ""
         inspectedTarget = nil
     }
     func scanFX(manualPath: String? = nil, openingLaunch: Bool = false) {
@@ -47,9 +47,8 @@ final class AppState: ObservableObject {
         tasks.start { [weak self] in
             guard let self else { return }
             do {
-                let config = try BridgeConfiguration.bundled(python: self.pythonURL)
                 let paths = self.fxSelection.scanPaths + (manualPath.map { [.string($0)] } ?? [])
-                let reply = try await self.bridge.request("list_fx_versions", configuration: config, params: ["selected_paths": .array(paths), "runtime_root": .string(self.runtimeRoot)])
+                let reply = try await self.core.request("list_fx_versions", params: ["selected_paths": .array(paths), "runtime_root": .string(self.runtimeRoot)])
                 self.results["list_fx_versions"] = reply.result
                 self.applyFXScan(reply.result)
                 if let rawPath = manualPath {
@@ -57,7 +56,7 @@ final class AppState: ObservableObject {
                     self.fxSelectionIssue = !self.fxSelection.candidates.contains { $0["path"]?.text == manualPath }
                     if self.fxSelection.selectedPath != manualPath { self.credentials.clear(); self.guiSnapshots = [:]; self.performanceConfigurationState = PerformanceConfigurationState() }
                     self.fxSelection.select(manualPath)
-                    if let root = self.fxSelection.selected?["runtime_root"]?.text { self.runtimeRoot = root }
+                    self.runtimeRoot = self.fxSelection.selectedPath ?? ""
                 }
                 if openingLaunch {
                     if self.fxSelection.selected == nil { self.selection = .fx }
@@ -68,11 +67,13 @@ final class AppState: ObservableObject {
             }
         }
     }
-    @Published var runtimeRoot = NativeLocalization.isolatedUXSmoke ? "" : (UserDefaults.standard.string(forKey: "NativeLaunchResourcesRoot") ?? UserDefaults.standard.string(forKey: "NativeRememberedRuntimeRoot") ?? "") {
+    @Published var runtimeRoot = "" {
         didSet {
             if oldValue != runtimeRoot {
                 credentials.clear(); guiSnapshots = [:]; performanceConfigurationState = PerformanceConfigurationState(); targetInspection = [:]; targetInspectionError = nil; inspectedTarget = nil
-                if !NativeLocalization.isolatedUXSmoke { UserDefaults.standard.set(runtimeRoot, forKey: "NativeLaunchResourcesRoot") }
+                if !runtimeRoot.isEmpty, !NativeLocalization.isolatedUXSmoke {
+                    UserDefaults.standard.set(runtimeRoot, forKey: "NativeRememberedRuntimeRoot")
+                }
             }
         }
     }
@@ -80,7 +81,7 @@ final class AppState: ObservableObject {
     @Published private(set) var targetInspectionError: ErrorState?
     @Published private(set) var inspectingTarget = false
     private var inspectedTarget: String?
-    var targetInspectionIdentity: String { runtimeRoot + "|" + pythonURL.path + "|" + (fxSelection.selectedPath ?? "") + "|" + fxVersion }
+    var targetInspectionIdentity: String { runtimeRoot + "|" + (fxSelection.selectedPath ?? "") + "|" + fxVersion }
     func inspectTargetIfNeeded(force: Bool = false) {
         let root = runtimeRoot, identity = targetInspectionIdentity, launchParameters = fxSelection.launchParameters(runtimeRoot: runtimeRoot)
         guard (hasLoaded || error != nil), !root.isEmpty, !tasks.busy, force || inspectedTarget != identity else { return }
@@ -90,8 +91,7 @@ final class AppState: ObservableObject {
             guard let self else { return }
             defer { self.inspectingTarget = false }
             do {
-                let config = try BridgeConfiguration.bundled(python: self.pythonURL)
-                let reply = try await self.bridge.request("inspect_launch_target", configuration: config, params: launchParameters)
+                let reply = try await self.core.request("inspect_launch_target", params: launchParameters)
                 guard self.targetInspectionIdentity == identity else { return }
                 guard reply.result["scope"]?.text == "selected_target_file_metadata_only",
                       reply.result["archive_files_match"]?.boolean != nil,
@@ -122,16 +122,6 @@ final class AppState: ObservableObject {
     @Published private(set) var launchSession = LaunchSession()
     private var operationGeneration = UUID()
     @Published var appearance: Appearance = .dark
-    @Published var pythonURL = AppState.savedPythonURL {
-        didSet { UserDefaults.standard.set(pythonURL.path, forKey: "NativePythonPath") }
-    }
-    private static var savedPythonURL: URL {
-        if NativeLocalization.isolatedUXSmoke { return URL(fileURLWithPath: "/usr/bin/python3") }
-        if let path = UserDefaults.standard.string(forKey: "NativePythonPath"), FileManager.default.isExecutableFile(atPath: path) {
-            return URL(fileURLWithPath: path)
-        }
-        return URL(fileURLWithPath: "/usr/bin/python3")
-    }
     @Published private(set) var results: [String: [String: JSONValue]] = [:]
     @Published private(set) var observedAt: String?
     @Published private(set) var error: ErrorState?
@@ -140,7 +130,7 @@ final class AppState: ObservableObject {
     @Published private(set) var stale = false
     @Published private(set) var refreshing = false
     let tasks = TaskManager()
-    private let bridge = BridgeService()
+    private let core = NativeCoreService()
 
     func t(_ key: String) -> String { NativeStrings.text(key, language: languageCode) }
     func pageTitle(_ page: Page) -> String { page.title(languageCode) }
@@ -159,7 +149,6 @@ final class AppState: ObservableObject {
         tasks.start { [weak self] in
             guard let self else { return }
             do {
-                let config = try BridgeConfiguration.bundled(python: self.pythonURL)
                 var input = params.filter { !["password","passphrase","sudo_password"].contains($0.key) }
                 if !selectedRoot.isEmpty { input["runtime_root"] = .string(selectedRoot) }
                 if ["launch_game", "preflight_launch", "observe_launch", "connect_fx", "inspect_guest_environment", "check_fx_state", "start_fx", "start_steam"].contains(method) {
@@ -168,7 +157,7 @@ final class AppState: ObservableObject {
                 if let note = input["note"]?.text { input["note"] = .string(redactor.text(note)) }
                 if method == "save_configuration", let value = input["configuration"], redactor.containsSecret(value) { throw ErrorState("SENSITIVE_CONFIGURATION") }
                 if ["launch_game","test_ssh","test_guest_sudo","connect_fx","inspect_guest_environment","start_steam","inspect_guest","apply_performance","save_network_snapshot"].contains(method) {
-                    let metadata = try await self.bridge.request("read_configuration", configuration: config)
+                    let metadata = try await self.core.request("read_configuration")
                     guard let revision = metadata.result["revision"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
                     await self.credentials.prepare(for: selectedRoot + "|" + revision)
                     input.merge(try self.credentials.parameters(for: selectedRoot + "|" + revision)) { _, new in new }
@@ -178,7 +167,7 @@ final class AppState: ObservableObject {
                 let eventRedactor = redactor
                 let authInput = input
                 let credentialTarget = selectedRoot + "|" + (input["credential_revision"]?.text ?? "")
-                let reply = try await self.bridge.request(method, configuration: config, timeout: method == "launch_game" || method == "apply_performance" ? 900 : 90, params: input) { [weak self] event in
+                let reply = try await self.core.request(method, timeout: method == "launch_game" || method == "performance_apply" || method == "performance_restore" ? 900 : 90, params: input) { [weak self] event in
                     Task { @MainActor in
                         guard let self, self.operationGeneration == generation else { return }
                         if method == "launch_game" { self.launchSession.consume(event) }
@@ -274,8 +263,7 @@ final class AppState: ObservableObject {
     func prepareCredentials(interactive: Bool = false) async {
         guard !NativeLocalization.isolatedUXSmoke else { return }
         do {
-            let config = try BridgeConfiguration.bundled(python: pythonURL)
-            let metadata = try await bridge.request("read_configuration", configuration: config)
+            let metadata = try await core.request("read_configuration")
             guard let revision = metadata.result["revision"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
             await credentials.prepare(for: runtimeRoot + "|" + revision, interactive: interactive)
         } catch { appendLog("credential target unavailable") }
@@ -306,13 +294,12 @@ final class AppState: ObservableObject {
         error = nil
         stale = !results.isEmpty
         do {
-            let config = try BridgeConfiguration.bundled(python: pythonURL)
             var snapshot: [String: [String: JSONValue]] = [:]
             var snapshotTime: String?
             for method in ["handshake", "get_launcher_version", "get_system_info", "get_environment_status", "get_dependencies", "list_fx_versions", "get_logs", "get_legacy_catalog"] {
                 try Task.checkCancellation()
                 let scanParams: [String: JSONValue] = method == "list_fx_versions" ? ["selected_paths": .array(fxSelection.scanPaths), "runtime_root": .string(runtimeRoot)] : [:]
-                let reply = try await bridge.request(method, configuration: config, params: scanParams)
+                let reply = try await core.request(method, params: scanParams)
                 try validate(method, result: reply.result)
                 snapshot[method] = reply.result
                 snapshotTime = reply.observedAt

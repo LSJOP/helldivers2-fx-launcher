@@ -11,7 +11,7 @@ class UpdateResources(unittest.TestCase):
     def test_ten_language_actual_coverage(self):
         source=(APP/'Services/AppUpdateManager.swift').read_text()
         keys=set(re.findall(r'case \.\w+: return "([^"]+)"',source))
-        catalogs=json.loads((APP/'bridge/native-locales.json').read_text())
+        catalogs=json.loads((APP/'Resources/native-locales.json').read_text())
         for code in ['en','zh-CN','ja','ko','ru','es','de','fr','pt-BR','zh-TW']:
             self.assertTrue(keys<=catalogs[code].keys(),(code,keys-catalogs[code].keys()))
             self.assertTrue(all(catalogs[code][key] for key in keys))

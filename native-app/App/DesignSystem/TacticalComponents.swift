@@ -1,11 +1,10 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The selected launch target is separate from shallow installation discovery.
+/// Selected FX plus app-bundled launch resources; no user script directory is required.
 struct RuntimeTargetPanel: View {
     @ObservedObject var state: AppState
     @ObservedObject var tasks: TaskManager
-    @State private var choosing = false
     private var resourceDiagnostics: String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -13,7 +12,7 @@ struct RuntimeTargetPanel: View {
         return String(data: data, encoding: .utf8) ?? ""
     }
     private var status: String {
-        if state.runtimeRoot.isEmpty { return state.t("ui.ux.choose") }
+        if state.fxSelection.selectedPath == nil { return state.t("ui.fx.choose") }
         if state.inspectingTarget { return state.t("ui.053") }
         if state.targetInspectionError != nil { return state.t("ui.041") }
         if state.targetInspection["archive_files_match"]?.boolean == true && state.targetInspection["fx_executable_present"]?.boolean == true {
@@ -27,14 +26,10 @@ struct RuntimeTargetPanel: View {
                 Text(state.fxVersion + " · " + state.fxStatus).font(TacticalTypography.body)
                 Text(path).font(TacticalTypography.caption).textSelection(.enabled)
             }
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 10) { summary; Spacer(minLength: 4); if state.runtimeRoot.isEmpty { controls } }
-                VStack(alignment: .leading, spacing: 8) { summary; if state.runtimeRoot.isEmpty { controls } }
-            }
+            summary
             DisclosureGroup(state.t("ui.ux.details")) {
-                Text(state.t("ui.fx.resourceHelp")).font(TacticalTypography.caption)
-                if !state.runtimeRoot.isEmpty { controls }
-                Text(state.runtimeRoot.isEmpty ? state.t("ui.062") : state.runtimeRoot).textSelection(.enabled)
+                Text(state.t("ui.native.noPython")).font(TacticalTypography.caption)
+                Text(LaunchResourceSummary.text).textSelection(.enabled)
                 if let path = state.targetInspection["fx_path"]?.text { Text(path).textSelection(.enabled) }
                 if state.targetInspection["archive_files_match"]?.boolean == false {
                     Text(state.t("ui.178")).foregroundStyle(.orange)
@@ -43,26 +38,18 @@ struct RuntimeTargetPanel: View {
                 }
                 if let error = state.targetInspectionError { Text(error.message(state.languageCode)) }
                 Text(state.t("ui.ux.scope")).font(TacticalTypography.caption).foregroundStyle(.secondary)
-                Button(state.t("ui.262")) { state.inspectTargetIfNeeded(force: true) }.disabled(tasks.busy || state.runtimeRoot.isEmpty)
+                Button(state.t("ui.262")) { state.inspectTargetIfNeeded(force: true) }.disabled(tasks.busy || state.fxSelection.selectedPath == nil)
             }.font(TacticalTypography.caption)
         }
         .padding(10).background(.primary.opacity(0.035))
         .accessibilityIdentifier("runtime.target")
-        .fileImporter(isPresented: $choosing, allowedContentTypes: [.folder]) { result in
-            if case .success(let url) = result { state.runtimeRoot = url.path; state.scanFX() }
-        }
     }
     private var summary: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(state.t("ui.fx.resources")).font(TacticalTypography.caption).foregroundStyle(.secondary)
-            Text(state.runtimeRoot.isEmpty ? state.t("ui.062") : state.runtimeRoot)
-                .font(TacticalTypography.body).lineLimit(1).truncationMode(.middle)
+            Text(LaunchResourceSummary.text).font(TacticalTypography.body).lineLimit(1).truncationMode(.middle)
             Text(status).font(TacticalTypography.caption)
         }
-    }
-    private var controls: some View {
-        Button(state.t("ui.fx.locateResources"), systemImage: "folder") { choosing = true }
-            .disabled(tasks.busy).accessibilityIdentifier("runtime.choose")
     }
 }
 

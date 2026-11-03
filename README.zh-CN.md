@@ -18,7 +18,7 @@
 
 <a id="zh-overview"></a>
 
-以 **SwiftUI + AppKit** 构建的原生界面，通过原有 Python Core 启动游戏、检查所选 FX 环境、读取性能配置。六个页面职责清晰，默认深色，操作进度和结果在页面内显示，技术细节按需展开。
+以 **SwiftUI + AppKit** 构建、**Swift 原生核心**驱动：启动游戏、检查所选 FX 环境、管理性能配置。六个页面职责清晰，默认深色，操作进度和结果在页面内显示，技术细节按需展开。正式运行不使用 Python 解释器、Python Bridge 或外部脚本目录。
 
 > [!IMPORTANT]
 > **开发预览。** 正式安装包尚未发布。已完成的 Native 成果已整合到 [main](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main)；[feature/macos-native-app](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app) 保留开发历史。仓库不包含运行时二进制、游戏文件或 Guest 镜像。
@@ -26,6 +26,8 @@
 <a id="zh-screenshots"></a>
 
 ## 软件截图
+
+截图拍摄于 Swift 原生核心改版之前，仅作布局参考；`docs/images/manifest.json` 已标记为**待重新拍摄**，当前标签和状态文字可能不同。
 
 [![总览](docs/images/zh-CN/dashboard.png)](docs/images/zh-CN/dashboard.png)
 
@@ -78,7 +80,7 @@
 
 **正式安装包尚未发布。** 仓库 [Releases 页面](https://github.com/LSJOP/helldivers2-fx-launcher/releases) 当前没有已发布版本；此链接不是不存在的安装包下载按钮。
 
-源码预览需要 **Apple Silicon、macOS 14+、完整 Xcode／macOS SDK、Python 3.9+**。游戏操作还需要既有完整旧启动器目录、原验证组合中的 FX／gvproxy 资源和可用的 Guest 认证配置。
+源码预览需要 **Apple Silicon、macOS 14+、完整 Xcode／macOS SDK**。游戏操作需要已安装且由发行方签名的 FX Steam Launcher，以及可通过 SSH 连接的 FX Guest。启动所需的 gvproxy 资源已内置并通过 SHA-256 校验。
 
 ```sh
 git clone --branch main --recurse-submodules https://github.com/LSJOP/helldivers2-fx-launcher.git
@@ -93,7 +95,7 @@ open build/Debug/HD2FXNative.app
 
 ## 快速开始
 
-1. 打开 App，在设置中选择语言、外观及已有 Python 解释器。
+1. 打开 App，在设置中选择语言与外观，然后在 FX 管理中选用已安装的 FX Steam Launcher。
 2. 首次操作选择已有启动器目录。“一键检测”只读检查 Guest，要求 FX 已运行；需要时先在 FX 管理中点击“启动 FX”。
 3. 在总览点击“启动 HELLDIVERS 2”，原有启动流程自动完成必要检查。核对启动确认及具体配置变更预览；密码仅填写 App 安全输入框。
 4. 在游戏性能配置页查看硬件与基准差异，在日志页查看错误详情。检测到进程不代表已经进入主菜单。
@@ -148,7 +150,7 @@ open build/Debug/HD2FXNative.app
 
 本项目非官方，不宣称获得官方认可，不保证兼容性。HELLDIVERS 2 及相关标识归各权利人所有。项目统一源码许可证**尚未选定**，不应推定均可自由再分发。见[权利与来源说明](THIRD_PARTY_NOTICES.md)，其中保留 Sparkle 的独立许可证和用户提供素材的来源。
 
-开发检查：`python3 native-app/script/check_localization.py` 报告十语言键／格式覆盖和 README 待审范围；`native-app/script/run_checks.sh` 及提交钩子包含此门槛。界面变更必须审查中英文 README 及真实截图。中英文截图均针对整合后的界面更新；译文自然度仍需人工审校。发布检查 Actions 模板保持未启用，尚未配置 CI 工作流。
+开发检查：`native-app/script/run_checks.sh` 编译并运行原生核心契约检查、十语言门槛与文档检查。Python 仅用于可选开发脚本；App Bundle 与正式运行流程不含 Python。界面变更必须审查中英文 README 及真实截图。中英文截图均针对整合后的界面更新；译文自然度仍需人工审校。发布检查 Actions 模板保持未启用，尚未配置 CI 工作流。
 
 FX 选择 V2 + 自动选择 V2.1：FX 管理、总览和启动窗口共享并持久化同一个默认 FX。扫描结果中只有一个通过身份和路径验证的 FX 时自动选择；多个 FX 时保留有效默认，否则请用户选择。默认 FX 删除、移动或更新后重新验证。选择后仍显示**启动能力待验证**，不会自动启动游戏。每次启动先重扫默认 FX，并为检查、预检和执行固定同一份所选路径。完整性校验接受历史精确哈希，或通过 Apple 信任锚、Bundle ID 与 Team ID 校验的 FX 发布者完整签名；再次核对已验证摘要，并保留全部原有配置、进程和 Guest 检查。这不代表游戏兼容性已经验证。FX 应用和辅助脚本／gvproxy 的启动资源目录明确区分：优先从所选应用的有限上级目录或已有资源目录解析，无法解析时才请用户定位一次**启动资源**，不再重复选择 FX 目录。刷新与自动检查不会启动 FX、SSH 或游戏。停止／重启仍不可用。限定参数的性能编辑与备份恢复要求固定版本 FX 1.9.4 已停止，并需明确预览和确认；推算推荐仍只读。
 

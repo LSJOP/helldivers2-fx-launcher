@@ -30,7 +30,7 @@ struct EnvironmentView: View {
             TacticalAdaptiveLayout(minimumWidth: 140, maximumColumns: 4) {
                 TacticalMetric(title: "macOS", value: state.value("get_system_info", "os_version"), symbol: "apple.logo")
                 TacticalMetric(title: state.t("ui.026"), value: state.value("get_system_info", "arch"), symbol: "cpu")
-                TacticalMetric(title: "Python", value: state.value("get_system_info", "python"), symbol: "terminal")
+                TacticalMetric(title: state.t("ui.native.runtime"), value: state.value("get_system_info", "native_runtime"), symbol: "swift")
                 TacticalMetric(title: state.t("ui.164"), value: state.t("ui.152"), symbol: "square.stack.3d.up")
             }
             TacticalAdaptiveLayout(minimumWidth: 255, maximumColumns: 2) {

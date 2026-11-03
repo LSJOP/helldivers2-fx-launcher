@@ -19,9 +19,9 @@ class LocalizationChecks(unittest.TestCase):
         self.root = Path(self.temp.name)
         for folder in ['App', 'Views', 'Stores', 'Services', 'Models', 'Support']:
             shutil.copytree(ROOT / 'native-app' / folder, self.root / 'native-app' / folder)
-        self.path = self.root / 'native-app/bridge/native-locales.json'
+        self.path = self.root / 'native-app/Resources/native-locales.json'
         self.path.parent.mkdir()
-        shutil.copyfile(ROOT / 'native-app/bridge/native-locales.json', self.path)
+        shutil.copyfile(ROOT / 'native-app/Resources/native-locales.json', self.path)
         shutil.copytree(ROOT / 'native-app/Localization', self.root / 'native-app/Localization')
         for name in ['README.md', 'README.zh-CN.md']:
             shutil.copyfile(ROOT / name, self.root / name)

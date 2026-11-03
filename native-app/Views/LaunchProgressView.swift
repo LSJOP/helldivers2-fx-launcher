@@ -29,7 +29,7 @@ struct LaunchProgressView: View {
             Button(state.t("ui.154")) { state.confirmSinglePlayer() }
                 .disabled(tasks.busy || !state.launchSession.processDetected || state.launchSession.mainMenuConfirmedAt == nil || state.launchSession.singlePlayerConfirmedAt != nil)
             Button(state.t("ui.259")) { state.runOperation("observe_launch", params: ["confirmed": .bool(true)]) }
-                .disabled(tasks.busy || state.runtimeRoot.isEmpty)
+                .disabled(tasks.busy || state.fxSelection.selected == nil)
         }
     }
 }

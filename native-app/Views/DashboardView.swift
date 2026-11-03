@@ -101,7 +101,7 @@ struct DashboardView: View {
         TacticalPanel(number: "03", title: state.t("ui.104"), symbol: "desktopcomputer") {
             TacticalInfoRow(title: "macOS", value: state.value("get_system_info", "os_version"))
             TacticalInfoRow(title: state.t("ui.026"), value: architecture)
-            TacticalInfoRow(title: "Python", value: state.value("get_system_info", "python"))
+            TacticalInfoRow(title: state.t("ui.native.runtime"), value: state.value("get_system_info", "native_runtime"))
             TacticalInfoRow(title: state.t("ui.093"), value: dependencySummary)
         }
     }

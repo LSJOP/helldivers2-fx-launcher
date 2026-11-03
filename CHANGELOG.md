@@ -8,6 +8,26 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+### Changed
+
+- Replace the Python Bridge with a **Swift Native Core**. FX discovery, launch-resource integrity, launcher settings, scoped CPU/memory/Vulkan preferences, diagnostics, logging and the FX/Guest/Steam/game launch path are implemented in Swift. The original script directory and Node.js are no longer required at runtime.
+
+### Removed
+
+- Remove the bundled Python bridge, `legacy_operations.py`, `core_adapter.py` and the Python packaging build phase. No Python interpreter is invoked by the app, build or runtime.
+
+### Fixed
+
+- Reject symlinked or tampered bundled launch resources (gvproxy) with pinned SHA-256, and report a missing/hash-mismatched resource explicitly instead of launching.
+- Persist launcher settings with revision guarding, a private backup and atomic replacement; restore requires confirmation and keeps a pre-restore copy.
+
+### Known issues
+
+- Live FX start, Guest authentication, Steam start, game launch, main-menu, EAC and multiplayer were **not** verified in this change. Their automated checks and host preflight do not prove gameplay.
+- Rewriting real FX preferences requires a stopped FX; live apply/restore was not executed while FX was running.
+- Distribution remains blocked: the Release app is ad-hoc signed and not notarized (no Developer ID / EdDSA publishing configuration). Code integration is not an end-to-end upgrade acceptance.
+
+
 ### Fixed
 
 - Share launch-resource validation between inspection and execution, with exact paths and expected/actual SHA-256. Freeze the selected FX path throughout launch. Accept intact bundles signed by the verified FX publisher while retaining all original profile/process/Guest guards. FX 1.9.4/1.9.8 path and integrity checks do not establish gameplay compatibility.

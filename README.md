@@ -19,7 +19,7 @@
 
 <a id="en-overview"></a>
 
-A native **SwiftUI + AppKit** interface over the original Python Core: launch the game, inspect the selected FX environment and read performance settings from six focused pages. The interface defaults to dark, with inline operation feedback and advanced details available when needed.
+A fully native **SwiftUI + AppKit** app with a **Swift Native Core**: launch the game, inspect the selected FX environment and manage performance settings from six focused pages. No Python interpreter, Python Bridge or external script directory is used at runtime. The interface defaults to dark, with inline operation feedback and advanced details available when needed.
 
 > [!IMPORTANT]
 > **Development preview.** No official installer has been released. The completed Native snapshot is integrated into [main](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main); [feature/macos-native-app](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app) is retained for development history. Runtime binaries, game files and Guest images are not included.
@@ -27,6 +27,8 @@ A native **SwiftUI + AppKit** interface over the original Python Core: launch th
 <a id="en-screenshots"></a>
 
 ## Screenshots
+
+Screenshots were captured before the Swift Native Core redesign. They remain as layout reference and are marked **pending recapture** in `docs/images/manifest.json`; current labels and status text may differ.
 
 [![Dashboard](docs/images/en/dashboard.png)](docs/images/en/dashboard.png)
 
@@ -77,7 +79,7 @@ Performance rules are local and reproducible. The recorded **M4 Pro / 24 GiB** s
 
 **An official installer has not been released.** The repository [Releases page](https://github.com/LSJOP/helldivers2-fx-launcher/releases) currently has no published release; this is not a download button for a nonexistent package.
 
-Source preview requirements: **Apple Silicon, macOS 14+, a complete Xcode/macOS SDK and Python 3.9+**. Game operations also require the existing complete legacy launcher directory, the original validated FX/gvproxy assets and compatible Guest access.
+Source preview requirements: **Apple Silicon, macOS 14+ and a complete Xcode/macOS SDK**. Game operations require an installed, publisher-signed FX Steam Launcher and a running FX Guest reachable over SSH. Launch networking resources (gvproxy) are bundled and SHA-256 verified.
 
 ```sh
 git clone --branch main --recurse-submodules https://github.com/LSJOP/helldivers2-fx-launcher.git
@@ -92,7 +94,7 @@ Existing clones need the intended branch and `git submodule update --init --recu
 
 ## Quick start
 
-1. Open the App; choose your language, appearance and existing Python interpreter in Settings.
+1. Open the App; choose your language and appearance in Settings, then select the installed FX Steam Launcher in FX Manager.
 2. Select the existing launcher directory on first use. Use **Inspect environment** for read-only Guest checks; FX must already be running. Use **Start FX** in FX Manager if needed.
 3. Click **Launch HELLDIVERS 2** on Dashboard. The existing launch workflow performs its required checks automatically. Review start consent and any exact configuration-change preview; enter credentials only in App secure fields.
 4. Use Game Performance for hardware and baseline comparisons, and Logs for failure details. A detected process does not establish arrival at the game menu.
@@ -147,7 +149,7 @@ See the full history in [CHANGELOG.md](CHANGELOG.md).
 
 Unofficial project; no endorsement or compatibility guarantee. HELLDIVERS 2 and related marks belong to their respective owners. A project-wide source license has **not been selected**; do not assume redistribution rights. See [rights and provenance](THIRD_PARTY_NOTICES.md), including the separate Sparkle license and supplied artwork notes.
 
-Development checks: `python3 native-app/script/check_localization.py` reports ten-language key/format coverage and README review candidates; `native-app/script/run_checks.sh` and the pre-commit hook include this gate. UI changes require a review of both READMEs and their real screenshots. Both English and Simplified Chinese screenshots are refreshed for the integrated UI. Translation naturalness still needs human review. The release-check Actions template remains inactive; no CI workflow is configured.
+Development checks: `native-app/script/run_checks.sh` compiles and runs the native-core contract checks plus ten-language and documentation gates. Python is used only by optional developer scripts; the app bundle and runtime contain no Python. UI changes require a review of both READMEs and their real screenshots. Both English and Simplified Chinese screenshots are refreshed for the integrated UI. Translation naturalness still needs human review. The release-check Actions template remains inactive; no CI workflow is configured.
 
 FX selection V2 + automatic selection V2.1: the FX page, overview and launch panel share one persisted default. One identity/path-verified FX is selected automatically from the scan results; multiple installations preserve an existing valid choice or require selection. Missing/moved/updated defaults are revalidated. Selection remains **launch capability unverified** and never starts the game. Every game launch rescans the default and freezes one selected FX path for inspection, preflight and execution. Integrity accepts the exact historical build or an intact bundle signed by the verified FX publisher (Apple trust anchor, Bundle ID and Team ID), rechecks the verified digest and retains all original profile, process and Guest guards. This does not establish gameplay compatibility. FX application selection is separate from the helper/gvproxy resource directory: resolve it from the selected app’s bounded ancestors or the existing resource directory when possible, otherwise explicitly locate **launch resources** once. Repeated FX-directory selection is not required. Refresh and automatic inspection do not start FX, SSH or the game. Stop/restart remain unavailable. Parameter-scoped performance editing and backup restore require a stopped, pinned FX 1.9.4 and explicit preview/confirmation; inferred recommendations remain read-only.
 

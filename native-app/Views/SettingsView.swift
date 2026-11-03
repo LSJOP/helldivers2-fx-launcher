@@ -1,15 +1,8 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-// View-local panel presentation, never business state or persisted preferences.
-private final class SettingsPresentation: ObservableObject {
-    @Published var choosingPython = false
-    @Published var invalidPython = false
-}
-
 struct SettingsView: View {
     @ObservedObject var state: AppState
-    @StateObject private var presentation = SettingsPresentation()
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             TacticalPageHeader(title: state.t("ui.308"))
@@ -23,27 +16,20 @@ struct SettingsView: View {
                 Text(UpdateString.languageRestart.text(state.languageCode))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
             }
-            TacticalPanel(number: "B", title: state.t("ui.284"), symbol: "cpu") {
-                TacticalInfoRow(title: state.t("ui.239"), value: state.pythonURL.lastPathComponent)
+            TacticalPanel(number: "B", title: state.t("ui.native.runtime"), symbol: "cpu") {
+                TacticalInfoRow(title: state.t("ui.native.engine"), value: state.t("ui.native.bundled"))
                 TacticalInfoRow(title: state.t("ui.035"), value: state.error != nil ? state.t("ui.242") : state.hasLoaded ? state.t("ui.241") : state.t("ui.217"))
-                TacticalButton(title: state.t("ui.061"), symbol: "folder") { presentation.choosingPython = true }
+                TacticalInfoRow(title: state.t("ui.native.resources"), value: LaunchResourceSummary.text)
+                Text(state.t("ui.native.noPython"))
+                    .font(TacticalTypography.caption).foregroundStyle(.secondary)
                 Text(state.t("ui.270"))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
-                if presentation.invalidPython {
-                    TacticalWarningBanner(text: state.t("ui.300"), isError: true)
-                }
             }
+            ConfigurationBackupView(state: state)
             CredentialManagementView(state: state, credentials: state.credentials, tasks: state.tasks)
             SoftwareUpdateView(manager: state.updates, language: state.languageCode)
             DisclosureGroup(state.t("ui.008")) { LegacyOperationsView(state: state, scope: "settings") }
 
-        }
-        .fileImporter(isPresented: $presentation.choosingPython, allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
-            guard case .success(let urls) = result, let url = urls.first else { return }
-            let name = url.lastPathComponent
-            guard name.range(of: "^python3(?:\\.[0-9]+)?$", options: .regularExpression) != nil,
-                  FileManager.default.isExecutableFile(atPath: url.path) else { presentation.invalidPython = true; return }
-            presentation.invalidPython = false; state.pythonURL = url
         }
     }
 }
@@ -153,7 +139,7 @@ struct LegacyOperationSheet: View {
     private var disabledReason: String? {
         if tasks.busy { return state.t("ui.014") }
         if operation == "launch_game" && state.fxSelection.selected == nil { return state.t("ui.fx.choose") }
-        if needsRoot && state.runtimeRoot.isEmpty { return state.t("ui.059") }
+        if needsRoot && state.fxSelection.selected == nil { return state.t("ui.fx.choose") }
         if operation == "launch_game" && state.targetInspection["archive_files_match"]?.boolean == false { return state.t("ui.178") }
         if needsConsent && !confirmed { return state.t("ui.276") }
         return nil
@@ -181,7 +167,7 @@ struct LegacyOperationSheet: View {
                 if operation == "launch_game" {
                     DisclosureGroup(state.t("ui.ux.details")) {
                         TacticalButton(title: state.t("ui.279"), symbol: "checklist") { state.runOperation("preflight_launch") }
-                            .disabled(tasks.busy || state.runtimeRoot.isEmpty)
+                            .disabled(tasks.busy || state.fxSelection.selected == nil)
                         Text(state.t("ui.195")).font(TacticalTypography.caption)
                     }
                 }
@@ -362,4 +348,57 @@ private struct CredentialManagementView: View {
         if credentials.rejected.contains(kind) { return state.t("ui.027") }
         return credentials.saved.contains(kind) ? state.t("ui.296") : state.t("ui.215")
     }
+}
+
+
+enum LaunchResourceSummary {
+    static var text: String {
+        guard let url = Bundle.main.resourceURL?.appendingPathComponent("launch/gvproxy-eim") else { return "—" }
+        return FileManager.default.fileExists(atPath: url.path) ? "gvproxy-eim · SHA-256" : "gvproxy-eim · missing"
+    }
+}
+
+private struct ConfigurationBackupView: View {
+    @ObservedObject var state: AppState
+    @ObservedObject private var tasks: TaskManager
+    init(state: AppState) { self.state = state; self._tasks = ObservedObject(wrappedValue: state.tasks) }
+    private var backups: [[String: JSONValue]] { state.operationResult["backups"]?.array.map(\.object) ?? [] }
+    var body: some View {
+        TacticalPanel(number: "B2", title: state.t("ui.native.backup"), symbol: "externaldrive") {
+            Text(state.t("ui.native.backupHelp")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+            HStack {
+                TacticalButton(title: state.t("ui.native.backupCreate"), symbol: "plus", disabledReason: tasks.busy ? state.t("ui.016") : nil) {
+                    state.runOperation("backup_configuration", params: ["note": .string("manual"), "confirmed": .bool(true)])
+                }
+                TacticalButton(title: state.t("ui.371"), symbol: "arrow.clockwise", disabledReason: tasks.busy ? state.t("ui.016") : nil) {
+                    state.runOperation("list_configuration_backups")
+                }
+            }
+            if let path = state.operationResult["path"]?.text {
+                TacticalInfoRow(title: state.t("ui.native.backupDone"), value: URL(fileURLWithPath: path).lastPathComponent)
+            }
+            if let revision = state.operationResult["revision"]?.text, state.operationResult["restored"]?.boolean == true {
+                TacticalInfoRow(title: state.t("ui.native.restoreDone"), value: String(revision.prefix(12)))
+            }
+            if !backups.isEmpty {
+                ForEach(backups, id: \.selfName) { row in
+                    HStack {
+                        Text(row["name"]?.text ?? "—").font(TacticalTypography.log).lineLimit(1)
+                        Spacer(minLength: 8)
+                        Button(state.t("ui.native.backupRestore")) {
+                            if let path = row["path"]?.text {
+                                state.runOperation("restore_configuration", params: ["backup_path": .string(path), "confirmed": .bool(true)])
+                            }
+                        }.disabled(tasks.busy)
+                    }
+                }
+            } else {
+                Text(state.t("ui.native.backupNone")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+private extension Dictionary where Key == String, Value == JSONValue {
+    var selfName: String { self["name"]?.text ?? "backup" }
 }

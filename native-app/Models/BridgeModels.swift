@@ -1,6 +1,6 @@
 import Foundation
 
-indirect enum JSONValue: Codable, Sendable {
+indirect enum JSONValue: Codable, Sendable, Equatable {
     case string(String), number(Double), bool(Bool), object([String: JSONValue]), array([JSONValue]), null
     init(from decoder: Decoder) throws {
         let c = try decoder.singleValueContainer()
