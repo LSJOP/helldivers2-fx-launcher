@@ -363,6 +363,7 @@ import ApplicationServices
                 throw ErrorState("BUILD_METADATA_INVALID")
             }
             var renders = 0
+            var resizeRenders = 0
             for (language, _) in NativeLocalization.languages {
                 state.languageCode = language
                 for key in ["ui.build.about", "ui.build.copy", "ui.ssh.test", "ui.ssh.scope"] {
@@ -376,7 +377,25 @@ import ApplicationServices
                     renders += 1
                 }
             }
+            for language in ["zh-CN", "en"] {
+                state.languageCode = language
+                for width in [850.0, 1180.0] {
+                    window.setContentSize(NSSize(width: width, height: 600))
+                    for page in Page.allCases {
+                        state.selection = page
+                        try await Task.sleep(nanoseconds: 100_000_000)
+                        window.contentView?.layoutSubtreeIfNeeded()
+                        guard let content = window.contentView, content.bounds.width >= 850,
+                              content.bounds.height >= 560 else { throw ErrorState("WINDOW_UNAVAILABLE") }
+                        resizeRenders += 1
+                    }
+                    state.selection = .dashboard
+                    let name = language == "en" ? (width == 850 ? "en-narrow.png" : "en-wide.png") : (width == 850 ? "zh-narrow.png" : "zh-wide.png")
+                    guard try await capture(window, name: name, directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
+                }
+            }
             result = ["result": "PASS", "page_language_renders": renders, "languages": 10,
+                      "resize_page_renders": resizeRenders, "widths": [850, 1180],
                       "build_metadata": metadata, "live_guest_actions": "NONE", "credential_access": "DISABLED",
                       "interactive_clicks_and_translation_naturalness": "NOT_TESTED"]
         } catch { result = ["result": "FAIL", "code": (error as? ErrorState)?.code ?? "TAKEOVER_UI_FAILED"] }
