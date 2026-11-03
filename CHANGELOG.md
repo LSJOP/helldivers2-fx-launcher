@@ -9,6 +9,7 @@ No official release has been published yet. The current Native App version `0.1.
 ## Unreleased
 
 - Fix remote sudo empty-prompt shell quoting and distinguish missing credentials, rejected authentication, policy denial, transport and command failures. Live passworded sudo acceptance and a replacement App release remain pending.
+- Remove the shared FX status bar from all six pages without a replacement or placeholder. Preserve the sidebar, page styling, FX detection/management and launch services; content fills the available top area.
 
 - Read-only SSH diagnostics also recognize the selected FX publisher-sealed stock gvproxy after signature, stable-content and process-ancestry verification. Game launch continues to require the pinned bundled networking backend.
 

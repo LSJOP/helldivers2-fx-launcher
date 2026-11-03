@@ -53,63 +53,6 @@ struct RuntimeTargetPanel: View {
     }
 }
 
-/// Compact global FX status bar: identity, install state, run state, manage entry.
-/// Technical details (path, gvproxy, SHA-256, manifest) live in FX Manager, not here.
-struct FXStatusBar: View {
-    @ObservedObject var state: AppState
-    @ObservedObject var tasks: TaskManager
-    @Environment(\.colorScheme) private var scheme
-    private var c: TacticalColors { TacticalColors(scheme: scheme) }
-
-    private var detected: (text: String, tone: TacticalTone) {
-        state.fxSelection.selected == nil
-            ? (state.t("ui.fx.statusNotDetected"), .neutral)
-            : (state.t("ui.fx.statusDetected"), .success)
-    }
-    private var running: (text: String, tone: TacticalTone) {
-        let recent = state.guiRecords.values
-            .filter { ["start_fx", "launch_game", "check_fx_state", "connect_fx"].contains($0.method) }
-            .max { $0.startedAt < $1.startedAt }
-        if let recent, recent.status == .running { return (state.t("ui.fx.statusStarting"), .checking) }
-        if let recent, recent.status == .failed { return (state.t("ui.fx.statusFailed"), .error) }
-        switch state.latestGUIEvidence["fx_host_running"]?.boolean {
-        case .some(true): return (state.t("ui.fx.statusRunning"), .success)
-        case .some(false): return (state.t("ui.fx.statusNotRunning"), .neutral)
-        case .none: return (state.t("ui.fx.statusUnknown"), .neutral)
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "shippingbox").font(.title3.weight(.semibold)).foregroundStyle(c.accent)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(state.t("ui.fx.title")).font(TacticalTypography.body.weight(.semibold)).foregroundStyle(c.text).lineLimit(1)
-                HStack(spacing: 8) {
-                    if state.fxVersion != "unknown" {
-                        Text(state.fxVersion).font(TacticalTypography.caption).foregroundStyle(c.muted)
-                    }
-                    Text(state.t("ui.fx.launchUnverified")).font(TacticalTypography.caption).foregroundStyle(c.muted).lineLimit(1)
-                }
-            }
-            Spacer(minLength: 8)
-            TacticalStatusBadge(text: detected.text, tone: detected.tone)
-            TacticalStatusBadge(text: running.text, tone: running.tone)
-            Button { state.selection = .fx } label: {
-                HStack(spacing: 3) {
-                    Text(state.t("ui.fx.manage")).font(TacticalTypography.caption.weight(.semibold))
-                    Image(systemName: "chevron.right").font(.caption.weight(.semibold))
-                }.foregroundStyle(c.accent)
-            }.buttonStyle(.plain).accessibilityIdentifier("fx.status.manage")
-        }
-        .padding(.vertical, 8).padding(.horizontal, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(c.panel)
-        .overlay(Rectangle().stroke(c.line, lineWidth: 1))
-        .accessibilityIdentifier("fx.status.bar")
-    }
-}
-
 /// Full FX diagnostics, relocated from the Dashboard top into FX Manager.
 struct FXTechnicalDetails: View {
     @ObservedObject var state: AppState

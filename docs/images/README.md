@@ -27,3 +27,7 @@ Integration refresh: both language sets now include the shared FX selection stat
 本次整合重拍覆盖共享 FX 选择、限定性能编辑与受保护更新界面。两套截图使用隔离进程偏好，来源摘要和原始图片哈希已记录。设置详情图为真实滚动视口，部分更新按钮在视口下方，不拼接或伪造状态。
 
 2026-11-04 Codex takeover: `en/environment.png`, `en/settings.png`, `zh-CN/environment.png`, and `zh-CN/settings.png` refreshed from the actual Debug working snapshot (0.1.0 build 2026110401, baseline 0ba4e20 with uncommitted takeover changes). These capture the Environment SSH button and About section heading; offscreen values are not composited. Other images retain their original provenance and are described as historical in both READMEs. Final diagnostic state plumbing and isolated smoke harness changes do not change the pictured regions.
+
+2026-11-04 global UI simplification: all sixteen current English/Chinese page and detail screenshots were recaptured from the real Debug App at source 34aaf40, build 2026110402. The global FXStatusBar is removed from the shared ContentView; native page content starts at the existing common margin. No backend or sidebar change. Actual pixels are retained, without overlays or compositing.
+
+2026-11-04 全局 UI 精简：十六张中英文页面与详情截图均已使用真实 Debug App 重拍，来源34aaf40，构建2026110402。共享ContentView不再渲染FXStatusBar，页面从原有统一边距开始；后端与侧栏不变，截图保留原像素。
