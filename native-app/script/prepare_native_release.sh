@@ -21,6 +21,9 @@ assert (channel=='preview') == ('-' in version), 'Preview needs prerelease versi
 PY
 mkdir -p "$STAGING"
 STAGING="$(cd "$STAGING" && pwd)"
+# Freeze caller-owned history: later edits must not change what we verify/reuse.
+HISTORY="$STAGING/previous-appcast.xml"
+cp "$EXISTING_FEED" "$HISTORY"
 xcodebuild -project "$APP_ROOT/HD2FXNative.xcodeproj" -scheme HD2FXNative -configuration Release \
     -destination 'generic/platform=macOS' -archivePath "$STAGING/Launcher.xcarchive" \
     -derivedDataPath "$STAGING/DerivedData" \
@@ -53,7 +56,6 @@ ARCHIVE_NAME="HD2FXLauncher-${RELEASE_VERSION}.zip"
 ditto -c -k --sequesterRsrc --keepParent "$APP" "$ARCHIVES/$ARCHIVE_NAME"
 /usr/bin/python3 -I -B "$APP_ROOT/script/check_release_secrets.py" --archive "$ARCHIVES/$ARCHIVE_NAME"
 cp "$NOTES" "$ARCHIVES/${ARCHIVE_NAME%.zip}.md"
-cp "$EXISTING_FEED" "$ARCHIVES/appcast.xml"
 TOOLS="$STAGING/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin"
 # Default Sparkle Keychain account only. No private key argument, file or export.
 PUBLIC_KEY="$("$TOOLS/generate_keys" -p)"
@@ -63,6 +65,10 @@ with open(sys.argv[1],'rb') as f:p=plistlib.load(f)
 assert p['SUPublicEDKey']==sys.argv[2].strip(), 'Keychain key does not match the bundled public key'
 assert p['SURequireSignedFeed'] is True and p['SUVerifyUpdateBeforeExtraction'] is True
 PY
+# Never re-sign unverified history into a trusted update feed.
+"$TOOLS/sign_update" --verify "$HISTORY"
+/usr/bin/python3 -I -B "$APP_ROOT/script/validate_release_history.py" "$HISTORY" "$CHANNEL" "$RELEASE_BUILD"
+cp "$HISTORY" "$ARCHIVES/appcast.xml"
 SIGNATURE="$("$TOOLS/sign_update" -p "$ARCHIVES/$ARCHIVE_NAME")"
 "$TOOLS/sign_update" --verify "$ARCHIVES/$ARCHIVE_NAME" "$SIGNATURE"
 /usr/bin/python3 -I -B "$APP_ROOT/script/make_update_manifest.py" "$APP/Contents/Info.plist" "$ARCHIVES/$ARCHIVE_NAME" "$CHANNEL" "$ARCHIVES/native-update.json"
@@ -76,7 +82,7 @@ if [[ "$CHANNEL" == preview ]]; then CHANNEL_ARGS=(--channel preview); fi
     "${CHANNEL_ARGS[@]}" "$ARCHIVES"
 "$TOOLS/sign_update" --verify "$ARCHIVES/appcast.xml"
 /usr/bin/python3 -I -B "$APP_ROOT/script/check_release_secrets.py" --path "$ARCHIVES/appcast.xml" --path "$NOTES"
-/usr/bin/python3 - "$ARCHIVES/appcast.xml" "$ARCHIVES/$ARCHIVE_NAME" "$RELEASE_BUILD" "$CHANNEL" "$EXISTING_FEED" <<'PY'
+/usr/bin/python3 - "$ARCHIVES/appcast.xml" "$ARCHIVES/$ARCHIVE_NAME" "$RELEASE_BUILD" "$CHANNEL" "$HISTORY" <<'PY'
 import base64,pathlib,sys,xml.etree.ElementTree as E
 feed,archive,build,channel,previous=sys.argv[1:];ns={'s':'http://www.andymatuschak.org/xml-namespaces/sparkle'}
 tree=E.parse(feed);items=tree.findall('./channel/item')
@@ -87,7 +93,8 @@ assert old<=new, 'Existing feed history was removed; review before publishing'
 item=next(x for x in items if version(x)==build);enclosure=item.find('enclosure')
 assert enclosure is not None and int(enclosure.get('length'))==pathlib.Path(archive).stat().st_size
 assert len(base64.b64decode(enclosure.get('{'+ns['s']+'}edSignature'),validate=True))==64
-assert enclosure.get('url').startswith('https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/native-v')
+release_version=pathlib.Path(archive).name.removeprefix('HD2FXLauncher-').removesuffix('.zip')
+assert enclosure.get('url')=='https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/native-v'+release_version+'/'+pathlib.Path(archive).name
 assert item.findtext('s:channel',namespaces=ns)==('preview' if channel=='preview' else None)
 assert build not in old, 'Do not overwrite an existing build'
 assert all(x and x.isdigit() and int(build)>int(x) for x in old), 'Build number must increase across feed history'

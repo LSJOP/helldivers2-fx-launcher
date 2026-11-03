@@ -15,4 +15,5 @@ xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -module-cache-path b
     -o build/UpdateManagerChecks >evidence/update-manager-compile.txt 2>&1
 ./build/UpdateManagerChecks >evidence/update-manager-checks.txt 2>&1
 /usr/bin/python3 -I -B checks/update_resources_checks.py >evidence/update-resources-checks.txt 2>&1
-cat evidence/update-service-checks.txt evidence/update-manager-checks.txt evidence/update-resources-checks.txt
+/usr/bin/python3 -I -B checks/release_history_checks.py >evidence/release-history-checks.txt 2>&1
+cat evidence/update-service-checks.txt evidence/update-manager-checks.txt evidence/update-resources-checks.txt evidence/release-history-checks.txt
