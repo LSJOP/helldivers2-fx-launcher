@@ -24,8 +24,8 @@ A second, latent bug: `hostIdentity` required exactly **one** `steamac-vm` proce
 - Running: `/Applications/FX Steam Launcher.app` (2 processes) — 1.9.8, same bundle/executable. **SAME INSTANCE: YES**.
 - The other installed copy `/Applications/FX 绝地潜兵2（脚本专用）.app` is 1.9.4 (different executable hash). If it is running instead, `check_fx_state`/launch still fails closed with `different_fx_copy` and now shows both paths.
 
-## Delivery note
-The repaired Release build is verified and staged at `Releases/0.1.0-f219577-Release-identity/HD2FXNative.app` (BUILD-VALIDATION.json present). `Latest` was **not** swapped because the user's app (pid 55717) and the FX it launched (gvproxy inside the current Latest bundle) are actively running; the publish tool correctly refused to replace a running app. Update `Latest` only after the user quits the App and FX normally.
+## Delivery
+The repaired Release build was verified, then published to `Latest` after the App and FX were quit normally. `Latest/HD2FXNative.app` now carries bundle SHA-256 `3415e2be3d66ed6a839ee95f3719c13c710a3977e890e1e86f9548e8320e1966`; the previous build was preserved in `Releases/Rollback-20261104-024617-204297`. Latest resource-integrity gate, icon, code signature and startup all PASS.
 
 ## Not verified (require user authorization)
 FX start (auto), Guest connection, Steam start, game launch, multiplayer: UNVERIFIED. No FX/SteamOS/game was modified or terminated.
@@ -47,6 +47,6 @@ AUTOMATED TESTS: PASS
 DEBUG BUILD: PASS
 RELEASE BUILD: PASS
 PR #3: UPDATED
-LATEST APP: staged /Volumes/Thunderbolt2TB/HD2-App-Builds/Releases/0.1.0-f219577-Release-identity/HD2FXNative.app (Latest swap blocked while App/FX running)
+LATEST APP: /Volumes/Thunderbolt2TB/HD2-App-Builds/Latest/HD2FXNative.app
 OVERALL STATUS: PARTIAL (identity repaired and verified; live launch/multiplayer unverified)
 ```
