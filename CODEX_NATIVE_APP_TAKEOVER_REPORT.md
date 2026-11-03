@@ -69,7 +69,7 @@ Bundle 摘要使用既有发布工具的路径、文件内容、权限、符号�
 | FX 选择 | 17 PASS |
 | 十语言 | 10 × 495 键完整，0 gate 错误；负例 8 PASS |
 | 截图/发行历史/更新资源负例 | 8 / 10 / 5 PASS |
-| SwiftUI 集成 | 60 次真实页面/语言渲染 PASS，内嵌元数据检查 PASS；无真实 Guest 操作 |
+| SwiftUI 集成 | 60 次真实页面/语言渲染 PASS，内嵌元数据检查 PASS；最终干净提交 365dfad 复验通过，无真实 Guest 操作 |
 | 双语文档 | 15 PASS；README/CHANGELOG 同步 |
 | Debug | 构建 PASS，冻结提交 365dfad、source_dirty=false |
 | Release | 新 DerivedData 构建 PASS，arm64、图标、Bundle ID、十语言资源、gvproxy 哈希、无 Python/Bridge、内嵌元数据与签名均 PASS |
