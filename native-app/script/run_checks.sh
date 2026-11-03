@@ -12,6 +12,13 @@ SDK="$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
 /usr/bin/python3 -I -B checks/release_history_checks.py >evidence/release-history-checks.txt 2>&1
 /usr/bin/python3 -I -B checks/update_resources_checks.py >evidence/update-resources-checks.txt 2>&1
 
+# SSH regression: arguments, controlling terminal, password echo, error classes.
+/usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" \
+  -module-cache-path "$ROOT_DIR/build/ModuleCache" \
+  Models/BridgeModels.swift Core/*.swift checks/SSHChecks.swift \
+  -o build/SSHChecks >evidence/ssh-compile.txt 2>&1
+./build/SSHChecks >evidence/ssh-checks.txt 2>&1
+
 # Native core contract, isolation and integrity checks.
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" \
   -module-cache-path "$ROOT_DIR/build/ModuleCache" \

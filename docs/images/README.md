@@ -25,3 +25,5 @@ Future top-level pages, important settings and launch/performance/update UI chan
 Integration refresh: both language sets now include the shared FX selection state, scoped performance editor and guarded update UI. All captures use isolated process preferences; matching source digests and exact bytes are retained in the manifest. Settings detail images are scroll viewports; additional update controls remain below the visible region.
 
 本次整合重拍覆盖共享 FX 选择、限定性能编辑与受保护更新界面。两套截图使用隔离进程偏好，来源摘要和原始图片哈希已记录。设置详情图为真实滚动视口，部分更新按钮在视口下方，不拼接或伪造状态。
+
+2026-11-04 Codex takeover: `en/environment.png`, `en/settings.png`, `zh-CN/environment.png`, and `zh-CN/settings.png` refreshed from the actual Debug working snapshot (0.1.0 build 2026110401, baseline 0ba4e20 with uncommitted takeover changes). These capture the Environment SSH button and About section heading; offscreen values are not composited. Other images retain their original provenance and are described as historical in both READMEs. Final diagnostic state plumbing and isolated smoke harness changes do not change the pictured regions.

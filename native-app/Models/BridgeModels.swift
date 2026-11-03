@@ -66,7 +66,7 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
         case "FX_IDENTITY_UNVERIFIED": return NativeStrings.text("ui.330", language: language)
         case "FX_INSTANCE_MISMATCH": return NativeStrings.text("ui.351", language: language)
         case "FX_ENTRY_MISMATCH": return NativeStrings.text("ui.341", language: language)
-        case "SSH_CONNECTION_FAILED": return NativeStrings.text("ui.143", language: language)
+        case "SSH_CONNECTION_FAILED", "SSH_CONNECTION_REFUSED", "SSH_CONNECTION_TIMEOUT", "SSH_CONNECTION_UNREACHABLE", "SSH_PROTOCOL_ERROR", "SSH_GUEST_NOT_READY", "SSH_HOST_KEY_MISMATCH": return NativeStrings.text("ui.143", language: language)
         case "AUTH_REQUIRED":
             if details["credential_kind"]?.text == "sudo_password" { return NativeStrings.text("ui.333", language: language) }
             if details["credential_kind"]?.text == "passphrase" { return NativeStrings.text("ui.335", language: language) }

@@ -105,7 +105,7 @@ enum LaunchService {
         }
     }
 
-    static func hostIdentity(fx: URL, gvproxy: URL, transport: SSHTransport, context: CoreContext?) throws -> String {
+    static func hostIdentity(fx: URL, gvproxy: URL, transport: SSHTransport, context: CoreContext?, requireCDP: Bool = true) throws -> String {
         let rows = try processTable(context: context)
         let executable = normalizedExecutable(fx)
         let fxPID = try fxSupervisorPID(rows: rows, executable: executable)
@@ -128,14 +128,16 @@ enum LaunchService {
               URL(fileURLWithPath: masterRow.command).lastPathComponent == "ssh" else {
             throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("ssh_master_unverified")])
         }
-        let command = (try? CoreProcess.run("/bin/ps", ["-ww", "-p", String(master), "-o", "command="], timeout: 5, context: context))?.stdout ?? ""
-        let expectedForward = "127.0.0.1:\(transport.settings.cdpLocalPort):127.0.0.1:8080"
-        guard command.contains("-L \(expectedForward)") || command.contains("-L\(expectedForward)") else {
-            throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("cdp_forward_unverified")])
-        }
-        let cdp = try fileDescriptors(arguments: ["-nP", "-iTCP:\(transport.settings.cdpLocalPort)", "-sTCP:LISTEN", "-Fpn"], context: context)
-        guard Set(cdp.keys) == [master] else {
-            throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("cdp_listener_not_owned_by_master")])
+        if requireCDP {
+            let command = (try? CoreProcess.run("/bin/ps", ["-ww", "-p", String(master), "-o", "command="], timeout: 5, context: context))?.stdout ?? ""
+            let expectedForward = "127.0.0.1:\(transport.settings.cdpLocalPort):127.0.0.1:8080"
+            guard command.contains("-L \(expectedForward)") || command.contains("-L\(expectedForward)") else {
+                throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("cdp_forward_unverified")])
+            }
+            let cdp = try fileDescriptors(arguments: ["-nP", "-iTCP:\(transport.settings.cdpLocalPort)", "-sTCP:LISTEN", "-Fpn"], context: context)
+            guard Set(cdp.keys) == [master] else {
+                throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("cdp_listener_not_owned_by_master")])
+            }
         }
         let peers = try fileDescriptors(arguments: ["-nP", "-a", "-p", String(master), "-iTCP", "-sTCP:ESTABLISHED", "-Fpn"], context: context)
         let actual = (peers[master] ?? []).compactMap { $0.split(separator: "->").last.map(String.init) }

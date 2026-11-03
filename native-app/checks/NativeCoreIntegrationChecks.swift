@@ -64,6 +64,11 @@ struct NativeCoreIntegrationChecks {
         let launchNoFX = run("launch_game", ["confirmed": .bool(true), "fx_path": .string("")])
         ok(launchNoFX.error == "FX_UNAVAILABLE", "launch without FX selection fails closed")
 
+        let diagnosticNoFX = run("test_ssh", ["confirmed": .bool(true), "fx_path": .string("")])
+        ok(diagnosticNoFX.error == "FX_UNAVAILABLE", "SSH diagnostic never starts missing FX")
+        let staleDiagnostic = run("test_ssh", ["confirmed": .bool(true), "credential_revision": .string("stale")])
+        ok(staleDiagnostic.error == "CREDENTIAL_SCOPE_CHANGED", "SSH diagnostic rejects changed configuration even without a secret")
+
         // Real FX state is read-only and never starts a process. When a different
         // FX copy is running, the core must report that honestly instead of guessing.
         let fxState = run("check_fx_state", ["fx_path": .string("/Applications/FX Steam Launcher.app")])

@@ -98,7 +98,7 @@ actor NativeCoreService {
         do {
             try context.check()
             guard Set(params.keys).isSubset(of: allowedParams) else { throw CoreError("INVALID_ARGUMENT") }
-            if let revision = params["credential_revision"]?.text, !secrets.isEmpty {
+            if let revision = params["credential_revision"]?.text {
                 let (_, current) = try ConfigurationService.read()
                 guard current == revision else { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
             }
@@ -318,26 +318,70 @@ actor NativeCoreService {
                              context: context, emit: emit)
     }
 
+    /// Dedicated read-only connection diagnosis: no forwarding, sudo, Steam or game.
     static func testSSH(_ params: [String: JSONValue], context: CoreContext,
-                        emit: (String, String, [String: JSONValue]) -> Void) throws -> [String: JSONValue] {
-        let (configuration, _) = try ConfigurationService.read()
-        var settings = configuration["ssh"]?.object ?? [:]
-        settings["cdp_local_port"] = .number(19000 + Double(Int.random(in: 0..<900)))
-        var transport = SSHTransport.make(["ssh": .object(settings)])
-        transport = SSHTransport(settings: .init(host: transport.settings.host, port: transport.settings.port,
-                                                 username: transport.settings.username, auth: transport.settings.auth,
-                                                 identityFile: transport.settings.identityFile,
-                                                 cdpLocalPort: transport.settings.cdpLocalPort,
-                                                 rememberPassword: transport.settings.rememberPassword,
-                                                 socketPath: "/tmp/hd2fx-test-\(getuid())-\(UUID().uuidString.prefix(8)).sock"))
+                        emit: @escaping (String, String, [String: JSONValue]) -> Void) throws -> [String: JSONValue] {
+        let request = try launchRequest(params, context: context, emit: emit, confirmed: true)
+        let fx = try LaunchService.selectedFX(request)
+        let base = SSHTransport.make(request.configuration)
+        let transport = SSHTransport(settings: .init(host: base.settings.host, port: base.settings.port,
+            username: base.settings.username, auth: base.settings.auth, identityFile: base.settings.identityFile,
+            cdpLocalPort: base.settings.cdpLocalPort, rememberPassword: false,
+            socketPath: "/tmp/hd2fx-test-\(getuid())-\(UUID().uuidString.prefix(8)).sock"))
+        guard SSHTransport.localHost(transport.settings.host) else { throw CoreError("LOCAL_FX_REQUIRED") }
+        var result: [String: JSONValue] = ["host": .string(transport.settings.host),
+            "port": .number(Double(transport.settings.port)), "username": .string(transport.settings.username),
+            "authentication_method": .string(transport.settings.auth), "port_reachable": .string("unverified"),
+            "protocol": .string("unverified"), "authentication": .string("unverified"),
+            "guest_identity": .string("unverified")]
+        var stage = "CheckingFXEntry"
+        func progress(_ name: String) {
+            stage = name
+            emit("INFO", name, result.merging(["stage": .string(name)]) { _, new in new })
+        }
         defer { transport.closeMaster() }
-        try transport.connectOnce(context: context)
-        let result = try transport.run("printf 'HD2FX_SSH_OK\\n'\n", timeout: 15, context: context)
-        guard result.status == 0, result.stdout.contains("HD2FX_SSH_OK") else { throw CoreError("SSH_CONNECTION_FAILED") }
-        emit("INFO", "SSH authentication succeeded", ["kind": .string("credential_status"),
-                                                      "credential_kind": .string("ssh"), "status": .string("authenticated")])
-        return ["ssh": .string("authenticated"), "guest_python": .string("not_required"),
-                "game": .string("unverified"), "eac": .string("unverified"), "multiplayer": .string("unverified")]
+        do {
+            let host = try LaunchService.fxState(request: request, fx: fx)
+            result["fx_host_running"] = host["fx_host_running"] ?? .bool(false)
+            progress("CheckingSSHPort")
+            // OpenSSH supplies bounded port/protocol errors; avoid a second divergent socket implementation.
+            transport.setSecret(password: request.password, passphrase: request.passphrase)
+            progress("AuthenticatingSSH")
+            try transport.connectOnce(context: context, forwarding: false)
+            result["port_reachable"] = .bool(true)
+            result["protocol"] = .string("negotiated")
+            result["authentication"] = .string("authenticated")
+            // A fresh master only counts as password proof if our secret was challenged.
+            if transport.passwordWasSent {
+                emit("INFO", "SSH authenticated", ["kind": .string("credential_status"),
+                    "credential_kind": .string("ssh"), "status": .string("authenticated")])
+            }
+            progress("VerifyingGuestIdentity")
+            let before = try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!,
+                transport: transport, context: context, requireCDP: false)
+            let probe = try transport.run("id -un; cat /proc/sys/kernel/random/boot_id; grep '^ID=steamos$' /etc/os-release\n", timeout: 15, context: context)
+            let lines = probe.stdout.split(whereSeparator: \.isNewline).map(String.init)
+            guard probe.status == 0, lines.count == 3, lines[0] == transport.settings.username,
+                  UUID(uuidString: lines[1]) != nil, lines[2] == "ID=steamos" else { throw CoreError("SSH_GUEST_NOT_READY") }
+            let after = try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!,
+                transport: transport, context: context, requireCDP: false)
+            guard before == after else { throw CoreError("FX_IDENTITY_UNVERIFIED") }
+            result["guest_identity"] = .string("verified")
+            result["stage"] = .string("Complete")
+            return result
+        } catch let error as CoreError {
+            if ["AUTH_REQUIRED", "SSH_AUTH_FAILED"].contains(error.code) {
+                result["port_reachable"] = .bool(true); result["protocol"] = .string("negotiated")
+                stage = "AuthenticatingSSH"
+            } else if ["SSH_CONNECTION_REFUSED", "SSH_CONNECTION_TIMEOUT", "SSH_CONNECTION_UNREACHABLE"].contains(error.code) {
+                result["port_reachable"] = .bool(false); stage = "CheckingSSHPort"
+            } else if error.code == "SSH_HOST_KEY_MISMATCH" || error.code == "SSH_PROTOCOL_ERROR" {
+                stage = "NegotiatingSSH"
+            }
+            result["stage"] = .string(stage)
+            for (key, value) in error.details { result[key] = value }
+            throw CoreError(error.code, result)
+        }
     }
 
     static func testSudo(_ params: [String: JSONValue], context: CoreContext,
@@ -400,8 +444,10 @@ actor NativeCoreService {
             if method == "check_fx_state" { return host }
             stageEmit("WaitingForGuest", "running")
             let (session, state, plan) = try LaunchService.connect(request, fx: fx, transport: transport)
-            emit("INFO", "Guest identity verified", ["kind": .string("credential_status"),
-                                                     "credential_kind": .string("ssh"), "status": .string("authenticated")])
+            if transport.passwordWasSent {
+                emit("INFO", "Guest identity verified", ["kind": .string("credential_status"),
+                    "credential_kind": .string("ssh"), "status": .string("authenticated")])
+            }
             let connected: [String: JSONValue] = {
                 var value = host
                 value["ssh_connected"] = .bool(true)

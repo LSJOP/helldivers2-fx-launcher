@@ -26,15 +26,15 @@
     {
       "path": "docs/images/en/environment.png",
       "language": "en",
-      "sha256": "adedc4396c7d64e7cb6390f380c06abf0d218093783bb30da07a74160415b03a",
+      "sha256": "9583c8dcd1377d752760b340d718128a7aaf01e2f44997aebae337fd358af2e3",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-03T08:01:28Z",
+      "captured_at": "2026-11-03T19:43:15Z",
       "app_version": "0.1.0",
-      "app_build": "1",
+      "app_build": "2026110401",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.launchfix.en",
-      "review_scope": "Real target-language launch-resource UI; no runtime selected, credentials disabled; no FX/Guest actions",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.takeover",
+      "review_scope": "2026-11-04 takeover Debug working snapshot: real Environment SSH button and Settings About heading; no selected runtime or credentials. About offscreen rows separately checked during Release UI acceptance.",
       "viewport_note": "Real viewport; offscreen content is not composited"
     },
     {
@@ -96,15 +96,15 @@
     {
       "path": "docs/images/en/settings.png",
       "language": "en",
-      "sha256": "cc9f372d974b43ead1edabb79f36b6cbf77db1a1dd8185e0eface204eac97036",
+      "sha256": "55b9b44acf181afd720c14d68c652c306fad47b02712a40be6d5e7c89286f042",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-03T08:01:28Z",
+      "captured_at": "2026-11-03T19:43:15Z",
       "app_version": "0.1.0",
-      "app_build": "1",
+      "app_build": "2026110401",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.launchfix.en",
-      "review_scope": "Real target-language launch-resource UI; no runtime selected, credentials disabled; no FX/Guest actions",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.takeover",
+      "review_scope": "2026-11-04 takeover Debug working snapshot: real Environment SSH button and Settings About heading; no selected runtime or credentials. About offscreen rows separately checked during Release UI acceptance.",
       "viewport_note": "Real viewport; offscreen content is not composited"
     },
     {
@@ -138,15 +138,15 @@
     {
       "path": "docs/images/zh-CN/environment.png",
       "language": "zh-CN",
-      "sha256": "115fcf0281e1d5122dda083bc3719fd606d298ad2f3688c6fc5b0c06638178da",
+      "sha256": "ef161d2548338be161998a58e213953b39e412132ffd0b14e8b0872432487c0f",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-03T08:00:27Z",
+      "captured_at": "2026-11-03T19:43:42Z",
       "app_version": "0.1.0",
-      "app_build": "1",
+      "app_build": "2026110401",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.launchfix.zh-cn",
-      "review_scope": "Real target-language launch-resource UI; no runtime selected, credentials disabled; no FX/Guest actions",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.takeover",
+      "review_scope": "2026-11-04 takeover Debug working snapshot: real Environment SSH button and Settings About heading; no selected runtime or credentials. About offscreen rows separately checked during Release UI acceptance.",
       "viewport_note": "Real viewport; offscreen content is not composited"
     },
     {
@@ -208,15 +208,15 @@
     {
       "path": "docs/images/zh-CN/settings.png",
       "language": "zh-CN",
-      "sha256": "568d48f8db3a3bd0cb44234452bd4f4284af1f356eaaa85dc39dd49da7a5ada2",
+      "sha256": "eb3289ce56b4d62d8eae25b38112cc15e1c3c9d57c05989097c2fc4934b0dfea",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-03T08:00:27Z",
+      "captured_at": "2026-11-03T19:43:42Z",
       "app_version": "0.1.0",
-      "app_build": "1",
+      "app_build": "2026110401",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.launchfix.zh-cn",
-      "review_scope": "Real target-language launch-resource UI; no runtime selected, credentials disabled; no FX/Guest actions",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.takeover",
+      "review_scope": "2026-11-04 takeover Debug working snapshot: real Environment SSH button and Settings About heading; no selected runtime or credentials. About offscreen rows separately checked during Release UI acceptance.",
       "viewport_note": "Real viewport; offscreen content is not composited"
     },
     {
@@ -235,7 +235,8 @@
     }
   ],
   "missing_required_pages": [],
-  "reviewed_ui_source_sha256": "d19f6281974d19dc227ef71bc88e793f0b2063f063219a473dcde565d341e7f8",
+  "reviewed_ui_source_sha256": "13fb2836adb14d43e49275b7c24586501eb247a749a4b9d00b034830b340692d",
   "screenshots_status": "PENDING_RECAPTURE_AFTER_SWIFT_NATIVE_MIGRATION",
-  "screenshots_note": "Screenshots predate the Swift Native Core and the UI refinement; retained as layout reference only. No mock UI was generated."
+  "screenshots_note": "Screenshots predate the Swift Native Core and the UI refinement; retained as layout reference only. No mock UI was generated.",
+  "review_note": "2026-11-04: Environment and Settings en/zh-CN recaptured and visually reviewed. Other page captures remain historical; no layout changes to those pages in this takeover. Final diagnostic endpoint model and isolated smoke updates do not alter the visible captured page regions."
 }

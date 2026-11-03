@@ -4,9 +4,17 @@
 
 All notable changes to the HELLDIVERS 2 FX Launcher Native App are recorded here, newest first. Unreleased entries have no release date. This file is the single source of truth for user-facing release notes; the README summary, GitHub Release notes and the future Sparkle appcast reuse this reviewed text. Do not paste raw, unreviewed Git commit messages into it.
 
-No official release has been published yet. The current Native App version `0.1.0` (build `1`) is a development preview, not a downloadable package.
+No official release has been published yet. The current Native App version `0.1.0` (build `2026110401`) is a development preview, not a downloadable package.
 
 ## Unreleased
+
+### Added
+
+- Settings → About includes App/build/Core versions, full source commit, build timestamp and actual running path, with copy support. Environment includes read-only SSH diagnostics with effective endpoint, authentication and Guest identity stages.
+
+### Fixed
+
+- Correct duplicate OpenSSH executable in argv, establish the controlling terminal required for GUI password prompts, pass secure credentials to SSH diagnostics, and distinguish connection refusal, timeout, authentication, host-key and protocol failures. Preserve FX identity checks and host-key verification. Live Guest acceptance remains pending.
 
 ### Fixed
 

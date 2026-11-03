@@ -25,6 +25,7 @@ struct SettingsView: View {
                 Text(state.t("ui.270"))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
             }
+            BuildIdentityView(state: state)
             ConfigurationBackupView(state: state)
             CredentialManagementView(state: state, credentials: state.credentials, tasks: state.tasks)
             SoftwareUpdateView(manager: state.updates, language: state.languageCode)
@@ -196,6 +197,9 @@ struct LegacyOperationSheet: View {
                 }
                 if needsConsent {
                     Toggle(state.t("ui.153"), isOn: $confirmed)
+                }
+                if operation == "test_ssh" {
+                    SSHDiagnosisView(state: state)
                 }
                 if let error = state.operationError {
                     TacticalWarningBanner(text: error.message(state.languageCode), isError: true)
@@ -401,4 +405,71 @@ private struct ConfigurationBackupView: View {
 
 private extension Dictionary where Key == String, Value == JSONValue {
     var selfName: String { self["name"]?.text ?? "backup" }
+}
+
+/// Read only signed bundle resources, never the development checkout.
+struct BuildIdentityView: View {
+    @ObservedObject var state: AppState
+    private var metadata: [String: JSONValue] {
+        guard let url = Bundle.main.url(forResource: "BuildMetadata", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let result = try? JSONDecoder().decode([String: JSONValue].self, from: data) else { return [:] }
+        return result
+    }
+    private var rows: [(String, String)] {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let unknown = state.t("ui.368")
+        return [("ui.build.version", info["CFBundleShortVersionString"] as? String ?? unknown),
+                ("ui.build.number", info["CFBundleVersion"] as? String ?? unknown),
+                ("ui.build.commit", (metadata["commit"]?.text ?? unknown) + (metadata["source_dirty"]?.boolean == true ? " (DIRTY)" : "")),
+                ("ui.build.time", metadata["built_at"]?.text ?? unknown),
+                ("ui.build.core", metadata["core_version"]?.text ?? unknown),
+                ("ui.build.path", Bundle.main.bundleURL.path)]
+    }
+    var body: some View {
+        TacticalPanel(number: "i", title: state.t("ui.build.about"), symbol: "info.circle") {
+            ForEach(rows, id: \.0) { row in
+                TacticalInfoRow(title: state.t(row.0), value: row.1)
+            }
+            Button(state.t("ui.build.copy")) {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(rows.map { state.t($0.0) + ": " + $0.1 }.joined(separator: "\n"), forType: .string)
+            }
+        }
+    }
+}
+
+struct SSHDiagnosisView: View {
+    @ObservedObject var state: AppState
+    private var facts: [String: JSONValue] {
+        if !state.operationResult.isEmpty { return state.operationResult }
+        if let error = state.operationError { return error.details }
+        return state.operationEvents.last ?? [:]
+    }
+    private func value(_ field: String) -> String {
+        let itemValue = ["host", "port", "username"].contains(field) ? state.sshConnectionTarget[field] ?? facts[field] : facts[field]
+        guard let item = itemValue else { return state.t("ui.368") }
+        if let text = item.text {
+            if let stage = LaunchStage(rawValue: text) { return stage.title(state.languageCode) }
+            let keys = ["unverified": "ui.368", "negotiated": "ui.241", "authenticated": "ui.241", "verified": "ui.241",
+                        "Complete": "ui.071", "CheckingSSHPort": "ui.ssh.reachable", "AuthenticatingSSH": "ui.ssh.auth",
+                        "VerifyingGuestIdentity": "ui.ssh.identity", "NegotiatingSSH": "ui.ssh.protocol"]
+            return keys[text].map { state.t($0) } ?? text
+        }
+        if let number = item.integer { return String(number) }
+        if let flag = item.boolean { return state.t(flag ? "ui.241" : "ui.242") }
+        return state.t("ui.368")
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(state.t("ui.ssh.scope")).font(TacticalTypography.caption)
+            ForEach([("ui.ssh.fx", "fx_host_running"), ("ui.ssh.host", "host"),
+                     ("ui.ssh.port", "port"), ("ui.ssh.user", "username"),
+                     ("ui.ssh.reachable", "port_reachable"), ("ui.ssh.protocol", "protocol"),
+                     ("ui.ssh.auth", "authentication"), ("ui.ssh.identity", "guest_identity"),
+                     ("ui.ssh.stage", "stage")], id: \.0) { row in
+                TacticalInfoRow(title: state.t(row.0), value: value(row.1))
+            }
+        }
+    }
 }

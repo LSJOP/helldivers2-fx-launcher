@@ -44,6 +44,19 @@ ver=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist" 2>
 iconfile=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$plist" 2>/dev/null)
 [ "$iconfile" = "AppIcon" ] && ok "INFO.PLIST ICON REFERENCE" || bad "INFO.PLIST ICON REFERENCE"
 
+# Self-contained identity must describe a clean source snapshot and this bundle.
+if /usr/bin/python3 - "$APP" <<'PYMETA'
+import json,pathlib,plistlib,re,sys
+app=pathlib.Path(sys.argv[1])
+m=json.loads((app/'Contents/Resources/BuildMetadata.json').read_text())
+i=plistlib.loads((app/'Contents/Info.plist').read_bytes())
+assert re.fullmatch(r'[0-9a-f]{40}',m['commit'])
+assert m['version']==i['CFBundleShortVersionString'] and m['build']==i['CFBundleVersion']
+assert m['core_version'] and m['built_at']
+assert m['configuration']=='Release' and m['source_dirty'] is False
+PYMETA
+then ok "BUILD METADATA"; else bad "BUILD METADATA"; fi
+
 # Architecture and runtime dependencies.
 arch=$(/usr/bin/lipo -archs "$APP/Contents/MacOS/HD2FXNative" 2>/dev/null)
 [ "$arch" = "arm64" ] && ok "ARCHITECTURE arm64" || bad "ARCHITECTURE arm64 ($arch)"

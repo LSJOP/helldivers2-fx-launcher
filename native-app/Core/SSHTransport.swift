@@ -16,6 +16,7 @@ final class SSHTransport {
     }
 
     let settings: Settings
+    private(set) var passwordWasSent = false
     private(set) var password: String?
     private(set) var passphrase: String?
 
@@ -46,7 +47,7 @@ final class SSHTransport {
     }
 
     var commandPrefix: [String] {
-        ["/usr/bin/ssh", "-S", settings.socketPath, "-p", String(settings.port), "-l", settings.username,
+        ["-S", settings.socketPath, "-p", String(settings.port), "-l", settings.username,
          "-o", "ConnectTimeout=8", "-o", "StrictHostKeyChecking=accept-new",
          "-o", "NumberOfPasswordPrompts=1"]
     }
@@ -95,19 +96,43 @@ final class SSHTransport {
         return Int(digits)
     }
 
-    func connectOnce(context: CoreContext? = nil) throws {
+    /// macOS script uses forkpty/login_tty. Process + openpty alone does not
+    /// supply /dev/tty to OpenSSH when launched from Finder/LaunchServices.
+    static func interactiveCommand(_ arguments: [String], executable: String = "/usr/bin/ssh") -> (String, [String]) {
+        ("/usr/bin/script", ["-q", "/dev/null", executable] + arguments)
+    }
+
+    static func failureCode(_ output: String, timedOut: Bool = false) -> String {
+        let text = output.lowercased()
+        if text.contains("host identification has changed") || text.contains("host key verification failed") { return "SSH_HOST_KEY_MISMATCH" }
+        if text.contains("address already in use") || text.contains("cannot listen to port") { return "SSH_LOCAL_PORT_BUSY" }
+        if text.contains("connection refused") { return "SSH_CONNECTION_REFUSED" }
+        if timedOut || text.contains("connection timed out") || text.contains("operation timed out") { return "SSH_CONNECTION_TIMEOUT" }
+        if text.contains("permission denied") || text.contains("authentication failed") { return "SSH_AUTH_FAILED" }
+        if text.contains("could not resolve hostname") || text.contains("no route to host") { return "SSH_CONNECTION_UNREACHABLE" }
+        return "SSH_PROTOCOL_ERROR"
+    }
+
+    func connectOnce(context: CoreContext? = nil, forwarding: Bool = true) throws {
         if masterPID(context: context) != nil { return }
         var arguments = commandPrefix + authArguments
         arguments += ["-M", "-N", "-f", "-o", "ControlMaster=yes", "-o", "ExitOnForwardFailure=yes",
-                      "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=3",
-                      "-L", "127.0.0.1:\(settings.cdpLocalPort):127.0.0.1:8080", settings.host]
+                      "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=3"]
+        arguments += forwarding ? ["-L", "127.0.0.1:\(settings.cdpLocalPort):127.0.0.1:8080"] : ["-o", "ClearAllForwardings=yes"]
+        arguments.append(settings.host)
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-        process.arguments = arguments
+        let command = Self.interactiveCommand(arguments)
+        process.executableURL = URL(fileURLWithPath: command.0)
+        process.arguments = command.1
         process.environment = ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "LANG": "en_US.UTF-8"]
         var masterFD: Int32 = 0, slaveFD: Int32 = 0
         var size = winsize(ws_row: 40, ws_col: 120, ws_xpixel: 0, ws_ypixel: 0)
         guard openpty(&masterFD, &slaveFD, nil, nil, &size) == 0 else { throw CoreError("SSH_UNAVAILABLE") }
+        var terminal = termios()
+        if tcgetattr(slaveFD, &terminal) == 0 {
+            terminal.c_lflag &= ~tcflag_t(ECHO | ECHONL)
+            _ = tcsetattr(slaveFD, TCSANOW, &terminal)
+        }
         let slave = FileHandle(fileDescriptor: slaveFD, closeOnDealloc: false)
         process.standardInput = slave
         process.standardOutput = slave
@@ -119,6 +144,10 @@ final class SSHTransport {
         var buffer = Data()
         var sent = false
         var exited = false
+        // All early exits close the PTY, terminating the script-owned SSH session.
+        defer {
+            if process.isRunning { process.terminate() }
+        }
         while CoreClock.monotonic < deadline {
             if context?.isCancelled == true { process.terminate(); throw CoreError("CANCELLED") }
             var descriptor = pollfd(fd: masterFD, events: Int16(POLLIN), revents: 0)
@@ -144,10 +173,14 @@ final class SSHTransport {
                 let payload = Array((value + "\n").utf8)
                 _ = payload.withUnsafeBytes { write(masterFD, $0.baseAddress, payload.count) }
                 sent = true
+                passwordWasSent = true
             } else if !sent, text.contains("passphrase for key") {
                 guard let value = passphrase else {
                     process.terminate()
                     throw CoreError("AUTH_REQUIRED", ["credential_kind": .string("passphrase")])
+                }
+                guard !value.contains("\n"), !value.contains("\r") else {
+                    process.terminate(); throw CoreError("SSH_AUTH_FAILED")
                 }
                 let payload = Array((value + "\n").utf8)
                 _ = payload.withUnsafeBytes { write(masterFD, $0.baseAddress, payload.count) }
@@ -160,24 +193,16 @@ final class SSHTransport {
             while process.isRunning && CoreClock.monotonic < grace { Thread.sleep(forTimeInterval: 0.01) }
             if process.isRunning { kill(process.processIdentifier, SIGKILL) }
             process.waitUntilExit()
-            throw CoreError("SSH_CONNECTION_FAILED")
+            throw CoreError(Self.failureCode(String(decoding: buffer, as: UTF8.self), timedOut: true))
         }
         process.waitUntilExit()
-        let text = String(decoding: buffer, as: UTF8.self).lowercased()
-        if text.contains("host identification has changed") {
-            throw CoreError("SSH_HOST_KEY_CHANGED")
-        }
-        if text.contains("address already in use") || text.contains("cannot listen to port") {
-            throw CoreError("SSH_LOCAL_PORT_BUSY")
-        }
+        let text = String(decoding: buffer, as: UTF8.self)
         guard process.terminationStatus == 0 else {
-            if sent || text.contains("permission denied") {
-                password = nil
-                throw CoreError("SSH_AUTH_FAILED")
-            }
-            throw CoreError("SSH_CONNECTION_FAILED")
+            let code = Self.failureCode(text)
+            if code == "SSH_AUTH_FAILED" { password = nil; passphrase = nil }
+            throw CoreError(code)
         }
-        guard masterPID(context: context) != nil else { throw CoreError("SSH_CONNECTION_FAILED") }
+        guard masterPID(context: context) != nil else { throw CoreError("SSH_PROTOCOL_ERROR") }
     }
 
     func setSecret(password: String?, passphrase: String?) {
@@ -191,7 +216,7 @@ final class SSHTransport {
                          "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", settings.host, "sh", "-s"]
         let result = try CoreProcess.run("/usr/bin/ssh", arguments, input: script, timeout: timeout, context: context)
         if result.timedOut { throw CoreError("TIMEOUT") }
-        if result.status == 255 { throw CoreError("SSH_CONNECTION_FAILED") }
+        if result.status == 255 { throw CoreError(Self.failureCode(result.stderr)) }
         return result
     }
 

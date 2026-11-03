@@ -27,6 +27,9 @@ struct EnvironmentView: View {
         VStack(alignment: .leading, spacing: 20) {
             TacticalPageHeader(title: state.t("ui.108"), refreshState: state)
             GUIOperationsPanel(state: state, tasks: state.tasks)
+            TacticalButton(title: state.t("ui.ssh.test"), symbol: "network", disabledReason: state.tasks.busy ? state.t("ui.016") : nil) {
+                state.operationSelection = NativeOperation(method: "test_ssh")
+            }
             TacticalAdaptiveLayout(minimumWidth: 140, maximumColumns: 4) {
                 TacticalMetric(title: "macOS", value: state.value("get_system_info", "os_version"), symbol: "apple.logo")
                 TacticalMetric(title: state.t("ui.026"), value: state.value("get_system_info", "arch"), symbol: "cpu")

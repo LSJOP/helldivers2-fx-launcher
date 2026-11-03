@@ -115,6 +115,7 @@ final class AppState: ObservableObject {
     @Published private(set) var performanceSnapshot: [String: JSONValue] = [:]
     @Published private(set) var guiRecords: [String: GUIOperationRecord] = [:]
     @Published private(set) var guiSnapshots: [String: [String: JSONValue]] = [:]
+    @Published private(set) var sshConnectionTarget: [String: JSONValue] = [:]
     @Published private(set) var operationResult: [String: JSONValue] = [:]
     @Published private(set) var operationError: ErrorState?
     @Published private(set) var operationEvents: [[String: JSONValue]] = []
@@ -152,7 +153,7 @@ final class AppState: ObservableObject {
             do {
                 var input = params.filter { !["password","passphrase","sudo_password"].contains($0.key) }
                 if !selectedRoot.isEmpty { input["runtime_root"] = .string(selectedRoot) }
-                if ["launch_game", "preflight_launch", "observe_launch", "connect_fx", "inspect_guest_environment", "check_fx_state", "start_fx", "start_steam"].contains(method) {
+                if ["launch_game", "preflight_launch", "observe_launch", "connect_fx", "inspect_guest_environment", "check_fx_state", "start_fx", "start_steam", "test_ssh"].contains(method) {
                     input.merge(launchParameters) { _, selected in selected }
                 }
                 if let note = input["note"]?.text { input["note"] = .string(redactor.text(note)) }
@@ -160,6 +161,11 @@ final class AppState: ObservableObject {
                 if ["launch_game","test_ssh","test_guest_sudo","connect_fx","inspect_guest_environment","start_steam","inspect_guest","apply_performance","save_network_snapshot"].contains(method) {
                     let metadata = try await self.core.request("read_configuration")
                     guard let revision = metadata.result["revision"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
+                    if method == "test_ssh" {
+                        let ssh = metadata.result["configuration"]?.object["ssh"]?.object ?? [:]
+                        self.sshConnectionTarget = ["host": ssh["host"] ?? .null, "port": ssh["port"] ?? .null,
+                                                    "username": ssh["username"] ?? .null]
+                    }
                     await self.credentials.prepare(for: selectedRoot + "|" + revision)
                     input.merge(try self.credentials.parameters(for: selectedRoot + "|" + revision)) { _, new in new }
                     redactor = self.credentials.redactor

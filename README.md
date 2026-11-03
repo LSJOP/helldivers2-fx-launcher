@@ -28,6 +28,8 @@ A fully native **SwiftUI + AppKit** app with a **Swift Native Core**: launch the
 
 ## Screenshots
 
+**Native takeover preview:** Guest SSH now uses a controlling terminal and corrected OpenSSH arguments, with a dedicated read-only **Test Guest SSH connection** action in Environment. Enter credentials only in App secure fields. Settings → About displays bundled build identity and can copy it. Live Guest password authentication and gameplay still require user acceptance; isolated checks are not live validation. Environment and Settings screenshots were refreshed from the real Debug App on 2026-11-04; offscreen About values are checked separately during Release acceptance. Other screenshots remain historical previews.
+
 Screenshots were captured before the Swift Native Core redesign. They remain as layout reference and are marked **pending recapture** in `docs/images/manifest.json`; current labels and status text may differ.
 
 [![Dashboard](docs/images/en/dashboard.png)](docs/images/en/dashboard.png)
@@ -54,7 +56,7 @@ Screenshots were captured before the Swift Native Core redesign. They remain as 
 </details>
 
 
-Eight English screenshots captured from the current real Native Debug App (0.1.0, build 1) on 2026-11-03, with read-only host metadata. Pixels are unmodified; no UI/status was composited. Scrolled views show performance actions and software update. Capture copies isolate App preferences and disable credential autoload; no FX/Guest action or configuration write was performed. Supplied artwork is rendered inside the real App. Screenshots do not prove gameplay, performance gains or installation readiness. [Capture provenance and limitations](docs/images/README.md).
+Eight English screenshots from the real Native Debug App: Environment and Settings were refreshed on 2026-11-04 (0.1.0, build 2026110401); the other six are historical captures from 2026-11-03 (build 1). All use read-only host metadata. Pixels are unmodified; no UI/status was composited. Scrolled views show performance actions and software update. Capture copies isolate App preferences and disable credential autoload; no FX/Guest action or configuration write was performed. Supplied artwork is rendered inside the real App. Screenshots do not prove gameplay, performance gains or installation readiness. [Capture provenance and limitations](docs/images/README.md).
 
 <a id="en-features"></a>
 
