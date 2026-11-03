@@ -100,9 +100,9 @@ EXTERNAL PYTHON DEPENDENCY: NONE (runtime/app bundle; dev scripts optional)
 EXTERNAL SCRIPT DEPENDENCY: NONE
 FX AUTO DISCOVERY: PASS
 FX MULTI-VERSION SUPPORT: PASS (1.9.4 / 1.9.8 identity; live launch unverified)
-CPU CONFIGURATION: PASS (isolated; live write UNVERIFIED)
-MEMORY CONFIGURATION: PASS (isolated; live write UNVERIFIED)
-VULKAN CONFIGURATION: PASS (isolated; live write UNVERIFIED)
+CPU CONFIGURATION: PASS (isolated + real-domain read; live write UNVERIFIED)
+MEMORY CONFIGURATION: PASS (isolated + real-domain read; live write UNVERIFIED)
+VULKAN CONFIGURATION: PASS (isolated + real-domain read; live write UNVERIFIED)
 ONE-CLICK APPLY: PASS (isolated; live write UNVERIFIED)
 ONE-CLICK RESTORE: PASS (isolated; live restore UNVERIFIED)
 RESOURCE INTEGRITY: PASS
