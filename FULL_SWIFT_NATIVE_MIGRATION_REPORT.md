@@ -76,7 +76,11 @@ Sparkle 2.10.1 remains embedded and unmodified. No Developer ID identity, notari
 Both READMEs now describe the Swift Native Core, remove Python/legacy-directory requirements and mark pre-migration screenshots as pending recapture (manifest updated). CHANGELOGs list migration changes and known issues.
 
 ## 17. Git commits and PR
-Commit `bf4e7eb` on `feature/full-swift-native-migration` (isolated worktree). Push and PR are **BLOCKED by the environment**: all HTTPS Git operations fail with `LibreSSL SSL_connect: SSL_ERROR_SYSCALL` (direct and via the local proxy), although `gh api` works. No force-push or history rewrite was attempted; the branch remains local.
+- `bf4e7eb` — feat(native): replace Python bridge with Swift Native Core.
+- `918ead9` — docs: record push blocker and final artifact hash (superseded by this entry).
+- Branch pushed to `origin/feature/full-swift-native-migration`; PR **#3**: https://github.com/LSJOP/helldivers2-fx-launcher/pull/3
+- Push note: the DNS-selected GitHub edge (`20.205.243.166`) fails the TLS handshake from this host, while alternate GitHub edges work. The push therefore used a per-command `http.curloptResolve=github.com:443:140.82.112.3`; hostname/certificate verification stayed enabled, no global Git configuration, `/etc/hosts`, or history rewrite was performed.
+- `main` was not modified locally or remotely; no force-push, tag or release was created.
 
 ## 18. Final App path
 `/Volumes/Thunderbolt2TB/HD2-App-Builds/Latest/HD2FXNative.app` after validation; historical copies under `Releases/`.
@@ -111,7 +115,7 @@ AUTOMATED TESTS: PASS
 DEBUG BUILD: PASS
 RELEASE BUILD: PASS (ad-hoc signed; not notarized)
 APP STARTUP: VERIFIED
-GIT STATUS: local commit bf4e7eb; push/PR BLOCKED by network (SSL_ERROR_SYSCALL); main untouched
+GIT STATUS: pushed to origin/feature/full-swift-native-migration; PR #3 open; main untouched
 FINAL APP PATH: /Volumes/Thunderbolt2TB/HD2-App-Builds/Latest/HD2FXNative.app
 OVERALL STATUS: PARTIAL (implementation complete; live launch/multiplayer and distribution unverified)
 ```
