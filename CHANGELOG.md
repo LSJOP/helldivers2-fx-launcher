@@ -8,6 +8,11 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+### Changed
+
+- Replace the tall global FX info block with a compact FX status bar (name, version, detected/running state, Manage FX) and move path, gvproxy, SHA-256 and preflight diagnostics into FX Manager → Details & resource verification. Remove the duplicated FX version/path/status from the Dashboard runtime card and reorder the page around the hero and launch actions.
+
+
 ### Fixed
 
 - Repair `PROTOCOL_ERROR · get_logs`: the native core now reports the `native_core_session` log source that the UI validates, and environment detection runs per method so one failed probe no longer blanks macOS/architecture/native-runtime and every other panel.

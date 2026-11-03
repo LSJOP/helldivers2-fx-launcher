@@ -2,7 +2,7 @@
   "schema": 1,
   "source_base_commit": "19d55ba",
   "source_integration": "fix/native-launch-resources-20261103; current UI source with shared resource diagnostics",
-  "ui_source_sha256": "9a2d6d284b7071e615dab4eb5eb7d54cd80f1f7c54fcc1036239b6b2c1dd7d04",
+  "ui_source_sha256": "df6fe0b27c25e3a44b1037684eddc485a1b87d1968fe2986500edb89a9855b81",
   "capture_method": "macOS screencapture of real App window IDs",
   "pixel_processing": "none",
   "timezone": "Asia/Shanghai",
@@ -235,7 +235,7 @@
     }
   ],
   "missing_required_pages": [],
-  "reviewed_ui_source_sha256": "9a2d6d284b7071e615dab4eb5eb7d54cd80f1f7c54fcc1036239b6b2c1dd7d04",
+  "reviewed_ui_source_sha256": "df6fe0b27c25e3a44b1037684eddc485a1b87d1968fe2986500edb89a9855b81",
   "screenshots_status": "PENDING_RECAPTURE_AFTER_SWIFT_NATIVE_MIGRATION",
-  "screenshots_note": "Screenshots predate the Swift Native Core and the regression repair; retained as layout reference only. README states they are pending recapture. No mock UI was generated."
+  "screenshots_note": "Screenshots predate the Swift Native Core and the UI refinement; retained as layout reference only. No mock UI was generated."
 }

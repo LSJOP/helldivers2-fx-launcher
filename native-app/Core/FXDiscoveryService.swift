@@ -71,6 +71,7 @@ enum FXDiscoveryService {
         let path: String
         let name: String
         let version: String
+        let bundleIdentifier: String
         let executable: URL
         let valid: Bool
     }
@@ -97,7 +98,9 @@ enum FXDiscoveryService {
         let version = (plist["CFBundleShortVersionString"] as? String) ?? "unknown"
         let valid = bundleIdentifier == "es.fxgam.steamac"
         return Identity(path: app.path, name: app.lastPathComponent,
-                        version: valid ? version : "unknown", executable: executable, valid: valid)
+                        version: valid ? version : "unknown",
+                        bundleIdentifier: bundleIdentifier ?? "unknown",
+                        executable: executable, valid: valid)
     }
 
     static func candidate(_ identity: Identity) -> [String: JSONValue] {
@@ -105,6 +108,7 @@ enum FXDiscoveryService {
         let location = parent == "/Applications" ? "/Applications" : parent.hasPrefix(CoreFS.home().path) ? "~/Applications" : parent
         return ["path": .string(identity.path), "name": .string(identity.name),
                 "version": .string(identity.version),
+                "bundle_identifier": .string(identity.bundleIdentifier),
                 "structure": .string(identity.valid ? "metadata_valid" : "unverified"),
                 "identity_valid": .bool(identity.valid),
                 "location": .string(location),

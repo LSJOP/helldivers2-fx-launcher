@@ -10,7 +10,7 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 210, ideal: 210, max: 250)
         } detail: {
             VStack(alignment: .leading, spacing: 16) {
-                RuntimeTargetPanel(state: state, tasks: tasks)
+                FXStatusBar(state: state, tasks: tasks)
                 if let error = state.error, state.selection != .dashboard {
                     Label(error.message(state.languageCode), systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red).textSelection(.enabled)

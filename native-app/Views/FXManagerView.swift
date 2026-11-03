@@ -45,6 +45,7 @@ struct FXManagerView: View {
                     }
                 }
             }
+            FXTechnicalDetails(state: state, tasks: state.tasks)
             DisclosureGroup(state.t("ui.095")) { LegacyOperationsView(state: state, scope: "fx") }
             TacticalPanel(number: "i", title: state.t("ui.163"), symbol: "info.circle") {
                 Text(state.t("ui.257"))

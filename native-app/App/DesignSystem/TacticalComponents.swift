@@ -53,6 +53,135 @@ struct RuntimeTargetPanel: View {
     }
 }
 
+/// Compact global FX status bar: identity, install state, run state, manage entry.
+/// Technical details (path, gvproxy, SHA-256, manifest) live in FX Manager, not here.
+struct FXStatusBar: View {
+    @ObservedObject var state: AppState
+    @ObservedObject var tasks: TaskManager
+    @Environment(\.colorScheme) private var scheme
+    private var c: TacticalColors { TacticalColors(scheme: scheme) }
+
+    private var detected: (text: String, tone: TacticalTone) {
+        state.fxSelection.selected == nil
+            ? (state.t("ui.fx.statusNotDetected"), .neutral)
+            : (state.t("ui.fx.statusDetected"), .success)
+    }
+    private var running: (text: String, tone: TacticalTone) {
+        let recent = state.guiRecords.values
+            .filter { ["start_fx", "launch_game", "check_fx_state", "connect_fx"].contains($0.method) }
+            .max { $0.startedAt < $1.startedAt }
+        if let recent, recent.status == .running { return (state.t("ui.fx.statusStarting"), .checking) }
+        if let recent, recent.status == .failed { return (state.t("ui.fx.statusFailed"), .error) }
+        switch state.latestGUIEvidence["fx_host_running"]?.boolean {
+        case .some(true): return (state.t("ui.fx.statusRunning"), .success)
+        case .some(false): return (state.t("ui.fx.statusNotRunning"), .neutral)
+        case .none: return (state.t("ui.fx.statusUnknown"), .neutral)
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "shippingbox").font(.title3.weight(.semibold)).foregroundStyle(c.accent)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(state.t("ui.fx.title")).font(TacticalTypography.body.weight(.semibold)).foregroundStyle(c.text).lineLimit(1)
+                HStack(spacing: 8) {
+                    if state.fxVersion != "unknown" {
+                        Text(state.fxVersion).font(TacticalTypography.caption).foregroundStyle(c.muted)
+                    }
+                    Text(state.t("ui.fx.launchUnverified")).font(TacticalTypography.caption).foregroundStyle(c.muted).lineLimit(1)
+                }
+            }
+            Spacer(minLength: 8)
+            TacticalStatusBadge(text: detected.text, tone: detected.tone)
+            TacticalStatusBadge(text: running.text, tone: running.tone)
+            Button { state.selection = .fx } label: {
+                HStack(spacing: 3) {
+                    Text(state.t("ui.fx.manage")).font(TacticalTypography.caption.weight(.semibold))
+                    Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                }.foregroundStyle(c.accent)
+            }.buttonStyle(.plain).accessibilityIdentifier("fx.status.manage")
+        }
+        .padding(.vertical, 8).padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(c.panel)
+        .overlay(Rectangle().stroke(c.line, lineWidth: 1))
+        .accessibilityIdentifier("fx.status.bar")
+    }
+}
+
+/// Full FX diagnostics, relocated from the Dashboard top into FX Manager.
+struct FXTechnicalDetails: View {
+    @ObservedObject var state: AppState
+    @ObservedObject var tasks: TaskManager
+    private var selected: [String: JSONValue] { state.fxSelection.selected ?? [:] }
+
+    private var resourceRows: [JSONValue] {
+        state.targetInspection["resource_files"]?.array ?? LaunchResources.report()["resource_files"]?.array ?? []
+    }
+    private var resourceState: String {
+        let stateText = LaunchResources.gvproxyState().state
+        switch stateText {
+        case "ready": return state.t("ui.130")
+        case "missing": return state.t("ui.209")
+        case "hash_mismatch": return state.t("ui.fx.statusFailed")
+        default: return state.t("ui.041")
+        }
+    }
+    private var preflightText: String {
+        if let error = state.targetInspectionError { return error.code }
+        if state.targetInspection["archive_files_match"]?.boolean == true { return state.t("ui.190") }
+        if !state.targetInspection.isEmpty { return state.t("ui.fx.statusFailed") }
+        return state.t("ui.208")
+    }
+
+    var body: some View {
+        TacticalPanel(number: "FX", title: state.t("ui.fx.details"), symbol: "info.circle") {
+            TacticalSectionHeader(number: "A", title: state.t("ui.fx.details.basic"), symbol: "shippingbox")
+            if selected.isEmpty {
+                Text(state.t("ui.fx.none")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+            } else {
+                TacticalInfoRow(title: state.t("ui.019"), value: selected["name"]?.text ?? state.t("ui.366"))
+                TacticalInfoRow(title: state.t("ui.fx.version"), value: state.fxVersion)
+                TacticalInfoRow(title: state.t("ui.fx.bundleId"), value: selected["bundle_identifier"]?.text ?? state.t("ui.366"))
+                TacticalInfoRow(title: state.t("ui.132"), value: selected["path"]?.text ?? state.t("ui.366"))
+                TacticalInfoRow(title: state.t("ui.102"), value: selected["location"]?.text ?? state.t("ui.366"))
+                TacticalInfoRow(title: state.t("ui.324"),
+                                value: selected["structure"]?.text == "metadata_valid" ? state.t("ui.190") : state.t("ui.368"))
+                TacticalInfoRow(title: state.t("ui.fx.fileState"),
+                                value: selected["identity_valid"]?.boolean == true ? state.t("ui.130") : state.t("ui.209"))
+            }
+            TacticalDivider()
+            TacticalSectionHeader(number: "B", title: state.t("ui.fx.details.resources"), symbol: "shippingbox")
+            ForEach(Array(resourceRows.enumerated()), id: \.offset) { _, row in
+                let name = row.object["file"]?.text ?? "—"
+                let actual = row.object["actual_sha256"]?.text ?? ""
+                let stateText = row.object["state"]?.text ?? "unknown"
+                TacticalInfoRow(title: name,
+                                value: stateText == "match" || stateText == "ready"
+                                    ? state.t("ui.190")
+                                    : stateText == "hash_mismatch" || stateText == "invalid"
+                                        ? state.t("ui.fx.statusFailed")
+                                        : stateText == "missing" ? state.t("ui.209") : state.t("ui.041"))
+                if !actual.isEmpty {
+                    Text(actual).font(TacticalTypography.log).foregroundStyle(.secondary).textSelection(.enabled).lineLimit(1)
+                }
+            }
+            TacticalDivider()
+            TacticalSectionHeader(number: "C", title: state.t("ui.fx.details.compat"), symbol: "checklist")
+            TacticalInfoRow(title: state.t("ui.fx.entryPoint"),
+                            value: state.targetInspection["fx_executable_present"]?.boolean == true ? state.t("ui.130") : state.t("ui.208"))
+            TacticalInfoRow(title: state.t("ui.fx.preflight"), value: preflightText)
+            if let error = state.targetInspectionError {
+                Text(error.message(state.languageCode)).font(TacticalTypography.caption).foregroundStyle(.red)
+            }
+            Text(state.t("ui.ux.scope")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+            TacticalButton(title: state.t("ui.262"), symbol: "arrow.clockwise", primary: false,
+                           disabledReason: tasks.busy ? state.t("ui.016") : nil) { state.inspectTargetIfNeeded(force: true) }
+        }
+    }
+}
+
 struct TacticalDivider: View {
     @Environment(\.colorScheme) private var scheme
     var body: some View { Rectangle().fill(TacticalColors(scheme: scheme).line).frame(height: 1) }
