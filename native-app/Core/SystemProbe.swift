@@ -118,7 +118,7 @@ enum DependencyProbe {
         let fxExecutable = selectedFX?.appendingPathComponent("Contents/MacOS/steamac-vm")
         let fxState: String
         if let fxExecutable, CoreFS.isRegularExecutable(fxExecutable) {
-            fxState = integrity?["state"]?.text == "verified" ? "ready" : "unverified"
+            fxState = integrity.map(FXDiscoveryService.launchAllowed) == true ? "ready" : "unverified"
         } else {
             fxState = selectedFX == nil ? "missing" : "invalid"
         }

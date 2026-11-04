@@ -267,9 +267,10 @@ import ApplicationServices
             guard let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
             var files: [String] = []
             let pages: [(Page, String)] = [(.dashboard,"dashboard"),(.environment,"environment"),(.fx,"fx-manager"),(.performance,"performance"),(.logs,"logs"),(.settings,"settings"),(.setup,"first-run-setup")]
-            for (page, name) in pages {
+            let capturePages = ProcessInfo.processInfo.arguments.contains("--fx-only") ? pages.filter { $0.0 == .fx } : pages
+            for (page, name) in capturePages {
                 state.selection = page
-                window.setContentSize(NSSize(width: 1180, height: page == .fx ? 700 : 850))
+                window.setContentSize(NSSize(width: 1180, height: page == .fx ? (ProcessInfo.processInfo.arguments.contains("--fx-only") ? 1100 : 700) : 850))
                 try await Task.sleep(nanoseconds: 700_000_000)
                 window.contentView?.layoutSubtreeIfNeeded()
                 if language == "en", let root = window.contentView {
