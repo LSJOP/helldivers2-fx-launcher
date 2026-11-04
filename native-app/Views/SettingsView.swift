@@ -279,13 +279,10 @@ private struct CredentialInputFields: View {
         DisclosureGroup(state.t("ui.084"), isExpanded: $expanded) {
             VStack(alignment: .leading, spacing: 10) {
                 SecureField(state.t("ui.305"), text: $credentials.password)
-                Toggle(state.t("ui.268"), isOn: Binding(get: { credentials.rememberSSH }, set: { credentials.setRemember(.ssh, $0) }))
                 SecureField(state.t("ui.168"), text: $credentials.passphrase)
                 SecureField(state.t("ui.304"), text: $credentials.sudoPassword)
-                Toggle(state.t("ui.267"), isOn: Binding(get: { credentials.rememberSudo }, set: { credentials.setRemember(.sudo, $0) }))
-                Text(state.t("ui.307"))
+                Text(state.t("ui.setup.credentials"))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
-                CredentialVaultNotice(state: state, credentials: credentials)
                 Button(state.t("ui.067")) { credentials.clear() }
             }.padding(.top, 8).disabled(tasks.busy)
         }
@@ -293,23 +290,6 @@ private struct CredentialInputFields: View {
         .onChange(of: state.operationError?.code) { if needsInput { expanded = true } }
     }
     private var needsInput: Bool { ["AUTH_REQUIRED","SSH_AUTH_FAILED","SUDO_AUTH_FAILED"].contains(state.operationError?.code ?? "") }
-}
-
-private struct CredentialVaultNotice: View {
-    @ObservedObject var state: AppState
-    @ObservedObject var credentials: SessionCredentialManager
-    var body: some View {
-        if let error = credentials.vaultError {
-            Text(message(error)).font(TacticalTypography.caption).foregroundStyle(.orange)
-        }
-    }
-    private func message(_ error: CredentialVaultError) -> String {
-        switch error {
-        case .locked: return state.t("ui.343")
-        case .permission: return state.t("ui.169")
-        default: return state.t("ui.299")
-        }
-    }
 }
 
 private struct CredentialManagementView: View {
@@ -320,7 +300,7 @@ private struct CredentialManagementView: View {
     @State private var clearAll = false
     var body: some View {
         TacticalPanel(number: "K", title: state.t("ui.083"), symbol: "key") {
-            Text(state.t("ui.189"))
+            Text(state.t("ui.setup.credentials"))
                 .font(TacticalTypography.caption).foregroundStyle(.secondary)
             ForEach(CredentialKind.allCases, id: \.self) { kind in
                 VStack(alignment: .leading, spacing: 8) {
@@ -334,23 +314,20 @@ private struct CredentialManagementView: View {
                     }
                 }
             }
-            CredentialVaultNotice(state: state, credentials: credentials)
-            Button(state.t("ui.028")) { Task { await state.prepareCredentials(interactive: true) } }
-            Button(state.t("ui.065")) { clearAll = true }
+            Button(state.t("ui.067")) { clearAll = true }
         }
         .disabled(tasks.busy)
         .task(id: state.runtimeRoot) { if !tasks.busy { await state.prepareCredentials() } }
         .confirmationDialog(state.t("ui.068"), isPresented: Binding(get: { clearing != nil }, set: { if !$0 { clearing = nil } })) {
             if let kind = clearing { Button(state.t("ui.074"), role: .destructive) { Task { await credentials.remove(kind) }; clearing = nil } }
         }
-        .confirmationDialog(state.t("ui.063"), isPresented: $clearAll) {
-            Button(state.t("ui.064"), role: .destructive) { Task { await credentials.removeAll() } }
+        .confirmationDialog(state.t("ui.067"), isPresented: $clearAll) {
+            Button(state.t("ui.067"), role: .destructive) { Task { await credentials.removeAll() } }
         }
     }
     private func status(_ kind: CredentialKind) -> String {
-        if credentials.vaultError != nil { return state.t("ui.042") }
         if credentials.rejected.contains(kind) { return state.t("ui.027") }
-        return credentials.saved.contains(kind) ? state.t("ui.296") : state.t("ui.215")
+        return credentials.reusable(kind) ? state.t("ui.241") : state.t("ui.215")
     }
 }
 

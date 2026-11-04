@@ -1,11 +1,12 @@
 import SwiftUI
 
 enum Page: String, CaseIterable, Identifiable {
-    case dashboard, environment, fx, performance, logs, settings
+    case dashboard, environment, fx, performance, logs, settings, setup
     var id: String { rawValue }
     var menuTitle: String { title("en") }
     var symbol: String {
         switch self {
+        case .setup: return "checklist"
         case .dashboard: return "square.grid.2x2"
         case .environment: return "desktopcomputer"
         case .fx: return "shippingbox"
@@ -17,6 +18,7 @@ enum Page: String, CaseIterable, Identifiable {
     func title(_ zh: Bool) -> String { title(zh ? "zh-CN" : "en") }
     func title(_ language: String) -> String {
         switch self {
+        case .setup: return NativeStrings.text("ui.setup.title", language: language)
         case .dashboard: return NativeStrings.text("ui.092", language: language)
         case .environment: return NativeStrings.text("ui.107", language: language)
         case .fx: return NativeStrings.text("ui.117", language: language)

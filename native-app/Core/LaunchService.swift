@@ -391,30 +391,7 @@ enum LaunchService {
         return "SUDO_COMMAND_FAILED"
     }
 
-    static func ensureIPv4(_ transport: SSHTransport, session: GuestSession, sudoPassword: String?, context: CoreContext) throws -> Bool {
-        let plan = try GuestService.inspect(transport, context: context)
-        let ipv6 = plan["ipv6"]?.object ?? [:]
-        if ["all", "default", "eth0", "lo"].allSatisfy({ ipv6[$0]?.text == "1" }) { return false }
-        // Keep transport/protocol/policy failures distinct from missing credentials.
-        let probe = try CoreProcess.run("/usr/bin/ssh", transport.commandArgs(), input: "LC_ALL=C sudo -n -v\n", timeout: 15, context: context)
-        if probe.status != 0 {
-            let failure = sudoFailure(probe)
-            guard failure == "AUTH_REQUIRED" else { throw CoreError(failure) }
-            guard let password = sudoPassword, !password.isEmpty else {
-                throw CoreError("AUTH_REQUIRED", ["credential_kind": .string("sudo_password")])
-            }
-            guard !password.contains("\n"), !password.contains("\r") else { throw CoreError("SUDO_CREDENTIAL_INVALID") }
-            let verify = try CoreProcess.run("/usr/bin/ssh", transport.sudoVerifyArgs(), input: password + "\n", timeout: 20, context: context)
-            if verify.status != 0 { throw CoreError(sudoFailure(verify)) }
-        }
-        let result = try CoreProcess.run("/usr/bin/ssh", transport.sudoCommandArgs(), input: GuestScripts.ipv6(boot: session.boot), timeout: 30, context: context)
-        if result.status != 0 { throw CoreError(sudoFailure(result)) }
-        guard result.status == 0, let value = try? GuestService.parse(result.stdout, expected: "COMPATIBILITY_CHECK_FAILED"),
-              value["ok"]?.boolean == true else {
-            throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("ipv6_write_failed")])
-        }
-        return true
-    }
+
 }
 
 extension SSHTransport {

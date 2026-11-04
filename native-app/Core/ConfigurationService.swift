@@ -55,6 +55,7 @@ enum ConfigurationService {
         guard ["password", "key"].contains(ssh["auth"]?.text ?? "") else { throw CoreError("INVALID_ARGUMENT") }
         guard ssh["remember_password"]?.boolean != nil else { throw CoreError("INVALID_ARGUMENT") }
         guard let identity = ssh["identity_file"]?.text, !identity.contains("\n") else { throw CoreError("INVALID_ARGUMENT") }
+        ssh["remember_password"] = .bool(false)
         return ssh
     }
 

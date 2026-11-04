@@ -11,6 +11,10 @@ actor NativeCoreService {
     struct Operation { let method: String; let scope: String; let confirmation: Bool; let external: Bool }
 
     static let operations: [Operation] = [
+        Operation(method: "first_run_detect", scope: "setup", confirmation: true, external: true),
+        Operation(method: "first_run_deploy", scope: "setup", confirmation: true, external: true),
+        Operation(method: "first_run_recover", scope: "setup", confirmation: true, external: true),
+        Operation(method: "first_run_receipts", scope: "setup", confirmation: false, external: false),
         Operation(method: "read_configuration", scope: "settings", confirmation: false, external: false),
         Operation(method: "save_configuration", scope: "settings", confirmation: true, external: false),
         Operation(method: "backup_configuration", scope: "settings", confirmation: false, external: false),
@@ -56,7 +60,7 @@ actor NativeCoreService {
         "fx_path", "confirmed", "runtime_root", "password", "passphrase", "sudo_password",
         "credential_revision", "approved_changes", "configuration", "expected_revision",
         "channel", "match_result", "note", "values", "preview_token", "backup_path",
-        "selected_paths"]
+        "selected_paths", "deployment_plan", "approved_steps", "receipt_id"]
 
     func request(_ method: String, timeout: TimeInterval = 5,
                  params: [String: JSONValue] = [:],
@@ -120,6 +124,9 @@ actor NativeCoreService {
     nonisolated static func dispatch(_ method: String, params: [String: JSONValue], context: CoreContext,
                                      emit: @escaping (String, String, [String: JSONValue]) -> Void) throws -> [String: JSONValue] {
         switch method {
+        case "first_run_detect", "first_run_deploy", "first_run_recover", "first_run_receipts":
+            guard method == "first_run_receipts" || params["confirmed"]?.boolean == true else { throw CoreError("CONFIRMATION_REQUIRED") }
+            return try deployment(method, params: params, context: context, emit: emit)
         case "handshake":
             return ["protocol_min": .number(1), "protocol_max": .number(1),
                     "capabilities": .array((Array(readMethods).sorted() + operations.map(\.method)).map { .string($0) }),
@@ -389,29 +396,32 @@ actor NativeCoreService {
         let request = try launchRequest(params, context: context, emit: emit, confirmed: true)
         let fx = try LaunchService.selectedFX(request)
         let transport = SSHTransport.make(request.configuration)
-        guard LaunchService.networkReady(context: context) else { throw CoreError("FX_NOT_RUNNING") }
-        _ = try LaunchService.checkFXEntry(request: request, fx: fx, requireRunning: true)
-        let session = try GuestService.connect(transport, password: request.password, passphrase: request.passphrase,
-                                               context: context) {
-            try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!,
-                                           transport: transport, context: context)
+        guard SSHTransport.localHost(transport.settings.host) else { throw CoreError("LOCAL_FX_REQUIRED") }
+        transport.setSecret(password: request.password, passphrase: request.passphrase)
+        try transport.connectOnce(context: context, forwarding: false)
+        let backend = try SSHEnvironmentBackend(fx: fx, transport: transport, context: context, revision: ConfigurationService.read().revision)
+        let before = try backend.snapshot()
+        let result: CoreProcessResult
+        let passwordVerified: Bool
+        if let password = request.sudoPassword, !password.isEmpty {
+            guard !password.contains("\n"), !password.contains("\r") else { throw CoreError("SUDO_CREDENTIAL_INVALID") }
+            // Password and command share one sudo invocation. No cross-channel timestamp reuse.
+            var args = transport.commandArgs(); args.removeLast(2)
+            let marker = "HD2FX_SUDO_" + UUID().uuidString
+            args.append("LC_ALL=C sudo -k -S -p '" + marker + "' -- /usr/bin/true")
+            result = try CoreProcess.run("/usr/bin/ssh", args, input: password + "\n", timeout: 20, context: context)
+            passwordVerified = result.stderr.contains(marker)
+        } else {
+            result = try transport.run("LC_ALL=C sudo -n -- /usr/bin/true\n", timeout: 15, context: context)
+            passwordVerified = false
         }
-        let probe = try CoreProcess.run("/usr/bin/ssh", transport.commandArgs(), input: "LC_ALL=C sudo -n -v\n", timeout: 15, context: context)
-        if probe.status == 0 {
-            return ["sudo": .string("available_without_password_prompt"), "password_verified": .bool(false),
-                    "configuration_changed": .bool(false), "guest_boot": .string(session.boot)]
-        }
-        let probeFailure = LaunchService.sudoFailure(probe)
-        guard probeFailure == "AUTH_REQUIRED" else { throw CoreError(probeFailure) }
-        guard let password = request.sudoPassword, !password.isEmpty, !password.contains("\n") else {
-            throw CoreError("AUTH_REQUIRED", ["credential_kind": .string("sudo_password")])
-        }
-        let verify = try CoreProcess.run("/usr/bin/ssh", transport.sudoVerifyArgs(), input: password + "\n", timeout: 20, context: context)
-        guard verify.status == 0 else { throw CoreError(LaunchService.sudoFailure(verify)) }
-        emit("INFO", "Guest sudo authenticated", ["kind": .string("credential_status"),
-                                                  "credential_kind": .string("sudo"), "status": .string("authenticated")])
-        return ["sudo": .string("authenticated"), "password_verified": .bool(true),
-                "configuration_changed": .bool(false), "guest_boot": .string(session.boot)]
+        guard result.status == 0 else { throw CoreError(LaunchService.sudoFailure(result)) }
+        let after = try backend.snapshot()
+        guard EnvironmentDeploymentService.identity(before, after) else { throw CoreError("TARGET_CHANGED") }
+        if passwordVerified { emit("INFO", "Guest sudo authenticated", ["kind": .string("credential_status"), "credential_kind": .string("sudo"), "status": .string("authenticated")]) }
+        return ["sudo": .string(passwordVerified ? "authenticated" : "available_without_password_prompt"),
+                "password_verified": .bool(passwordVerified), "configuration_changed": .bool(false),
+                "guest_boot": .string(before.boot)]
     }
 
     static func runGUI(_ method: String, params: [String: JSONValue], context: CoreContext,
@@ -561,16 +571,12 @@ printf '{"guest_os":"%s","guest_arch":"%s","components":{"steam_files":%s,"game_
             return value
         }
         try LaunchService.compatibility(state)
-        guard LaunchService.checkProxyPort() else {
-            throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("host_proxy_7890_unavailable")])
-        }
         guard LaunchService.launchOptionsReady(state) else {
             throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("steam_launch_options_action_required")])
         }
         if let apps = state["apps"]?.text, !apps.isEmpty, !apps.split(separator: " ").allSatisfy({ $0 == "553850" }) {
             throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("other_steam_game_running")])
         }
-        _ = try LaunchService.ensureIPv4(transport, session: session, sudoPassword: request.sudoPassword, context: context)
         advance("CheckingCompatibility", "done")
         advance("StartingSteam", "running")
         let steamResult = try GuestService.steam(transport, session: session, context: context)

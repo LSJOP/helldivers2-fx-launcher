@@ -24,6 +24,7 @@ struct ContentView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         switch state.selection ?? .dashboard {
+                        case .setup: FirstRunSetupView(state: state, tasks: tasks, credentials: state.credentials)
                         case .dashboard: DashboardView(state: state, tasks: tasks)
                         case .environment: EnvironmentView(state: state)
                         case .fx: FXManagerView(state: state)

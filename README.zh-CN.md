@@ -16,14 +16,26 @@
 
 [软件截图](#zh-screenshots) · [主要功能](#zh-features) · [下载安装](#zh-installation) · [快速开始](#zh-usage) · [兼容性](#zh-development) · [更新日志](#zh-changelog) · [原脚本](#zh-legacy)
 
+
+### 首次运行环境配置（独立开发版）
+
+打开**首次运行环境配置**，选择 FX，分别输入仅供本进程使用的 SSH／sudo 密码，然后连接并检测。审阅目标身份、配置档和具体修改后点击**配置运行环境**。离线写入配置前请自行退出 Steam 和游戏；再次检测会跳过已正确配置的应用管理项。恢复功能仅使用本应用收据，核对当前值，遇到目标变化或外部修改就停止。
+
+候选矩阵为 FX **1.9.8**／SteamOS **0.4.5**／**aarch64**／AppID **553850**。这是历史目标，不代表所有同版本安装都含有相同组件。FEX／Proton-JE 的公开部署在取得审核发行包、完整清单、哈希、构建来源及许可证前为 **BLOCKED**。不分发私人 VM 文件。初始配置档不强制代理、gvproxy 替换、IPv4-only、CPU 亲和性或历史 CPU／内存／GPU 预算。硬件／FX 建议沿用现有受保护的性能页面。
+
+组件来源、恢复规则、常见错误与测试边界见[实现报告](NATIVE_FIRST_RUN_DEPLOYMENT_IMPLEMENTATION.md)、[配置档矩阵](NATIVE_ENVIRONMENT_PROFILE_MATRIX.md)、[安全审查](NATIVE_DEPLOYMENT_SECURITY_REVIEW.md)、[测试结果](NATIVE_DEPLOYMENT_TEST_RESULTS.md)和[验收报告](NATIVE_FIRST_RUN_ACCEPTANCE.md)。缺失或不支持的版本需要新的审核配置档；`ARTIFACT_UNAPPROVED` 表示未尝试安装，`STEAM_RUNNING` 需要退出 Steam 后重新检测，`RECOVERY_REQUIRED` 会阻止后续部署，直到解决收据所记录的修改。配置写入成功不等于游戏、EAC 或多人验证通过。全新 VM 验收为 **NOT_TESTED**，Latest 未修改。
+
+
 <a id="zh-overview"></a>
 
-以 **SwiftUI + AppKit** 构建、**Swift 原生核心**驱动：启动游戏、检查所选 FX 环境、管理性能配置。六个页面职责清晰，默认深色，操作进度和结果在页面内显示，技术细节按需展开。正式运行不使用 Python 解释器、Python Bridge 或外部脚本目录。
+以 **SwiftUI + AppKit** 构建、**Swift 原生核心**驱动：启动游戏、检查所选 FX 环境、管理性能配置。七个页面职责清晰，默认深色，操作进度和结果在页面内显示，技术细节按需展开。正式运行不使用 Python 解释器、Python Bridge 或外部脚本目录。
 
 > [!IMPORTANT]
 > **开发预览。** 正式安装包尚未发布。已完成的 Native 成果已整合到 [main](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main)；[feature/macos-native-app](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app) 保留开发历史。仓库不包含运行时二进制、游戏文件或 Guest 镜像。
 
 <a id="zh-screenshots"></a>
+
+总览、设置与首次配置为 2026-11-04 独立 Debug build 2026110410 的真实窗口；其他页面保留历史截图。截图未修改像素，不代表 Guest／游戏验收。
 
 ## 软件截图
 
@@ -55,7 +67,7 @@
 </details>
 
 
-八张简体中文截图均来自真实 Native Debug App：运行环境与设置于 2026-11-04 更新（0.1.0，构建 2026110401），其余六张为 2026-11-03 的历史截图（构建 1）。均使用只读本机元数据，原始像素未改动，没有合成界面或状态；滚动视图展示性能操作和软件更新。截图副本隔离偏好并禁用凭据自动读取，未执行 FX／Guest 操作或配置写入。插画是在真实 App 内渲染的素材。截图不证明游戏、性能提升或安装已就绪。[采集来源与限制](docs/images/README.md)。
+简体中文真实 Debug App 窗口：总览、设置与首次配置于 2026-11-04 更新（构建 2026110410）；其余页面明确保留历史截图。原始像素未改动，采集副本隔离偏好，仅检查本机只读状态，未连接 Guest。截图不代表安装／游戏验收。[采集来源与限制](docs/images/README.md)。
 
 <a id="zh-features"></a>
 
@@ -65,7 +77,7 @@
 
 | 状态 | 功能 |
 | --- | --- |
-| 🟢 已实现 | 六页原生界面、Cmd+1…6 导航、深色／浅色／跟随系统、正式项目图标 |
+| 🟢 已实现 | 七页原生界面、Cmd+1…7 导航、深色／浅色／跟随系统、正式项目图标 |
 | 🟢 已实现 | 限定范围本机／FX 发现；带校验、修订检查、备份和原子替换的配置编辑 |
 | 🟢 已实现 | 可搜索、筛选、有容量限制且脱敏的日志与诊断报告 |
 | 🟢 已实现 · 受保护写入 | 硬件／FX 偏好与参考对比；固定 FX 1.9.4 构建的限定参数编辑、备份与恢复 |
@@ -124,7 +136,7 @@ open build/Debug/HD2FXNative.app
 
 尚未发布任何正式版本；当前原生版本 `0.1.0` 为开发预览。近期未发布改动：
 
-- 原生六页界面、限定范围 FX 发现、带校验的配置编辑、脱敏日志与只读性能比较。
+- 原生七页界面、限定范围 FX 发现、带校验的配置编辑、脱敏日志与只读性能比较。
 - GUI 化 FX／SSH 操作与可选 SSH／sudo 凭据记忆。
 - Sparkle 2 更新集成（Feed／签名服务尚未配置）。
 
@@ -133,7 +145,7 @@ open build/Debug/HD2FXNative.app
 ## 常见问题
 
 - **为什么停止／重启或部分应用按钮禁用？** 正常退出后端尚未验证。性能编辑只支持固定 FX 1.9.4 构建，需读取合法配置、FX 停止并预览确认；无有效备份或外部修改会阻止恢复。App 不强制停止 FX。
-- **每次都要输入密码吗？** 默认会话内复用。主动选择记住后，经实际验证的 SSH／sudo 凭据分别保存在本 App 新建的 macOS Keychain namespace；自动读取禁止授权弹窗。钥匙串锁定／访问受限时回退安全输入，主动授权访问或 App 身份／签名变化时仍可能出现系统授权。旧脚本钥匙串项目保持不动。
+- **每次都要输入密码吗？** SSH 与 sudo 分别保留在本进程内存，可在本次 App 会话内复用。不使用 Keychain 或密码文件；目标／修订变化及退出 App 后清除。旧脚本／App 保存的钥匙串项目不访问、不删除。
 - **自动更新能用了吗？** 在「设置 → 软件更新」可手动检查 GitHub Native 发布。默认稳定版；正式服务未就绪前，预览渠道及自动检查保持关闭。安全下载需要可信 Ed25519 公钥与签名清单；缺少签名 Appcast、Developer ID、公证及分发条件时禁止安装。手动检查不会自动安装；自动检查开关需签名服务就绪才可启用。下载校验包含签名、大小与 SHA-256，安装仅由官方 Sparkle 执行。目前尚无正式更新包，失败保留当前 App，不把下载成功视为安装或重启成功。发布准备复用历史更新源前会先验证其签名。[配置和发布条件](docs/NATIVE_UPDATES.md)。
 
 <a id="zh-legacy"></a>
@@ -159,3 +171,7 @@ FX 选择 V2 + 自动选择 V2.1：FX 管理、总览和启动窗口共享并持
 启动资源：`/Applications` 和 FX `.app` 不是原始脚本资源目录。请选择包含 `launcher-20261026/steam-cdp.mjs`、`tools/check_node.cjs` 和 `goal-fx-multiplayer-20261026/gvproxy-eim-wrapper` 的完整现有脚本目录。检查与执行共用内置归档对比，提供预期／实际完整路径与 SHA-256 诊断。资源缺失、改动或符号链接均拒绝执行，不修改 FX 文件。FX 1.9.4／1.9.8 的路径和签名检查已有覆盖，真实游戏仍未验证。
 
 sudo 排查（2026-11-04）：构建 2026110402 存在远程空提示符参数引用缺陷。相关修复及 sudo/SSH 错误分类正在验证，尚未发布替代构建。真实只读检查已通过完整 Guest 身份确认；带密码 sudo 及后续启动阶段仍未验证。
+
+首次配置（独立 Debug 真实窗口）：
+
+![First-Run Setup](docs/images/zh-CN/first-run-setup.png)

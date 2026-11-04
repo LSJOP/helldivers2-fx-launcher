@@ -17,9 +17,19 @@
 
 [Screenshots](#en-screenshots) · [Features](#en-features) · [Installation](#en-installation) · [Quick start](#en-usage) · [Compatibility](#en-development) · [Changelog](#en-changelog) · [Legacy script](#en-legacy)
 
+
+### First-run environment setup (isolated development build)
+
+Open **First-Run Setup**, choose FX, enter separate session-only SSH/sudo passwords, then connect and inspect. Review the detected target, profile and exact changes before selecting **Configure environment**. Close Steam/game yourself before offline configuration writes. Correct managed settings are skipped on subsequent scans. Recovery loads only this app’s receipts, compares current values, and stops on identity changes or external edits.
+
+The candidate matrix is FX **1.9.8** / SteamOS **0.4.5** / **aarch64** / AppID **553850**. It is a historical target, not a promise that all installations have identical components. FEX and Proton-JE distribution is **BLOCKED** until reviewed packages, full manifests, hashes, provenance and licenses are available. No private VM files are distributed. The initial profile never forces a proxy, gvproxy replacement, IPv4-only, CPU affinity or historical CPU/RAM/GPU budgets. Hardware/FX recommendations use the existing guarded Performance page.
+
+Component sources, recovery rules, common errors and test boundaries are recorded in [implementation](NATIVE_FIRST_RUN_DEPLOYMENT_IMPLEMENTATION.md), [profile matrix](NATIVE_ENVIRONMENT_PROFILE_MATRIX.md), [security review](NATIVE_DEPLOYMENT_SECURITY_REVIEW.md), [test results](NATIVE_DEPLOYMENT_TEST_RESULTS.md) and [acceptance](NATIVE_FIRST_RUN_ACCEPTANCE.md). Missing/unsupported versions require a new reviewed profile; `ARTIFACT_UNAPPROVED` means no installation attempt, `STEAM_RUNNING` requires closing Steam and rescanning, and `RECOVERY_REQUIRED` blocks further deployment until the recorded change is resolved. A successful configuration receipt does not validate gameplay, EAC or multiplayer. New VM acceptance is **NOT_TESTED**. Latest is unchanged.
+
+
 <a id="en-overview"></a>
 
-A fully native **SwiftUI + AppKit** app with a **Swift Native Core**: launch the game, inspect the selected FX environment and manage performance settings from six focused pages. No Python interpreter, Python Bridge or external script directory is used at runtime. The interface defaults to dark, with inline operation feedback and advanced details available when needed.
+A fully native **SwiftUI + AppKit** app with a **Swift Native Core**: launch the game, inspect the selected FX environment and manage performance settings from seven focused pages. No Python interpreter, Python Bridge or external script directory is used at runtime. The interface defaults to dark, with inline operation feedback and advanced details available when needed.
 
 > [!IMPORTANT]
 > **Development preview.** No official installer has been released. The completed Native snapshot is integrated into [main](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main); [feature/macos-native-app](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app) is retained for development history. Runtime binaries, game files and Guest images are not included.
@@ -56,7 +66,7 @@ Screenshots were captured before the Swift Native Core redesign. They remain as 
 </details>
 
 
-Eight English screenshots from the real Native Debug App: Environment and Settings were refreshed on 2026-11-04 (0.1.0, build 2026110401); the other six are historical captures from 2026-11-03 (build 1). All use read-only host metadata. Pixels are unmodified; no UI/status was composited. Scrolled views show performance actions and software update. Capture copies isolate App preferences and disable credential autoload; no FX/Guest action or configuration write was performed. Supplied artwork is rendered inside the real App. Screenshots do not prove gameplay, performance gains or installation readiness. [Capture provenance and limitations](docs/images/README.md).
+Real English Debug App windows: Dashboard, Settings and First-Run Setup were captured on 2026-11-04 (build 2026110410). Other pages retain explicitly historical captures. Unmodified pixels, isolated capture App preferences, read-only host inspection, no Guest actions. Screenshots do not establish installation/gameplay acceptance. [Capture provenance and limitations](docs/images/README.md).
 
 <a id="en-features"></a>
 
@@ -123,7 +133,7 @@ Existing clones need the intended branch and `git submodule update --init --recu
 
 No official release has been published yet; the current Native version `0.1.0` is a development preview. Recent unreleased changes:
 
-- Native six-page interface, bounded FX discovery, validated configuration editing, redacted logs and read-only performance comparison.
+- Native seven-page interface, bounded FX discovery, validated configuration editing, redacted logs and read-only performance comparison.
 - GUI-driven FX/SSH actions and optional SSH/sudo credential remembering.
 - Sparkle 2 update integration (feed/signing service not configured).
 
@@ -132,7 +142,7 @@ See the full history in [CHANGELOG.md](CHANGELOG.md).
 ## FAQ
 
 - **Why are stop/restart or some Apply actions disabled?** Graceful exit is unverified. Performance editing requires the pinned FX 1.9.4 build, valid preferences, stopped FX and explicit preview/consent. Invalid backups or external changes block restore. The App does not force-stop FX.
-- **Must I retype passwords?** Session reuse is the default. Optional remembering stores independently verified SSH/sudo credentials in a new App-owned macOS Keychain namespace; automatic reads suppress authorization dialogs. Locked/access-restricted storage falls back to secure input. Explicit access or App identity/signature changes may still require system authorization. Old script items are untouched.
+- **Must I retype passwords?** SSH and sudo remain separate in process memory and can be reused during this app session. No Keychain or password file is used. Target/revision changes and app exit clear the session; old stored script/App items are not accessed.
 - **Are automatic updates ready?** Manual GitHub Native-release checks work in Settings → Software Update. Stable is the default; Preview and automatic checks remain closed until verified service setup. A verified-download backend requires a trusted Ed25519 key and signed manifest; installation remains disabled without the signed Appcast, Developer ID and notarization/distribution conditions. Manual checks never install automatically. The automatic-check toggle stays disabled until the signed service is ready. Download verification includes signature, size and SHA-256; installation stays with official Sparkle. No production update package is published yet. Failures leave the current App intact; no installed/relaunched success is inferred. Release preparation verifies signed feed history before reusing it. [Setup and release gates](docs/NATIVE_UPDATES.md).
 
 <a id="en-legacy"></a>
@@ -158,3 +168,7 @@ FX selection V2 + automatic selection V2.1: the FX page, overview and launch pan
 Launch resources: `/Applications` and the FX `.app` are not the original script resource directory. Select the complete existing launcher folder containing `launcher-20261026/steam-cdp.mjs`, `tools/check_node.cjs` and `goal-fx-multiplayer-20261026/gvproxy-eim-wrapper`. Inspection and execution share the same bundled-archive comparison, with exact expected/actual paths and SHA-256 diagnostics. Missing, altered or symlinked resources fail closed; no FX files are changed. FX 1.9.4/1.9.8 path and signature checks are covered; live gameplay remains unverified.
 
 Sudo investigation (2026-11-04): build 2026110402 has a remote empty-prompt quoting defect. The fix and distinct sudo/SSH failure classification are under validation; no replacement build is released. Full Guest identity passed a live read-only check; passworded sudo and subsequent launch stages remain unverified.
+
+First-Run Setup (actual isolated Debug window):
+
+![First-Run Setup](docs/images/en/first-run-setup.png)

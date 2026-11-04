@@ -38,7 +38,7 @@ final class SSHTransport {
                                               auth: ssh["auth"]?.text ?? "password",
                                               identityFile: ssh["identity_file"]?.text ?? "",
                                               cdpLocalPort: cdp,
-                                              rememberPassword: ssh["remember_password"]?.boolean ?? false,
+                                              rememberPassword: false,
                                               socketPath: "/tmp/hd2fx-\(getuid())-\(suffix).sock"))
     }
 

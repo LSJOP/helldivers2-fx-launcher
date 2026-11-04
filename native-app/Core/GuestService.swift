@@ -208,19 +208,6 @@ enum GuestService {
         return value
     }
 
-    static func ensureIPv4(_ transport: SSHTransport, session: GuestSession, context: CoreContext?) throws -> Bool {
-        let plan = try inspect(transport, context: context)
-        let ipv6 = plan["ipv6"]?.object ?? [:]
-        let keys = ["all", "default", "eth0", "lo"]
-        if keys.allSatisfy({ ipv6[$0]?.text == "1" }) { return false }
-        let result = try transport.run(GuestScripts.ipv6(boot: session.boot), timeout: 30, context: context)
-        guard result.status == 0, let value = try? parse(result.stdout, expected: "COMPATIBILITY_CHECK_FAILED"),
-              value["ok"]?.boolean == true else {
-            throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("ipv6_write_failed")])
-        }
-        return true
-    }
-
     static func launchGame(_ transport: SSHTransport, session: GuestSession, context: CoreContext?) throws -> [String: JSONValue] {
         let result = try transport.run(GuestScripts.launchGame(boot: session.boot), timeout: 40, context: context)
         guard result.status == 0 else { throw CoreError("GAME_START_FAILED") }

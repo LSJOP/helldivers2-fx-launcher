@@ -48,10 +48,18 @@ struct NativeCoreIntegrationChecks {
         let node = depRows.first { $0["id"]?.text == "node" }
         ok(node?["state"]?.text == "not_required", "Node not required")
 
-        let scan = run("list_fx_versions")
+        // Discovery/version regression uses a synthetic bundle, independent of installed FX.
+        let fixture = root.appendingPathComponent("Fixture FX.app")
+        let executable = fixture.appendingPathComponent("Contents/MacOS/steamac-vm")
+        try! FileManager.default.createDirectory(at: executable.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try! Data("#!/bin/sh\nexit 99\n".utf8).write(to: executable)
+        try! FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: executable.path)
+        let info: [String: Any] = ["CFBundleIdentifier":"es.fxgam.steamac", "CFBundleShortVersionString":"1.9.8"]
+        try! PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0).write(to: fixture.appendingPathComponent("Contents/Info.plist"))
+        let scan = run("list_fx_versions", ["selected_paths": .array([.string(fixture.path)])])
         ok(scan.result["candidates"] != nil && scan.result["scan_incomplete"]?.boolean != nil, "fx scan contract")
         let realFX = (scan.result["candidates"]?.array ?? []).contains { $0.object["version"]?.text == "1.9.8" }
-        ok(realFX, "real FX 1.9.8 discovered")
+        ok(realFX, "fixture FX 1.9.8 discovered")
 
         let catalog = run("get_legacy_catalog")
         ok(catalog.result["runtime"]?.text == "swift_native_core", "catalog native runtime")
@@ -71,7 +79,7 @@ struct NativeCoreIntegrationChecks {
 
         // Real FX state is read-only and never starts a process. When a different
         // FX copy is running, the core must report that honestly instead of guessing.
-        let fxState = run("check_fx_state", ["fx_path": .string("/Applications/FX Steam Launcher.app")])
+        let fxState = run("check_fx_state", ["fx_path": .string(fixture.path)])
         if let running = fxState.result["fx_host_running"]?.boolean {
             ok(true, "check_fx_state returns running flag")
             ok(fxState.result["fx_version"]?.text == "1.9.8", "fx state version")
@@ -82,7 +90,7 @@ struct NativeCoreIntegrationChecks {
         }
 
         // Bundled resource integrity is exposed through the launch-target contract.
-        let target = run("inspect_launch_target", ["fx_path": .string("/Applications/FX Steam Launcher.app")])
+        let target = run("inspect_launch_target", ["fx_path": .string(fixture.path)])
         ok(target.result["archive_files_match"]?.boolean == true, "inspect_launch_target resources match")
         ok(target.result["fx_executable_present"]?.boolean == true, "inspect_launch_target executable present")
 
