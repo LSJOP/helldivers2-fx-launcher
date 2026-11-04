@@ -290,7 +290,7 @@ private struct CredentialInputFields: View {
                 if operation == "test_guest_sudo" { SecureField(state.t("ui.304"), text: $credentials.sudoPassword) }
                 Text(state.t("ui.session.policy"))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
-                Button(state.t("ui.067")) { state.clearSessionCredentials() }
+                Button(state.t("ui.067")) { state.forgetSavedCredentials() }
             }.padding(.top, 8).disabled(tasks.busy)
         }
         .onAppear { expanded = ["test_ssh","test_guest_sudo"].contains(operation) || needsInput }
@@ -306,9 +306,11 @@ private struct CredentialManagementView: View {
     var body: some View {
         TacticalPanel(number: "K", title: state.t("ui.session.title"), symbol: "key") {
             Text(state.t("ui.session.policy")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+            if credentials.storageIssue { TacticalWarningBanner(text: state.t("ui.credentials.storageIssue"), isError: true) }
             ForEach(CredentialKind.allCases, id: \.self) { kind in
                 VStack(alignment: .leading, spacing: 8) {
                     TacticalInfoRow(title: state.t(kind == .ssh ? "ui.session.ssh" : "ui.session.sudo"), value: status(kind))
+                    if credentials.saved.contains(kind) { Text(state.t("ui.credentials.saved")).font(TacticalTypography.caption).foregroundStyle(.secondary) }
                     HStack {
                         Button(state.t(kind == .ssh ? "ui.session.updateSSH" : "ui.session.updateSudo")) {
                             credentials.update(kind)
@@ -321,10 +323,11 @@ private struct CredentialManagementView: View {
                 }
             }
             HStack {
-                Button(state.t("ui.session.clear")) { state.clearSessionCredentials() }
+                Button(state.t("ui.session.clear")) { state.forgetSavedCredentials() }
                 Button(state.t("ui.session.revalidate")) { state.operationSelection = NativeOperation(method: "test_ssh") }
             }
         }.disabled(tasks.busy)
+            .task { if !tasks.busy { await state.prepareCredentials() } }
     }
     private func status(_ kind: CredentialKind) -> String {
         switch credentials.status(kind) {

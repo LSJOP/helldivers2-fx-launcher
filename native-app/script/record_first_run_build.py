@@ -29,7 +29,7 @@ evidence = root / 'native-app/evidence'
 swift_cases = {}
 for name in ['ssh','privileged','network','native-core','native-integration','fx-identity','launch','credential-swift','performance','fx-selection','deployment']:
     text = (evidence / (name + '-checks.txt')).read_text()
-    patterns = [r'(\d+) memory-only credential checks PASS', r'(\d+) privileged executor checks PASS', r'(\d+) network checks PASS', r'PASS: (\d+) FX selection checks', r'TOTAL (\d+) passed, 0 failed', r'SSH checks: (\d+) passed, 0 failed', r'(\d+) (?:launch and GUI state|credential|performance inference and editor state|FX selection|deployment) checks (?:PASS|passed)']
+    patterns = [r'(\d+) (?:memory-only|session) credential checks PASS', r'(\d+) privileged executor checks PASS', r'(\d+) network checks PASS', r'PASS: (\d+) FX selection checks', r'TOTAL (\d+) passed, 0 failed', r'SSH checks: (\d+) passed, 0 failed', r'(\d+) (?:launch and GUI state|credential|performance inference and editor state|FX selection|deployment) checks (?:PASS|passed)']
     match = next((m for p in patterns if (m := re.search(p, text))), None)
     if not match: raise SystemExit('Missing passing test result: ' + name)
     swift_cases[name] = int(match.group(1))

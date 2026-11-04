@@ -19,3 +19,11 @@ SEC-01/02 源码及隔离检查 PASS，完整真实安全验收 NOT TESTED。
 ## 用户授权本地测试副本启动 · 2026-11-05
 
 用户明确要求显示并允许测试副本启动。认可自定义测试ID es.fxgam.steamtc，元数据扫描仍不执行候选程序。启动接受原发布者完整签名或完整的本地代码签名/资源封印，后者状态为local_copy、publisher_signature=false，不伪造官方信任。独立校验签名前后可执行文件摘要、所选路径、进程祖先与SSH监听/peer/Guest绑定；不禁用macOS Gatekeeper，不改FX包，不允许损坏封印。正常启动仍由现有操作确认发起，无新增官签专属授权。性能写入继续要求官方签名，未启用自定义偏好域写入。
+
+## Current policy: encrypted local persistence without Keychain (2026-11-05)
+
+The user's latest instruction explicitly supersedes the earlier memory-only policy while prohibiting macOS Keychain. LocalCredentialStore uses CryptoKit AES-GCM, an installation-random 32-byte key, per-target/per-role authenticated data, 0700 directory and 0600 files, no-follow/owner/nlink checks, bounded interprocess locking and atomic writes. The key is outside the App bundle, alongside private ciphertext storage. This is account-permission protection, not hardware binding; software running as the same macOS user or a reader holding both key and ciphertext can decrypt it. No SecItem/SecKeychain APIs; no plaintext passwords in settings, preferences, diagnostics, argv or environment. Existing diagnostic and configuration exports do not recurse into this storage directory.
+
+Persistence binding includes canonical FX executable/content identity and SSH host/port/user/auth/identity-file, not transient PID or Guest boot. Every connection retains process/endpoint/host-key/Guest checks. Saving requires a successful password challenge and verified Guest identity. Loaded values remain provided, never current-session verified. SSH/sudo save separately; sudo still uses per-call -k -S. Key-file passphrases remain session-only. Rejection or explicit deletion writes a durable no-reuse marker before deleting the encrypted entry; storage failures remain visible. Connection changes clear live authorization and do not erase unrelated environments.
+
+Tests use fictional values and isolated private temporary directories, including separate writer/reader OS processes, no plaintext persistence, target/role separation, tamper/mode/symlink rejection, deletion failure and storage-unavailable behavior. They do not read live user passwords or existing Keychain items. An old running App's memory is not imported; the first use of this build needs one successful verification.
