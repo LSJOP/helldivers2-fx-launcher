@@ -307,6 +307,11 @@ final class AppState: ObservableObject {
                 self.recordGUIOperation(method)
                 if method == "launch_game" || method == "observe_launch" { self.launchSession.complete(reply.result, at: reply.observedAt); self.recordLaunch() }
                 self.appendLog(method + ": COMPLETED")
+                if method == "launch_game", reply.result["game_process_detected"]?.boolean == true,
+                   !Task.isCancelled, self.operationGeneration == generation,
+                   self.operationSelection?.method == method {
+                    self.operationSelection = nil
+                }
             } catch {
                 let failure = error as? ErrorState ?? ErrorState("PROTOCOL_ERROR", method: method)
                 self.operationError = ErrorState(failure.code, method: failure.method, details: redactor.diagnostic(failure.details))
