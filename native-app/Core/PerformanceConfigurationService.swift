@@ -7,7 +7,6 @@ enum PerformanceDomain {
     static let name = "es.fxgam.steamac"
     static let keys = ["cpus", "memMiB", "vulkanDriver", "metalHUD", "superResolution"]
     static let pinned194 = "0db013e9766b77e1c40f588c5f02ce1bab5937ec88cc17d6a8ade6c53e00b0cb"
-    static let supportedVersions = ["1.9.4", "1.9.8"]
 }
 
 protocol PreferencesStore {
@@ -107,7 +106,6 @@ enum PerformanceConfigurationService {
 
     static func capabilities(app: URL) throws -> PerformanceRules {
         guard let identity = FXDiscoveryService.identity(of: app.path), identity.valid else { throw CoreError("PERF_VERSION") }
-        guard PerformanceDomain.supportedVersions.contains(identity.version) else { throw CoreError("PERF_VERSION") }
         let integrity = FXDiscoveryService.integrity(app: app)
         let trusted = integrity["state"]?.text == "verified"
         let pinned = try? CoreHash.sha256File(identity.executable) == PerformanceDomain.pinned194
@@ -182,7 +180,7 @@ enum PerformanceConfigurationService {
               let body = envelope["body"] as? [String: Any], let digest = envelope["sha256"] as? String else { throw CoreError("PERF_BACKUP") }
         let value = CoreJSON.value(body)
         guard digest == CoreHash.sha256(Data(CoreJSON.encode(value).utf8)) else { throw CoreError("PERF_BACKUP") }
-        guard let version = value.object["version"]?.text, PerformanceDomain.supportedVersions.contains(version),
+        guard let version = value.object["version"]?.text, !version.isEmpty,
               value.object["domain"]?.text == PerformanceDomain.name else { throw CoreError("PERF_BACKUP") }
         return value.object
     }

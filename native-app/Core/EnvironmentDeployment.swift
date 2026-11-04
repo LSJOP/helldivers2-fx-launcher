@@ -73,6 +73,11 @@ struct DeploymentOperation: Codable, Identifiable, Equatable {
     let changes: [String: String], permission: String, estimatedBytes: Int64, needsRestart: Bool
     let backupLocation: String, rollback: String, verification: String
     let requirement: Requirement, blocked: String?
+    // A successful bounded observation is independent of permission to deploy changes.
+    var detectionPassed: Bool {
+        ["steam", "game", "vulkan", "kosmickrisp", "network", "gvproxy", "ipv4", "ipv6"].contains(component)
+            && ["present", "configured", "available"].contains(currentVersion)
+    }
 }
 struct DeploymentPlan: Codable {
     let id: UUID, profileID: String, profileVersion: Int, snapshot: DeploymentSnapshot
@@ -89,7 +94,8 @@ enum DeploymentPlanBuilder {
                              rollback: "compare_current_then_restore_receipt", verification: "read_back_and_compare",
                              requirement: profile.requirements[component] ?? .UNKNOWN, blocked: block))
         }
-        let supported = profile.fx.contains(snapshot.fxVersion) && profile.steamOS.contains(snapshot.osVersion) && profile.architecture == snapshot.architecture
+        // Version lists record historical evidence; actual capabilities govern deployment.
+        let supported = profile.architecture == snapshot.architecture
         for (component, version) in [("fex", profile.fexVersion), ("proton", profile.protonVersion)] {
             let verified = snapshot.facts[component + "_manifest"] == "verified"
             let artifact = profile.artifacts.first { $0.component == component && $0.version == version }
@@ -111,7 +117,7 @@ enum DeploymentPlanBuilder {
                 block: snapshot.facts["proton_manifest"] == "verified" ? nil : "ARTIFACT_UNAPPROVED")
         }
         if !supported {
-            ops = ops.map { .init(id: $0.id, component: $0.component, currentVersion: $0.currentVersion, targetVersion: $0.targetVersion,
+            ops = ops.map { $0.detectionPassed ? $0 : .init(id: $0.id, component: $0.component, currentVersion: $0.currentVersion, targetVersion: $0.targetVersion,
                                  changes: $0.changes, permission: $0.permission, estimatedBytes: $0.estimatedBytes, needsRestart: $0.needsRestart,
                                  backupLocation: $0.backupLocation, rollback: $0.rollback, verification: $0.verification,
                                  requirement: $0.requirement, blocked: "UNSUPPORTED") }

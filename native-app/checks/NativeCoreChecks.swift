@@ -157,7 +157,7 @@ func runChecks() {
                                         "vulkanDriver": .string("kosmickrisp"),
                                         "metalHUD": .bool(false), "superResolution": .bool(false),
                                         "unrelated": .string("keep")])
-    let rules = PerformanceRules(version: "1.9.8", cpuMin: 1, cpuMax: 12, memoryMin: 4096, memoryMax: 12288,
+    let rules = PerformanceRules(version: "future-build", cpuMin: 1, cpuMax: 12, memoryMin: 4096, memoryMax: 12288,
                                  memoryStep: 256, drivers: ["kosmickrisp", "moltenvk"],
                                  writable: ["cpus", "memMiB", "vulkanDriver", "metalHUD"])
     let snapshotResult = try! PerformanceConfigurationService.snapshot(store: store, rules: rules)

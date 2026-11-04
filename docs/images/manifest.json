@@ -7,7 +7,7 @@
   "timezone": "Asia/Shanghai",
   "fx_guest_actions": "none",
   "credential_autoload": "disabled by isolated capture arguments",
-  "reviewed_ui_source_sha256": "e4025daf138a776cf3dde38a90e34de39f2ad7dbd6b79b0c69b44348dfbd0677",
+  "reviewed_ui_source_sha256": "689ec29584eff5e598245fbab978ba5128339a1d1162954aeae171d66417792f",
   "screenshots": [
     {
       "path": "docs/images/zh-CN/dashboard.png",
@@ -305,5 +305,6 @@
   "review_scope": "Seven-page real UI with retained main network/credential controls; all secure inputs empty; no live Guest/installation/game acceptance.",
   "dashboard_update_note": "2026-11-05: only English and Chinese Dashboard captures updated for duplicate setup-shortcut removal, build 2026110503; other screenshots retain their own historical provenance.",
   "ssh_settings_update_note": "2026-11-05: SSH settings screenshots from reviewed original dirty Debug build 2026110501; Dashboard remains build 2026110503. Entries retain individual source provenance.",
-  "local_copy_review_note": "FX Manager zh-CN/en build2026110505 recaptured: both official and local test copy shown, metadata-only; other page layouts unchanged."
+  "local_copy_review_note": "FX Manager zh-CN/en build2026110505 recaptured: both official and local test copy shown, metadata-only; other page layouts unchanged.",
+  "version_policy_review_note": "2026-11-05: setup status presentation and performance capability error changed. Removed first-run screenshots from current README display; recapture pending. Other page layouts unchanged; retained captures keep their original provenance. No live Guest capture or acceptance."
 }

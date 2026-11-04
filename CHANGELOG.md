@@ -8,6 +8,10 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+- Passed component detections remain green independently of unrelated deployment restrictions.
+
+- Remove FX/SteamOS version allowlists from first-run setup and FX performance editing; retain actual capability, architecture, identity, artifact, backup and write-safety checks. Version changes during an approved transaction still invalidate that transaction.
+
 - Remember successfully verified SSH/sudo passwords across App restarts using installation-local AES-GCM encrypted files, without macOS Keychain. Keep environments and roles separate, stop reusing rejected values, and provide deletion and visible storage errors.
 
 - First-Run Setup now uses the same local FX copy eligibility as launch; intact local test copies no longer fail the entry check solely because they lack an official publisher signature. Guest authentication and deployment profile/artifact checks remain separate.

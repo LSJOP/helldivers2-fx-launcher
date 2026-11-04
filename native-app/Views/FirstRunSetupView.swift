@@ -40,8 +40,8 @@ struct FirstRunSetupView: View {
                             HStack {
                                 Text(state.t("ui.setup.component." + operation.component)).font(.headline)
                                 Spacer()
-                                Text(operation.blocked != nil ? state.t("ui.setup.blocked") : operation.changes.isEmpty ? state.t("ui.setup.skip") : state.t("ui.setup.change"))
-                                    .foregroundStyle(operation.blocked != nil ? .orange : .secondary)
+                                Text(operation.detectionPassed ? state.t("ui.net.pass") : operation.blocked != nil ? state.t("ui.setup.blocked") : operation.changes.isEmpty ? state.t("ui.setup.skip") : state.t("ui.setup.change"))
+                                    .foregroundStyle(operation.detectionPassed ? .green : operation.blocked != nil ? .orange : .secondary)
                             }
                             Text(operation.currentVersion + " → " + operation.targetVersion).font(.caption.monospaced())
                             DisclosureGroup(state.t("ui.setup.details")) {
