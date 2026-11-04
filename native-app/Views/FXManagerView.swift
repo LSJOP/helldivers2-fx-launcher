@@ -32,6 +32,9 @@ struct FXManagerView: View {
                         } else if row["identity_valid"]?.boolean == true, let path = row["path"]?.text {
                             Button(state.t("ui.fx.setDefault")) { state.selectFX(path) }.disabled(state.tasks.busy)
                         } else { TacticalStatusBadge(text: state.t("ui.368")) }
+                        if row["local_test_copy"]?.boolean == true {
+                            Text(state.t("ui.fx.localTestCopy")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+                        }
                         TacticalInfoRow(title: state.t("ui.019"), value: row["path"]?.text.map { URL(fileURLWithPath: $0).lastPathComponent } ?? state.t("ui.366"))
                         TacticalInfoRow(title: state.t("ui.102"), value: row["location"]?.text ?? state.t("ui.366"))
                         TacticalInfoRow(title: state.t("ui.132"), value: row["path"]?.text ?? state.t("ui.366"))

@@ -8,6 +8,8 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+- Show local FX test copies using the custom test identity and allow their intact locally signed bundles to launch through normal confirmation. Preserve target/process/SSH binding and distinguish local copies from publisher-verified builds.
+
 - Remove the duplicate First-Run Setup shortcut above the Dashboard hero; keep setup accessible from the sidebar.
 
 - Automatically close the game launch sheet when the current launch completes with a detected game process. Keep failed, cancelled and unverified launches open for inspection.

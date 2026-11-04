@@ -37,3 +37,5 @@ Integration refresh: both language sets now include the shared FX selection stat
 Build 2026110410: real isolated Debug windows for zh-CN/en First-Run Setup, Dashboard and Settings, including credential section. Unmodified pixels; capture bundle IDs recorded in manifest; metadata-only host refresh, no Guest connection or configuration writes. Visual review checked language, clipping, empty secure fields and honest unknown states. Other README images remain historical. Full ten-language human review and live wizard interaction remain NOT_TESTED.
 
 2026-11-05 SSH settings update: only `en/settings*.png` and `zh-CN/settings*.png` were replaced from the actual dirty Debug candidate (base 6dd08fb, build 2026110501). Visible host, port and user fields reviewed in both languages. Other page captures remain from the prior unchanged layouts. No live SSH or interactive save acceptance.
+
+2026-11-05: FX Manager only recaptured in zh-CN/en from the dirty Debug build2026110505 (base1879f33); both installed1.9.9 copies and the local-test marker are visible. No FX, SSH or game action. Other images retain individual provenance.

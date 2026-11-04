@@ -106,7 +106,7 @@ enum LaunchService {
     }
 
     /// Diagnostic-only stock FX transport. Accept it only inside the selected,
-    /// publisher-sealed bundle, with stable bytes across signature verification.
+    /// publisher-sealed or intact local test bundle, with stable bytes across validation.
     static func diagnosticNetworkExecutable(fx: URL, context: CoreContext?) throws -> String {
         let network = fx.appendingPathComponent("Contents/Resources/gvproxy")
         let canonicalFX = fx.resolvingSymlinksInPath().standardizedFileURL.path
@@ -116,10 +116,8 @@ enum LaunchService {
               let before = try? CoreHash.sha256File(network) else {
             throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("diagnostic_network_path_untrusted")])
         }
-        let signature = try CoreProcess.run("/usr/bin/codesign",
-            ["--verify", "--deep", "--strict", "-R=" + LaunchResources.fxPublisherRequirement, fx.path],
-            timeout: 20, context: context)
-        guard signature.status == 0, let after = try? CoreHash.sha256File(network), before == after else {
+        let seal = FXDiscoveryService.integrity(app: fx, context: context)
+        guard FXDiscoveryService.launchAllowed(seal), let after = try? CoreHash.sha256File(network), before == after else {
             throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("diagnostic_network_signature_untrusted")])
         }
         return canonicalNetwork
@@ -285,7 +283,7 @@ enum LaunchService {
             throw CoreError("FX_ALREADY_RUNNING")
         }
         let integrity = FXDiscoveryService.integrity(app: fx)
-        guard integrity["state"]?.text == "verified" else {
+        guard FXDiscoveryService.launchAllowed(integrity) else {
             throw CoreError("FX_PROFILE_MISMATCH", ["state": integrity["state"] ?? .string("unverified")])
         }
         _ = try LaunchResources.verifiedForLaunch()
@@ -325,7 +323,7 @@ enum LaunchService {
         let items = DependencyProbe.items(selectedFX: fx, integrity: integrity)
         let ready = items.filter { $0["state"]?.text != "unverified" }
             .allSatisfy { ["ready", "not_required"].contains($0["state"]?.text ?? "") }
-        guard integrity["state"]?.text == "verified" else {
+        guard FXDiscoveryService.launchAllowed(integrity) else {
             throw CoreError("FX_PROFILE_MISMATCH", ["state": integrity["state"] ?? .string("unverified")])
         }
         guard ready else {

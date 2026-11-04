@@ -67,6 +67,13 @@ enum LaunchResources {
 
 /// Bounded, metadata-only FX discovery. A candidate is never a launch or gameplay claim.
 enum FXDiscoveryService {
+    static let officialBundleIdentifier = "es.fxgam.steamac"
+    static let localTestBundleIdentifier = "es.fxgam.steamtc"
+
+    static func launchAllowed(_ evidence: [String: JSONValue]) -> Bool {
+        ["verified", "local_copy"].contains(evidence["state"]?.text ?? "")
+    }
+
     struct Identity: Sendable {
         let path: String
         let name: String
@@ -96,7 +103,7 @@ enum FXDiscoveryService {
               let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else { return nil }
         let bundleIdentifier = plist["CFBundleIdentifier"] as? String
         let version = (plist["CFBundleShortVersionString"] as? String) ?? "unknown"
-        let valid = bundleIdentifier == "es.fxgam.steamac"
+        let valid = [officialBundleIdentifier, localTestBundleIdentifier].contains(bundleIdentifier ?? "")
         return Identity(path: app.path, name: app.lastPathComponent,
                         version: valid ? version : "unknown",
                         bundleIdentifier: bundleIdentifier ?? "unknown",
@@ -111,6 +118,7 @@ enum FXDiscoveryService {
                 "bundle_identifier": .string(identity.bundleIdentifier),
                 "structure": .string(identity.valid ? "metadata_valid" : "unverified"),
                 "identity_valid": .bool(identity.valid),
+                "local_test_copy": .bool(identity.bundleIdentifier == localTestBundleIdentifier),
                 "location": .string(location),
                 "launch": .string("unverified"), "eac": .string("unverified"),
                 "multiplayer": .string("unverified")]
@@ -193,16 +201,21 @@ enum FXDiscoveryService {
         return result
     }
 
-    /// Hash-pinned history or a bundle sealed by the verified FX publisher.
-    static func integrity(app: URL) -> [String: JSONValue] {
+    /// Publisher identity and intact local bundle seals are distinct evidence.
+    static func integrity(app: URL, context: CoreContext? = nil) -> [String: JSONValue] {
         let executable = app.appendingPathComponent("Contents/MacOS/steamac-vm")
-        guard let digest = try? CoreHash.sha256File(executable) else {
+        guard let identity = identity(of: app.path), identity.valid,
+              !FileManager.default.isSymbolicLink(atPath: executable.path),
+              let digest = try? CoreHash.sha256File(executable) else {
             return ["fx_path": .string(app.path), "actual_sha256": .null,
                     "state": .string("missing"), "trust": .string("unverified")]
         }
         let signature = (try? CoreProcess.run("/usr/bin/codesign",
                                              ["--verify", "--deep", "--strict", "-R=" + LaunchResources.fxPublisherRequirement, app.path],
-                                             timeout: 20))?.status == 0
+                                             timeout: 20, context: context))?.status == 0
+        let localSeal = !signature && (try? CoreProcess.run("/usr/bin/codesign",
+            ["--verify", "--deep", "--strict", "-R=identifier \"" + identity.bundleIdentifier + "\"", app.path],
+            timeout: 20, context: context))?.status == 0
         let fresh = try? CoreHash.sha256File(executable)
         var result: [String: JSONValue] = ["fx_path": .string(app.path),
                                            "actual_path": .string(executable.path),
@@ -213,6 +226,9 @@ enum FXDiscoveryService {
         if signature && fresh == digest {
             result["state"] = .string("verified")
             result["trust"] = .string("fx_publisher_signature")
+        } else if localSeal && fresh == digest {
+            result["state"] = .string("local_copy")
+            result["trust"] = .string("local_bundle_seal")
         } else if !signature {
             result["state"] = .string("signature_invalid")
         }

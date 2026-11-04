@@ -67,3 +67,7 @@ App现有窗口仍需在FX管理切换到标准副本；用户须重新输入内
 | LIVE-MULTIPLAYER-USER-01 | 多人任务/EAC | 加入并完成多人任务/观察EAC | 尚无实测结果；菜单成功不证明多人或独立EAC验收 | NOT TESTED | 同上 |
 
 该证据覆盖先前摘要中“HELLDIVERS 2 LAUNCH”和“GAME MAIN MENU”的NOT TESTED为PASS（用户确认）。不自动将独立sudo、SSH异常矩阵、VM/TLS/PlayFab/UDP诊断、CPU/RAM/Vulkan写入、新VM首次部署或多人改为PASS。真实游戏成功范围为这一次会话，不是全版本兼容/全部故障分支通过。未再次启动或发送Guest命令，不干扰用户游戏。
+
+## 本地测试副本启动策略 · 2026-11-05
+
+用户要求显示并允许本地测试FX启动。真实只读Native Core预检：标准`/Applications/FX Steam Launcher.app`返回verified/host_ready=true；`/Applications/FX Steam Launcher测试用.app`返回local_copy、publisher_signature=false、launch_allowed=true、host_ready=true。未发出FX或游戏启动命令，不把预检当实际开机/Guest/游戏成功。中英文真实FX页面均出现两个副本；386 Swift+31 Python检查通过，包含本地签名允许与封印篡改拒绝。证据：local-copy-real-preflight.jsonl、local-copy-ui-zh/en、native-core-checks.txt等。

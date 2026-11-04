@@ -585,7 +585,8 @@
   "ui.ssh.settingsHelp": "Change the address, port and user used by HD2. This saves launcher settings only; it does not change FX or connect. Saving clears session credentials. For the isolated test FX, use 127.0.0.1 and port 2223.",
   "ui.ssh.settingsInvalid": "Enter a valid host, port (1–65535) and user. The SSH port must differ from the local forwarding port.",
   "ui.ssh.settingsSave": "Save connection settings",
-  "ui.ssh.settingsSaved": "Saved. Enter credentials again before connecting."
+  "ui.ssh.settingsSaved": "Saved. Enter credentials again before connecting.",
+  "ui.fx.localTestCopy": "Local test copy · custom identity"
  },
  "zh-CN": {
   "ui.193": "导航",
@@ -1173,7 +1174,8 @@
   "ui.ssh.settingsHelp": "修改 HD2 使用的地址、端口和用户名。仅保存启动器配置，不修改 FX，也不会连接。保存后会清除会话凭据。隔离测试 FX 请使用 127.0.0.1 和端口 2223。",
   "ui.ssh.settingsInvalid": "请输入有效地址、端口（1–65535）和用户名。SSH 端口不能与本地转发端口相同。",
   "ui.ssh.settingsSave": "保存连接设置",
-  "ui.ssh.settingsSaved": "已保存。连接前请重新输入凭据。"
+  "ui.ssh.settingsSaved": "已保存。连接前请重新输入凭据。",
+  "ui.fx.localTestCopy": "本地测试副本 · 自定义身份"
  },
  "ja": {
   "ui.193": "移動",
@@ -1761,7 +1763,8 @@
   "ui.ssh.settingsHelp": "HD2 の接続先アドレス、ポート、ユーザーを変更します。ランチャー設定のみを保存し、FX の変更や接続は行いません。保存するとセッション認証情報が消去されます。隔離テスト用 FX は 127.0.0.1、ポート 2223 を使用します。",
   "ui.ssh.settingsInvalid": "有効なホスト、ポート（1–65535）、ユーザーを入力してください。SSH ポートはローカル転送ポートと異なる必要があります。",
   "ui.ssh.settingsSave": "接続設定を保存",
-  "ui.ssh.settingsSaved": "保存しました。接続前に認証情報を再入力してください。"
+  "ui.ssh.settingsSaved": "保存しました。接続前に認証情報を再入力してください。",
+  "ui.fx.localTestCopy": "ローカルテスト用コピー · カスタム識別情報"
  },
  "ko": {
   "ui.193": "탐색",
@@ -2349,7 +2352,8 @@
   "ui.ssh.settingsHelp": "HD2에서 사용할 주소, 포트, 사용자를 변경합니다. 런처 설정만 저장하며 FX를 변경하거나 연결하지 않습니다. 저장하면 세션 인증 정보가 지워집니다. 격리 테스트 FX에는 127.0.0.1과 포트 2223을 사용하세요.",
   "ui.ssh.settingsInvalid": "유효한 호스트, 포트(1–65535), 사용자를 입력하세요. SSH 포트는 로컬 전달 포트와 달라야 합니다.",
   "ui.ssh.settingsSave": "연결 설정 저장",
-  "ui.ssh.settingsSaved": "저장했습니다. 연결하기 전에 인증 정보를 다시 입력하세요."
+  "ui.ssh.settingsSaved": "저장했습니다. 연결하기 전에 인증 정보를 다시 입력하세요.",
+  "ui.fx.localTestCopy": "로컬 테스트 사본 · 사용자 지정 ID"
  },
  "ru": {
   "ui.193": "Навигация",
@@ -2937,7 +2941,8 @@
   "ui.ssh.settingsHelp": "Измените адрес, порт и пользователя HD2. Сохраняются только настройки лаунчера: FX не изменяется, подключение не выполняется. Сохранение очищает учётные данные сеанса. Для изолированного тестового FX используйте 127.0.0.1 и порт 2223.",
   "ui.ssh.settingsInvalid": "Укажите допустимый адрес, порт (1–65535) и пользователя. Порт SSH должен отличаться от локального порта перенаправления.",
   "ui.ssh.settingsSave": "Сохранить подключение",
-  "ui.ssh.settingsSaved": "Сохранено. Перед подключением введите учётные данные заново."
+  "ui.ssh.settingsSaved": "Сохранено. Перед подключением введите учётные данные заново.",
+  "ui.fx.localTestCopy": "Локальная тестовая копия · изменённый идентификатор"
  },
  "es": {
   "ui.193": "Navegación",
@@ -3525,7 +3530,8 @@
   "ui.ssh.settingsHelp": "Cambia la dirección, el puerto y el usuario de HD2. Solo guarda la configuración del lanzador; no modifica FX ni inicia una conexión. Al guardar se borran las credenciales de sesión. Para FX de prueba aislado, usa 127.0.0.1 y el puerto 2223.",
   "ui.ssh.settingsInvalid": "Introduce un host, un puerto (1–65535) y un usuario válidos. El puerto SSH debe ser distinto del puerto local de reenvío.",
   "ui.ssh.settingsSave": "Guardar conexión",
-  "ui.ssh.settingsSaved": "Guardado. Vuelve a introducir las credenciales antes de conectar."
+  "ui.ssh.settingsSaved": "Guardado. Vuelve a introducir las credenciales antes de conectar.",
+  "ui.fx.localTestCopy": "Copia de prueba local · identidad personalizada"
  },
  "de": {
   "ui.193": "Navigation",
@@ -4113,7 +4119,8 @@
   "ui.ssh.settingsHelp": "Adresse, Port und Benutzer für HD2 ändern. Speichert nur Launcher-Einstellungen; FX wird nicht geändert und keine Verbindung aufgebaut. Beim Speichern werden Sitzungszugangsdaten gelöscht. Für das isolierte Test-FX: 127.0.0.1 und Port 2223.",
   "ui.ssh.settingsInvalid": "Gültigen Host, Port (1–65535) und Benutzer eingeben. SSH-Port und lokaler Weiterleitungsport müssen verschieden sein.",
   "ui.ssh.settingsSave": "Verbindung speichern",
-  "ui.ssh.settingsSaved": "Gespeichert. Zugangsdaten vor dem Verbinden erneut eingeben."
+  "ui.ssh.settingsSaved": "Gespeichert. Zugangsdaten vor dem Verbinden erneut eingeben.",
+  "ui.fx.localTestCopy": "Lokale Testkopie · angepasste Identität"
  },
  "fr": {
   "ui.193": "Navigation",
@@ -4701,7 +4708,8 @@
   "ui.ssh.settingsHelp": "Modifiez l’adresse, le port et l’utilisateur de HD2. Seuls les paramètres du lanceur sont enregistrés, sans modifier FX ni établir de connexion. L’enregistrement efface les identifiants de session. Pour FX de test isolé : 127.0.0.1, port 2223.",
   "ui.ssh.settingsInvalid": "Saisissez un hôte, un port (1–65535) et un utilisateur valides. Le port SSH doit différer du port local de redirection.",
   "ui.ssh.settingsSave": "Enregistrer la connexion",
-  "ui.ssh.settingsSaved": "Enregistré. Saisissez à nouveau les identifiants avant de vous connecter."
+  "ui.ssh.settingsSaved": "Enregistré. Saisissez à nouveau les identifiants avant de vous connecter.",
+  "ui.fx.localTestCopy": "Copie de test locale · identité personnalisée"
  },
  "pt-BR": {
   "ui.193": "Navegação",
@@ -5289,7 +5297,8 @@
   "ui.ssh.settingsHelp": "Altere o endereço, a porta e o usuário do HD2. Salva apenas as configurações do inicializador, sem alterar o FX ou conectar. Salvar apaga as credenciais da sessão. Para o FX de teste isolado, use 127.0.0.1 e a porta 2223.",
   "ui.ssh.settingsInvalid": "Informe um host, uma porta (1–65535) e um usuário válidos. A porta SSH deve ser diferente da porta local de encaminhamento.",
   "ui.ssh.settingsSave": "Salvar conexão",
-  "ui.ssh.settingsSaved": "Salvo. Insira as credenciais novamente antes de conectar."
+  "ui.ssh.settingsSaved": "Salvo. Insira as credenciais novamente antes de conectar.",
+  "ui.fx.localTestCopy": "Cópia de teste local · identidade personalizada"
  },
  "zh-TW": {
   "ui.270": "無需外部執行環境；檢測後按 ⌘R 重新讀取全部唯讀快照。",
@@ -5877,6 +5886,7 @@
   "ui.ssh.settingsHelp": "修改 HD2 使用的位址、連接埠和使用者名稱。僅儲存啟動器設定，不修改 FX，也不會連線。儲存後會清除工作階段憑證。隔離測試 FX 請使用 127.0.0.1 和連接埠 2223。",
   "ui.ssh.settingsInvalid": "請輸入有效位址、連接埠（1–65535）和使用者名稱。SSH 連接埠不能與本機轉送連接埠相同。",
   "ui.ssh.settingsSave": "儲存連線設定",
-  "ui.ssh.settingsSaved": "已儲存。連線前請重新輸入憑證。"
+  "ui.ssh.settingsSaved": "已儲存。連線前請重新輸入憑證。",
+  "ui.fx.localTestCopy": "本機測試副本 · 自訂身分"
  }
 }

@@ -86,6 +86,24 @@ func runChecks() {
     check(target["launch"]?.text == "unverified", "launch target not launch proof")
     check(FXDiscoveryService.launchTarget(fxPath: "/tmp/missing.app")["fx_executable_present"]?.boolean == false, "missing target fails closed")
 
+    // A renamed local test copy remains selectable and launchable without claiming publisher trust.
+    let localFX = try! makeApp("Local FX", bundleID: "es.fxgam.steamtc", version: "1.9.9")
+    check(FXDiscoveryService.identity(of: localFX.path)?.valid == true, "local test identity recognized")
+    let localScan = FXDiscoveryService.scan(selectedPaths: [], runtimeRoot: nil, directories: [root])
+    check((localScan["candidates"]?.array ?? []).contains { $0.object["path"]?.text == localFX.path && $0.object["local_test_copy"]?.boolean == true }, "local test copy visible with honest marker")
+    let localExe = localFX.appendingPathComponent("Contents/MacOS/steamac-vm")
+    try! FileManager.default.removeItem(at: localExe)
+    try! FileManager.default.copyItem(at: URL(fileURLWithPath: "/usr/bin/true"), to: localExe)
+    let signing = try! CoreProcess.run("/usr/bin/codesign", ["--force", "--sign", "-", "--identifier", "es.fxgam.steamtc", localFX.path], timeout: 20)
+    check(signing.status == 0, "isolated local fixture signed")
+    let localIntegrity = FXDiscoveryService.integrity(app: localFX)
+    check(localIntegrity["state"]?.text == "local_copy" && localIntegrity["publisher_signature"]?.boolean == false, "local seal does not claim publisher verification")
+    check(FXDiscoveryService.launchAllowed(localIntegrity), "local sealed copy allowed to start")
+    check(!FXDiscoveryService.launchAllowed(["state": .string("signature_invalid")]), "broken seal never accepted")
+    let originalInfo = try! Data(contentsOf: localFX.appendingPathComponent("Contents/Info.plist"))
+    try! (originalInfo + Data("\n<!-- changed after signing -->\n".utf8)).write(to: localFX.appendingPathComponent("Contents/Info.plist"))
+    check(!FXDiscoveryService.launchAllowed(FXDiscoveryService.integrity(app: localFX)), "modified sealed resource rejected")
+
     // MARK: Configuration read/save/backup/restore
     let read = try! ConfigurationService.resultRead()
     check(read["configuration"]?.object["version"]?.integer == 1, "default settings")
