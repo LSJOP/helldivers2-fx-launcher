@@ -55,7 +55,7 @@ final class FileDeploymentBackend: DeploymentBackend {
             let dir = root.appendingPathComponent(UUID().uuidString); try CoreFS.ensurePrivateDirectory(dir)
             let snapshot = DeploymentSnapshot(target: "fixture-target", boot: UUID().uuidString, revision: "",
                 fxVersion: "1.9.8", osVersion: "0.4.5", architecture: "aarch64", steamRunning: false, gameRunning: false,
-                freeBytes: 128 * 1_048_576, facts: ["steam": "present", "game": "present"], values: ["launch": "%command%", "tool": "other-tool"])
+                freeBytes: 128 * 1_048_576, facts: ["steam": "present", "game": "present", "ipv4": "available", "gvproxy": "available"], values: ["launch": "%command%", "tool": "other-tool"])
             let backend = try FileDeploymentBackend(dir.appendingPathComponent("config.json"), state: snapshot)
             let service = EnvironmentDeploymentService(backend: backend, receipts: .init(directory: dir.appendingPathComponent("receipts")))
             return (backend, service, DeploymentPlanBuilder.build(try backend.snapshot(), profile: profile))
@@ -127,8 +127,18 @@ final class FileDeploymentBackend: DeploymentBackend {
             try fails("RECEIPT_INVALID", "corrupt receipt blocks recovery") { _ = try s.recover(receipt.id, selected: ["launch"]) }
             try check(try b.snapshot() == before, "corrupt receipt never changes target")
         }
-        var mismatch = p.snapshot; mismatch.fxVersion = "2.0"
-        try check(DeploymentPlanBuilder.build(mismatch, profile: profile).operations.allSatisfy { $0.blocked == "UNSUPPORTED" }, "unsupported versions cannot write")
+        var mismatch = p.snapshot
+        for (fx, os) in [("1.9.9", "0.4.5"), ("2.0", "0.5.0"), ("future-build", "rolling")] {
+            mismatch.fxVersion = fx; mismatch.osVersion = os
+            let updated = DeploymentPlanBuilder.build(mismatch, profile: profile)
+            try check(updated.operations == p.operations, "version updates preserve capability and artifact decisions: " + fx + "/" + os)
+        }
+        mismatch = p.snapshot; mismatch.architecture = "x86_64"
+        try check(DeploymentPlanBuilder.build(mismatch, profile: profile).operations.filter { !$0.detectionPassed }.allSatisfy { $0.blocked == "UNSUPPORTED" }, "architecture mismatch blocks configuration without overriding passed detection")
+        let architecturePlan = DeploymentPlanBuilder.build(mismatch, profile: profile)
+        for id in ["steam", "game", "ipv4", "gvproxy"] {
+            try check(architecturePlan.operations.first { $0.id == id }?.detectionPassed == true && architecturePlan.operations.first { $0.id == id }?.blocked == nil, "passed detection survives unrelated deployment block: " + id)
+        }
         mismatch = p.snapshot; mismatch.facts["fex"] = LaunchService.verifiedFEX
         try check(DeploymentPlanBuilder.build(mismatch, profile: profile).operations.first { $0.id == "fex" }?.blocked != nil, "single known hash cannot establish complete FEX")
         let original = "CUSTOM=foo %command% --user-flag"

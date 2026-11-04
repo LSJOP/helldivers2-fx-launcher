@@ -21,6 +21,8 @@
 
 ### First-run environment setup (isolated development build)
 
+FX and SteamOS version numbers are recorded for diagnostics and historical evidence, not used as allowlists. Setup retains architecture, Guest identity, component/artifact and safe-write checks; performance editing retains bundle integrity, available-driver, parameter-format and hardware bounds. New versions still require actual capability checks and do not imply game compatibility. First-run screenshots predate this policy change; updated captures are pending.
+
 Open **First-Run Setup**, choose FX, enter separate SSH/sudo passwords, then connect and inspect. Review the detected target, profile and exact changes before selecting **Configure environment**. Close Steam/game yourself before offline configuration writes. Correct managed settings are skipped on subsequent scans. Recovery loads only this app’s receipts, compares current values, and stops on identity changes or external edits.
 
 The candidate matrix is FX **1.9.8** / SteamOS **0.4.5** / **aarch64** / AppID **553850**. It is a historical target, not a promise that all installations have identical components. FEX and Proton-JE distribution is **BLOCKED** until reviewed packages, full manifests, hashes, provenance and licenses are available. No private VM files are distributed. The initial profile never forces a proxy, gvproxy replacement, IPv4-only, CPU affinity or historical CPU/RAM/GPU budgets. Hardware/FX recommendations use the existing guarded Performance page.
@@ -167,7 +169,7 @@ Unofficial project; no endorsement or compatibility guarantee. HELLDIVERS 2 and 
 
 Development checks: `native-app/script/run_checks.sh` compiles and runs the native-core contract checks plus ten-language and documentation gates. Python is used only by optional developer scripts; the app bundle and runtime contain no Python. UI changes require a review of both READMEs and their real screenshots. Both English and Simplified Chinese screenshots are refreshed for the integrated UI. Translation naturalness still needs human review. The release-check Actions template remains inactive; no CI workflow is configured.
 
-FX selection V2 + automatic selection V2.1: the FX page, overview and launch panel share one persisted default. One identity/path-verified FX is selected automatically from the scan results; multiple installations preserve an existing valid choice or require selection. Missing/moved/updated defaults are revalidated. Selection remains **launch capability unverified** and never starts the game. Every game launch rescans the default and freezes one selected FX path for inspection, preflight and execution. Integrity accepts an intact bundle signed by the verified FX publisher (Apple trust anchor, Bundle ID and Team ID), or a recognized locally signed copy with a valid content seal; it rechecks the executable digest and retains all original profile, process and Guest guards. This does not establish gameplay compatibility. Launch resources are bundled in the Native App; no original script directory or Node helper is required. Stop/restart remain unavailable. Scoped performance editing supports verified FX 1.9.4/1.9.8 while stopped, with explicit preview and confirmation; FX 1.9.9 writes remain unsupported.
+FX selection V2 + automatic selection V2.1: the FX page, overview and launch panel share one persisted default. One identity/path-verified FX is selected automatically from the scan results; multiple installations preserve an existing valid choice or require selection. Missing/moved/updated defaults are revalidated. Selection remains **launch capability unverified** and never starts the game. Every game launch rescans the default and freezes one selected FX path for inspection, preflight and execution. Integrity accepts an intact bundle signed by the verified FX publisher (Apple trust anchor, Bundle ID and Team ID), or a recognized locally signed copy with a valid content seal; it rechecks the executable digest and retains all original profile, process and Guest guards. This does not establish gameplay compatibility. Launch resources are bundled in the Native App; no original script directory or Node helper is required. Stop/restart remain unavailable. Scoped performance editing supports verified FX 1.9.4/1.9.8 while stopped, with explicit preview and confirmation; FX writes use capability and safety checks rather than a version allowlist.
 
 Launch resources: the Native bundle includes SHA-256-verified gvproxy and wrapper resources. Missing, altered or symlinked resources fail closed; no FX files are changed. Host discovery is checked separately from Guest and gameplay compatibility.
 
@@ -180,11 +182,10 @@ Sudo investigation (2026-11-04): build 2026110402 has a remote empty-prompt quot
 
 [![SteamOS network settings and diagnostics](docs/images/en/environment-network.png)](docs/STEAMOS_NETWORK_SETTINGS.md)
 
-![First-Run Setup](docs/images/en/first-run-setup.png)
 
 [First-run integration and Latest build record](NATIVE_FIRST_RUN_MAIN_MERGE_REPORT.md).
 
-Acceptance in progress: selected FX entries are deduplicated against automatic discovery. FX 1.9.9 is installed and discoverable but performance writes are unsupported; real Guest/game acceptance and formal distribution remain pending. See [acceptance report](docs/acceptance/FULL_SYSTEM_ACCEPTANCE_REPORT.md).
+Acceptance in progress: selected FX entries are deduplicated against automatic discovery. FX 1.9.9 is installed and discoverable; performance writes depend on actual capability and safety checks; real Guest/game acceptance and formal distribution remain pending. See [acceptance report](docs/acceptance/FULL_SYSTEM_ACCEPTANCE_REPORT.md).
 
 The game launch sheet closes automatically after the current launch completes with a detected game process; errors, cancellation and unverified results remain visible. Process detection does not establish main-menu or multiplayer success. This dismissal change awaits a fresh live GUI check; existing screenshots do not demonstrate it.
 
