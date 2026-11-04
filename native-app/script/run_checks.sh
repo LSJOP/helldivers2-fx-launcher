@@ -60,3 +60,7 @@ SDK="$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
 ./build/FXSelectionChecks >evidence/fx-selection-checks.txt 2>&1
 /usr/bin/plutil -lint HD2FXNative.xcodeproj/project.pbxproj >evidence/project-lint.txt
 cat evidence/native-core-checks.txt evidence/native-integration-checks.txt evidence/fx-identity-checks.txt
+
+/usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Core/*.swift checks/DeploymentChecks.swift -o build/DeploymentChecks >evidence/deployment-compile.txt 2>&1
+./build/DeploymentChecks >evidence/deployment-checks.txt 2>&1
+cat evidence/deployment-checks.txt

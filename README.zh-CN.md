@@ -16,6 +16,16 @@
 
 [软件截图](#zh-screenshots) · [主要功能](#zh-features) · [下载安装](#zh-installation) · [快速开始](#zh-usage) · [兼容性](#zh-development) · [更新日志](#zh-changelog) · [原脚本](#zh-legacy)
 
+### 首次运行环境配置（独立开发版）
+
+打开**首次运行环境配置**，选择 FX，分别输入仅供本进程使用的 SSH／sudo 密码，然后连接并检测。审阅目标身份、配置档和具体修改后点击**配置运行环境**。离线写入配置前请自行退出 Steam 和游戏；再次检测会跳过已正确配置的应用管理项。恢复功能仅使用本应用收据，核对当前值，遇到目标变化或外部修改就停止。
+
+候选矩阵为 FX **1.9.8**／SteamOS **0.4.5**／**aarch64**／AppID **553850**。这是历史目标，不代表所有同版本安装都含有相同组件。FEX／Proton-JE 的公开部署在取得审核发行包、完整清单、哈希、构建来源及许可证前为 **BLOCKED**。不分发私人 VM 文件。初始配置档不强制代理、gvproxy 替换、IPv4-only、CPU 亲和性或历史 CPU／内存／GPU 预算。硬件／FX 建议沿用现有受保护的性能页面。
+
+组件来源、恢复规则、常见错误与测试边界见[实现报告](NATIVE_FIRST_RUN_DEPLOYMENT_IMPLEMENTATION.md)、[配置档矩阵](NATIVE_ENVIRONMENT_PROFILE_MATRIX.md)、[安全审查](NATIVE_DEPLOYMENT_SECURITY_REVIEW.md)、[测试结果](NATIVE_DEPLOYMENT_TEST_RESULTS.md)和[验收报告](NATIVE_FIRST_RUN_ACCEPTANCE.md)。缺失或不支持的版本需要新的审核配置档；`ARTIFACT_UNAPPROVED` 表示未尝试安装，`STEAM_RUNNING` 需要退出 Steam 后重新检测，`RECOVERY_REQUIRED` 会阻止后续部署，直到解决收据所记录的修改。配置写入成功不等于游戏、EAC 或多人验证通过。全新 VM 验收为 **NOT_TESTED**，Latest 未修改。
+
+
+
 <a id="zh-overview"></a>
 
 以 **SwiftUI + AppKit** 构建、**Swift 原生核心**驱动：启动游戏、检查所选 FX 环境、管理性能配置。六个页面职责清晰，默认深色，操作进度和结果在页面内显示，技术细节按需展开。正式运行不使用 Python 解释器、Python Bridge 或外部脚本目录。
@@ -57,7 +67,7 @@
 </details>
 
 
-八张当前简体中文截图均来自真实 Native Debug App（0.1.0，构建 2026110402），拍摄于 2026-11-04。原始像素未改动，没有合成界面或状态。截图副本隔离偏好并禁用凭据自动读取，未执行 FX／Guest 操作或配置写入。截图不证明游戏或安装已就绪。[采集来源与限制](docs/images/README.md)。
+十张当前简体中文截图来自实际整合 Debug App（0.1.0，构建 2026110411），涵盖七个页面、网络设置与滚动设置视图。原始像素未修改，采集副本隔离偏好，不连接或修改 Guest；不代表游戏或安装验收。[采集来源与限制](docs/images/README.md)。
 
 <a id="zh-features"></a>
 
@@ -67,7 +77,7 @@
 
 | 状态 | 功能 |
 | --- | --- |
-| 🟢 已实现 | 六页原生界面、Cmd+1…6 导航、深色／浅色／跟随系统、正式项目图标 |
+| 🟢 已实现 | 七页原生界面、Cmd+1…7 导航、深色／浅色／跟随系统、正式项目图标 |
 | 🟢 已实现 | 限定范围本机／FX 发现；带校验、修订检查、备份和原子替换的配置编辑 |
 | 🟢 已实现 | 可搜索、筛选、有容量限制且脱敏的日志与诊断报告 |
 | 🟢 已实现 · 受保护写入 | 硬件／FX 偏好与参考对比；固定 FX 1.9.4 构建的限定参数编辑、备份与恢复 |
@@ -126,7 +136,7 @@ open build/Debug/HD2FXNative.app
 
 尚未发布任何正式版本；当前原生版本 `0.1.0` 为开发预览。近期未发布改动：
 
-- 原生六页界面、限定范围 FX 发现、带校验的配置编辑、脱敏日志与只读性能比较。
+- 原生七页界面、限定范围 FX 发现、带校验的配置编辑、脱敏日志与只读性能比较。
 - GUI 化 FX／SSH 操作与独立的 SSH／sudo 会话内存凭据。
 - Sparkle 2 更新集成（Feed／签名服务尚未配置）。
 
@@ -162,9 +172,13 @@ FX 选择 V2 + 自动选择 V2.1：FX 管理、总览和启动窗口共享并持
 
 sudo 排查（2026-11-04）：构建 2026110402 存在远程空提示符参数引用缺陷。相关修复及 sudo/SSH 错误分类正在验证，尚未发布替代构建。真实只读检查已通过完整 Guest 身份确认；带密码 sudo 及后续启动阶段仍未验证。
 
-**纯内存候选版本：** 会话凭据管理替换全部钥匙串操作。每次获准的特权 SSH 调用在自身调用中认证，密码输入与目标命令标准输入隔离。Guest IPv6 修改须经过精确预览、确认并保留本地回滚记录；本候选的真实 Guest 修改、Steam／游戏与联机验收仍为 NOT TESTED。设置截图来自真实的纯内存工作候选（构建 2026110403、冻结前未提交快照）；其他页面保留各自记录的界面简化版本来源。
+**当前凭据实现：** 保留 main 的 Guest 身份绑定、独立 SSH／sudo 内存凭据、逐次认证和脱敏；首次配置也使用同一服务。真实特权修改、全新 VM、游戏及联机仍为 NOT_TESTED。当前截图为整合版构建 2026110411。
 
 
 **SteamOS 网络候选（未发布）：** 运行环境 → SteamOS 网络设置提供主动开启/关闭 IPv6、精确确认、备份与验证恢复。IPv6 不再是启动前提，游戏启动不会修改它。VM、Steam TLS、PlayFab、UDP 为手动只读探测，不申请 sudo，检测通过不代表多人联机已验证。凭据仅存进程内存。真实 Guest 写入及游戏启动仍为 NOT TESTED。[网络使用说明](docs/STEAMOS_NETWORK_SETTINGS.md) · [Python → Swift 功能矩阵](docs/PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md)。
 
 [![SteamOS 网络设置与诊断](docs/images/zh-CN/environment-network.png)](docs/STEAMOS_NETWORK_SETTINGS.md)
+
+![First-Run Setup](docs/images/zh-CN/first-run-setup.png)
+
+[首次配置合并与 Latest 构建记录](NATIVE_FIRST_RUN_MAIN_MERGE_REPORT.md)。

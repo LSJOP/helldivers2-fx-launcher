@@ -1,6 +1,6 @@
 # Native App development
 
-Instruction version: **v1.2.14** · Updated: **2026-11-04**.
+Instruction version: **v1.2.15** · Updated: **2026-11-04**.
 Change: integrate scoped performance editing, guarded update management, real localized screenshot policy and existing FX/localization/Git rules.
 
 - Architecture: SwiftUI + narrowly scoped AppKit; one AppState and existing Service Layer. Refresh remains read-only. The functional migration permits allowlisted Core actions through the supervised Bridge, with explicit user initiation and consent for writes/launch/SSH. Unknown/unverified is never success. Development tests use isolated fixtures; real game/network/system changes require the corresponding user action.
@@ -57,3 +57,7 @@ README screenshot policy: **HD2_README_LOCALIZED_SCREENSHOTS_POLICY** · 2026-11
 
 
 Credential architecture override: **HD2FX_MEMORY_ONLY_CREDENTIALS v1.0.0** · 2026-11-04. The current user instruction supersedes every prior credential-remembering/Keychain rule: credentials live only in SessionCredentialManager process memory, independently for SSH and sudo; no credential-store read/write/delete, no defaults/files, no migration or cleanup of old saved items. Preserve Security APIs for code-signing validation and Sparkle distribution. Bind reuse to canonical target/executable/config revision/process identity and verified Guest boot; clear on identity loss/change, input change, user clear or exit. Each approved privileged SSH call authenticates in that call with stdin-only credentials; never rely on timestamp cache/NOPASSWD changes. Guest configuration requires exact preview, confirmation, backup, bounded verification and recovery. Work on the PR #3 development line, preserve unknown worktrees/files, no main merge or Latest publication; deliver a separately validated candidate only.
+
+First-run instruction: **HD2_NATIVE_FIRST_RUN_DEPLOYMENT_v1.0.0** · 2026-11-04. This task supersedes remembered-credential rules: no Keychain access or persistence, independent SSH/sudo memory values only. Compatibility checks never change Guest networking. Develop in the isolated first-run worktree, preserve other worktrees and Latest, never merge main or publish. Missing reviewed artifacts remain BLOCKED. New-VM/game/EAC/multiplayer acceptance needs separate explicit authorization. Keep durable write-ahead receipts and compare-and-swap recovery; never replace unknown components or reset a VM/prefix. Serial development only.
+
+Integration authorization: **HD2_NATIVE_FIRST_RUN_MAIN_LATEST_v1.0.0** · 2026-11-04. The user explicitly authorized resolving the 23 cross-branch conflicts while preserving main credential/network protections, merging the verified result to main, and generating Latest from clean main. This overrides earlier no-main/no-Latest restrictions only for this integration. Preserve current Latest as a verified rollback, do not modify Guest/game/Prefix or publish a formal release. Serial integration, complete isolated checks and Debug build before main promotion.

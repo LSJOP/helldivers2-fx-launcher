@@ -68,3 +68,11 @@ User-authorized follow-up supersedes the completed historical queue for this tas
 ## Global UI simplification — 2026-11-04
 
 User requested removal of the shared FXStatusBar from all six pages and explicitly forbids branch merging. Isolated branch ui/remove-global-fx-bar-20261104 is based on the latest delivered Swift Native source (feature/full-swift-native-migration at 1bd1bcc), not the older Python/main baseline. Removed only the global ContentView call, unused View definition and three bar-only locale keys across ten languages; Core/Models/Services/Stores/sidebar untouched. Both README/changelog files and sixteen real bilingual screenshots updated. Existing Release pipeline and strict resources/signature gate PASS; standalone Release main window displayed. Native checks pass; final resize/runtime verification and safe Latest publication recorded in the external UI-Simplify-20261104 build report. Legacy uxReview fails its obsolete target guard on this Native Core baseline and is not used as current UI acceptance. No real FX/Guest/game action. No merge authorized or performed.
+
+## First-run environment deployment · 2026-11-04
+
+New explicit user task, isolated `feature/native-first-run-20261104`, baseline 7725cac. Memory-only auth and read-only compatibility repaired here without copying the parallel dirty memory-only checkout. Wizard/profile/actual SSH detector/plan/executor/write-ahead integrity-checked receipts/Steam VDF recovery and controlled FEX/Proton adapter interfaces implemented. Initial profile has no approved redistributable packages: actual public component deployment remains BLOCKED. No Latest/main/VM/prefix/game changes. Details and exact verification boundaries: five NATIVE_FIRST_RUN / NATIVE_DEPLOYMENT / NATIVE_ENVIRONMENT reports at repository root. Existing completed task queue is preserved; no automation is configured.
+
+## First-run main integration and Latest · 2026-11-04
+
+User explicitly authorized main merge, resolution of the 23 conflicts while preserving main security/network services, and generating Latest from verified clean main. Integration uses a separate worktree/branch. Existing first-run, credential and network checks are retained; real Guest/game acceptance is not authorized. Final build/rollback identity lives in Latest BUILD-INFO and the merge report.

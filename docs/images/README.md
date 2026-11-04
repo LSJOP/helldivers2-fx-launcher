@@ -31,3 +31,7 @@ Integration refresh: both language sets now include the shared FX selection stat
 2026-11-04 global UI simplification: all sixteen current English/Chinese page and detail screenshots were recaptured from the real Debug App at source 34aaf40, build 2026110402. The global FXStatusBar is removed from the shared ContentView; native page content starts at the existing common margin. No backend or sidebar change. Actual pixels are retained, without overlays or compositing.
 
 2026-11-04 全局 UI 精简：十六张中英文页面与详情截图均已使用真实 Debug App 重拍，来源34aaf40，构建2026110402。共享ContentView不再渲染FXStatusBar，页面从原有统一边距开始；后端与侧栏不变，截图保留原像素。
+
+## First-run development captures · 2026-11-04
+
+Build 2026110410: real isolated Debug windows for zh-CN/en First-Run Setup, Dashboard and Settings, including credential section. Unmodified pixels; capture bundle IDs recorded in manifest; metadata-only host refresh, no Guest connection or configuration writes. Visual review checked language, clipping, empty secure fields and honest unknown states. Other README images remain historical. Full ten-language human review and live wizard interaction remain NOT_TESTED.

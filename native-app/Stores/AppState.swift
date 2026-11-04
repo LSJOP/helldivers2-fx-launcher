@@ -29,6 +29,75 @@ final class AppState: ObservableObject {
     @Published var guestRestorePath = ""
     @Published var pendingAction: GUIAction?
     let credentials = SessionCredentialManager()
+    @Published var firstRunPlan: DeploymentPlan?
+    @Published var firstRunState: DeploymentState = .NotChecked
+    @Published var firstRunReceipt: DeploymentReceipt?
+    @Published var firstRunReceipts: [DeploymentReceipt] = []
+    @Published var firstRunFailure: String?
+    private var firstRunEventGeneration: UUID?
+    func firstRunAction(_ method: String, receipt: UUID? = nil, selected: Set<String> = []) {
+        guard !tasks.busy else { return }
+        let generation = UUID(); firstRunEventGeneration = generation
+        let root = runtimeRoot, launch = fxSelection.launchParameters(runtimeRoot: runtimeRoot)
+        let plan = firstRunPlan
+        firstRunFailure = nil
+        firstRunState = method == "first_run_detect" ? .Checking : method == "first_run_receipts" ? firstRunState : .AwaitingAuthorization
+        tasks.start { [weak self] in
+            guard let self else { return }
+            do {
+                var input = launch
+                input["confirmed"] = .bool(true)
+                if method != "first_run_receipts" {
+                    let metadata = try await self.core.request("read_configuration")
+                    let revision = metadata.result["revision"]?.text ?? ""
+                    let binding = try await self.core.request("credential_target", timeout: 45, params: launch)
+                    guard let identity = binding.result["identity"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
+                    let target = root + "|" + revision + "|" + identity
+                    if let scope = self.credentials.scope, scope != target { self.clearSessionCredentials() }
+                    await self.credentials.prepare(for: target)
+                    try self.credentials.bindGuest(binding.result["guest_boot"]?.text)
+                    input.merge(try self.credentials.parameters(for: target)) { _, value in value }
+                    input["credential_revision"] = .string(revision)
+                    input["credential_host_identity"] = .string(identity)
+                }
+                if method == "first_run_deploy", let plan {
+                    input["deployment_plan"] = try JSONDecoder().decode(JSONValue.self, from: JSONEncoder().encode(plan))
+                    input["approved_steps"] = .array(plan.executable.map { .string($0.id) })
+                    self.firstRunState = .Deploying
+                }
+                if let receipt { input["receipt_id"] = .string(receipt.uuidString); input["approved_steps"] = .array(selected.sorted().map { .string($0) }) }
+                let reply = try await self.core.request(method, timeout: 180, params: input) { [weak self] event in
+                    guard let raw = event["deployment_state"]?.text, let status = DeploymentState(rawValue: raw) else { return }
+                    Task { @MainActor in
+                        guard let self, self.firstRunEventGeneration == generation else { return }
+                        self.firstRunState = status
+                    }
+                }
+                self.firstRunEventGeneration = nil
+                if let value = reply.result["plan"] {
+                    let plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(value))
+                    try self.credentials.bindGuest(plan.snapshot.boot)
+                    self.firstRunPlan = plan
+                    self.firstRunState = plan.operations.allSatisfy { $0.blocked == "UNSUPPORTED" } ? .Unsupported : plan.operations.allSatisfy { $0.blocked == nil && $0.changes.isEmpty } ? .Ready : .NeedsConfiguration
+                }
+                if let value = reply.result["receipt"] {
+                    let receipt = try JSONDecoder().decode(DeploymentReceipt.self, from: JSONEncoder().encode(value))
+                    self.firstRunReceipt = receipt; self.firstRunState = receipt.state; self.firstRunFailure = receipt.failure
+                    self.firstRunPlan = nil // Every subsequent operation requires a fresh scan.
+                }
+                if let value = reply.result["receipts"] { self.firstRunReceipts = try JSONDecoder().decode([DeploymentReceipt].self, from: JSONEncoder().encode(value)) }
+            } catch {
+                self.firstRunEventGeneration = nil
+                let code = (error as? ErrorState)?.code ?? (error as? CoreError)?.code ?? "DEPLOYMENT_FAILED"
+                self.firstRunFailure = code
+                self.firstRunState = code == "RECOVERY_REQUIRED" ? .RecoveryRequired : .Failed
+                if ["CREDENTIAL_SCOPE_CHANGED", "TARGET_CHANGED", "FX_IDENTITY_UNVERIFIED", "FX_ENTRY_MISMATCH"].contains(code) { self.clearSessionCredentials(); self.firstRunPlan = nil }
+                if code == "SSH_AUTH_FAILED" { self.credentials.reject(.ssh) }
+                if code == "SUDO_AUTH_FAILED" { self.credentials.reject(.sudo) }
+            }
+        }
+    }
+
     @Published private(set) var fxSelection = FXSelectionManager(defaults: NativeLocalization.isolatedUXSmoke ? nil : .standard)
     @Published private(set) var fxSelectionIssue = false
     var fxStatus: String {

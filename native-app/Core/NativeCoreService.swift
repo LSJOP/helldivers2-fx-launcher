@@ -11,6 +11,10 @@ actor NativeCoreService {
     struct Operation { let method: String; let scope: String; let confirmation: Bool; let external: Bool }
 
     static let operations: [Operation] = [
+        Operation(method: "first_run_detect", scope: "setup", confirmation: true, external: true),
+        Operation(method: "first_run_deploy", scope: "setup", confirmation: true, external: true),
+        Operation(method: "first_run_recover", scope: "setup", confirmation: true, external: true),
+        Operation(method: "first_run_receipts", scope: "setup", confirmation: false, external: false),
         Operation(method: "read_configuration", scope: "settings", confirmation: false, external: false),
         Operation(method: "save_configuration", scope: "settings", confirmation: true, external: false),
         Operation(method: "backup_configuration", scope: "settings", confirmation: false, external: false),
@@ -60,7 +64,7 @@ actor NativeCoreService {
         "fx_path", "confirmed", "runtime_root", "password", "passphrase", "sudo_password",
         "credential_guest_boot", "credential_host_identity", "credential_revision", "approved_changes", "configuration", "expected_revision",
         "channel", "match_result", "note", "values", "preview_token", "backup_path",
-        "selected_paths", "ipv6_enabled", "network_plan"]
+        "selected_paths", "ipv6_enabled", "network_plan", "deployment_plan", "approved_steps", "receipt_id"]
 
     func request(_ method: String, timeout: TimeInterval = 5,
                  params: [String: JSONValue] = [:],
@@ -130,6 +134,9 @@ actor NativeCoreService {
     nonisolated static func dispatch(_ method: String, params: [String: JSONValue], context: CoreContext,
                                      emit: @escaping (String, String, [String: JSONValue]) -> Void) throws -> [String: JSONValue] {
         switch method {
+        case "first_run_detect", "first_run_deploy", "first_run_recover", "first_run_receipts":
+            guard method == "first_run_receipts" || params["confirmed"]?.boolean == true else { throw CoreError("CONFIRMATION_REQUIRED") }
+            return try deployment(method, params: params, context: context, emit: emit)
         case "credential_target": return try credentialTarget(params, context: context)
         case "handshake":
             return ["protocol_min": .number(1), "protocol_max": .number(1),

@@ -8,6 +8,8 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+- Isolated First-Run Setup development build: actual environment detection, versioned profiles, reviewable plans, durable receipts, offline Steam VDF transactions and drift-guarded recovery, with ten-language UI. Credentials are process-memory only; compatibility checking no longer changes IPv4 configuration. FEX/Proton distribution is blocked pending reviewed artifacts; fresh VM/game/EAC/multiplayer remain untested. Latest is unchanged.
+
 - SteamOS network candidate: runtime IPv6 moved to Environment with explicit preview, confirmation, independent sudo authentication, full-interface backup and recovery. Game startup no longer writes or requires IPv6.
 - Added bounded read-only VM, verified Steam TLS, Guest PlayFab and STUN/UDP diagnostics, ten-language UI and Python parity audit. Real Guest writes/gameplay remain unverified; no Latest publication.
 

@@ -1,0 +1,53 @@
+{
+  "id": "hd2-fx198-steamos045-aarch64",
+  "version": 1,
+  "fx": [
+    "1.9.8"
+  ],
+  "steamOS": [
+    "0.4.5"
+  ],
+  "architecture": "aarch64",
+  "appID": "553850",
+  "fexVersion": "RF-historical-candidate",
+  "protonVersion": "proton-je-11.0-20261014-3",
+  "vulkan": "Vulkan / KosmicKrisp",
+  "launchOptions": {
+    "FEX_NEEDSSECCOMP": "1",
+    "FEX_DISKCACHE": "0"
+  },
+  "requirements": {
+    "fex": "CONDITIONAL",
+    "proton": "CONDITIONAL",
+    "steam": "REQUIRED",
+    "game": "REQUIRED",
+    "vulkan": "CONDITIONAL",
+    "kosmickrisp": "CONDITIONAL",
+    "launch": "CONDITIONAL",
+    "tool": "CONDITIONAL",
+    "network": "REQUIRED",
+    "gvproxy": "UNKNOWN",
+    "ipv4": "OPTIONAL",
+    "ipv6": "UNKNOWN"
+  },
+  "artifacts": [],
+  "networkCandidates": [
+    "gvproxy-eim: opt-in, UDP acceptance unknown",
+    "Guest IPv4-only: optional, no universal necessity evidence",
+    "HTTPS proxy: user-specified only"
+  ],
+  "sources": [
+    "docs/STEAMOS_ENVIRONMENT_TRACE_20261104.zh-CN.md",
+    "https://github.com/fxgl/steamac/releases/tag/v1.9.8"
+  ],
+  "licenses": [
+    "FEX: provenance/license review required before distribution",
+    "Proton-JE: full redistribution manifest/license review required"
+  ],
+  "testedScope": [
+    "historical personal environment only",
+    "fresh VM NOT_TESTED",
+    "FEX full release manifest BLOCKED",
+    "Proton full release manifest BLOCKED"
+  ]
+}

@@ -17,9 +17,19 @@
 
 [Screenshots](#en-screenshots) · [Features](#en-features) · [Installation](#en-installation) · [Quick start](#en-usage) · [Compatibility](#en-development) · [Changelog](#en-changelog) · [Legacy script](#en-legacy)
 
+### First-run environment setup (isolated development build)
+
+Open **First-Run Setup**, choose FX, enter separate session-only SSH/sudo passwords, then connect and inspect. Review the detected target, profile and exact changes before selecting **Configure environment**. Close Steam/game yourself before offline configuration writes. Correct managed settings are skipped on subsequent scans. Recovery loads only this app’s receipts, compares current values, and stops on identity changes or external edits.
+
+The candidate matrix is FX **1.9.8** / SteamOS **0.4.5** / **aarch64** / AppID **553850**. It is a historical target, not a promise that all installations have identical components. FEX and Proton-JE distribution is **BLOCKED** until reviewed packages, full manifests, hashes, provenance and licenses are available. No private VM files are distributed. The initial profile never forces a proxy, gvproxy replacement, IPv4-only, CPU affinity or historical CPU/RAM/GPU budgets. Hardware/FX recommendations use the existing guarded Performance page.
+
+Component sources, recovery rules, common errors and test boundaries are recorded in [implementation](NATIVE_FIRST_RUN_DEPLOYMENT_IMPLEMENTATION.md), [profile matrix](NATIVE_ENVIRONMENT_PROFILE_MATRIX.md), [security review](NATIVE_DEPLOYMENT_SECURITY_REVIEW.md), [test results](NATIVE_DEPLOYMENT_TEST_RESULTS.md) and [acceptance](NATIVE_FIRST_RUN_ACCEPTANCE.md). Missing/unsupported versions require a new reviewed profile; `ARTIFACT_UNAPPROVED` means no installation attempt, `STEAM_RUNNING` requires closing Steam and rescanning, and `RECOVERY_REQUIRED` blocks further deployment until the recorded change is resolved. A successful configuration receipt does not validate gameplay, EAC or multiplayer. New VM acceptance is **NOT_TESTED**. Latest is unchanged.
+
+
+
 <a id="en-overview"></a>
 
-A fully native **SwiftUI + AppKit** app with a **Swift Native Core**: launch the game, inspect the selected FX environment and manage performance settings from six focused pages. No Python interpreter, Python Bridge or external script directory is used at runtime. The interface defaults to dark, with inline operation feedback and advanced details available when needed.
+A fully native **SwiftUI + AppKit** app with a **Swift Native Core**: launch the game, inspect the selected FX environment and manage performance settings from seven focused pages. No Python interpreter, Python Bridge or external script directory is used at runtime. The interface defaults to dark, with inline operation feedback and advanced details available when needed.
 
 > [!IMPORTANT]
 > **Development preview.** No official installer has been released. The completed Native snapshot is integrated into [main](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main); [feature/macos-native-app](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app) is retained for development history. Runtime binaries, game files and Guest images are not included.
@@ -58,7 +68,7 @@ All six pages and the performance/update detail viewports were recaptured on 202
 </details>
 
 
-Eight current English screenshots from the real Native Debug App (0.1.0, build 2026110402), captured on 2026-11-04. Original pixels are unchanged; no UI/status was composited. Capture copies isolate preferences and disable credential autoload; no FX/Guest action or configuration write was performed. Screenshots do not prove gameplay or installation readiness. [Capture provenance and limitations](docs/images/README.md).
+Ten current English screenshots come from the actual integrated Debug App (0.1.0, build 2026110411), covering seven pages, network settings and scrolled settings. Original pixels are unmodified; capture copies isolate preferences and do not connect to or change Guest state. Screenshots do not establish gameplay or installation acceptance. [Capture provenance](docs/images/README.md).
 
 <a id="en-features"></a>
 
@@ -125,7 +135,7 @@ Existing clones need the intended branch and `git submodule update --init --recu
 
 No official release has been published yet; the current Native version `0.1.0` is a development preview. Recent unreleased changes:
 
-- Native six-page interface, bounded FX discovery, validated configuration editing, redacted logs and read-only performance comparison.
+- Native seven-page interface, bounded FX discovery, validated configuration editing, redacted logs and read-only performance comparison.
 - GUI-driven FX/SSH actions and independent, memory-only SSH/sudo session credentials.
 - Sparkle 2 update integration (feed/signing service not configured).
 
@@ -161,9 +171,13 @@ Launch resources: `/Applications` and the FX `.app` are not the original script 
 
 Sudo investigation (2026-11-04): build 2026110402 has a remote empty-prompt quoting defect. The fix and distinct sudo/SSH failure classification are under validation; no replacement build is released. Full Guest identity passed a live read-only check; passworded sudo and subsequent launch stages remain unverified.
 
-**Memory-only candidate:** session credential management replaces all Keychain controls. Each approved privileged SSH call authenticates in that call and isolates command stdin from password input. Guest IPv6 changes require an exact preview, consent and a local rollback receipt; live Guest changes, Steam/game and multiplayer acceptance remain NOT TESTED for this candidate. Settings screenshots show the real memory-only working candidate (build 2026110403, dirty pre-freeze snapshot); other pages retain their recorded UI-simplification provenance.
+**Current credential implementation:** Main retains Guest identity binding, independent SSH/sudo memory credentials, per-call authorization and redaction; First-Run Setup uses the same service. Live privileged changes, fresh VM, gameplay and multiplayer remain NOT_TESTED. Current captures use integrated build 2026110411.
 
 
 **SteamOS network candidate (unreleased):** Environment → SteamOS network settings provides explicit runtime IPv6 enable/disable, exact confirmation, backup and verified recovery. IPv6 is optional and game startup never changes it. VM, Steam TLS, PlayFab and UDP diagnostics are explicit read-only probes without sudo; passing does not verify multiplayer. Credentials remain memory-only. Real Guest writes and game launch remain NOT TESTED. [Network guide](docs/STEAMOS_NETWORK_SETTINGS.md) · [Python → Swift parity](docs/PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md).
 
 [![SteamOS network settings and diagnostics](docs/images/en/environment-network.png)](docs/STEAMOS_NETWORK_SETTINGS.md)
+
+![First-Run Setup](docs/images/en/first-run-setup.png)
+
+[First-run integration and Latest build record](NATIVE_FIRST_RUN_MAIN_MERGE_REPORT.md).
