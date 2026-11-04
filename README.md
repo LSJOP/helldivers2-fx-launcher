@@ -193,3 +193,5 @@ First-Run Setup is available from the sidebar; the duplicate shortcut above the 
 The Dashboard image was refreshed from an isolated real Debug window on 2026-11-05 (build 2026110503). It captures the layout while the initial read-only snapshot is loading; it is not runtime acceptance evidence. Other screenshots retain their recorded build provenance.
 
 FX Manager also lists the local test identity `es.fxgam.steamtc`. Intact locally signed copies can use the normal launch confirmation, without an official publisher signature. They are labelled as local test copies; path, content-seal, process ancestry and SSH endpoint checks remain active. This does not enable performance preference writes for custom copies or establish Guest/game compatibility.
+
+First-Run Setup uses the same official/local-copy entry validation as launch. A fresh test Guest still needs its own SSH/sudo authentication and a reviewed deployment profile; recognizing the copy does not establish that those prerequisites are complete.

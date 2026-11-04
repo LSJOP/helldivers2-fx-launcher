@@ -276,7 +276,10 @@ extension NativeCoreService {
         if method == "first_run_receipts" { return ["receipts": try json(deploymentReceipts.list())] }
         let request = try launchRequest(params, context: context, emit: emit, confirmed: true)
         let fx = try LaunchService.selectedFX(request)
-        guard FXDiscoveryService.integrity(app: fx)["state"]?.text == "verified" else { throw CoreError("FX_ENTRY_MISMATCH") }
+        let integrity = FXDiscoveryService.integrity(app: fx, context: context)
+        guard FXDiscoveryService.launchAllowed(integrity) else {
+            throw CoreError("FX_ENTRY_MISMATCH", ["integrity_state": integrity["state"] ?? .string("unverified")])
+        }
         let transport = SSHTransport.isolatedSetup(request.configuration)
         defer { transport.closeMaster() }
         guard SSHTransport.localHost(transport.settings.host) else { throw CoreError("LOCAL_FX_REQUIRED") }
