@@ -19,3 +19,5 @@
 4. 更新安装限隔离副本，但需先有可信签名包；缺少包不能靠授权绕过。
 
 上述尚未授权/执行，均 NOT TESTED 或 BLOCKED。没有关闭/绕过反作弊，没有更改 sudoers/NOPASSWD，没有删除/替换虚拟磁盘或升级运行组件。
+
+修复版 Release：3次有界启动/窗口检测/退出，实际 on-screen window 均为1。仅4秒/轮、单台系统、隔离 bundle ID，无 Guest；完整稳定性仍 NOT TESTED。证据位于候选 release-gui-results.json/release-window.png。

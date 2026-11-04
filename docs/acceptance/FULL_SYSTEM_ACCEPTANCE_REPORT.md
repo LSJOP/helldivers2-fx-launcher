@@ -126,3 +126,62 @@
 FX 自动发现重复：保留 FIX-01 原始失败，FIX-02 记录修复及实际只读复测。初始 Sparkle 未解析失败单独保留，构建解析依赖后全套复测通过。修复不增加 FX 1.9.9 允许范围、不降低身份验证、不访问 Guest。README 已修正脚本目录和七页面矛盾。
 
 全部遗留分支/原 Python 目录/Latest 保留。只获准验收分支本地提交；不推送/main合并/发布。构建后的完整身份与发布摘要见 RELEASE_READINESS_REPORT.md 及候选构建文件。
+
+## 最终验收摘要
+
+未测项目保留 NOT TESTED/BLOCKED，即使原模板该行只列 PASS/FAIL，也不伪造二元结果。
+
+```text
+HD2FXNATIVE v1.0.0 — FULL ACCEPTANCE
+GIT HEAD (BUILD): 3967534413ed8cde9ac8c0d8f5f4c4b5f4e5ae17
+BRANCH: audit/full-acceptance-20261105
+PR #3: MERGED (prior to this task)
+SOURCE CODE AUDIT: PASS (scoped; not an exhaustive proof)
+PYTHON FEATURE PARITY: PARTIAL
+FIRST RUN EXPERIENCE: NOT TESTED
+FX AUTO DISCOVERY: PASS (host paths and focused regression)
+FX MANAGEMENT: NOT TESTED
+STEAMOS MANAGEMENT: NOT TESTED
+GUEST IDENTITY: NOT TESTED
+SSH AUTHENTICATION: NOT TESTED
+INDEPENDENT SUDO: NOT TESTED
+MEMORY-ONLY CREDENTIALS: PASS (source/isolated tests; live lifecycle NOT TESTED)
+KEYCHAIN REMOVED: YES (credential APIs)
+FIRST-TIME ENVIRONMENT SETUP: BLOCKED
+IPv6 STANDALONE CONTROL: NOT TESTED
+IPv6 REMOVED FROM GAME STARTUP: PASS
+VM DIAGNOSTIC: NOT TESTED
+STEAM TLS: NOT TESTED
+PLAYFAB: NOT TESTED
+UDP: NOT TESTED
+CPU CONFIGURATION: NOT TESTED (1.9.9 unsupported)
+MEMORY CONFIGURATION: NOT TESTED (1.9.9 unsupported)
+VULKAN CONFIGURATION: NOT TESTED (1.9.9 unsupported)
+CONFIG BACKUP / RESTORE: NOT TESTED (isolated tests PASS)
+STEAM LAUNCH: NOT TESTED
+HELLDIVERS 2 LAUNCH: NOT TESTED
+GAME MAIN MENU: NOT TESTED
+SINGLE PLAYER: NOT TESTED
+MULTIPLAYER: NOT TESTED
+GUI ACCEPTANCE: FAIL (stale runtime-directory instruction; complete interactions NOT TESTED)
+10-LANGUAGE LOCALIZATION: NOT TESTED (581 keys x 10 static PASS)
+AUTO UPDATE: BLOCKED
+SECURITY AUDIT: NOT TESTED (scoped source and isolated checks PASS)
+STABILITY TESTS: NOT TESTED (3 bounded Release launch/window/exit cycles PASS)
+RELEASE BUILD: PASS
+DISTRIBUTION SIGNING: FAIL (ad-hoc)
+NOTARIZATION: NOT TESTED (no stapled ticket)
+P0 ISSUES: 2 open release blockers/evidence gaps
+P1 ISSUES: 5 open
+P2 ISSUES: 2 open; 2 fixed
+RELEASE CANDIDATE: /Volumes/Thunderbolt2TB/HD2-App-Builds/Candidates/acceptance-fixed-20261105/Products/HD2FXNative.app
+BUILD COMMIT: 3967534413ed8cde9ac8c0d8f5f4c4b5f4e5ae17
+BUILD NUMBER: 2026110501
+APP VERSION: 0.1.0 (engineering candidate, not released v1.0.0)
+SHA256 (Mach-O executable): a4804a0e93eb2eac84e98bec43e29f28c6cab192d85e9e4acf8735de171d2f40
+LATEST OVERWRITTEN: NO (before/after executable SHA256 matches)
+MAIN MERGED: NO (this task)
+GITHUB RELEASE PUBLISHED: NO
+PUSHED: NO
+RELEASE READINESS: NOT READY
+```

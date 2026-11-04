@@ -13,3 +13,13 @@ PR #3 已 MERGED（2026-11-04 UTC；合并 7bd7aed）。当前任务未合并 ma
 修复候选计划：`/Volumes/Thunderbolt2TB/HD2-App-Builds/Candidates/acceptance-fixed-20261105/Products/HD2FXNative.app`。仅在干净已提交源码构建并通过资源门禁后标记构建 PASS；实际 Commit/Build/SHA-256 记录在该目录。
 
 正式 Developer ID、Hardened Runtime 分发评估、公证、DMG 安装、签名更新、完整真实游戏和新用户部署均未放行。8秒 Release 进程存活不证明全部窗口和功能；历史 Release/Sparkle 启动限制不直接沿用为本次已复现崩溃。
+
+## 修复候选实际交付
+
+- Release arm64 构建及资源/签名门禁 PASS；Build 2026110501，源码干净提交 `3967534413ed8cde9ac8c0d8f5f4c4b5f4e5ae17`。
+- App：`/Volumes/Thunderbolt2TB/HD2-App-Builds/Candidates/acceptance-fixed-20261105/Products/HD2FXNative.app`。
+- 可执行文件 SHA-256：`a4804a0e93eb2eac84e98bec43e29f28c6cab192d85e9e4acf8735de171d2f40`。
+- 独立 bundle ID 的 Release 副本连续3次启动均存活且各检测到1个 on-screen window；首轮实际截图 release-window.png 已视觉检查。仅终止本次探测进程，未启动任何 FX/Guest/Steam/game。不能推断长时稳定、全部 GUI 或其他 macOS 兼容。
+- staging secret gate 与最终 bundle pattern scan PASS（不构成凭据绝不泄漏证明）。
+- Latest 可执行文件前后摘要一致：841f222642619e1bc33b99e976ac385d10af70add15da790653f4c48e232509a。
+- 本地验收报告收尾提交可能晚于 BUILD COMMIT；不得用文档 HEAD 冒充 App 构建提交。

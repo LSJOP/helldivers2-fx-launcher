@@ -11,3 +11,7 @@ GUI-01 / L10N-01 PASS（限定范围）。真实捕获 zh-CN/en 七页面加详�
 GUI 总体验收与十语言完整验收均 NOT TESTED。首次安装不是干净 macOS 用户沙箱：capture ID 隔离偏好，但 CoreFS 仍只读读取现有 App Support。因此不能标记 FIRST RUN PASS。
 
 修复 README 七页面与“选择原脚本目录”矛盾、更新双语未发布记录；App UI 无布局变化，保留现有 README 截图，本次捕获仅作为基线证据，不冒充修复 build 2026110501 截图。
+
+## 修复候选 Release 实测补充
+
+连续3次实际启动各显示1个主窗口；首轮截图已检查。发现首页 `ui.180` 仍要求指定既有运行目录，十语言资源均残留旧前提，列 P2-04 OPEN。故 GUI ACCEPTANCE 改为 FAIL，不宣称中文完全正确。本次没有修改界面文案或将旧截图替换为未验证新图。
