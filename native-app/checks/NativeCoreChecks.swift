@@ -110,6 +110,14 @@ func runChecks() {
         _ = try ConfigurationService.save(patch: .object(["appearance": .object(["language": .string("password=abc123")])]),
                                           expectedRevision: afterSave.revision)
     }
+    let endpoint = try! ConfigurationService.validatedSSH(["host": .string("test-vm.local"), "port": .number(2223), "username": .string("steamos")])
+    check(endpoint["host"]?.text == "test-vm.local" && endpoint["port"]?.integer == 2223, "custom SSH endpoint accepted")
+    for host in ["-oProxyCommand=bad", "host; command", "user@host", ""] {
+        checkThrows("INVALID_ARGUMENT", "unsafe SSH endpoint rejected") { _ = try ConfigurationService.validatedSSH(["host": .string(host)]) }
+    }
+    checkThrows("INVALID_ARGUMENT", "SSH forwarding port collision rejected") {
+        _ = try ConfigurationService.validatedSSH(["port": .number(18094)])
+    }
     let snapshot = try! ConfigurationService.snapshot(reason: "checks")
     check(FileManager.default.fileExists(atPath: snapshot["path"]?.text ?? ""), "manual backup file")
     let secondSave = try! ConfigurationService.save(patch: .object(["ssh": .object(["port": .number(2224)])]),

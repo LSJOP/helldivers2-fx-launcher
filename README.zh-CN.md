@@ -1,5 +1,7 @@
 <div align="center">
   <img src="docs/assets/app-icon.png" width="128" alt="HELLDIVERS 2 FX Launcher 图标">
+
+**SSH 连接设置（未发布候选）：** 设置页新增地址、端口和用户名输入框，保存时校验配置版本、备份并清除会话凭据。隔离测试 FX 可填写 `127.0.0.1:2223`；不会修改 FX 或自动连接。中英文设置截图已于 2026-11-05 使用实际 Debug 候选 App 更新。真实连接尚待验收。
   <h1>HELLDIVERS 2 FX Launcher</h1>
   <p>为 Apple Silicon Mac 打造的 HELLDIVERS 2 FX 启动与管理工具。</p>
 </div>

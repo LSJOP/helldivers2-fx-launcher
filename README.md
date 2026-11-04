@@ -1,5 +1,7 @@
 <div align="center">
   <img src="docs/assets/app-icon.png" width="128" alt="HELLDIVERS 2 FX Launcher icon">
+
+**SSH connection settings (unreleased candidate):** Settings now provides host, port and user fields. Save uses revision checks and a backup, and clears session credentials. For an isolated test FX, enter `127.0.0.1:2223`; this does not change FX or connect automatically. Chinese and English settings screenshots were captured from the actual Debug candidate on 2026-11-05. Live connection acceptance is pending.
   <h1>HELLDIVERS 2 FX Launcher</h1>
   <p>A HELLDIVERS 2 FX launcher and management tool for Apple Silicon Macs.</p>
 </div>
