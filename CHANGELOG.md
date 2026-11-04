@@ -8,6 +8,8 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+- Separate detected components from deployment permissions; show unknown evidence neutrally, keep IPv6 advisory and non-blocking, and discover Proton-JE across bounded tool directories without executing candidates.
+
 - Passed component detections remain green independently of unrelated deployment restrictions.
 
 - Remove FX/SteamOS version allowlists from first-run setup and FX performance editing; retain actual capability, architecture, identity, artifact, backup and write-safety checks. Version changes during an approved transaction still invalidate that transaction.

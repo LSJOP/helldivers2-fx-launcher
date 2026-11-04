@@ -141,6 +141,34 @@ final class FileDeploymentBackend: DeploymentBackend {
         }
         mismatch = p.snapshot; mismatch.facts["fex"] = LaunchService.verifiedFEX
         try check(DeploymentPlanBuilder.build(mismatch, profile: profile).operations.first { $0.id == "fex" }?.blocked != nil, "single known hash cannot establish complete FEX")
+        var observed = p.snapshot
+        observed.facts["fex"] = "present"; observed.facts["proton"] = "present"
+        observed.facts["ipv6"] = "UNKNOWN"
+        let observedPlan = DeploymentPlanBuilder.build(observed, profile: profile)
+        for id in ["fex", "proton"] {
+            let op = observedPlan.operations.first { $0.id == id }!
+            try check(op.observation == .found && !op.warning && op.blocked == "ARTIFACT_UNAPPROVED", "installed component is neutral while deployment stays protected: " + id)
+        }
+        let ipv6 = observedPlan.operations.first { $0.id == "ipv6" }!
+        try check(ipv6.warning && ipv6.advisory && ipv6.blocked == nil, "unknown IPv6 warns without blocking")
+        try check(observedPlan.executable.map(\.id) == p.executable.map(\.id), "IPv6 does not change executable operations")
+        let readyWithIPv6 = DeploymentPlan(id: UUID(), profileID: p.profileID, profileVersion: p.profileVersion, snapshot: observed,
+            operations: observedPlan.operations.filter { ["steam", "game", "ipv4", "gvproxy", "ipv6"].contains($0.id) })
+        try check(readyWithIPv6.detectionState == .Ready, "IPv6 warning does not block readiness")
+        for id in ["kosmickrisp", "network"] {
+            let op = observedPlan.operations.first { $0.id == id }!
+            try check(op.observation == .unverified && !op.warning && op.blocked == nil, "unknown evidence stays unverified: " + id)
+        }
+        let discoveryHome = root.appendingPathComponent("discovery")
+        let steam = discoveryHome.appendingPathComponent(".local/share/Steam")
+        let tool = steam.appendingPathComponent("compatibilitytools.d/Proton-JE-future")
+        try CoreFS.ensurePrivateDirectory(tool)
+        try CoreFS.atomicWrite(Data(), to: tool.appendingPathComponent("proton"))
+        try CoreFS.atomicWrite(Data(), to: tool.appendingPathComponent("compatibilitytool.vdf"))
+        let discovery = String(SSHEnvironmentBackend.probe.components(separatedBy: "# Bounded file discovery only:")[1].components(separatedBy: "for pair in")[0])
+        let discoveryScript = "set -eu\nS=" + SSHEnvironmentBackend.quote(steam.path) + "\n# Bounded file discovery only:" + discovery
+        let discovered = try CoreProcess.run("/bin/sh", ["-s"], input: discoveryScript.replacingOccurrences(of: "$HOME", with: discoveryHome.path), timeout: 5)
+        try check(discovered.status == 0 && discovered.stdout.contains("proton=present"), "discover newer Proton-JE directory without executing it")
         let original = "CUSTOM=foo %command% --user-flag"
         let merged = try LaunchOptionsAdapter.merge(original, managed: profile.launchOptions)
         try check(merged.contains("CUSTOM=foo") && merged.hasSuffix("--user-flag"), "custom arguments preserved")

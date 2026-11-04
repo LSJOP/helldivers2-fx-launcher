@@ -21,6 +21,8 @@
 
 ### First-run environment setup (isolated development build)
 
+Component observations are separate from deployment permissions: installed FEX/Proton remain unverified until integrity checks, unknown probes are neutral, and IPv6 is an optional orange advisory that never blocks other configuration. Proton-JE discovery checks bounded tool directories without running them; it does not automatically select an unverified tool. Updated setup screenshots are pending.
+
 FX and SteamOS version numbers are recorded for diagnostics and historical evidence, not used as allowlists. Setup retains architecture, Guest identity, component/artifact and safe-write checks; performance editing retains bundle integrity, available-driver, parameter-format and hardware bounds. New versions still require actual capability checks and do not imply game compatibility. First-run screenshots predate this policy change; updated captures are pending.
 
 Open **First-Run Setup**, choose FX, enter separate SSH/sudo passwords, then connect and inspect. Review the detected target, profile and exact changes before selecting **Configure environment**. Close Steam/game yourself before offline configuration writes. Correct managed settings are skipped on subsequent scans. Recovery loads only this app’s receipts, compares current values, and stops on identity changes or external edits.

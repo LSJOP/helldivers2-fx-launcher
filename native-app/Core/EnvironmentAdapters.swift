@@ -207,8 +207,25 @@ printf 'free=%s\n' "$free"
 present(){ if [ -e "$2" ]; then printf '%s=present\n' "$1"; else printf '%s=missing\n' "$1"; fi; }
 present steam "$S/steam.sh"
 present game "$S/steamapps/common/Helldivers 2/bin/helldivers2.exe"
-present fex "$S/steamapps/common/FEX-Emu/usr/bin/FEX"
-present proton "$S/compatibilitytools.d/proton-je-11.0-20261014-3/proton"
+# Bounded file discovery only: do not run unknown FEX/Proton executables.
+fex_found=missing
+for f in "$S/steamapps/common/FEX-Emu/usr/bin/FEX" "$S/steamapps/common/FEX-Emu/usr/bin/FEXInterpreter" /usr/bin/FEX /usr/bin/FEXInterpreter /usr/local/bin/FEXInterpreter; do
+ if [ -f "$f" ]; then fex_found=present; fi
+done
+printf 'fex=%s\n' "$fex_found"
+proton_found=missing
+for root in "$S/compatibilitytools.d" "$HOME/.steam/compatibilitytools.d"; do
+ count=0
+ for d in "$root"/*; do
+  [ -d "$d" ] || continue
+  count=$((count+1)); [ "$count" -le 64 ] || { proton_found=UNKNOWN; break; }
+  name=$(basename "$d")
+  case "$name" in *[Pp][Rr][Oo][Tt][Oo][Nn]*[Jj][Ee]*)
+   if [ -f "$d/proton" ] && [ -f "$d/compatibilitytool.vdf" ]; then proton_found=present; fi;;
+  esac
+ done
+done
+printf 'proton=%s\n' "$proton_found"
 for pair in 'fex:FEX-Emu/usr/bin/FEX'; do
  f="$S/steamapps/common/${pair#*:}"; if [ -f "$f" ]; then printf 'fex_sha256=%s\n' "$(sha256sum "$f" | cut -d' ' -f1)"; fi
 done

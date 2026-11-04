@@ -8,6 +8,17 @@ struct FirstRunSetupView: View {
     @State private var recoverID: UUID?
     @State private var recoverySelection = Set<String>()
     private var plan: DeploymentPlan? { state.firstRunPlan }
+    private func statusKey(_ operation: DeploymentOperation) -> String {
+        switch operation.observation {
+        case .advisory: return "ui.setup.status.advisory"
+        case .passed: return "ui.net.pass"
+        case .found: return "ui.setup.status.found"
+        case .unverified: return "ui.368"
+        case .blocked: return "ui.setup.blocked"
+        case .unchanged: return "ui.setup.skip"
+        case .change: return "ui.setup.change"
+        }
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             TacticalPageHeader(title: state.t("ui.setup.title"))
@@ -40,17 +51,22 @@ struct FirstRunSetupView: View {
                             HStack {
                                 Text(state.t("ui.setup.component." + operation.component)).font(.headline)
                                 Spacer()
-                                Text(operation.detectionPassed ? state.t("ui.net.pass") : operation.blocked != nil ? state.t("ui.setup.blocked") : operation.changes.isEmpty ? state.t("ui.setup.skip") : state.t("ui.setup.change"))
-                                    .foregroundStyle(operation.detectionPassed ? .green : operation.blocked != nil ? .orange : .secondary)
+                                Text(state.t(statusKey(operation)))
+                                    .foregroundStyle(operation.detectionPassed ? .green : operation.warning ? .orange : .secondary)
                             }
-                            Text(operation.currentVersion + " → " + operation.targetVersion).font(.caption.monospaced())
+                            Text(operation.changes.isEmpty ? operation.currentVersion : operation.currentVersion + " → " + operation.targetVersion).font(.caption.monospaced())
                             DisclosureGroup(state.t("ui.setup.details")) {
-                                Text(operation.requirement.rawValue + " · " + operation.permission + " · " + String(operation.estimatedBytes))
+                                if !operation.changes.isEmpty {
+                                    Text(operation.permission + " · " + String(operation.estimatedBytes))
+                                }
                                 ForEach(operation.changes.keys.sorted(), id: \.self) { key in
                                     Text((plan.snapshot.values[key] ?? "") + " → " + (operation.changes[key] ?? "")).textSelection(.enabled)
                                 }
-                                if let block = operation.blocked { Text(block).font(.caption.monospaced()) }
-                                Text(state.t("ui.setup.rollback"))
+                                if let block = operation.blocked {
+                                    Text(state.t(block.hasPrefix("ARTIFACT_") ? "ui.setup.artifactUnavailable" : "ui.setup.blocked"))
+                                }
+                                if operation.advisory { Text(state.t("ui.setup.ipv6Advisory")) }
+                                if !operation.changes.isEmpty { Text(state.t("ui.setup.rollback")) }
                             }
                         }.padding(.vertical, 4)
                     }
