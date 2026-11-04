@@ -410,73 +410,6 @@ enum LaunchService {
         return "SUDO_COMMAND_FAILED"
     }
 
-    static var guestChangesDirectory: URL { CoreFS.nativeData().appendingPathComponent("guest-changes", isDirectory: true) }
-
-    static func ensureIPv4(_ transport: SSHTransport, session: GuestSession, sudoPassword: String?, context: CoreContext,
-                           approvedChanges: [JSONValue], onPasswordVerified: () -> Void = {}, verifyTarget: (CoreContext) throws -> Void) throws -> Bool {
-        try verifyTarget(context)
-        let plan = try GuestService.inspect(transport, context: context)
-        guard plan["boot"]?.text == session.boot else { throw CoreError("FX_ENTRY_MISMATCH") }
-        let before = plan["ipv6"]?.object ?? [:]
-        let keys = ["all", "default", "eth0", "lo"]
-        guard Set(before.keys) == Set(keys), keys.allSatisfy({ ["0", "1"].contains(before[$0]?.text ?? "") }) else { throw CoreError("UNSUPPORTED_CONFIGURATION") }
-        if keys.allSatisfy({ before[$0]?.text == "1" }) { return false }
-        let after = Dictionary(uniqueKeysWithValues: keys.map { ($0, JSONValue.string("1")) })
-        let change: JSONValue = .object(["operation": .string("guest_ipv6_disable"), "guest_boot": .string(session.boot),
-                                        "fx_identity": .string(session.identitySignature), "before": .object(before), "after": .object(after)])
-        guard approvedChanges.contains(change) else {
-            throw CoreError("CHANGE_CONFIRMATION_REQUIRED", ["change": change, "reason": .string("guest_ipv6_exact_change_requires_consent")])
-        }
-        try CoreFS.ensurePrivateDirectory(guestChangesDirectory)
-        let backup = guestChangesDirectory.appendingPathComponent("ipv6-" + UUID().uuidString + ".json")
-        var receipt: [String: JSONValue] = ["version": .number(1), "change": change, "status": .string("prepared")]
-        try CoreFS.atomicWrite(Data(CoreJSON.pretty(.object(receipt)).utf8), to: backup)
-        do {
-            let privilege = try GuestPrivilegedExecutor.run(transport, operation: .ipv6(boot: session.boot, values: after.mapValues { $0.text! }),
-                password: sudoPassword, approved: true, context: context) { try verifyTarget(context) }
-            if privilege["password_verified"]?.boolean == true { onPasswordVerified() }
-            receipt["status"] = .string("applied")
-            try CoreFS.atomicWrite(Data(CoreJSON.pretty(.object(receipt)).utf8), to: backup)
-            return true
-        } catch {
-            let failure = error as? CoreError ?? CoreError("COMPATIBILITY_CHECK_FAILED")
-            guard failure.details["command_started"]?.boolean == true else {
-                receipt["status"] = .string(["SUDO_AUTH_FAILED", "AUTH_REQUIRED", "SUDO_PERMISSION_DENIED"].contains(failure.code) ? "not_applied" : "restore_required")
-                try? CoreFS.atomicWrite(Data(CoreJSON.pretty(.object(receipt)).utf8), to: backup)
-                throw CoreError(failure.code, failure.details.merging(["backup_path": .string(backup.path), "recovery_status": receipt["status"]!]) { _, new in new })
-            }
-            // Recovery has its own bounded deadline and re-verifies the exact boot/FX.
-            let recovery = CoreContext(timeout: 40)
-            do {
-                _ = try GuestPrivilegedExecutor.run(transport, operation: .ipv6(boot: session.boot, values: before.mapValues { $0.text! }),
-                    password: sudoPassword, approved: true, context: recovery) { try verifyTarget(recovery) }
-                receipt["status"] = .string("rolled_back")
-            } catch { receipt["status"] = .string("restore_required") }
-            try? CoreFS.atomicWrite(Data(CoreJSON.pretty(.object(receipt)).utf8), to: backup)
-            throw CoreError(failure.code, ["backup_path": .string(backup.path), "recovery_status": receipt["status"]!])
-        }
-    }
-
-    static func restoreIPv4(_ transport: SSHTransport, session: GuestSession, path: String, password: String?, context: CoreContext, approvedChanges: [JSONValue],
-                            verifyTarget: () throws -> Void) throws -> [String: JSONValue] {
-        let url = URL(fileURLWithPath: path).standardizedFileURL
-        guard url.deletingLastPathComponent() == guestChangesDirectory.standardizedFileURL,
-              CoreFS.noSymlink(url), !FileManager.default.isSymbolicLink(atPath: url.path), let data = try? Data(contentsOf: url), data.count < CoreLimits.maxSmallFile,
-              let receipt = try? JSONDecoder().decode([String: JSONValue].self, from: data),
-              let change = receipt["change"]?.object, change["operation"]?.text == "guest_ipv6_disable",
-              change["guest_boot"]?.text == session.boot, change["fx_identity"]?.text == session.identitySignature,
-              let before = change["before"]?.object, let after = change["after"]?.object else { throw CoreError("FX_ENTRY_MISMATCH") }
-        try verifyTarget()
-        let current = try GuestService.inspect(transport, context: context)
-        guard current["ipv6"]?.object == after else { throw CoreError("CONFIG_CHANGED") }
-        let preview: JSONValue = .object(["operation": .string("restore_guest_ipv6"), "guest_boot": .string(session.boot),
-            "before": .object(after), "after": .object(before), "backup_path": .string(url.path)])
-        guard approvedChanges.contains(preview) else { throw CoreError("CHANGE_CONFIRMATION_REQUIRED", ["change": preview]) }
-        var result = try GuestPrivilegedExecutor.run(transport, operation: .ipv6(boot: session.boot, values: before.compactMapValues { $0.text }),
-            password: password, approved: true, context: context, verifyTarget: verifyTarget)
-        result["restored"] = .bool(true); result["configuration_changed"] = .bool(true)
-        return result
-    }
 
 }
 
@@ -498,12 +431,27 @@ enum GuestPrivilegedExecutor {
     enum Operation {
         case verify
         case ipv6(boot: String, values: [String: String])
+        case networkIPv6(boot: String, before: [String: String], after: [String: String])
     }
     static let challenge = "HD2FX_SUDO_CHALLENGE:"
     static func quote(_ text: String) -> String { "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'" }
     static func script(_ operation: Operation) throws -> String {
         switch operation {
         case .verify: return "exec </dev/null\nid -u\n"
+        case .networkIPv6(let boot, let before, let after):
+            guard GuestIPv6Snapshot(boot: boot, values: before).valid,
+                  GuestIPv6Snapshot(boot: boot, values: after).valid, Set(before.keys) == Set(after.keys) else { throw CoreError("INVALID_ARGUMENT") }
+            var body = "exec </dev/null\nset -eu\n[ \"$(cat /proc/sys/kernel/random/boot_id)\" = " + quote(boot) + " ] || exit 73\n"
+            body += "command -v pgrep >/dev/null || exit 77\nif pgrep -x helldivers2.exe >/dev/null || pgrep -x reaper >/dev/null; then exit 75; fi\n"
+            body += "set -- /proc/sys/net/ipv6/conf/*/disable_ipv6\n[ \"$#\" -eq " + String(before.count) + " ] || exit 76\n"
+            for key in before.keys.sorted() {
+                body += "[ \"$(cat /proc/sys/net/ipv6/conf/" + key + "/disable_ipv6)\" = " + quote(before[key]!) + " ] || exit 76\n"
+            }
+            body += "printf 'HD2FX_COMMAND_STARTED\\n' >&2\n"
+            let order = ["all", "default"] + after.keys.filter { $0 != "all" && $0 != "default" }.sorted()
+            for key in order { body += "printf '%s' " + quote(after[key]!) + " > /proc/sys/net/ipv6/conf/" + key + "/disable_ipv6\n" }
+            for key in order { body += "[ \"$(cat /proc/sys/net/ipv6/conf/" + key + "/disable_ipv6)\" = " + quote(after[key]!) + " ] || exit 74\n" }
+            return body + "printf 'HD2FX_IPV6_OK\\n'\n"
         case .ipv6(let boot, let values):
             guard UUID(uuidString: boot) != nil, Set(values.keys) == Set(["all", "default", "eth0", "lo"]),
                   values.values.allSatisfy({ ["0", "1"].contains($0) }) else { throw CoreError("INVALID_ARGUMENT") }
@@ -521,14 +469,14 @@ enum GuestPrivilegedExecutor {
         let options = hasPassword ? "-k -S -p " + quote(challenge) : "-k -n -p ''"
         let remote = "LC_ALL=C sudo " + options + " -- /bin/sh -c " + quote(try script(operation))
         return ["-S", transport.settings.socketPath, "-p", String(transport.settings.port), "-l", transport.settings.username,
-                "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", transport.settings.host, remote]
+                "-o", "BatchMode=yes", "-o", "ProxyCommand=false", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=8", transport.settings.host, remote]
     }
     static func run(_ transport: SSHTransport, operation: Operation, password: String?, approved: Bool = false,
                     context: CoreContext, verifyTarget: () throws -> Void,
                     process: (([String], String?, CoreContext) throws -> CoreProcessResult)? = nil) throws -> [String: JSONValue] {
         try context.check()
         try verifyTarget()
-        if case .ipv6 = operation, !approved { throw CoreError("CONFIRMATION_REQUIRED") }
+        switch operation { case .verify: break; default: if !approved { throw CoreError("CONFIRMATION_REQUIRED") } }
         let provided = password.flatMap { $0.isEmpty ? nil : $0 }
         if let provided, provided.contains("\n") || provided.contains("\r") || provided.contains("\0") {
             throw CoreError("SUDO_CREDENTIAL_INVALID")
@@ -541,6 +489,10 @@ enum GuestPrivilegedExecutor {
         try context.check()
         if result.status != 0 {
             if result.status == 73 { throw CoreError("FX_ENTRY_MISMATCH", ["reason": .string("guest_boot_changed")]) }
+            if result.status == 77 { throw CoreError("UNSUPPORTED_CONFIGURATION") }
+            if result.status == 75 { throw CoreError("GAME_ALREADY_RUNNING") }
+            if result.status == 76 { throw CoreError("CONFIG_CHANGED") }
+            if result.status == 74 { throw CoreError("IPV6_VERIFY_FAILED", ["command_started": .bool(true)]) }
             let code = LaunchService.sudoFailure(result)
             var details: [String: JSONValue] = ["command_started": .bool(result.stderr.contains("HD2FX_COMMAND_STARTED"))]
             if code == "AUTH_REQUIRED" { details["credential_kind"] = .string("sudo_password") }
@@ -551,7 +503,7 @@ enum GuestPrivilegedExecutor {
         switch operation {
         case .verify:
             guard output == "0" else { throw CoreError("SUDO_COMMAND_FAILED") }
-        case .ipv6:
+        case .ipv6, .networkIPv6:
             guard output == "HD2FX_IPV6_OK" else { throw CoreError("COMPATIBILITY_CHECK_FAILED") }
         }
         return ["sudo": .string("authenticated"), "command": .string("completed"),

@@ -163,3 +163,8 @@ FX 选择 V2 + 自动选择 V2.1：FX 管理、总览和启动窗口共享并持
 sudo 排查（2026-11-04）：构建 2026110402 存在远程空提示符参数引用缺陷。相关修复及 sudo/SSH 错误分类正在验证，尚未发布替代构建。真实只读检查已通过完整 Guest 身份确认；带密码 sudo 及后续启动阶段仍未验证。
 
 **纯内存候选版本：** 会话凭据管理替换全部钥匙串操作。每次获准的特权 SSH 调用在自身调用中认证，密码输入与目标命令标准输入隔离。Guest IPv6 修改须经过精确预览、确认并保留本地回滚记录；本候选的真实 Guest 修改、Steam／游戏与联机验收仍为 NOT TESTED。设置截图来自真实的纯内存工作候选（构建 2026110403、冻结前未提交快照）；其他页面保留各自记录的界面简化版本来源。
+
+
+**SteamOS 网络候选（未发布）：** 运行环境 → SteamOS 网络设置提供主动开启/关闭 IPv6、精确确认、备份与验证恢复。IPv6 不再是启动前提，游戏启动不会修改它。VM、Steam TLS、PlayFab、UDP 为手动只读探测，不申请 sudo，检测通过不代表多人联机已验证。凭据仅存进程内存。真实 Guest 写入及游戏启动仍为 NOT TESTED。[网络使用说明](docs/STEAMOS_NETWORK_SETTINGS.md) · [Python → Swift 功能矩阵](docs/PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md)。
+
+[![SteamOS 网络设置与诊断](docs/images/zh-CN/environment-network.png)](docs/STEAMOS_NETWORK_SETTINGS.md)

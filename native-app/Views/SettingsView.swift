@@ -286,7 +286,7 @@ private struct CredentialInputFields: View {
             VStack(alignment: .leading, spacing: 10) {
                 SecureField(state.t("ui.305"), text: $credentials.password)
                 SecureField(state.t("ui.168"), text: $credentials.passphrase)
-                SecureField(state.t("ui.304"), text: $credentials.sudoPassword)
+                if operation == "test_guest_sudo" { SecureField(state.t("ui.304"), text: $credentials.sudoPassword) }
                 Text(state.t("ui.session.policy"))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
                 Button(state.t("ui.067")) { state.clearSessionCredentials() }
@@ -317,13 +317,6 @@ private struct CredentialManagementView: View {
                             state.operationSelection = NativeOperation(method: kind == .ssh ? "test_ssh" : "test_guest_sudo")
                         }
                     }
-                }
-            }
-            Button(state.t("ui.session.backups")) { state.runOperation("list_guest_ipv6_backups") }
-            ForEach(state.operationResult["guest_backups"]?.array.map(\.object) ?? [], id: \.selfName) { row in
-                Button(state.t("ui.session.restoreIPv6") + " · " + (row["name"]?.text ?? "")) {
-                    state.guestRestorePath = row["path"]?.text ?? ""
-                    state.operationSelection = NativeOperation(method: "restore_guest_ipv6")
                 }
             }
             HStack {

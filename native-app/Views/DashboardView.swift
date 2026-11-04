@@ -68,9 +68,9 @@ struct DashboardView: View {
         .overlay(alignment: .top) { Rectangle().fill(c.yellow).frame(height: 3) }
     }
     private var launchButton: some View {
-        TacticalButton(title: state.t("ui.176"), symbol: "play.fill", primary: true, loading: tasks.busy) { state.perform(.game) }
+        TacticalButton(title: state.t("ui.176"), symbol: "play.fill", primary: true, loading: tasks.busy && !state.networkDiagnosticRunning) { state.perform(.game) }
             .accessibilityIdentifier("dashboard.launch")
-            .disabled(tasks.busy)
+            .disabled(tasks.busy && !state.networkDiagnosticRunning)
     }
     private var inspectButton: some View {
         TacticalButton(title: tasks.busy ? state.t("ui.055") : state.t("ui.049"),

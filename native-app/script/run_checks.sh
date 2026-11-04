@@ -25,6 +25,12 @@ SDK="$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
 ./build/PrivilegedExecutorChecks >evidence/privileged-checks.txt 2>&1
 /usr/bin/python3 -I -B script/check_memory_only.py >evidence/memory-only-audit.json
 
+# Runtime network transactions and actual diagnostic protocol validation, isolated.
+/usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" \
+ -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Core/*.swift checks/NetworkChecks.swift \
+ -o build/NetworkChecks >evidence/network-compile.txt 2>&1
+./build/NetworkChecks >evidence/network-checks.txt 2>&1
+
 # Native core contract, isolation and integrity checks.
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" \
   -module-cache-path "$ROOT_DIR/build/ModuleCache" \

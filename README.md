@@ -162,3 +162,8 @@ Launch resources: `/Applications` and the FX `.app` are not the original script 
 Sudo investigation (2026-11-04): build 2026110402 has a remote empty-prompt quoting defect. The fix and distinct sudo/SSH failure classification are under validation; no replacement build is released. Full Guest identity passed a live read-only check; passworded sudo and subsequent launch stages remain unverified.
 
 **Memory-only candidate:** session credential management replaces all Keychain controls. Each approved privileged SSH call authenticates in that call and isolates command stdin from password input. Guest IPv6 changes require an exact preview, consent and a local rollback receipt; live Guest changes, Steam/game and multiplayer acceptance remain NOT TESTED for this candidate. Settings screenshots show the real memory-only working candidate (build 2026110403, dirty pre-freeze snapshot); other pages retain their recorded UI-simplification provenance.
+
+
+**SteamOS network candidate (unreleased):** Environment → SteamOS network settings provides explicit runtime IPv6 enable/disable, exact confirmation, backup and verified recovery. IPv6 is optional and game startup never changes it. VM, Steam TLS, PlayFab and UDP diagnostics are explicit read-only probes without sudo; passing does not verify multiplayer. Credentials remain memory-only. Real Guest writes and game launch remain NOT TESTED. [Network guide](docs/STEAMOS_NETWORK_SETTINGS.md) · [Python → Swift parity](docs/PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md).
+
+[![SteamOS network settings and diagnostics](docs/images/en/environment-network.png)](docs/STEAMOS_NETWORK_SETTINGS.md)

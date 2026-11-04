@@ -8,6 +8,9 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+- SteamOS network candidate: runtime IPv6 moved to Environment with explicit preview, confirmation, independent sudo authentication, full-interface backup and recovery. Game startup no longer writes or requires IPv6.
+- Added bounded read-only VM, verified Steam TLS, Guest PlayFab and STUN/UDP diagnostics, ten-language UI and Python parity audit. Real Guest writes/gameplay remain unverified; no Latest publication.
+
 ### Memory-only candidate (not released)
 
 - Replace credential-vault access and remember/delete/authorize controls with independent SSH/sudo session credentials and explicit provided/verified/failed states. Existing saved items are never read, migrated or deleted.

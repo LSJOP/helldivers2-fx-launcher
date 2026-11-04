@@ -284,7 +284,7 @@ import ApplicationServices
                 }
                 guard try await capture(window, name: name + ".png", directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
                 files.append(name + ".png")
-                if page == .performance || page == .settings {
+                if page == .performance || page == .settings || page == .environment {
                     func scrollViews(_ view: NSView) -> [NSScrollView] {
                         (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews)
                     }
@@ -292,11 +292,11 @@ import ApplicationServices
                        let scroll = scrollViews(root).filter({ $0.bounds.width > 600 }).max(by: { $0.bounds.width < $1.bounds.width }),
                        let document = scroll.documentView {
                         let maximum = max(0, document.bounds.height - scroll.contentView.bounds.height)
-                        let fraction: CGFloat = page == .performance ? 1 : 0.7
+                        let fraction: CGFloat = page == .performance ? 1 : page == .environment ? 0.35 : 0.7
                         scroll.contentView.scroll(to: NSPoint(x: 0, y: maximum * (document.isFlipped ? fraction : 1 - fraction)))
                         scroll.reflectScrolledClipView(scroll.contentView)
                         try await Task.sleep(nanoseconds: 500_000_000)
-                        let detail = page == .performance ? "performance-actions.png" : "settings-updates.png"
+                        let detail = page == .performance ? "performance-actions.png" : page == .environment ? "environment-network.png" : "settings-updates.png"
                         guard try await capture(window, name: detail, directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
                         files.append(detail)
                     }

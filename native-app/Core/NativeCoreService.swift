@@ -17,11 +17,13 @@ actor NativeCoreService {
         Operation(method: "list_configuration_backups", scope: "settings", confirmation: false, external: false),
         Operation(method: "restore_configuration", scope: "settings", confirmation: true, external: false),
         Operation(method: "inspect_legacy_runtime", scope: "fx", confirmation: false, external: false),
+        Operation(method: "read_steamos_ipv6", scope: "environment", confirmation: false, external: false),
+        Operation(method: "preview_steamos_ipv6", scope: "environment", confirmation: false, external: false),
+        Operation(method: "apply_steamos_ipv6", scope: "environment", confirmation: true, external: true),
+        Operation(method: "run_network_diagnostics", scope: "environment", confirmation: false, external: false),
         Operation(method: "inspect_network", scope: "environment", confirmation: false, external: false),
         Operation(method: "test_network", scope: "environment", confirmation: false, external: false),
         Operation(method: "test_ssh", scope: "environment", confirmation: true, external: true),
-        Operation(method: "list_guest_ipv6_backups", scope: "settings", confirmation: false, external: false),
-        Operation(method: "restore_guest_ipv6", scope: "settings", confirmation: true, external: true),
         Operation(method: "test_guest_sudo", scope: "settings", confirmation: true, external: true),
         Operation(method: "connect_fx", scope: "environment", confirmation: true, external: true),
         Operation(method: "inspect_guest_environment", scope: "environment", confirmation: true, external: true),
@@ -58,7 +60,7 @@ actor NativeCoreService {
         "fx_path", "confirmed", "runtime_root", "password", "passphrase", "sudo_password",
         "credential_guest_boot", "credential_host_identity", "credential_revision", "approved_changes", "configuration", "expected_revision",
         "channel", "match_result", "note", "values", "preview_token", "backup_path",
-        "selected_paths"]
+        "selected_paths", "ipv6_enabled", "network_plan"]
 
     func request(_ method: String, timeout: TimeInterval = 5,
                  params: [String: JSONValue] = [:],
@@ -195,6 +197,37 @@ actor NativeCoreService {
         case "apply_performance":
             // Legacy broad profile apply stays unavailable: no validated portable ranges.
             throw CoreError("PROFILE_NOT_APPLICABLE", ["reason": .string("no_validated_ranges_or_scoped_backend")])
+        case "read_steamos_ipv6", "preview_steamos_ipv6", "apply_steamos_ipv6":
+            let bound = try SteamOSNetworkService.bind(params, context: context, emit: emit)
+            if let expected = params["credential_guest_boot"]?.text, expected != bound.session.boot { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
+            if method == "read_steamos_ipv6" {
+                var result = SteamOSNetworkService.result(try bound.read(context), bound: bound)
+                let names = (try? FileManager.default.contentsOfDirectory(atPath: SteamOSNetworkService.receipts.path)) ?? []
+                result["backups"] = .array(names.filter { $0.hasPrefix("ipv6-") && $0.hasSuffix(".json") }.sorted().suffix(30).compactMap { name in
+                    let path = SteamOSNetworkService.receipts.appendingPathComponent(name).path
+                    guard let receipt = try? SteamOSNetworkService.load(path), receipt["guest_boot"]?.text == bound.session.boot,
+                          receipt["fx_identity"]?.text == bound.receiptIdentity else { return nil }
+                    return .object(["name": .string(name), "path": .string(path)])
+                })
+                return result
+            }
+            if method == "preview_steamos_ipv6" {
+                return try SteamOSNetworkService.preview(bound, enabled: params["ipv6_enabled"]?.boolean, backup: params["backup_path"]?.text)
+            }
+            guard let plan = params["network_plan"]?.object else { throw CoreError("INVALID_ARGUMENT") }
+            // Recompute the permitted plan; arbitrary desired values are never accepted.
+            let desiredEnabled = plan["after"]?.object["all"]?.text == "0"
+            let expectedPlan = try SteamOSNetworkService.preview(bound, enabled: desiredEnabled, backup: plan["backup_path"]?.text)
+            for key in ["operation", "guest_boot", "fx_identity", "before", "after", "backup_path"] {
+                guard plan[key] == expectedPlan[key] else { throw CoreError("CONFIG_CHANGED") }
+            }
+            return try SteamOSNetworkService.apply(bound, plan: plan, password: params["sudo_password"]?.text, confirmed: params["confirmed"]?.boolean == true)
+        case "run_network_diagnostics":
+            var binding: SteamOSNetworkService.Bound?; var failure: String?
+            do { binding = try SteamOSNetworkService.bind(params, context: context, emit: emit) }
+            catch { failure = (error as? CoreError)?.code ?? "SSH_DISCONNECTED" }
+            try context.check()
+            return try NetworkDiagnosticsService.run(bound: binding, bindingFailure: failure, context: context, emit: emit)
         case "inspect_network":
             return ["host": .object(try NetworkProfileService.inspect()),
                     "conditions": .object(NetworkProfileService.successConditions()),
@@ -214,30 +247,6 @@ actor NativeCoreService {
             return try NetworkProfileService.toggleCheck()
         case "test_ssh":
             return try testSSH(params, context: context, emit: emit)
-        case "list_guest_ipv6_backups":
-            let directory = LaunchService.guestChangesDirectory
-            let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
-            return ["guest_backups": .array(names.filter { $0.hasPrefix("ipv6-") && $0.hasSuffix(".json") }.sorted().suffix(30).map {
-                .object(["name": .string($0), "path": .string(directory.appendingPathComponent($0).path)])
-            })]
-        case "restore_guest_ipv6":
-            let request = try launchRequest(params, context: context, emit: emit, confirmed: true)
-            let fx = try LaunchService.selectedFX(request)
-            let transport = SSHTransport.make(request.configuration)
-            let (session, _, _) = try LaunchService.connect(request, fx: fx, transport: transport)
-            if let expected = params["credential_guest_boot"]?.text, expected != session.boot { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
-            guard let path = params["backup_path"]?.text else { throw CoreError("INVALID_ARGUMENT") }
-            var result = try LaunchService.restoreIPv4(transport, session: session, path: path, password: request.sudoPassword, context: context, approvedChanges: request.approvedChanges) {
-                _ = try GuestService.verify(transport, session: session, context: context) {
-                    try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
-                }
-            }
-            if result["password_verified"]?.boolean == true {
-                emit("INFO", "Guest sudo authenticated", ["kind": .string("credential_status"),
-                    "credential_kind": .string("sudo"), "status": .string("authenticated")])
-            }
-            result["guest_boot"] = .string(session.boot)
-            return result
         case "test_guest_sudo":
             return try testSudo(params, context: context, emit: emit)
         case "check_fx_state":
@@ -350,7 +359,7 @@ actor NativeCoreService {
         let transport = SSHTransport.make(configuration)
         if !processes.isEmpty { _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context) }
         if transport.masterPID(context: context) != nil {
-            _ = try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
+            _ = try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context, requireCDP: false, allowPublisherNetwork: true)
             value["guest_boot"] = try GuestService.inspect(transport, context: context)["boot"]
         }
         return value
@@ -447,13 +456,13 @@ actor NativeCoreService {
         let session = try GuestService.connect(transport, password: request.password, passphrase: request.passphrase,
                                                context: context) {
             try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!,
-                                           transport: transport, context: context)
+                                           transport: transport, context: context, requireCDP: false, allowPublisherNetwork: true)
         }
         if let expected = params["credential_guest_boot"]?.text, expected != session.boot { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
         var result = try GuestPrivilegedExecutor.run(transport, operation: .verify, password: request.sudoPassword,
             context: context) {
                 _ = try GuestService.verify(transport, session: session, context: context) {
-                    try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
+                    try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context, requireCDP: false, allowPublisherNetwork: true)
                 }
             }
         if result["password_verified"]?.boolean == true {
@@ -625,15 +634,8 @@ printf '{"guest_os":"%s","guest_arch":"%s","components":{"steam_files":%s,"game_
         if let apps = state["apps"]?.text, !apps.isEmpty, !apps.split(separator: " ").allSatisfy({ $0 == "553850" }) {
             throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("other_steam_game_running")])
         }
-        _ = try LaunchService.ensureIPv4(transport, session: session, sudoPassword: request.sudoPassword, context: context,
-            approvedChanges: request.approvedChanges, onPasswordVerified: {
-                emit("INFO", "Guest sudo authenticated", ["kind": .string("credential_status"),
-                    "credential_kind": .string("sudo"), "status": .string("authenticated")])
-            }) { checkContext in
-                _ = try GuestService.verify(transport, session: session, context: checkContext) {
-                    try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: checkContext)
-                }
-            }
+        // IPv6 is optional runtime configuration, never a launch prerequisite.
+        emit("INFO", "ipv6_optional_no_startup_write", ["ipv6": state["ipv6"] ?? .null])
         advance("CheckingCompatibility", "done")
         advance("StartingSteam", "running")
         let steamResult = try GuestService.steam(transport, session: session, context: context)

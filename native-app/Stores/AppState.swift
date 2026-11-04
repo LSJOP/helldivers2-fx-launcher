@@ -17,6 +17,15 @@ final class AppState: ObservableObject {
         set { languageCode = newValue ? "zh-CN" : "en" }
     }
     @Published var operationSelection: NativeOperation?
+    @Published var networkIPv6: [String: JSONValue] = [:]
+    @Published var networkPlan: [String: JSONValue] = [:]
+    @Published var networkRows: [[String: JSONValue]] = []
+    @Published private(set) var networkLaunchPending = false
+    var networkDiagnosticRunning: Bool { tasks.busy && guiRecords["run_network_diagnostics"]?.status == .running }
+    @Published var networkDiagnosticError: ErrorState?
+    @Published var networkError: ErrorState?
+    @Published var networkBackup = ""
+    @Published var networkShowConfirmation = false
     @Published var guestRestorePath = ""
     @Published var pendingAction: GUIAction?
     let credentials = SessionCredentialManager()
@@ -32,12 +41,12 @@ final class AppState: ObservableObject {
     private func applyFXScan(_ result: [String: JSONValue]) {
         let previous = fxSelection.selectedPath
         fxSelection.reconcile(result["candidates"]?.array.map(\.object) ?? [], incomplete: result["scan_incomplete"]?.boolean != false)
-        if previous != fxSelection.selectedPath { clearSessionCredentials(); guiSnapshots = [:]; performanceConfigurationState = PerformanceConfigurationState(); inspectedTarget = nil }
+        if previous != fxSelection.selectedPath { clearSessionCredentials(); clearNetworkState(); guiSnapshots = [:]; performanceConfigurationState = PerformanceConfigurationState(); inspectedTarget = nil }
         runtimeRoot = fxSelection.selectedPath ?? ""
     }
     func selectFX(_ path: String) {
         guard !tasks.busy else { return }
-        if fxSelection.selectedPath != path { clearSessionCredentials(); guiSnapshots = [:]; performanceConfigurationState = PerformanceConfigurationState() }
+        if fxSelection.selectedPath != path { clearSessionCredentials(); clearNetworkState(); guiSnapshots = [:]; performanceConfigurationState = PerformanceConfigurationState() }
         fxSelection.select(path)
         runtimeRoot = fxSelection.selectedPath ?? ""
         inspectedTarget = nil
@@ -71,7 +80,7 @@ final class AppState: ObservableObject {
     @Published var runtimeRoot = "" {
         didSet {
             if oldValue != runtimeRoot {
-                clearSessionCredentials(); guiSnapshots = [:]; performanceConfigurationState = PerformanceConfigurationState(); targetInspection = [:]; targetInspectionError = nil; inspectedTarget = nil
+                clearSessionCredentials(); clearNetworkState(); guiSnapshots = [:]; performanceConfigurationState = PerformanceConfigurationState(); targetInspection = [:]; targetInspectionError = nil; inspectedTarget = nil
                 if !runtimeRoot.isEmpty, !NativeLocalization.isolatedUXSmoke {
                     UserDefaults.standard.set(runtimeRoot, forKey: "NativeRememberedRuntimeRoot")
                 }
@@ -143,6 +152,8 @@ final class AppState: ObservableObject {
         let selectedRoot = runtimeRoot
         let launchParameters = fxSelection.launchParameters(runtimeRoot: selectedRoot)
         var redactor = credentials.redactor
+        if method == "run_network_diagnostics" { networkRows = []; networkDiagnosticError = nil }
+        if method.hasSuffix("steamos_ipv6") { networkError = nil; if method != "apply_steamos_ipv6" { networkPlan = [:] } }
         if method == "launch_game" { launchSession.begin(root: selectedRoot); recordLaunch() }
         if method == "observe_launch", selectedRoot != launchSession.root { launchSession.begin(root: selectedRoot) }
         guiRecords[method] = GUIOperationRecord(method: method, target: selectedRoot)
@@ -154,12 +165,12 @@ final class AppState: ObservableObject {
             do {
                 var input = params.filter { !["password","passphrase","sudo_password"].contains($0.key) }
                 if !selectedRoot.isEmpty { input["runtime_root"] = .string(selectedRoot) }
-                if ["launch_game", "preflight_launch", "observe_launch", "connect_fx", "inspect_guest_environment", "check_fx_state", "start_fx", "start_steam", "test_ssh", "test_guest_sudo", "restore_guest_ipv6"].contains(method) {
+                if ["launch_game", "preflight_launch", "observe_launch", "connect_fx", "inspect_guest_environment", "check_fx_state", "start_fx", "start_steam", "test_ssh", "test_guest_sudo", "restore_guest_ipv6", "read_steamos_ipv6", "preview_steamos_ipv6", "apply_steamos_ipv6", "run_network_diagnostics"].contains(method) {
                     input.merge(launchParameters) { _, selected in selected }
                 }
                 if let note = input["note"]?.text { input["note"] = .string(redactor.text(note)) }
                 if method == "save_configuration", let value = input["configuration"], redactor.containsSecret(value) { throw ErrorState("SENSITIVE_CONFIGURATION") }
-                if ["launch_game","test_ssh","test_guest_sudo","restore_guest_ipv6","connect_fx","inspect_guest_environment","start_steam","inspect_guest","apply_performance","save_network_snapshot"].contains(method) {
+                if ["launch_game","test_ssh","test_guest_sudo","restore_guest_ipv6","connect_fx","inspect_guest_environment","start_steam","inspect_guest","apply_performance","save_network_snapshot","apply_steamos_ipv6"].contains(method) {
                     input.merge(launchParameters) { _, selected in selected }
                     let metadata = try await self.core.request("read_configuration")
                     guard let revision = metadata.result["revision"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
@@ -194,6 +205,10 @@ final class AppState: ObservableObject {
 
                             }
                         }
+                        if method == "run_network_diagnostics", let row = event["diagnostic"]?.object, let name = row["name"]?.text {
+                            self.networkRows.removeAll { $0["name"]?.text == name }
+                            self.networkRows.append(eventRedactor.diagnostic(row))
+                        }
                         let safeEvent = eventRedactor.event(event)
                         self.operationEvents.append(safeEvent)
                         self.runtimeLogs.append(safeEvent)
@@ -211,6 +226,14 @@ final class AppState: ObservableObject {
                 }
                 if ["performance_preview", "performance_restore_preview"].contains(method), self.runtimeRoot == selectedRoot { self.performanceConfigurationState.acceptPreview(reply.result) }
                 if GUIAction(rawValue: method) != nil, self.runtimeRoot == selectedRoot { self.guiSnapshots[method] = reply.result }
+                if method == "read_steamos_ipv6" || method == "apply_steamos_ipv6" {
+                    self.networkIPv6 = reply.result
+                    if let path = reply.result["backup_path"]?.text { self.networkBackup = path }
+                    if self.networkBackup.isEmpty { self.networkBackup = reply.result["backups"]?.array.last?.object["path"]?.text ?? "" }
+                    self.networkPlan = [:]
+                }
+                if method == "preview_steamos_ipv6" { self.networkPlan = reply.result; self.networkShowConfirmation = true }
+                if method == "run_network_diagnostics" { self.networkRows = reply.result["items"]?.array.map(\.object) ?? [] }
                 self.guiRecords[method]?.finish()
                 self.recordGUIOperation(method)
                 if method == "launch_game" || method == "observe_launch" { self.launchSession.complete(reply.result, at: reply.observedAt); self.recordLaunch() }
@@ -219,6 +242,20 @@ final class AppState: ObservableObject {
                 let failure = error as? ErrorState ?? ErrorState("PROTOCOL_ERROR", method: method)
                 self.operationError = ErrorState(failure.code, method: failure.method, details: redactor.diagnostic(failure.details))
                 if ["CREDENTIAL_SCOPE_CHANGED", "FX_ENTRY_MISMATCH", "FX_IDENTITY_UNVERIFIED", "FX_INSTANCE_MISMATCH"].contains(failure.code) { self.clearSessionCredentials() }
+                if method.hasSuffix("steamos_ipv6") || method == "run_network_diagnostics" {
+                    if method == "run_network_diagnostics" { self.networkDiagnosticError = self.operationError } else { self.networkError = self.operationError }
+                    if let path = failure.details["backup_path"]?.text { self.networkBackup = path }
+                    if method.hasSuffix("steamos_ipv6") {
+                        self.networkIPv6 = ["status": .string("unknown"), "values": failure.details["actual_values"] ?? .object([:])]
+                        self.networkPlan = [:]
+                    }
+                    if method == "run_network_diagnostics" {
+                        for name in ["vm", "steam", "playfab", "udp"] where self.networkRows.first(where: { $0["name"]?.text == name })?["status"]?.text == "RUNNING" || self.networkRows.first(where: { $0["name"]?.text == name }) == nil {
+                            self.networkRows.removeAll { $0["name"]?.text == name }
+                            self.networkRows.append(NetworkDiagnosticsService.row(name, failure.code == "CANCELLED" ? .cancelled : failure.code == "TIMEOUT" ? .timeout : .fail, reason: failure.code))
+                        }
+                    }
+                }
                 if failure.code == "SUDO_AUTH_FAILED" { self.credentials.reject(.sudo) }
                 if failure.code == "SSH_AUTH_FAILED" { self.credentials.reject(.ssh) }
                 if method == "launch_game" || method == "observe_launch", let failure = self.operationError {
@@ -250,6 +287,19 @@ final class AppState: ObservableObject {
             "confirmed": .bool(true), "expected_revision": .string(revision), "values": after, "preview_token": .string(token)])
     }
     func perform(_ action: GUIAction) {
+        if action == .game && networkDiagnosticRunning {
+            guard !networkLaunchPending else { return }
+            networkLaunchPending = true
+            tasks.cancel()
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                while self.tasks.busy { try? await Task.sleep(nanoseconds: 50_000_000) }
+                guard self.networkLaunchPending else { return }
+                self.networkLaunchPending = false
+                self.perform(.game)
+            }
+            return
+        }
         guard !tasks.busy else { return }
         operationError = nil; operationResult = [:]; operationEvents = []
         if action == .game { scanFX(openingLaunch: true); return }
@@ -300,7 +350,7 @@ final class AppState: ObservableObject {
     func confirmMainMenu() { launchSession.confirmMainMenu(); recordLaunch() }
     func confirmSinglePlayer() { launchSession.confirmSinglePlayer(); recordLaunch() }
     func clearSessionCredentials() { credentials.clear(); SSHTransport.closeOwnedMasters() }
-    func endSession() { tasks.cancel(); clearSessionCredentials() }
+    func endSession() { networkLaunchPending = false; tasks.cancel(); clearSessionCredentials() }
     func value(_ method: String, _ key: String) -> String { results[method]?[key]?.text ?? t("ui.366") }
     func rows(_ method: String, _ key: String) -> [[String: JSONValue]] { results[method]?[key]?.array.map(\.object) ?? [] }
     func refresh() {
@@ -360,5 +410,21 @@ final class AppState: ObservableObject {
     var logText: String {
         let bridgeLogs = rows("get_logs", "entries").map { ($0["at"]?.text ?? "") + "  " + ($0["message"]?.text ?? "") }
         return credentials.redactor.text((sessionLogs + bridgeLogs).joined(separator: "\n"))
+    }
+}
+
+@MainActor extension AppState {
+    func clearNetworkState() { networkLaunchPending = false; networkIPv6 = [:]; networkRows = []; networkPlan = [:]; networkError = nil; networkDiagnosticError = nil; networkBackup = ""; networkShowConfirmation = false }
+    func previewIPv6(_ enabled: Bool? = nil, restore: Bool = false) {
+        var params: [String: JSONValue] = [:]
+        if restore { guard !networkBackup.isEmpty else { return }; params["backup_path"] = .string(networkBackup) }
+        else if let enabled { params["ipv6_enabled"] = .bool(enabled) }
+        runOperation("preview_steamos_ipv6", params: params)
+    }
+    func applyIPv6Plan() {
+        guard !networkPlan.isEmpty else { return }
+        let plan = networkPlan
+        networkShowConfirmation = false
+        runOperation("apply_steamos_ipv6", params: ["confirmed": .bool(true), "network_plan": .object(plan)])
     }
 }

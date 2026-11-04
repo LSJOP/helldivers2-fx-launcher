@@ -18,7 +18,7 @@ Status vocabulary: **COMPLETE** (native implementation + automated checks), **PA
 | Guest inspect | `guest_safety.py`, `STATE` | `GuestScripts.state/inspect` (POSIX sh) | SSH | JSON state | read-only, bounded, no user interpolation | parser fixtures | PARTIAL — live parse NOT TESTED |
 | FX start | `start-hd2.py` `open` args | `LaunchService.startFX` | selected FX + prefs | launches FX | integrity, resources, target lock, 30 s timeout, no foreign FX | preflight real PASS; start not run | PARTIAL — not launched (user consent) |
 | Steam start | `guest_safety` systemd | `GuestScripts.steam` | boot id | one controlled `systemctl --user start steam.service` | idle/managed-service/boot guards, never retries | code path compiled | PARTIAL — live NOT TESTED |
-| Game launch | `start-hd2.py` `_main` | `LaunchService`/`NativeCoreService.launchGame` | consent | `steam -applaunch 553850`, waits for process | compat tool/FEX/ntdll/wine hashes, IPv6, proxy, duplicate-launch checks | preflight only | PARTIAL — REAL GAME LAUNCH UNVERIFIED |
+| Game launch | `start-hd2.py` `_main` | `LaunchService`/`NativeCoreService.launchGame` | consent | `steam -applaunch 553850`, waits for process | compat tool/FEX/ntdll/wine hashes, proxy, duplicate-launch checks | preflight only | PARTIAL — REAL GAME LAUNCH UNVERIFIED |
 | Launch preflight | `preflight_launch` | `LaunchService.preflight` | selected FX | host readiness + explicit guest unverified | integrity, resources, SSH, local host | real `/Applications` FX 1.9.8 PASS | COMPLETE (host only) |
 | Observe launch | `observe_launch` | `runGUI observe_launch` | SSH | process counts only | no menu/EAC/multiplayer inference | compiled | PARTIAL |
 | EAC / multiplayer | probes in `start-hd2.py` | not inferred; reported `unverified`/`not_requested` | — | — | never fabricates | none | BLOCKED — outside authorization |
@@ -43,7 +43,7 @@ This section supersedes older credential/live-acceptance wording above. Source-l
 | Credentials | SessionCredentialManager, independent SSH/sudo memory states and target scope | Replaces historical keychain_store/preferences persistence | Memory-only; no old credential read/delete; real candidate authentication NOT TESTED |
 | Independent sudo | GuestPrivilegedExecutor: stdin-only per-call auth, no cache dependency, closed operations | Original forkpty/SSH helpers; fixes migrated two-call cache assumption | Synthetic multi-call checks; real new executor acceptance NOT TESTED |
 | Guest identity | Host supervisor/network/listener/SSH peer plus Guest boot/marker | launch_safety / guest_safety | Preserved and extended to pre-send credential binding |
-| Guest IPv6 | Four validated runtime proc switches, exact preview/approval, receipt, verification, recovery and manual restore | Original ensure_ipv4 behavior | PARTIAL; no real writes authorized/performed; no persistent sysctl-file edits |
+| Guest IPv6 | Environment-only full-interface snapshot, four runtime controls, exact confirmation, receipt, verification and recovery; never a launch prerequisite | Original ensure_ipv4 behavior | PARTIAL; no real writes authorized/performed; no persistent sysctl-file edits |
 | Guest proxy | Read-only environment/drop-in inspection; game launch option is checked, not auto-written | Legacy per-game proxy vs Steam drop-in distinction | PARTIAL; automatic proxy repair/rollback not implemented |
 | Compatibility files | Pinned FEX, NTDLL, Wine DLLs and Proton tool checks | Verified historical launch constants | Read-only validation, not install/repair; no anti-cheat changes |
 | Steam installation/login | GuestScripts inspect service/process and bounded login log evidence | Original state() checks process before Logged On | PARTIAL; readiness now requires service + process + login evidence; log alone is insufficient |
@@ -54,3 +54,5 @@ This section supersedes older credential/live-acceptance wording above. Source-l
 | Theme, icon, ten languages | Shared SwiftUI/AppKit UI; UI bar removal integrated; new session credential panel | Existing HELLDIVERS assets retained | Candidate build gates; refreshed credential screenshots pending if capture unavailable |
 
 Overall automated “download FX -> install Guest/game -> configure everything -> play” workflow is PARTIAL. Native buttons and read-only snapshots do not establish that missing install/configuration backends exist. No runtime Python Bridge or original-script dependency is restored.
+
+Network migration details: [full parity audit](PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md) and [network guide](STEAMOS_NETWORK_SETTINGS.md).

@@ -541,7 +541,7 @@ struct GUIOperationsPanel: View {
             Text(description).font(TacticalTypography.caption)
             Text(state.guiRecords[action.rawValue].map { $0.status.title(state) } ?? state.t("ui.216")).font(TacticalTypography.caption).foregroundStyle(.secondary)
             TacticalButton(title: state.t("ui.315"), symbol: "play.fill", primary: true, loading: state.guiRecords[action.rawValue]?.status == .running,
-                disabledReason: tasks.busy ? state.t("ui.224") : nil) { state.perform(action) }
+                disabledReason: tasks.busy && !(action == .game && state.networkDiagnosticRunning) ? state.t("ui.224") : nil) { state.perform(action) }
         }
     }
     private func unavailableCard(_ title: String, symbol: String) -> some View {

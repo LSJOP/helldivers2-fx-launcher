@@ -147,7 +147,7 @@ enum GuestService {
         let result = try transport.run(GuestScripts.inspect, timeout: 25, context: context)
         guard result.status == 0 else { throw CoreError("GUEST_INSPECTION_FAILED") }
         let plan = try parse(result.stdout, expected: "GUEST_INSPECTION_FAILED")
-        guard plan["boot"]?.text != nil, plan["marker"]?.boolean == true, plan["ipv6_ok"]?.boolean == true else {
+        guard plan["boot"]?.text != nil, plan["marker"]?.boolean == true else {
             throw CoreError("FX_ENTRY_MISMATCH", ["reason": .string("guest_identity_or_marker_unverified")])
         }
         return plan

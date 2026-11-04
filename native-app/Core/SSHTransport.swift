@@ -222,7 +222,7 @@ final class SSHTransport {
     /// Runs a command through the existing master with BatchMode (never prompts).
     func run(_ script: String, timeout: TimeInterval = 30, context: CoreContext? = nil) throws -> CoreProcessResult {
         var arguments = ["-S", settings.socketPath, "-p", String(settings.port), "-l", settings.username,
-                         "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", settings.host, "sh", "-s"]
+                         "-o", "BatchMode=yes", "-o", "ProxyCommand=false", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=8", settings.host, "sh", "-s"]
         let result = try CoreProcess.run("/usr/bin/ssh", arguments, input: script, timeout: timeout, context: context)
         if result.timedOut { throw CoreError("TIMEOUT") }
         if result.status == 255 { throw CoreError(Self.failureCode(result.stderr)) }
