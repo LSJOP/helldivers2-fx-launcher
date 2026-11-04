@@ -159,8 +159,8 @@ MEMORY CONFIGURATION: NOT TESTED (1.9.9 unsupported)
 VULKAN CONFIGURATION: NOT TESTED (1.9.9 unsupported)
 CONFIG BACKUP / RESTORE: NOT TESTED (isolated tests PASS)
 STEAM LAUNCH: NOT TESTED
-HELLDIVERS 2 LAUNCH: NOT TESTED
-GAME MAIN MENU: NOT TESTED
+HELLDIVERS 2 LAUNCH: PASS (explicit user confirmation; Native App entry)
+GAME MAIN MENU: PASS (explicit user confirmation; main menu or ship)
 SINGLE PLAYER: NOT TESTED
 MULTIPLAYER: NOT TESTED
 GUI ACCEPTANCE: FAIL (stale runtime-directory instruction; complete interactions NOT TESTED)
@@ -185,3 +185,5 @@ GITHUB RELEASE PUBLISHED: NO
 PUSHED: NO
 RELEASE READINESS: NOT READY
 ```
+
+用户确认实测更新：2026-11-05，Native App启动到主菜单/舰桥PASS；单人、多人及独立sudo/网络诊断仍未确认。详见REAL_ENVIRONMENT_TEST_RESULTS.md的LIVE-GAME-USER-01。历史未测记录保留，最新确认覆盖对应游戏启动/菜单字段。

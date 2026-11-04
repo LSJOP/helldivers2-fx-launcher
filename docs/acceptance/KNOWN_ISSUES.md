@@ -9,7 +9,7 @@
 | ID | 级别 | 问题 | 状态 | 证据/处理 |
 |---|---|---|---|
 | P0-01 | P0 | 正式分发缺 Developer ID、已验证公证/安装链与正式 DMG | OPEN | ad-hoc TeamIdentifier 未设置；这是发布阻断，不是凭据缺陷 |
-| P0-02 | P0 | 完整一键启动、主菜单、单人/多人验收无本次真实证据 | OPEN / NOT TESTED | 核心发布验收缺口；不声称代码已证实损坏 |
+| P0-02 | P0 | Native启动到主菜单/舰桥已获用户确认；单人/多人及完整异常矩阵仍缺真实证据 | OPEN / NOT TESTED | 核心发布验收缺口；不声称代码已证实损坏 |
 | P1-01 | P1 | 首次部署审核 FEX/Proton 制品缺失 | BLOCKED | 维持 ARTIFACT_UNAPPROVED |
 | P1-02 | P1 | FX 1.9.9 性能写入/部署 profile 不支持 | OPEN | 拒绝写入正确；须独立兼容开发与验证 |
 | P1-03 | P1 | 真实 SSH/独立 sudo/Guest/IPv6/配置恢复未验收 | NOT TESTED | 等待 FX 启动及逐项授权 |

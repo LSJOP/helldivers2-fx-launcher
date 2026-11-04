@@ -23,3 +23,7 @@ PR #3 已 MERGED（2026-11-04 UTC；合并 7bd7aed）。当前任务未合并 ma
 - staging secret gate 与最终 bundle pattern scan PASS（不构成凭据绝不泄漏证明）。
 - Latest 可执行文件前后摘要一致：841f222642619e1bc33b99e976ac385d10af70add15da790653f4c48e232509a。
 - 本地验收报告收尾提交可能晚于 BUILD COMMIT；不得用文档 HEAD 冒充 App 构建提交。
+
+## 用户主菜单确认更新
+
+2026-11-05用户明确确认通过Native App启动并到达主菜单/舰桥，对应游戏启动/菜单PASS。单人/多人、独立认证与诊断、首次部署、版本兼容、分发与更新门禁未全部完成，结论仍NOT READY。未因本次成功自动发布/覆盖Latest/合并main。
