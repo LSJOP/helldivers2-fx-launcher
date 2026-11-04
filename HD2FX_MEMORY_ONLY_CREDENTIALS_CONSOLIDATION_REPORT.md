@@ -67,3 +67,26 @@ Final full run_checks.sh completed PASS: SSH 28, privileged executor 30, Core 62
 ## Release readiness — NOT READY
 
 Candidate delivery is authorized; formal publication is not. Remaining live Guest auth/compatibility/game/multiplayer acceptance and incomplete automatic game-option/configuration flows prevent READY. Latest and historical Releases/rollback copies remain untouched. Next user step after delivery: open the candidate, re-enter independent SSH/sudo credentials, perform read-only connection/root checks; review any exact Guest mutation preview before separately authorizing it. Game process detection does not establish playability.
+
+## Frozen candidate artifact — PASS
+
+- Build commit: `ebbc9118cce6eeee5af1b873c50e784718164b8c` (clean source; subsequent report-only commits are not a new binary).
+- Build: 0.1.0 / `2026110403`; Native Core 1.1.0.
+- Release built at: 2026-11-04T08:50:41+00:00 (16:50:41 Asia/Shanghai).
+- Candidate: `/Volumes/Thunderbolt2TB/HD2-App-Builds/Candidates/ebbc911-memory-only-credentials-20261104-1654/HD2FXNative.app`.
+- Executable SHA-256: `2d7000db63c0a2da62101b4f1dee3b592a390d05e474baecbb7e00e574a2cf93`.
+- Frozen Debug build: PASS. Frozen full regression: PASS with the counts above.
+- Optimized Release build + copied candidate bundle gate: PASS (arm64, correct Bundle ID, build metadata clean, icon/assets, ten languages, pinned gvproxy SHA-256, Sparkle, signature, no Python runtime/files/Bridge).
+- Signature: local ad hoc only; Developer ID, notarization, Gatekeeper distribution and updater end-to-end installation NOT TESTED.
+- Executable undefined symbols: no SecItem/SecKeychain imports. Bundle bounded secret scan: PASS, 78 files, zero findings; heuristic evidence, not proof of physical-memory erasure.
+- Independent Release launch: PASS from exact candidate executable, PID 86502, visible native window 13508, dashboard rendered and read-only snapshots loaded, no current error record. No game/Guest action invoked; no Keychain prompt observed during this launch.
+- Latest executable remains `50d176122baf1d7fec1c06770151c69208f708b62c0704d18120a27968012f45`; no replacement operation performed.
+- Candidate metadata and verification evidence copied alongside App. Existing rollback/Release directories preserved.
+
+## Final UI regression — PASS (programmatic)
+
+Frozen Debug acceptance: 60 page/language renders across ten languages plus 24 resize page renders (850/1180 widths), build metadata validated and credentials empty at startup. No live Guest actions; production preferences isolated. Screenshot window capture PASS. English/Chinese Settings inspected visually separately. Interactive authentication clicks, translation naturalness of all languages and live authentication remain NOT TESTED.
+
+## PR and delivery
+
+PR #3 is the single existing PR; target branch remains feature/full-swift-native-migration. Source build commit is separate from this subsequent report-only update. Branch cleanup intentionally preserves all other worktrees/unknown files. No further source rebuild is needed for report-only changes. Formal publication requires additional live acceptance and user release instruction.
