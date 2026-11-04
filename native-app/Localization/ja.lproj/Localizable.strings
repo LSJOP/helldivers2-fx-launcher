@@ -9,6 +9,6 @@
 "updates.finished" = "更新処理終了。インストールと再起動は未確認です。";
 "updates.failed" = "更新失敗";
 "updates.scope" = "このランチャーのみ更新します。ゲーム、Steam、FX Runtime、ゲスト、EAC は対象外です。";
-"updates.languageRestart" = "言語とインタープリターはこのアプリ用に保存されます。メニュー言語の適用には再起動が必要です。外観は今回のセッションのみ有効です。FX の選択と起動リソースは別々に保存されます。ネイティブ UI は全10言語に対応しています。";
+"updates.languageRestart" = "言語設定はこのアプリ専用です。メニュー言語の反映には再起動が必要です。外観は現在のセッションのみ有効です。ネイティブ UI は全10言語に対応しています。";
 "updates.automaticOff" = "自動確認はオフです。署名サービス準備後に Sparkle が同意を管理します。";
 "updates.automaticOn" = "自動確認オン（Sparkle 設定）。";

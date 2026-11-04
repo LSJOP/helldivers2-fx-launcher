@@ -16,7 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // be blocked by the caller's MainActor task; use that loop's timer instead.
         let timer = Timer(timeInterval: 0.1, repeats: true) { timer in
             MainActor.assumeIsolated {
-                guard !BridgeWorkerStatus.isActive else { return }
+                guard !CoreWorkerStatus.isActive else { return }
                 timer.invalidate()
                 #if DEBUG
                 NativeLifecycle.event?("replyToApplicationShouldTerminate")

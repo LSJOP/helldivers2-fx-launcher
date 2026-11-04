@@ -1,6 +1,6 @@
 import Foundation
 
-indirect enum JSONValue: Codable, Sendable {
+indirect enum JSONValue: Codable, Sendable, Equatable {
     case string(String), number(Double), bool(Bool), object([String: JSONValue]), array([JSONValue]), null
     init(from decoder: Decoder) throws {
         let c = try decoder.singleValueContainer()
@@ -29,17 +29,8 @@ indirect enum JSONValue: Codable, Sendable {
     var object: [String: JSONValue] { if case .object(let v) = self { return v }; return [:] }
 }
 
-struct BridgeResponse: Decodable, Sendable {
-    struct Failure: Decodable, Sendable { let code: String; let message: String; let details: [String: JSONValue]? }
-    let `protocol`: Int
-    let request_id: String
-    let ok: Bool
-    let result: [String: JSONValue]?
-    let error: Failure?
-    let observed_at: String?
-}
 
-struct BridgeReply: Sendable {
+struct CoreReply: Sendable {
     let result: [String: JSONValue]
     let observedAt: String
     let requestID: String
@@ -75,18 +66,18 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
         case "FX_IDENTITY_UNVERIFIED": return NativeStrings.text("ui.330", language: language)
         case "FX_INSTANCE_MISMATCH": return NativeStrings.text("ui.351", language: language)
         case "FX_ENTRY_MISMATCH": return NativeStrings.text("ui.341", language: language)
-        case "SSH_CONNECTION_FAILED": return NativeStrings.text("ui.143", language: language)
+        case "SSH_CONNECTION_FAILED", "SSH_CONNECTION_REFUSED", "SSH_CONNECTION_TIMEOUT", "SSH_CONNECTION_UNREACHABLE", "SSH_PROTOCOL_ERROR", "SSH_GUEST_NOT_READY", "SSH_HOST_KEY_MISMATCH": return NativeStrings.text("ui.143", language: language)
+        case "CREDENTIAL_SCOPE_CHANGED", "CREDENTIAL_SCOPE_CHANGED_DURING_REQUEST": return NativeStrings.text("ui.session.targetChanged", language: language)
         case "AUTH_REQUIRED":
             if details["credential_kind"]?.text == "sudo_password" { return NativeStrings.text("ui.333", language: language) }
             if details["credential_kind"]?.text == "passphrase" { return NativeStrings.text("ui.335", language: language) }
             return NativeStrings.text("ui.332", language: language)
-        case "GUEST_TRANSACTION_FAILED": return NativeStrings.text("ui.334", language: language)
+        case "GUEST_TRANSACTION_FAILED", "SUDO_PERMISSION_DENIED", "SUDO_COMMAND_FAILED", "SUDO_CREDENTIAL_INVALID": return NativeStrings.text("ui.334", language: language)
         case "FX_NOT_RUNNING": return NativeStrings.text("ui.353", language: language)
         case "LOCAL_FX_REQUIRED": return NativeStrings.text("ui.355", language: language)
         case "GUEST_INSPECTION_FAILED": return NativeStrings.text("ui.146", language: language)
         case "SSH_AUTH_FAILED": return NativeStrings.text("ui.289", language: language)
         case "SUDO_AUTH_FAILED": return NativeStrings.text("ui.147", language: language)
-        case "CREDENTIAL_SCOPE_CHANGED": return NativeStrings.text("ui.354", language: language)
         case "SENSITIVE_CONFIGURATION", "SENSITIVE_CHANGE_BLOCKED": return NativeStrings.text("ui.231", language: language)
         case "COMPATIBILITY_CHECK_FAILED": return NativeStrings.text("ui.070", language: language)
         case "STEAM_START_FAILED": return NativeStrings.text("ui.322", language: language)

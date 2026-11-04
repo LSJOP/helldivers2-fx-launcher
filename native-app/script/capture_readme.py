@@ -23,7 +23,7 @@ result_file=output/'readme-capture.json';request_file=output/'capture-request.js
 if result_file.exists() or request_file.exists():raise SystemExit('Use a fresh capture directory')
 launch_args=['--readme-screenshots',str(output),args.language,
              '-NativeLanguage',initial,'-AppleLanguages','(zh-Hans)' if initial=='zh-CN' else '(en)',
-             '-NativeRememberedRuntimeRoot','','-NativePythonPath','/usr/bin/python3',
+             '-NativeRememberedRuntimeRoot','',
              '-NativeCredentialAutoLoadDisabled','YES','-ApplePersistenceIgnoreState','YES','-NSQuitAlwaysKeepsWindows','NO']
 subprocess.run(['/usr/bin/open','-n',str(bundle),'--args',*launch_args],check=True)
 seen=set();started=time.monotonic();deadline=started+90;reopened=False

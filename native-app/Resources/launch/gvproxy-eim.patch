@@ -1,0 +1,283 @@
+diff --git a/pkg/services/forwarder/udp.go b/pkg/services/forwarder/udp.go
+index 7b00312..6ecb05b 100644
+--- a/pkg/services/forwarder/udp.go
++++ b/pkg/services/forwarder/udp.go
+@@ -15,6 +15,7 @@ import (
+ )
+ 
+ func UDP(s *stack.Stack, nat map[tcpip.Address]tcpip.Address, natLock *sync.Mutex, ec2MetadataAccess bool) *udp.Forwarder {
++	dialSession := newUDPSessionDialer()
+ 	return udp.NewForwarder(s, func(r *udp.ForwarderRequest) {
+ 		localAddress := r.ID().LocalAddress
+ 
+@@ -41,7 +42,8 @@ func UDP(s *stack.Stack, nat map[tcpip.Address]tcpip.Address, natLock *sync.Mute
+ 		}
+ 
+ 		p, _ := NewUDPProxy(&autoStoppingListener{underlying: gonet.NewUDPConn(&wq, ep)}, func() (net.Conn, error) {
+-			return net.Dial("udp", net.JoinHostPort(localAddress.String(), strconv.Itoa(int(r.ID().LocalPort))))
++			source := net.JoinHostPort(r.ID().RemoteAddress.String(), strconv.Itoa(int(r.ID().RemotePort)))
++			return dialSession(source, net.JoinHostPort(localAddress.String(), strconv.Itoa(int(r.ID().LocalPort))))
+ 		})
+ 		go func() {
+ 			p.Run()
+diff --git a/pkg/services/forwarder/udp_mapping_darwin.go b/pkg/services/forwarder/udp_mapping_darwin.go
+new file mode 100644
+index 0000000..d41b9ba
+--- /dev/null
++++ b/pkg/services/forwarder/udp_mapping_darwin.go
+@@ -0,0 +1,90 @@
++package forwarder
++
++import (
++	"net"
++	"os"
++	"sync"
++	"syscall"
++
++	log "github.com/sirupsen/logrus"
++	"golang.org/x/sys/unix"
++)
++
++// Preserve one host source port per guest source endpoint across destinations.
++// Connected UDP sockets retain the existing remote-address filtering.
++func newUDPSessionDialer() func(string, string) (net.Conn, error) {
++	if os.Getenv("GVPROXY_UDP_PORT_MAPPING") != "endpoint-independent" {
++		return func(_ string, destination string) (net.Conn, error) { return net.Dial("udp", destination) }
++	}
++	log.Info("UDP endpoint-independent source port mapping enabled")
++	m := &udpPortMappings{bindings: make(map[string]*udpPortBinding)}
++	return m.dial
++}
++
++type udpPortBinding struct{ port, refs int }
++type udpPortMappings struct {
++	mu       sync.Mutex
++	bindings map[string]*udpPortBinding
++}
++
++func (m *udpPortMappings) dial(source, destination string) (net.Conn, error) {
++	address, err := net.ResolveUDPAddr("udp", destination)
++	if err != nil {
++		return nil, err
++	}
++	if address.IP.To4() == nil {
++		return net.Dial("udp", destination)
++	}
++	m.mu.Lock()
++	defer m.mu.Unlock()
++	binding := m.bindings[source]
++	port := 0
++	if binding != nil {
++		port = binding.port
++	}
++	d := net.Dialer{
++		LocalAddr: &net.UDPAddr{IP: net.IPv4zero, Port: port},
++		Control: func(_, _ string, raw syscall.RawConn) error {
++			var optionErr error
++			err := raw.Control(func(fd uintptr) {
++				optionErr = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEADDR, 1)
++				if optionErr == nil {
++					optionErr = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
++				}
++			})
++			if err != nil {
++				return err
++			}
++			return optionErr
++		},
++	}
++	conn, err := d.Dial("udp4", address.String())
++	if err != nil {
++		return nil, err
++	}
++	if binding == nil {
++		binding = &udpPortBinding{port: conn.LocalAddr().(*net.UDPAddr).Port}
++		m.bindings[source] = binding
++	}
++	binding.refs++
++	return &mappedUDPConn{Conn: conn, release: func() {
++		m.mu.Lock()
++		defer m.mu.Unlock()
++		binding.refs--
++		if binding.refs == 0 {
++			delete(m.bindings, source)
++		}
++	}}, nil
++}
++
++type mappedUDPConn struct {
++	net.Conn
++	once     sync.Once
++	release  func()
++	closeErr error
++}
++
++func (c *mappedUDPConn) Close() error {
++	c.once.Do(func() { c.closeErr = c.Conn.Close(); c.release() })
++	return c.closeErr
++}
+diff --git a/pkg/services/forwarder/udp_mapping_other.go b/pkg/services/forwarder/udp_mapping_other.go
+new file mode 100644
+index 0000000..53e04c6
+--- /dev/null
++++ b/pkg/services/forwarder/udp_mapping_other.go
+@@ -0,0 +1,9 @@
++//go:build !darwin
++
++package forwarder
++
++import "net"
++
++func newUDPSessionDialer() func(string, string) (net.Conn, error) {
++	return func(_ string, destination string) (net.Conn, error) { return net.Dial("udp", destination) }
++}
+diff --git a/pkg/services/forwarder/udp_mapping_darwin_test.go b/pkg/services/forwarder/udp_mapping_darwin_test.go
+new file mode 100644
+index 0000000..cd669f7
+--- /dev/null
++++ b/pkg/services/forwarder/udp_mapping_darwin_test.go
+@@ -0,0 +1,144 @@
++package forwarder
++
++import (
++	"fmt"
++	"net"
++	"sync"
++	"testing"
++	"time"
++)
++
++func echoUDP(t *testing.T) string {
++	t.Helper()
++	c, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(func() { c.Close() })
++	go func() {
++		b := make([]byte, 4096)
++		for {
++			n, a, err := c.ReadFromUDP(b)
++			if err != nil {
++				return
++			}
++			c.WriteToUDP(b[:n], a)
++		}
++	}()
++	return c.LocalAddr().String()
++}
++
++func checkEcho(c net.Conn, payload string) error {
++	c.SetDeadline(time.Now().Add(3 * time.Second))
++	if _, err := c.Write([]byte(payload)); err != nil {
++		return err
++	}
++	b := make([]byte, 4096)
++	n, err := c.Read(b)
++	if err != nil {
++		return err
++	}
++	if string(b[:n]) != payload {
++		return fmt.Errorf("wrong reply: %q", b[:n])
++	}
++	return nil
++}
++
++func TestUDPPortMapping(t *testing.T) {
++	t.Setenv("GVPROXY_UDP_PORT_MAPPING", "endpoint-independent")
++	dial := newUDPSessionDialer()
++	a, b := echoUDP(t), echoUDP(t)
++	c1, err := dial("guest:1234", a)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c1.Close()
++	c2, err := dial("guest:1234", b)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c2.Close()
++	c3, err := dial("guest:5678", a)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c3.Close()
++	if c1.LocalAddr().String() != c2.LocalAddr().String() {
++		t.Fatal("source port changed across destinations")
++	}
++	if c1.LocalAddr().String() == c3.LocalAddr().String() {
++		t.Fatal("different guest sources share a binding")
++	}
++	for i, c := range []net.Conn{c1, c2, c3} {
++		if err := checkEcho(c, fmt.Sprint(i)); err != nil {
++			t.Fatal(err)
++		}
++	}
++}
++
++func TestUDPPortMappingConcurrentAndRelease(t *testing.T) {
++	m := &udpPortMappings{bindings: make(map[string]*udpPortBinding)}
++	const count = 32
++	destinations := make([]string, count)
++	conns := make([]net.Conn, count)
++	for i := range destinations {
++		destinations[i] = echoUDP(t)
++	}
++	var wg sync.WaitGroup
++	for i := range destinations {
++		wg.Add(1)
++		go func(i int) {
++			defer wg.Done()
++			c, err := m.dial("guest:1111", destinations[i])
++			if err != nil {
++				t.Error(err)
++				return
++			}
++			conns[i] = c
++			if err := checkEcho(c, fmt.Sprint(i)); err != nil {
++				t.Error(err)
++			}
++		}(i)
++	}
++	wg.Wait()
++	port := 0
++	for _, c := range conns {
++		if c == nil {
++			continue
++		}
++		p := c.LocalAddr().(*net.UDPAddr).Port
++		if port != 0 && p != port {
++			t.Error("port changed during concurrent dials")
++		}
++		port = p
++	}
++	for _, c := range conns {
++		if c != nil {
++			c.Close()
++			c.Close()
++		}
++	}
++	m.mu.Lock()
++	defer m.mu.Unlock()
++	if len(m.bindings) != 0 {
++		t.Fatal("closed bindings retained")
++	}
++}
++
++func TestUDPPortMappingDefaultUnchanged(t *testing.T) {
++	t.Setenv("GVPROXY_UDP_PORT_MAPPING", "")
++	dial := newUDPSessionDialer()
++	c1, err := dial("guest:1234", echoUDP(t))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c1.Close()
++	c2, err := dial("guest:1234", echoUDP(t))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c2.Close()
++	if c1.LocalAddr().String() == c2.LocalAddr().String() {
++		t.Fatal("opt-in unexpectedly active by default")
++	}
++}

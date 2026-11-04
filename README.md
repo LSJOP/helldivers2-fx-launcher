@@ -19,14 +19,20 @@
 
 <a id="en-overview"></a>
 
-A native **SwiftUI + AppKit** interface over the original Python Core: launch the game, inspect the selected FX environment and read performance settings from six focused pages. The interface defaults to dark, with inline operation feedback and advanced details available when needed.
+A fully native **SwiftUI + AppKit** app with a **Swift Native Core**: launch the game, inspect the selected FX environment and manage performance settings from six focused pages. No Python interpreter, Python Bridge or external script directory is used at runtime. The interface defaults to dark, with inline operation feedback and advanced details available when needed.
 
 > [!IMPORTANT]
 > **Development preview.** No official installer has been released. The completed Native snapshot is integrated into [main](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main); [feature/macos-native-app](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app) is retained for development history. Runtime binaries, game files and Guest images are not included.
 
 <a id="en-screenshots"></a>
 
+All six pages open directly into their content; the repeated global FX status bar has been removed. FX detection, versions, running state and resource diagnostics remain in FX Manager and Environment.
+
 ## Screenshots
+
+**Native takeover preview:** Guest SSH now uses a controlling terminal and corrected OpenSSH arguments, with a dedicated read-only **Test Guest SSH connection** action in Environment. Enter credentials only in App secure fields. Settings → About displays bundled build identity and can copy it. Live Guest password authentication and gameplay still require user acceptance; isolated checks are not live validation. Environment and Settings screenshots were refreshed from the real Debug App on 2026-11-04; offscreen About values are checked separately during Release acceptance. All page screenshots now show the current simplified layout. The SSH-only check can inspect an already-running stock FX network process after publisher-signature and ancestry verification; game launch still requires the pinned bundled backend.
+
+All six pages and the performance/update detail viewports were recaptured on 2026-11-04 after the shared global FX status bar was removed. No replacement bar or reserved space is present.
 
 [![Dashboard](docs/images/en/dashboard.png)](docs/images/en/dashboard.png)
 
@@ -52,7 +58,7 @@ A native **SwiftUI + AppKit** interface over the original Python Core: launch th
 </details>
 
 
-Eight English screenshots captured from the current real Native Debug App (0.1.0, build 1) on 2026-11-03, with read-only host metadata. Pixels are unmodified; no UI/status was composited. Scrolled views show performance actions and software update. Capture copies isolate App preferences and disable credential autoload; no FX/Guest action or configuration write was performed. Supplied artwork is rendered inside the real App. Screenshots do not prove gameplay, performance gains or installation readiness. [Capture provenance and limitations](docs/images/README.md).
+Eight current English screenshots from the real Native Debug App (0.1.0, build 2026110402), captured on 2026-11-04. Original pixels are unchanged; no UI/status was composited. Capture copies isolate preferences and disable credential autoload; no FX/Guest action or configuration write was performed. Screenshots do not prove gameplay or installation readiness. [Capture provenance and limitations](docs/images/README.md).
 
 <a id="en-features"></a>
 
@@ -77,7 +83,7 @@ Performance rules are local and reproducible. The recorded **M4 Pro / 24 GiB** s
 
 **An official installer has not been released.** The repository [Releases page](https://github.com/LSJOP/helldivers2-fx-launcher/releases) currently has no published release; this is not a download button for a nonexistent package.
 
-Source preview requirements: **Apple Silicon, macOS 14+, a complete Xcode/macOS SDK and Python 3.9+**. Game operations also require the existing complete legacy launcher directory, the original validated FX/gvproxy assets and compatible Guest access.
+Source preview requirements: **Apple Silicon, macOS 14+ and a complete Xcode/macOS SDK**. Game operations require an installed, publisher-signed FX Steam Launcher and a running FX Guest reachable over SSH. Launch networking resources (gvproxy) are bundled and SHA-256 verified.
 
 ```sh
 git clone --branch main --recurse-submodules https://github.com/LSJOP/helldivers2-fx-launcher.git
@@ -92,7 +98,7 @@ Existing clones need the intended branch and `git submodule update --init --recu
 
 ## Quick start
 
-1. Open the App; choose your language, appearance and existing Python interpreter in Settings.
+1. Open the App; choose your language and appearance in Settings, then select the installed FX Steam Launcher in FX Manager.
 2. Select the existing launcher directory on first use. Use **Inspect environment** for read-only Guest checks; FX must already be running. Use **Start FX** in FX Manager if needed.
 3. Click **Launch HELLDIVERS 2** on Dashboard. The existing launch workflow performs its required checks automatically. Review start consent and any exact configuration-change preview; enter credentials only in App secure fields.
 4. Use Game Performance for hardware and baseline comparisons, and Logs for failure details. A detected process does not establish arrival at the game menu.
@@ -120,7 +126,7 @@ Existing clones need the intended branch and `git submodule update --init --recu
 No official release has been published yet; the current Native version `0.1.0` is a development preview. Recent unreleased changes:
 
 - Native six-page interface, bounded FX discovery, validated configuration editing, redacted logs and read-only performance comparison.
-- GUI-driven FX/SSH actions and optional SSH/sudo credential remembering.
+- GUI-driven FX/SSH actions and independent, memory-only SSH/sudo session credentials.
 - Sparkle 2 update integration (feed/signing service not configured).
 
 See the full history in [CHANGELOG.md](CHANGELOG.md).
@@ -128,7 +134,7 @@ See the full history in [CHANGELOG.md](CHANGELOG.md).
 ## FAQ
 
 - **Why are stop/restart or some Apply actions disabled?** Graceful exit is unverified. Performance editing requires the pinned FX 1.9.4 build, valid preferences, stopped FX and explicit preview/consent. Invalid backups or external changes block restore. The App does not force-stop FX.
-- **Must I retype passwords?** Session reuse is the default. Optional remembering stores independently verified SSH/sudo credentials in a new App-owned macOS Keychain namespace; automatic reads suppress authorization dialogs. Locked/access-restricted storage falls back to secure input. Explicit access or App identity/signature changes may still require system authorization. Old script items are untouched.
+- **Must I retype passwords?** SSH and sudo passwords are independent and reused only during this App process. They are never stored in macOS Keychain, preferences or local files. Fully quitting the App requires reentry; changing FX/Guest identity clears authorization. Old saved items are neither read, migrated nor deleted.
 - **Are automatic updates ready?** Manual GitHub Native-release checks work in Settings → Software Update. Stable is the default; Preview and automatic checks remain closed until verified service setup. A verified-download backend requires a trusted Ed25519 key and signed manifest; installation remains disabled without the signed Appcast, Developer ID and notarization/distribution conditions. Manual checks never install automatically. The automatic-check toggle stays disabled until the signed service is ready. Download verification includes signature, size and SHA-256; installation stays with official Sparkle. No production update package is published yet. Failures leave the current App intact; no installed/relaunched success is inferred. Release preparation verifies signed feed history before reusing it. [Setup and release gates](docs/NATIVE_UPDATES.md).
 
 <a id="en-legacy"></a>
@@ -147,8 +153,17 @@ See the full history in [CHANGELOG.md](CHANGELOG.md).
 
 Unofficial project; no endorsement or compatibility guarantee. HELLDIVERS 2 and related marks belong to their respective owners. A project-wide source license has **not been selected**; do not assume redistribution rights. See [rights and provenance](THIRD_PARTY_NOTICES.md), including the separate Sparkle license and supplied artwork notes.
 
-Development checks: `python3 native-app/script/check_localization.py` reports ten-language key/format coverage and README review candidates; `native-app/script/run_checks.sh` and the pre-commit hook include this gate. UI changes require a review of both READMEs and their real screenshots. Both English and Simplified Chinese screenshots are refreshed for the integrated UI. Translation naturalness still needs human review. The release-check Actions template remains inactive; no CI workflow is configured.
+Development checks: `native-app/script/run_checks.sh` compiles and runs the native-core contract checks plus ten-language and documentation gates. Python is used only by optional developer scripts; the app bundle and runtime contain no Python. UI changes require a review of both READMEs and their real screenshots. Both English and Simplified Chinese screenshots are refreshed for the integrated UI. Translation naturalness still needs human review. The release-check Actions template remains inactive; no CI workflow is configured.
 
 FX selection V2 + automatic selection V2.1: the FX page, overview and launch panel share one persisted default. One identity/path-verified FX is selected automatically from the scan results; multiple installations preserve an existing valid choice or require selection. Missing/moved/updated defaults are revalidated. Selection remains **launch capability unverified** and never starts the game. Every game launch rescans the default and freezes one selected FX path for inspection, preflight and execution. Integrity accepts the exact historical build or an intact bundle signed by the verified FX publisher (Apple trust anchor, Bundle ID and Team ID), rechecks the verified digest and retains all original profile, process and Guest guards. This does not establish gameplay compatibility. FX application selection is separate from the helper/gvproxy resource directory: resolve it from the selected app’s bounded ancestors or the existing resource directory when possible, otherwise explicitly locate **launch resources** once. Repeated FX-directory selection is not required. Refresh and automatic inspection do not start FX, SSH or the game. Stop/restart remain unavailable. Parameter-scoped performance editing and backup restore require a stopped, pinned FX 1.9.4 and explicit preview/confirmation; inferred recommendations remain read-only.
 
 Launch resources: `/Applications` and the FX `.app` are not the original script resource directory. Select the complete existing launcher folder containing `launcher-20261026/steam-cdp.mjs`, `tools/check_node.cjs` and `goal-fx-multiplayer-20261026/gvproxy-eim-wrapper`. Inspection and execution share the same bundled-archive comparison, with exact expected/actual paths and SHA-256 diagnostics. Missing, altered or symlinked resources fail closed; no FX files are changed. FX 1.9.4/1.9.8 path and signature checks are covered; live gameplay remains unverified.
+
+Sudo investigation (2026-11-04): build 2026110402 has a remote empty-prompt quoting defect. The fix and distinct sudo/SSH failure classification are under validation; no replacement build is released. Full Guest identity passed a live read-only check; passworded sudo and subsequent launch stages remain unverified.
+
+**Memory-only candidate:** session credential management replaces all Keychain controls. Each approved privileged SSH call authenticates in that call and isolates command stdin from password input. Guest IPv6 changes require an exact preview, consent and a local rollback receipt; live Guest changes, Steam/game and multiplayer acceptance remain NOT TESTED for this candidate. Settings screenshots show the real memory-only working candidate (build 2026110403, dirty pre-freeze snapshot); other pages retain their recorded UI-simplification provenance.
+
+
+**SteamOS network candidate (unreleased):** Environment → SteamOS network settings provides explicit runtime IPv6 enable/disable, exact confirmation, backup and verified recovery. IPv6 is optional and game startup never changes it. VM, Steam TLS, PlayFab and UDP diagnostics are explicit read-only probes without sudo; passing does not verify multiplayer. Credentials remain memory-only. Real Guest writes and game launch remain NOT TESTED. [Network guide](docs/STEAMOS_NETWORK_SETTINGS.md) · [Python → Swift parity](docs/PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md).
+
+[![SteamOS network settings and diagnostics](docs/images/en/environment-network.png)](docs/STEAMOS_NETWORK_SETTINGS.md)

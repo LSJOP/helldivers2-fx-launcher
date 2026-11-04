@@ -6,7 +6,7 @@ struct LaunchProgressView: View {
     var body: some View {
         TacticalPanel(number: "L", title: state.t("ui.088"), symbol: "play.rectangle") {
             Text(state.launchSession.current.title(state.languageCode)).font(TacticalTypography.module)
-            ForEach([LaunchStage.checkingEnvironment, .checkingFXEntry, .startingFX, .waitingForGuest, .checkingCompatibility, .startingSteam, .gameProcessDetected, .checkingEAC]) { stage in
+            ForEach([LaunchStage.checkingEnvironment, .checkingFXEntry, .startingFX, .waitingForFXReady, .verifyingFXIdentity, .waitingForGuest, .checkingCompatibility, .startingSteam, .launchingGame, .waitingForGame, .gameProcessDetected, .checkingEAC]) { stage in
                 let value = state.launchSession.evidence[stage] ?? "unverified"
                 HStack {
                     Image(systemName: value == "done" || value == "passed" ? "checkmark.circle" : value == "failed" ? "exclamationmark.circle" : "circle.dashed")
@@ -29,7 +29,7 @@ struct LaunchProgressView: View {
             Button(state.t("ui.154")) { state.confirmSinglePlayer() }
                 .disabled(tasks.busy || !state.launchSession.processDetected || state.launchSession.mainMenuConfirmedAt == nil || state.launchSession.singlePlayerConfirmedAt != nil)
             Button(state.t("ui.259")) { state.runOperation("observe_launch", params: ["confirmed": .bool(true)]) }
-                .disabled(tasks.busy || state.runtimeRoot.isEmpty)
+                .disabled(tasks.busy || state.fxSelection.selected == nil)
         }
     }
 }

@@ -4,9 +4,76 @@
 
 All notable changes to the HELLDIVERS 2 FX Launcher Native App are recorded here, newest first. Unreleased entries have no release date. This file is the single source of truth for user-facing release notes; the README summary, GitHub Release notes and the future Sparkle appcast reuse this reviewed text. Do not paste raw, unreviewed Git commit messages into it.
 
-No official release has been published yet. The current Native App version `0.1.0` (build `1`) is a development preview, not a downloadable package.
+No official release has been published yet. The current Native App version `0.1.0` (build `2026110402`) is a development preview, not a downloadable package.
 
 ## Unreleased
+
+- SteamOS network candidate: runtime IPv6 moved to Environment with explicit preview, confirmation, independent sudo authentication, full-interface backup and recovery. Game startup no longer writes or requires IPv6.
+- Added bounded read-only VM, verified Steam TLS, Guest PlayFab and STUN/UDP diagnostics, ten-language UI and Python parity audit. Real Guest writes/gameplay remain unverified; no Latest publication.
+
+### Memory-only candidate (not released)
+
+- Replace credential-vault access and remember/delete/authorize controls with independent SSH/sudo session credentials and explicit provided/verified/failed states. Existing saved items are never read, migrated or deleted.
+- Consolidate the UI simplification branch while retaining the 1188d59 sudo quoting repair. Each approved privileged SSH call now authenticates independently without cross-session timestamp assumptions, with password-free argv/env and detached command stdin.
+- Bind credentials to canonical FX/executable/config/process evidence and verified Guest boot; clear on identity change/loss or exit.
+- Require exact-change approval and backup/recovery receipts for Guest IPv6 changes; manual restore re-verifies boot, identity and current values. Historical Steam login alone no longer establishes Steam readiness.
+- Candidate only: live authentication/configuration/game acceptance remains unverified; no Latest update or main merge.
+
+- Fix remote sudo empty-prompt shell quoting and distinguish missing credentials, rejected authentication, policy denial, transport and command failures. Live passworded sudo acceptance and a replacement App release remain pending.
+- Remove the shared FX status bar from all six pages without a replacement or placeholder. Preserve the sidebar, page styling, FX detection/management and launch services; content fills the available top area.
+
+- Read-only SSH diagnostics also recognize the selected FX publisher-sealed stock gvproxy after signature, stable-content and process-ancestry verification. Game launch continues to require the pinned bundled networking backend.
+
+### Added
+
+- Settings → About includes App/build/Core versions, full source commit, build timestamp and actual running path, with copy support. Environment includes read-only SSH diagnostics with effective endpoint, authentication and Guest identity stages.
+
+### Fixed
+
+- Correct duplicate OpenSSH executable in argv, establish the controlling terminal required for GUI password prompts, pass secure credentials to SSH diagnostics, and distinguish connection refusal, timeout, authentication, host-key and protocol failures. Preserve FX identity checks and host-key verification. Live Guest acceptance remains pending.
+
+### Fixed
+
+- FX instance identity false positive: trim the `ps` command-column padding and normalize the one-supervisor/one-VM-child FX topology, so the selected FX is recognized as the same instance instead of `FX_INSTANCE_MISMATCH (different_fx_copy)`. Genuinely different copies still fail closed and now report the selected and running paths.
+
+
+### Changed
+
+- Replace the tall global FX info block with a compact FX status bar (name, version, detected/running state, Manage FX) and move path, gvproxy, SHA-256 and preflight diagnostics into FX Manager → Details & resource verification. Remove the duplicated FX version/path/status from the Dashboard runtime card and reorder the page around the hero and launch actions.
+
+
+### Fixed
+
+- Repair `PROTOCOL_ERROR · get_logs`: the native core now reports the `native_core_session` log source that the UI validates, and environment detection runs per method so one failed probe no longer blanks macOS/architecture/native-runtime and every other panel.
+- Restore the App icon and asset catalog in Debug and Release: the resource-copy build phase no longer deletes the compiled `AppIcon.icns`/`Assets.car` and now also restores the ten `.lproj` bundles.
+- Game launch no longer fails immediately with "FX not running": the launch path now auto-starts the verified FX once, waits for Guest, waits for Steam login, then sends the game request, with cancellation and stage reporting. Connection-only actions still require an already-running FX.
+- Remove legacy Python Bridge wording (Bridge status, latest Bridge error, "Python executed the Bridge", "requires Python 3.9", Node runtime requirement) from the ten-language resources and the Logs source label.
+
+### Added
+
+- Release resource-integrity gate (`native-app/script/check_release_bundle.sh`): icon, asset catalog, ten languages, bundled gvproxy SHA-256, Sparkle, bundle identifier, version, architecture, no Python/Bridge, and code-signature verification.
+- SwiftUI ↔ Native Core integration checks covering the log source contract, system info, environment, dependencies, FX discovery, catalog, configuration and fail-closed launch without a selection.
+
+
+### Changed
+
+- Replace the Python Bridge with a **Swift Native Core**. FX discovery, launch-resource integrity, launcher settings, scoped CPU/memory/Vulkan preferences, diagnostics, logging and the FX/Guest/Steam/game launch path are implemented in Swift. The original script directory and Node.js are no longer required at runtime.
+
+### Removed
+
+- Remove the bundled Python bridge, `legacy_operations.py`, `core_adapter.py` and the Python packaging build phase. No Python interpreter is invoked by the app, build or runtime.
+
+### Fixed
+
+- Reject symlinked or tampered bundled launch resources (gvproxy) with pinned SHA-256, and report a missing/hash-mismatched resource explicitly instead of launching.
+- Persist launcher settings with revision guarding, a private backup and atomic replacement; restore requires confirmation and keeps a pre-restore copy.
+
+### Known issues
+
+- Live FX start, Guest authentication, Steam start, game launch, main-menu, EAC and multiplayer were **not** verified in this change. Their automated checks and host preflight do not prove gameplay.
+- Rewriting real FX preferences requires a stopped FX; live apply/restore was not executed while FX was running.
+- Distribution remains blocked: the Release app is ad-hoc signed and not notarized (no Developer ID / EdDSA publishing configuration). Code integration is not an end-to-end upgrade acceptance.
+
 
 ### Fixed
 
@@ -24,7 +91,7 @@ No official release has been published yet. The current Native App version `0.1.
 - Searchable, filtered, bounded and redacted logs, plus diagnostic report export.
 - Read-only hardware detection (chip/CPU/GPU/memory/macOS) and current FX preference baseline comparison in Game Performance.
 - GUI-driven FX/SSH actions: connect, read-only Guest inspection, original-entry FX/Steam start and the existing game-launch panel.
-- Optional SSH/sudo credential remembering in a new App-owned Keychain namespace (session memory by default; old script Keychain items are untouched).
+- Historical preview implemented optional credential remembering; superseded by the memory-only candidate above. No current credential-store access remains.
 - Manual anonymous Native-release checks and a guarded signed-manifest download backend; official Sparkle remains the only installer. Appcast history is signature-verified before release preparation. Production automatic update installation remains unavailable without trusted distribution setup.
 - Scoped, preview-confirmed FX 1.9.4 preference editing, verified backup/restore and external-change protection; stopped pinned FX required. Inferred recommendations remain read-only.
 - Real English and Simplified Chinese screenshot sets, provenance hashes and documentation checks; the release-check Actions code is preserved as an inactive template under docs/ci.

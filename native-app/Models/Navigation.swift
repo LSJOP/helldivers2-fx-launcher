@@ -49,7 +49,7 @@ struct NativeOperation: Identifiable {
 @MainActor enum NativeLocalization {
     static var isolatedUXSmoke: Bool {
         #if DEBUG
-        return ProcessInfo.processInfo.arguments.contains("--ux-refinement-smoke") || ProcessInfo.processInfo.arguments.contains("--readme-screenshots")
+        return ProcessInfo.processInfo.arguments.contains("--takeover-smoke") || ProcessInfo.processInfo.arguments.contains("--ux-refinement-smoke") || ProcessInfo.processInfo.arguments.contains("--readme-screenshots")
         #else
         return false
         #endif

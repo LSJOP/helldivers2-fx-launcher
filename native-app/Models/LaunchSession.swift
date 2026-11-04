@@ -3,6 +3,7 @@ import Foundation
 enum LaunchStage: String, CaseIterable, Identifiable {
     case idle = "Idle", checkingEnvironment = "CheckingEnvironment", startingFX = "StartingFX"
     case checkingFXEntry = "CheckingFXEntry"
+    case waitingForFXReady = "WaitingForFXReady", verifyingFXIdentity = "VerifyingFXIdentity"
     case waitingForGuest = "WaitingForGuest", checkingCompatibility = "CheckingCompatibility"
     case startingSteam = "StartingSteam", launchingGame = "LaunchingGame", waitingForGame = "WaitingForGame"
     case gameProcessDetected = "GameProcessDetected", checkingEAC = "CheckingEAC", failed = "Failed"
@@ -14,6 +15,8 @@ enum LaunchStage: String, CaseIterable, Identifiable {
         case .checkingEnvironment: return NativeStrings.text("ui.057", language: language)
         case .startingFX: return NativeStrings.text("ui.120", language: language)
         case .checkingFXEntry: return NativeStrings.text("ui.121", language: language)
+        case .waitingForFXReady: return NativeStrings.text("ui.fx.waitReady", language: language)
+        case .verifyingFXIdentity: return NativeStrings.text("ui.fx.verifyIdentity", language: language)
         case .waitingForGuest: return NativeStrings.text("ui.384", language: language)
         case .checkingCompatibility: return NativeStrings.text("ui.054", language: language)
         case .startingSteam: return NativeStrings.text("ui.320", language: language)

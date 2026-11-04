@@ -9,6 +9,6 @@
 "updates.finished" = "Ciclo encerrado; instalação e reinício não confirmados.";
 "updates.failed" = "Falha na atualização";
 "updates.scope" = "Apenas o inicializador é atualizado. Jogo, Steam, FX Runtime, Guest e EAC ficam de fora.";
-"updates.languageRestart" = "O idioma e o interpretador são salvos para este aplicativo; reinicie para aplicar o idioma dos menus. A aparência vale apenas nesta sessão. A seleção de FX e os recursos de inicialização são salvos separadamente. A interface abrange os dez idiomas.";
+"updates.languageRestart" = "O idioma é salvo apenas para este app; reinicie para aplicar o idioma dos menus. A aparência vale para esta sessão. A interface oferece dez idiomas.";
 "updates.automaticOff" = "Verificações automáticas desativadas. Sparkle gerenciará o consentimento quando o serviço assinado estiver pronto.";
 "updates.automaticOn" = "Verificações automáticas ativadas (Sparkle).";
