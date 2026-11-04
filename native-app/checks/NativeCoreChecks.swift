@@ -77,6 +77,9 @@ func runChecks() {
     let fixtureCount = (scan["candidates"]?.array ?? []).filter { ($0.object["path"]?.text ?? "").hasPrefix(root.path) }.count
     check(fixtureCount == 2, "duplicate hint de-duplicated")
     check(scan["scope"]?.text == "two_shallow_application_directories_metadata_only", "scan scope explicit")
+    let overlap = FXDiscoveryService.scan(selectedPaths: [fx194.path, fx198.path], runtimeRoot: nil, directories: [root])
+    let overlapRows = overlap["candidates"]?.array ?? []
+    check(overlapRows.count == 2, "selected FX already discovered is not duplicated")
     let target = FXDiscoveryService.launchTarget(fxPath: fx198.path)
     check(target["fx_version"]?.text == "1.9.8", "launch target version")
     check(target["archive_files_match"]?.boolean == true, "launch target resources")

@@ -36,13 +36,13 @@ A fully native **SwiftUI + AppKit** app with a **Swift Native Core**: launch the
 
 <a id="en-screenshots"></a>
 
-All six pages open directly into their content; the repeated global FX status bar has been removed. FX detection, versions, running state and resource diagnostics remain in FX Manager and Environment.
+All seven pages open directly into their content; the repeated global FX status bar has been removed. FX detection, versions, running state and resource diagnostics remain in FX Manager and Environment.
 
 ## Screenshots
 
 **Native takeover preview:** Guest SSH now uses a controlling terminal and corrected OpenSSH arguments, with a dedicated read-only **Test Guest SSH connection** action in Environment. Enter credentials only in App secure fields. Settings → About displays bundled build identity and can copy it. Live Guest password authentication and gameplay still require user acceptance; isolated checks are not live validation. Environment and Settings screenshots were refreshed from the real Debug App on 2026-11-04; offscreen About values are checked separately during Release acceptance. All page screenshots now show the current simplified layout. The SSH-only check can inspect an already-running stock FX network process after publisher-signature and ancestry verification; game launch still requires the pinned bundled backend.
 
-All six pages and the performance/update detail viewports were recaptured on 2026-11-04 after the shared global FX status bar was removed. No replacement bar or reserved space is present.
+All seven pages and the performance/update detail viewports were recaptured on 2026-11-04 after the shared global FX status bar was removed. No replacement bar or reserved space is present.
 
 [![Dashboard](docs/images/en/dashboard.png)](docs/images/en/dashboard.png)
 
@@ -76,7 +76,7 @@ Ten current English screenshots come from the actual integrated Debug App (0.1.0
 
 | Status | Capability |
 | --- | --- |
-| 🟢 Implemented | Six-page native interface, Cmd+1…6 navigation, dark/light/system appearance, bundled official project icon |
+| 🟢 Implemented | Seven-page native interface, Cmd+1…7 navigation, dark/light/system appearance, bundled official project icon |
 | 🟢 Implemented | Bounded host/FX discovery; validated configuration editing with revision checks, backup and atomic replacement |
 | 🟢 Implemented | Searchable, filtered, bounded and redacted logs; diagnostic reports |
 | 🟢 Implemented · Guarded writes | Hardware/current FX preferences and reference differences; scoped performance editing/backup/restore for the pinned FX 1.9.4 build |
@@ -84,7 +84,7 @@ Ten current English screenshots come from the actual integrated Debug App (0.1.0
 | 🟢 Implemented · Static coverage checked | Ten original Python catalogs retained separately; unified Native resources cover all ten languages. Missing Native text is shown as an explicit missing key, without English fallback. Translation naturalness still needs human review |
 | ⚪ Planned / unavailable | Safe FX stop/restart, verified performance recommendations, signed/notarized installer |
 
-Performance rules are local and reproducible. The recorded **M4 Pro / 24 GiB** settings are a candidate baseline, not comprehensive performance validation. Other hardware has no inferred writable profile. FX 1.9.4 with the pinned build supports a conservative CPU/memory/Vulkan/Metal HUD editor with preview, consent, verified backups and conflict-guarded restore. FX must be stopped; saved preferences need a fresh FX/Guest start and remain unverified. The original launch path overrides values and may reject custom settings: restore before using it. Super resolution and the 6144 MiB GPU budget remain read-only. Current localized screenshots include the new performance and update surfaces. [Parameter sources and limits](docs/GAME_PERFORMANCE.md).
+Performance rules are local and reproducible. The recorded **M4 Pro / 24 GiB** settings are a candidate baseline, not comprehensive performance validation. Other hardware has no inferred writable profile. Verified FX 1.9.4 and 1.9.8 builds support a conservative CPU/memory/Vulkan/Metal HUD editor with preview, consent, verified backups and conflict-guarded restore. FX must be stopped; saved preferences need a fresh FX/Guest start and remain unverified. The original launch path overrides values and may reject custom settings: restore before using it. Super resolution and the 6144 MiB GPU budget remain read-only. Current localized screenshots include the new performance and update surfaces. [Parameter sources and limits](docs/GAME_PERFORMANCE.md).
 
 <a id="en-requirements"></a>
 <a id="en-installation"></a>
@@ -109,7 +109,7 @@ Existing clones need the intended branch and `git submodule update --init --recu
 ## Quick start
 
 1. Open the App; choose your language and appearance in Settings, then select the installed FX Steam Launcher in FX Manager.
-2. Select the existing launcher directory on first use. Use **Inspect environment** for read-only Guest checks; FX must already be running. Use **Start FX** in FX Manager if needed.
+2. The Native App uses bundled resources; no script directory is required. Use **Inspect environment** for read-only Guest checks; FX must already be running. Use **Start FX** in FX Manager if needed.
 3. Click **Launch HELLDIVERS 2** on Dashboard. The existing launch workflow performs its required checks automatically. Review start consent and any exact configuration-change preview; enter credentials only in App secure fields.
 4. Use Game Performance for hardware and baseline comparisons, and Logs for failure details. A detected process does not establish arrival at the game menu.
 
@@ -119,7 +119,7 @@ Existing clones need the intended branch and `git submodule update --init --recu
 
 | Evidence | Current result |
 | --- | --- |
-| Native App | Debug build and six-page smoke passed; current focused checks: 35 migration + 9 inference cases |
+| Native App | Debug build and seven-page capture passed; current focused checks: 35 migration + 9 inference cases |
 | FX / game process | Observed during the earlier recorded dedicated FX 1.9.4 launch; not a claim about every FX installation |
 | Main menu / controllable ship | Explicitly confirmed by the user on 2026-11-03 in that recorded environment |
 | Current GUI SSH / Guest read | Real backends wired; latest host check rejected a different running FX copy before connecting. Fresh success through the new actions remains pending |
@@ -165,9 +165,9 @@ Unofficial project; no endorsement or compatibility guarantee. HELLDIVERS 2 and 
 
 Development checks: `native-app/script/run_checks.sh` compiles and runs the native-core contract checks plus ten-language and documentation gates. Python is used only by optional developer scripts; the app bundle and runtime contain no Python. UI changes require a review of both READMEs and their real screenshots. Both English and Simplified Chinese screenshots are refreshed for the integrated UI. Translation naturalness still needs human review. The release-check Actions template remains inactive; no CI workflow is configured.
 
-FX selection V2 + automatic selection V2.1: the FX page, overview and launch panel share one persisted default. One identity/path-verified FX is selected automatically from the scan results; multiple installations preserve an existing valid choice or require selection. Missing/moved/updated defaults are revalidated. Selection remains **launch capability unverified** and never starts the game. Every game launch rescans the default and freezes one selected FX path for inspection, preflight and execution. Integrity accepts the exact historical build or an intact bundle signed by the verified FX publisher (Apple trust anchor, Bundle ID and Team ID), rechecks the verified digest and retains all original profile, process and Guest guards. This does not establish gameplay compatibility. FX application selection is separate from the helper/gvproxy resource directory: resolve it from the selected app’s bounded ancestors or the existing resource directory when possible, otherwise explicitly locate **launch resources** once. Repeated FX-directory selection is not required. Refresh and automatic inspection do not start FX, SSH or the game. Stop/restart remain unavailable. Parameter-scoped performance editing and backup restore require a stopped, pinned FX 1.9.4 and explicit preview/confirmation; inferred recommendations remain read-only.
+FX selection V2 + automatic selection V2.1: the FX page, overview and launch panel share one persisted default. One identity/path-verified FX is selected automatically from the scan results; multiple installations preserve an existing valid choice or require selection. Missing/moved/updated defaults are revalidated. Selection remains **launch capability unverified** and never starts the game. Every game launch rescans the default and freezes one selected FX path for inspection, preflight and execution. Integrity accepts the exact historical build or an intact bundle signed by the verified FX publisher (Apple trust anchor, Bundle ID and Team ID), rechecks the verified digest and retains all original profile, process and Guest guards. This does not establish gameplay compatibility. Launch resources are bundled in the Native App; no original script directory or Node helper is required. Stop/restart remain unavailable. Scoped performance editing supports verified FX 1.9.4/1.9.8 while stopped, with explicit preview and confirmation; FX 1.9.9 writes remain unsupported.
 
-Launch resources: `/Applications` and the FX `.app` are not the original script resource directory. Select the complete existing launcher folder containing `launcher-20261026/steam-cdp.mjs`, `tools/check_node.cjs` and `goal-fx-multiplayer-20261026/gvproxy-eim-wrapper`. Inspection and execution share the same bundled-archive comparison, with exact expected/actual paths and SHA-256 diagnostics. Missing, altered or symlinked resources fail closed; no FX files are changed. FX 1.9.4/1.9.8 path and signature checks are covered; live gameplay remains unverified.
+Launch resources: the Native bundle includes SHA-256-verified gvproxy and wrapper resources. Missing, altered or symlinked resources fail closed; no FX files are changed. Host discovery is checked separately from Guest and gameplay compatibility.
 
 Sudo investigation (2026-11-04): build 2026110402 has a remote empty-prompt quoting defect. The fix and distinct sudo/SSH failure classification are under validation; no replacement build is released. Full Guest identity passed a live read-only check; passworded sudo and subsequent launch stages remain unverified.
 
@@ -181,3 +181,11 @@ Sudo investigation (2026-11-04): build 2026110402 has a remote empty-prompt quot
 ![First-Run Setup](docs/images/en/first-run-setup.png)
 
 [First-run integration and Latest build record](NATIVE_FIRST_RUN_MAIN_MERGE_REPORT.md).
+
+Acceptance in progress: selected FX entries are deduplicated against automatic discovery. FX 1.9.9 is installed and discoverable but performance writes are unsupported; real Guest/game acceptance and formal distribution remain pending. See [acceptance report](docs/acceptance/FULL_SYSTEM_ACCEPTANCE_REPORT.md).
+
+The game launch sheet closes automatically after the current launch completes with a detected game process; errors, cancellation and unverified results remain visible. Process detection does not establish main-menu or multiplayer success. This dismissal change awaits a fresh live GUI check; existing screenshots do not demonstrate it.
+
+First-Run Setup is available from the sidebar; the duplicate shortcut above the Dashboard hero has been removed.
+
+The Dashboard image was refreshed from an isolated real Debug window on 2026-11-05 (build 2026110503). It captures the layout while the initial read-only snapshot is loading; it is not runtime acceptance evidence. Other screenshots retain their recorded build provenance.

@@ -1,0 +1,189 @@
+# HD2FXNATIVE v1.0.0 — FULL ACCEPTANCE
+
+验收日期：2026-11-05（Asia/Shanghai）。源码基线 `8ba547c390d52971a7740a1970411c9e153c44b7`；验收分支 `audit/full-acceptance-20261105`。修复构建提交及 SHA-256 以候选目录的 SOURCE-COMMIT.txt / executable-sha256.txt 为准。基线 App 0.1.0 / 2026110411；修复构建 App 0.1.0 / 2026110501。未声称已发布 v1.0.0。
+
+证据根：`native-app/evidence/`（本地忽略，交付时复制到候选 Evidence）。PASS 只适用于记录的范围；单元/隔离替身结果不代表真实 Guest 或游戏。未执行的真实项目一律 NOT TESTED，缺少前提的项目 BLOCKED。截图为真实 Debug App 窗口，非模拟 UI；抽查不代表全部交互已验收。
+
+结论：**NOT READY**。当前证据支持本机编译、隔离回归、部分只读宿主与真实窗口捕获；不支持完整系统/新用户部署/游戏可玩性/正式分发结论。
+
+## 验收台账
+
+| 编号 | 测试目标 | 测试环境 | 执行步骤 | 预期结果 | 实际结果 | 结果 | 证据 | 对应源码基线 |
+|---|---|---|---|---|---|---|---|---|
+| GIT-01 | Git/PR/历史完整性 | macOS 27.2 / Apple Silicon；当前验收工作树 | 读取 status、branches、worktrees、remote、stash、log；gh pr view 3 | 独立分支；不修改他人成果 | PR #3 MERGED；合并提交 7bd7aed；main 基线 8ba547c；保留 10 个既有工作树和 stash | PASS | git-inventory.txt | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| AUTO-01 | 完整现有自动化 | macOS 27.2 / Apple Silicon；当前验收工作树 | 构建 Debug 解析固定 Sparkle，然后执行 run_checks.sh | 所有检查成功 | 372 Swift 检查、31 Python 检查通过；初次缺少 Sparkle 的失败保留，未伪装成产品失败或隐藏 | PASS | initial/release-history-checks.txt；*checks.txt；localization-checks.json | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| FIX-01 | FX 候选跨来源重复 | macOS 27.2 / Apple Silicon；当前验收工作树 | 真实 Core 调用 list_fx_versions，selected_paths 指向 Applications 中已扫描 FX | 每个规范路径仅出现一次 | 基线 1.9.9 出现两次；根因自动扫描和手动提示使用不同去重集合 | FAIL | host-native-results.jsonl | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| FIX-02 | FX 去重修复回归 | macOS 27.2 / Apple Silicon；当前验收工作树 | 共享已发现路径集合；加入可注入扫描目录的隔离回归；重跑实际 Core | 单一路径仅出现一次；保留不同 FX | 63 Native Core 检查通过；实际 1.9.9 仅一次；不放宽身份/版本验证 | PASS | fix-native-core-checks.txt；host-native-retest.jsonl | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| HOST-01 | 已安装 FX 版本/签名 | macOS 27.2 / Apple Silicon；当前验收工作树 | 只读读取三个实际 bundle，codesign --verify --deep --strict，计算可执行文件摘要 | 版本/完整签名可识别 | 实际 1.9.4、1.9.8、1.9.9 签名校验通过；并非游戏兼容 PASS | PASS | host-readonly.json | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| HOST-02 | 实际 Native 发现/资源/状态 | macOS 27.2 / Apple Silicon；当前验收工作树 | 生产 NativeCoreService 调用 list_fx_versions/inspect_launch_target/check_fx_state | 真实 metadata、资源摘要、运行状态；不启动任何进程 | 1.9.8 自定义路径及 1.9.9 Applications 可读取，资源匹配，FX 未运行 | PASS | host-native-results.jsonl；host-native-retest.jsonl | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| COMP-01 | FX 1.9.9 性能写入 | macOS 27.2 / Apple Silicon；当前验收工作树 | 审查 PerformanceDomain.supportedVersions 和部署 profile | 所要求版本有经验证配置支持 | 只允许 1.9.4/1.9.8；1.9.9 被拒绝写入是安全行为，但不满足目标版本支持 | FAIL | Core/PerformanceConfigurationService.swift:10 | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SEC-01 | Keychain API 移除 | macOS 27.2 / Apple Silicon；当前验收工作树 | 执行 check_memory_only.py；审查 credential manager、Views、Core | 无凭据存储访问 | 43 个 Swift 文件 API 检查通过；保留代码签名/Sparkle 的 Security API | PASS | memory-only-audit.json | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SEC-02 | 内存凭据/脱敏/独立 sudo 隔离验证 | macOS 27.2 / Apple Silicon；当前验收工作树 | 25 CredentialChecks、35 SSHChecks、30 PrivilegedExecutorChecks；审查 argv/env/stdin | 独立密码、逐次 sudo -k -S、目标绑定、日志脱敏 | 隔离检查通过，真实密码未输入；不依赖跨会话 sudo 缓存 | PASS | credential-swift-checks.txt；ssh-checks.txt；privileged-checks.txt | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| NET-01 | IPv6 与游戏启动分离 | macOS 27.2 / Apple Silicon；当前验收工作树 | 审查 CheckingCompatibility/launchGame/NetworkDiagnosticsService，并运行 NetworkChecks | 游戏/诊断路径不修改 IPv6、不以未知 IPv6 阻止启动 | 66 隔离网络检查通过；真实开关未执行 | PASS | network-checks.txt；Core/NativeCoreService.swift | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SETUP-01 | 首次组件自动部署完备性 | macOS 27.2 / Apple Silicon；当前验收工作树 | 审查 EnvironmentDeployment 和发行 profile、66 DeploymentChecks | 有完整审核包、清单、来源、许可和可恢复部署 | FEX/Proton 缺少审核制品，ARTIFACT_UNAPPROVED；不得绕过 | BLOCKED | deployment-checks.txt；NATIVE_ENVIRONMENT_PROFILE_MATRIX.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GUI-01 | 真实 zh-CN/en 七页面窗口 | macOS 27.2 / Apple Silicon；当前验收工作树 | 以独立 bundle ID 启动 Debug 捕获副本，遍历七页面及三个滚动区域 | 显示真实界面、正确未知状态、无启动 Guest | 两套各 10 张 PNG 捕获成功并自动退出；抽查首次配置、网络、性能、设置 | PASS | acceptance-gui-zh/readme-capture.json；acceptance-gui-en/readme-capture.json | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| L10N-01 | 十语言键/占位符/回退静态检查 | macOS 27.2 / Apple Silicon；当前验收工作树 | check_localization.py 与 8 负向检查 | 十语言完整且保留 | 十语言各 581 必需键通过；并非自然度/全部运行时文案通过 | PASS | localization-checks.json；localization-negative-checks.txt | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| BUILD-01 | 基线 Release 本机构建 | macOS 27.2 / Apple Silicon；当前验收工作树 | 干净 8ba547c 构建 Release arm64；资源门禁；本地 codesign | 有可追溯本地候选 | 版本 0.1.0/2026110411；18 项资源/身份/签名门禁通过；无 Python/Bridge | PASS | 候选 acceptance-20261105-8ba547c/release-validation.txt | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| BUILD-02 | Release 进程启动存活 | macOS 27.2 / Apple Silicon；当前验收工作树 | 重签独立 bundle ID 副本，直接运行 8 秒，终止本次自建进程 | 不立即退出 | 8 秒仍存活；不推断窗口、长期稳定或正式分发就绪 | PASS | 候选 release-startup-result.json；release-startup.log | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| DIST-01 | 正式签名 | macOS 27.2 / Apple Silicon；当前验收工作树 | codesign -dv；检查 TeamIdentifier 与签名类型 | 正式 Developer ID | ad-hoc；TeamIdentifier 缺失 | FAIL | distribution-signature.txt | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| DIST-02 | 公证/票据 | macOS 27.2 / Apple Silicon；当前验收工作树 | xcrun stapler validate | 有可验证分发公证证据 | 无 stapled ticket；未查询在线公证记录，不能证明已公证 | NOT TESTED | notarization.txt | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| UPD-01 | 真实自动更新准备 | macOS 27.2 / Apple Silicon；当前验收工作树 | 检查受信公钥/服务门禁、gh release list、Sparkle 签名负向检查 | 有可验证正式包和隔离升级链 | 无公开 Release；未完成受信生产更新/安装/重启验收 | BLOCKED | release-history-checks.txt；docs/NATIVE_UPDATES.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| FIRST-LIVE-01 | 干净安装首次打开且无资源/终端/Python/Keychain要求 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| FIRST-LIVE-02 | 无 FX 安装引导 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| FIRST-LIVE-03 | 单一有效 FX 自动选择 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| FIRST-LIVE-04 | 多个 FX 交互选择与重启保留 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| FIRST-LIVE-05 | Applications/自定义路径交互 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| FIRST-LIVE-06 | 不完整 FX 拒绝与不兼容提示 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| FIRST-LIVE-07 | 首次 SteamOS/SSH 检测和会话凭据输入 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| FX-LIVE-01 | 实际启动 FX | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| FX-LIVE-02 | 停止/重启 FX（安全后端尚不可用） | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| FX-LIVE-03 | FX 异常退出 UI 恢复 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| FX-LIVE-04 | 实例切换及凭据清除 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| FX-LIVE-05 | FX 成功后等待 Guest 而非提前报错 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GUEST-LIVE-01 | 启动/连接/端口与身份 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GUEST-LIVE-02 | 重启/断线/重连/超时/错误恢复 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SSH-LIVE-01 | 正确密码 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SSH-LIVE-02 | 错误密码 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SSH-LIVE-03 | 空密码 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SSH-LIVE-04 | 连接超时 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SSH-LIVE-05 | 连接中断 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SSH-LIVE-06 | Guest 重启 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SSH-LIVE-07 | FX 实例切换 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SSH-LIVE-08 | Host Key 变化 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SSH-LIVE-09 | SSH 端口变化 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SUDO-LIVE-01 | 正确密码 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SUDO-LIVE-02 | 错误密码 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SUDO-LIVE-03 | 缺失密码 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SUDO-LIVE-04 | 与 SSH 密码不同 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SUDO-LIVE-05 | 缓存失效 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SUDO-LIVE-06 | 独立 SSH 特权调用 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SUDO-LIVE-07 | 多次连续特权操作 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SUDO-LIVE-08 | Guest 重启后重新认证 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| CRED-LIVE-01 | 真实双密码当前会话复用 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| CRED-LIVE-02 | 手动清除 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| CRED-LIVE-03 | FX/Guest 切换清除 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| CRED-LIVE-04 | 退出重启后重新输入 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| CRED-LIVE-05 | 真实失败日志脱敏与无 Keychain 弹窗 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SETUP-LIVE-01 | 新 VM 缺失检测/精确预览/授权 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SETUP-LIVE-02 | 真实配置/验证/部分失败/恢复 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| SETUP-LIVE-03 | 重复部署幂等 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| IPV6-LIVE-01 | 实际状态开启/关闭/混合/未知 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| IPV6-LIVE-02 | 修改确认与独立 sudo | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| IPV6-LIVE-03 | 真实开关写入后核对 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| IPV6-LIVE-04 | 原始快照/失败恢复/手动恢复 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| DIAG-LIVE-01 | VM 身份绑定 SSH | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| DIAG-LIVE-02 | Steam TLS 实际探测 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| DIAG-LIVE-03 | Guest PlayFab direct/proxy | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| DIAG-LIVE-04 | Guest STUN UDP 与计数 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| DIAG-LIVE-05 | 暂停/未测/超时/取消/重新检测 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| PERF-LIVE-01 | 真实 CPU 读取/写入/回读 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| PERF-LIVE-02 | 真实内存读取/写入/回读 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| PERF-LIVE-03 | 真实 Vulkan 读取/写入/回读 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| PERF-LIVE-04 | 一键应用/备份/默认恢复/失败回滚 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| PERF-LIVE-05 | M4 Pro 24GB 实际性能测量 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| BACKUP-LIVE-01 | GUI 配置备份/恢复实际文件往返 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| COMP-LIVE-01 | FX 1.9.8 Guest/网络/CPU/内存/Vulkan/磁盘/SSH 兼容 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| COMP-LIVE-02 | FX 1.9.9 Guest/网络/CPU/内存/Vulkan/磁盘/SSH 兼容 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-01 | FX 运行时一键启动 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-02 | FX 未运行时一键启动 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-03 | Steam 已运行 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-04 | Steam 未运行 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-05 | 游戏已运行 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-06 | 游戏未安装 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-07 | Steam 登录失效 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-08 | Guest SSH 断开 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-09 | sudo 失败 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-10 | 进程创建失败 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-11 | 启动超时 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-12 | 用户取消 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-13 | 重复点击 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-14 | 退出后状态恢复 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-15 | App 重启状态恢复 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-16 | 游戏主菜单 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-17 | 单人任务 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-18 | 发现/加入玩家 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-19 | 创建多人房间 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-20 | 完成多人任务 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GAME-LIVE-21 | 真实反作弊无错误 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GUI-LIVE-01 | 人工点击全部页面/按钮/弹窗 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GUI-LIVE-02 | 最小窗口/缩放/浅色/系统主题 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GUI-LIVE-03 | 任务 Idle/Running/Success/Failed/Cancelled 的真实一致性 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| GUI-LIVE-04 | 十语言视觉截断/自然度/错误提示 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| UPDATE-LIVE-01 | 真实下载与签名/哈希校验 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| UPDATE-LIVE-02 | 隔离副本安装/失败恢复/重启 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| LOG-LIVE-01 | GUI 日志实时/过滤/复制/导出 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| LOG-LIVE-02 | 真实错误归因/部分成功/回滚分类 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| STABILITY-LIVE-01 | 连续真实启动/退出有界循环 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| STABILITY-LIVE-02 | 页面/语言反复切换 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| STABILITY-LIVE-03 | 重复 Guest/网络只读操作 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| STABILITY-LIVE-04 | Guest/FX 突然断开与取消 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| STABILITY-LIVE-05 | CPU/RSS 长时增长/SSH清理/泄漏 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| DIST-LIVE-01 | DMG 安装包与安装验证 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+| DIST-LIVE-02 | 正式包 Gatekeeper/其他 macOS 验证 | macOS 27.2 / Apple Silicon；当前验收工作树 | 未执行真实目标操作；等待对应前提/授权或人工交互 | 目标行为与故障恢复均有真实证据 | 无证据，不以单元测试/截图替代 | NOT TESTED | 无；原因见 REAL_ENVIRONMENT_TEST_RESULTS.md | 8ba547c390d52971a7740a1970411c9e153c44b7 |
+
+## 修复与复测
+
+FX 自动发现重复：保留 FIX-01 原始失败，FIX-02 记录修复及实际只读复测。初始 Sparkle 未解析失败单独保留，构建解析依赖后全套复测通过。修复不增加 FX 1.9.9 允许范围、不降低身份验证、不访问 Guest。README 已修正脚本目录和七页面矛盾。
+
+全部遗留分支/原 Python 目录/Latest 保留。只获准验收分支本地提交；不推送/main合并/发布。构建后的完整身份与发布摘要见 RELEASE_READINESS_REPORT.md 及候选构建文件。
+
+## 最终验收摘要
+
+未测项目保留 NOT TESTED/BLOCKED，即使原模板该行只列 PASS/FAIL，也不伪造二元结果。
+
+```text
+HD2FXNATIVE v1.0.0 — FULL ACCEPTANCE
+GIT HEAD (BUILD): 3967534413ed8cde9ac8c0d8f5f4c4b5f4e5ae17
+BRANCH: audit/full-acceptance-20261105
+PR #3: MERGED (prior to this task)
+SOURCE CODE AUDIT: PASS (scoped; not an exhaustive proof)
+PYTHON FEATURE PARITY: PARTIAL
+FIRST RUN EXPERIENCE: NOT TESTED
+FX AUTO DISCOVERY: PASS (host paths and focused regression)
+FX MANAGEMENT: NOT TESTED
+STEAMOS MANAGEMENT: NOT TESTED
+GUEST IDENTITY: NOT TESTED
+SSH AUTHENTICATION: NOT TESTED
+INDEPENDENT SUDO: NOT TESTED
+MEMORY-ONLY CREDENTIALS: PASS (source/isolated tests; live lifecycle NOT TESTED)
+KEYCHAIN REMOVED: YES (credential APIs)
+FIRST-TIME ENVIRONMENT SETUP: BLOCKED
+IPv6 STANDALONE CONTROL: NOT TESTED
+IPv6 REMOVED FROM GAME STARTUP: PASS
+VM DIAGNOSTIC: NOT TESTED
+STEAM TLS: NOT TESTED
+PLAYFAB: NOT TESTED
+UDP: NOT TESTED
+CPU CONFIGURATION: NOT TESTED (1.9.9 unsupported)
+MEMORY CONFIGURATION: NOT TESTED (1.9.9 unsupported)
+VULKAN CONFIGURATION: NOT TESTED (1.9.9 unsupported)
+CONFIG BACKUP / RESTORE: NOT TESTED (isolated tests PASS)
+STEAM LAUNCH: NOT TESTED
+HELLDIVERS 2 LAUNCH: PASS (explicit user confirmation; Native App entry)
+GAME MAIN MENU: PASS (explicit user confirmation; main menu or ship)
+SINGLE PLAYER: NOT TESTED
+MULTIPLAYER: NOT TESTED
+GUI ACCEPTANCE: FAIL (stale runtime-directory instruction; complete interactions NOT TESTED)
+10-LANGUAGE LOCALIZATION: NOT TESTED (581 keys x 10 static PASS)
+AUTO UPDATE: BLOCKED
+SECURITY AUDIT: NOT TESTED (scoped source and isolated checks PASS)
+STABILITY TESTS: NOT TESTED (3 bounded Release launch/window/exit cycles PASS)
+RELEASE BUILD: PASS
+DISTRIBUTION SIGNING: FAIL (ad-hoc)
+NOTARIZATION: NOT TESTED (no stapled ticket)
+P0 ISSUES: 2 open release blockers/evidence gaps
+P1 ISSUES: 5 open
+P2 ISSUES: 2 open; 2 fixed
+RELEASE CANDIDATE: /Volumes/Thunderbolt2TB/HD2-App-Builds/Candidates/acceptance-fixed-20261105/Products/HD2FXNative.app
+BUILD COMMIT: 3967534413ed8cde9ac8c0d8f5f4c4b5f4e5ae17
+BUILD NUMBER: 2026110501
+APP VERSION: 0.1.0 (engineering candidate, not released v1.0.0)
+SHA256 (Mach-O executable): a4804a0e93eb2eac84e98bec43e29f28c6cab192d85e9e4acf8735de171d2f40
+LATEST OVERWRITTEN: NO (before/after executable SHA256 matches)
+MAIN MERGED: NO (this task)
+GITHUB RELEASE PUBLISHED: NO
+PUSHED: NO
+RELEASE READINESS: NOT READY
+```
+
+用户确认实测更新：2026-11-05，Native App启动到主菜单/舰桥PASS；单人、多人及独立sudo/网络诊断仍未确认。详见REAL_ENVIRONMENT_TEST_RESULTS.md的LIVE-GAME-USER-01。历史未测记录保留，最新确认覆盖对应游戏启动/菜单字段。

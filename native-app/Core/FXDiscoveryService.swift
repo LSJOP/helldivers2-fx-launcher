@@ -116,12 +116,12 @@ enum FXDiscoveryService {
                 "multiplayer": .string("unverified")]
     }
 
-    static func scan(selectedPaths: [String], runtimeRoot: String?) -> [String: JSONValue] {
+    static func scan(selectedPaths: [String], runtimeRoot: String?, directories: [URL]? = nil) -> [String: JSONValue] {
         var candidates: [[String: JSONValue]] = []
         var seenInodes = Set<String>()
         var incomplete = false
         var issues: [JSONValue] = []
-        for directory in applicationsDirectories() {
+        for directory in directories ?? applicationsDirectories() {
             do {
                 let entries = try FileManager.default.contentsOfDirectory(atPath: directory.path)
                 if entries.count > CoreLimits.maxScanEntries { incomplete = true }
@@ -148,7 +148,7 @@ enum FXDiscoveryService {
         if let runtimeRoot, !runtimeRoot.isEmpty {
             hints.append(runtimeRoot + "/performance-stutter-20261027/FX HUD隔离诊断.app")
         }
-        var seenPaths = Set<String>()
+        var seenPaths = Set(candidates.compactMap { $0["path"]?.text })
         for hint in hints {
             guard let identity = identity(of: hint), !seenPaths.contains(identity.path) else { continue }
             seenPaths.insert(identity.path)

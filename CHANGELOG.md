@@ -4,9 +4,15 @@
 
 All notable changes to the HELLDIVERS 2 FX Launcher Native App are recorded here, newest first. Unreleased entries have no release date. This file is the single source of truth for user-facing release notes; the README summary, GitHub Release notes and the future Sparkle appcast reuse this reviewed text. Do not paste raw, unreviewed Git commit messages into it.
 
-No official release has been published yet. The current Native App version `0.1.0` (build `2026110402`) is a development preview, not a downloadable package.
+No official release has been published yet. The current Native App version `0.1.0` (build `2026110411`) is a development preview, not a downloadable package.
 
 ## Unreleased
+
+- Remove the duplicate First-Run Setup shortcut above the Dashboard hero; keep setup accessible from the sidebar.
+
+- Automatically close the game launch sheet when the current launch completes with a detected game process. Keep failed, cancelled and unverified launches open for inspection.
+
+- Fix duplicate selected FX entries in automatic discovery; correct current seven-page documentation. Real Guest/game and distribution acceptance remain pending.
 
 - Isolated First-Run Setup development build: actual environment detection, versioned profiles, reviewable plans, durable receipts, offline Steam VDF transactions and drift-guarded recovery, with ten-language UI. Credentials are process-memory only; compatibility checking no longer changes IPv4 configuration. FEX/Proton distribution is blocked pending reviewed artifacts; fresh VM/game/EAC/multiplayer remain untested. Latest is unchanged.
 

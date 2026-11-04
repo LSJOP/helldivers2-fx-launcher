@@ -11,7 +11,6 @@ struct DashboardView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: TacticalSpacing.panel) {
-            Button(state.t("ui.setup.title")) { state.selection = .setup }
             hero
             TacticalAdaptiveLayout(minimumWidth: 120, maximumColumns: 5) {
                 TacticalMetric(title: "FX", value: observed("fx_host_running"), symbol: "shippingbox")
