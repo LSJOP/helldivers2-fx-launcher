@@ -71,3 +71,7 @@ App现有窗口仍需在FX管理切换到标准副本；用户须重新输入内
 ## 本地测试副本启动策略 · 2026-11-05
 
 用户要求显示并允许本地测试FX启动。真实只读Native Core预检：标准`/Applications/FX Steam Launcher.app`返回verified/host_ready=true；`/Applications/FX Steam Launcher测试用.app`返回local_copy、publisher_signature=false、launch_allowed=true、host_ready=true。未发出FX或游戏启动命令，不把预检当实际开机/Guest/游戏成功。中英文真实FX页面均出现两个副本；386 Swift+31 Python检查通过，包含本地签名允许与封印篡改拒绝。证据：local-copy-real-preflight.jsonl、local-copy-ui-zh/en、native-core-checks.txt等。
+
+## 新测试 Guest 首次配置入口修复 · 2026-11-05
+
+用户明确正在使用新的FX测试环境，不沿用此前标准副本游戏进入菜单的结论。用户截图首次配置报FX_ENTRY_MISMATCH；根因EnvironmentAdapters.deployment仍只接受integrity.state=verified，遗漏local_copy。已统一调用launchAllowed，并保留内容签名及进程/端口/Guest检查。真实first_run_detect只读复测（未提供任何密码、无写入/部署）返回AUTH_REQUIRED，已越过旧FX_ENTRY_MISMATCH并到达SSH凭据阶段。此结果不是SSH或部署成功。76 Core检查、66部署检查、十语言/凭据API/文档门禁和Debug构建通过。UI未改布局或文案，无需重拍截图；新Guest后续仍须独立认证及审核profile/artifact。
