@@ -12,15 +12,18 @@
     {
       "path": "docs/images/zh-CN/dashboard.png",
       "language": "zh-CN",
-      "sha256": "e108862a23cd8ed634b29a06aab3468f5dfaa7b700973c0a5038c1f96196bb9e",
-      "width": 2360,
-      "height": 1700,
-      "captured_at": "2026-11-04T15:38:50Z",
+      "sha256": "3daf83a3852fe0fffbfe42099621e863967f5a2411bfed61fc7fa314fe576102",
+      "width": 2120,
+      "height": 1440,
+      "captured_at": "2026-11-04T19:03:22.455438+00:00",
       "app_version": "0.1.0",
-      "app_build": "2026110411",
+      "app_build": "2026110503",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.mergefirst.zh",
-      "guest_actions": "none"
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.dashboarddedup20261105.zh-CN",
+      "guest_actions": "none",
+      "source_base_commit": "f3ac5c90e56cce7e35a662514e4aec0130510870",
+      "source_dirty": true,
+      "capture_scope": "Dashboard duplicate-entry layout only; initial read-only snapshot still loading; not runtime acceptance"
     },
     {
       "path": "docs/images/zh-CN/environment.png",
@@ -142,15 +145,18 @@
     {
       "path": "docs/images/en/dashboard.png",
       "language": "en",
-      "sha256": "08f941582a40d888af27eec1820fc17fdfebb2f7744f8a34109cc6dfd8a6d25f",
-      "width": 2360,
-      "height": 1700,
-      "captured_at": "2026-11-04T15:39:22Z",
+      "sha256": "7d6ec75f184dc050065255ec136ab8bc7a0a18026817ec1934f7df3fcde282c1",
+      "width": 2120,
+      "height": 1440,
+      "captured_at": "2026-11-04T19:03:29.594911+00:00",
       "app_version": "0.1.0",
-      "app_build": "2026110411",
+      "app_build": "2026110503",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.mergefirst.en",
-      "guest_actions": "none"
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.dashboarddedup20261105.en",
+      "guest_actions": "none",
+      "source_base_commit": "f3ac5c90e56cce7e35a662514e4aec0130510870",
+      "source_dirty": true,
+      "capture_scope": "Dashboard duplicate-entry layout only; initial read-only snapshot still loading; not runtime acceptance"
     },
     {
       "path": "docs/images/en/environment.png",
@@ -270,5 +276,6 @@
       "guest_actions": "none"
     }
   ],
-  "review_scope": "Seven-page real UI with retained main network/credential controls; all secure inputs empty; no live Guest/installation/game acceptance."
+  "review_scope": "Seven-page real UI with retained main network/credential controls; all secure inputs empty; no live Guest/installation/game acceptance.",
+  "dashboard_update_note": "2026-11-05: only English and Chinese Dashboard captures updated for duplicate setup-shortcut removal, build 2026110503; other screenshots retain their own historical provenance."
 }

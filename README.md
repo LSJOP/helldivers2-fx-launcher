@@ -185,3 +185,7 @@ Sudo investigation (2026-11-04): build 2026110402 has a remote empty-prompt quot
 Acceptance in progress: selected FX entries are deduplicated against automatic discovery. FX 1.9.9 is installed and discoverable but performance writes are unsupported; real Guest/game acceptance and formal distribution remain pending. See [acceptance report](docs/acceptance/FULL_SYSTEM_ACCEPTANCE_REPORT.md).
 
 The game launch sheet closes automatically after the current launch completes with a detected game process; errors, cancellation and unverified results remain visible. Process detection does not establish main-menu or multiplayer success. This dismissal change awaits a fresh live GUI check; existing screenshots do not demonstrate it.
+
+First-Run Setup is available from the sidebar; the duplicate shortcut above the Dashboard hero has been removed.
+
+The Dashboard image was refreshed from an isolated real Debug window on 2026-11-05 (build 2026110503). It captures the layout while the initial read-only snapshot is loading; it is not runtime acceptance evidence. Other screenshots retain their recorded build provenance.

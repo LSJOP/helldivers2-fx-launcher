@@ -8,6 +8,8 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+- Remove the duplicate First-Run Setup shortcut above the Dashboard hero; keep setup accessible from the sidebar.
+
 - Automatically close the game launch sheet when the current launch completes with a detected game process. Keep failed, cancelled and unverified launches open for inspection.
 
 - Fix duplicate selected FX entries in automatic discovery; correct current seven-page documentation. Real Guest/game and distribution acceptance remain pending.
