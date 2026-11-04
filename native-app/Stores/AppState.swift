@@ -194,6 +194,7 @@ final class AppState: ObservableObject {
     @Published private(set) var performanceSnapshot: [String: JSONValue] = [:]
     @Published private(set) var guiRecords: [String: GUIOperationRecord] = [:]
     @Published private(set) var guiSnapshots: [String: [String: JSONValue]] = [:]
+    @Published private(set) var sshConfiguration: [String: JSONValue] = [:]
     @Published private(set) var sshConnectionTarget: [String: JSONValue] = [:]
     @Published private(set) var operationResult: [String: JSONValue] = [:]
     @Published private(set) var operationError: ErrorState?
@@ -288,6 +289,14 @@ final class AppState: ObservableObject {
                 if let action = GUIAction(rawValue: method), !action.accepts(reply.result) { throw ErrorState("PROTOCOL_ERROR", method: method) }
                 if reply.result["fx_host_running"]?.boolean == false { self.guiSnapshots = [:] }
                 if let boot = reply.result["guest_boot"]?.text { try self.credentials.bindGuest(boot) }
+                if method == "read_configuration" { self.sshConfiguration = reply.result }
+                if ["save_configuration", "restore_configuration"].contains(method) {
+                    self.clearSessionCredentials()
+                    self.guiSnapshots = [:]; self.sshConnectionTarget = [:]
+                    self.networkPlan = [:]; self.networkIPv6 = [:]; self.networkRows = []
+                    self.firstRunPlan = nil; self.firstRunReceipt = nil; self.firstRunState = .NotChecked
+                    self.sshConfiguration = try await self.core.request("read_configuration").result
+                }
                 self.operationResult = reply.result
                 if method == "read_performance" { self.performanceSnapshot = reply.result }
                 if ["performance_read", "performance_apply", "performance_restore"].contains(method), self.runtimeRoot == selectedRoot {

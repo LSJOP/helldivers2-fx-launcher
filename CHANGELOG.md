@@ -8,6 +8,7 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+- Add host, port and user fields under Settings → SSH connection settings, with guarded saves and session credential invalidation. Candidate only; actual Chinese/English settings captures checked, live connection validation pending.
 - Fix duplicate selected FX entries in automatic discovery; correct current seven-page documentation. Real Guest/game and distribution acceptance remain pending.
 
 - Isolated First-Run Setup development build: actual environment detection, versioned profiles, reviewable plans, durable receipts, offline Steam VDF transactions and drift-guarded recovery, with ten-language UI. Credentials are process-memory only; compatibility checking no longer changes IPv4 configuration. FEX/Proton distribution is blocked pending reviewed artifacts; fresh VM/game/EAC/multiplayer remain untested. Latest is unchanged.

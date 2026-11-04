@@ -7,7 +7,7 @@
   "timezone": "Asia/Shanghai",
   "fx_guest_actions": "none",
   "credential_autoload": "disabled by isolated capture arguments",
-  "reviewed_ui_source_sha256": "740a3028776a7a8264f0811aeea9a15b8c292ac568a4cbc41a0c9d49f2650a4c",
+  "reviewed_ui_source_sha256": "7be3a416b73793e440726e1347b2b716466ae81f8c11e60dfd1cd8934b6d50e5",
   "screenshots": [
     {
       "path": "docs/images/zh-CN/dashboard.png",
@@ -103,28 +103,34 @@
     {
       "path": "docs/images/zh-CN/settings.png",
       "language": "zh-CN",
-      "sha256": "79768cb2eb540b766c640b992265371b95d520d09160b917d07429e494657984",
+      "sha256": "7cd49dd415a81268ceb1bc0e9976d0244716418a9fdb0809bdc5bab4f70eed1b",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-04T15:38:50Z",
+      "captured_at": "2026-11-04T18:53:55Z",
       "app_version": "0.1.0",
-      "app_build": "2026110411",
+      "app_build": "2026110501",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.mergefirst.zh",
-      "guest_actions": "none"
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.ssh.final.zh",
+      "guest_actions": "none",
+      "source_dirty": true,
+      "source_base_commit": "6dd08fb",
+      "review_note": "Actual SSH settings candidate; visible address/port/user labels reviewed; no interactive save or Guest action."
     },
     {
       "path": "docs/images/zh-CN/settings-updates.png",
       "language": "zh-CN",
-      "sha256": "19ae25dcb58fa61d69c561e40f33483bb75d2bf21df1be6d73194c2271e3853f",
+      "sha256": "8f1bfd09e9aff8dd8a788e11ed172f077472a153c158406059483275aabb8852",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-04T15:38:50Z",
+      "captured_at": "2026-11-04T18:53:55Z",
       "app_version": "0.1.0",
-      "app_build": "2026110411",
+      "app_build": "2026110501",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.mergefirst.zh",
-      "guest_actions": "none"
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.ssh.final.zh",
+      "guest_actions": "none",
+      "source_dirty": true,
+      "source_base_commit": "6dd08fb",
+      "review_note": "Actual SSH settings candidate; visible address/port/user labels reviewed; no interactive save or Guest action."
     },
     {
       "path": "docs/images/zh-CN/first-run-setup.png",
@@ -233,28 +239,34 @@
     {
       "path": "docs/images/en/settings.png",
       "language": "en",
-      "sha256": "99828eb1e01f8782985c58a3aa13983f6314826efbacaac948cd3da6c749d21d",
+      "sha256": "7f06c709e2514db42320a39c7bcfaa016c088a3d82f5396020d25e24e042d4a3",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-04T15:39:22Z",
+      "captured_at": "2026-11-04T18:54:18Z",
       "app_version": "0.1.0",
-      "app_build": "2026110411",
+      "app_build": "2026110501",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.mergefirst.en",
-      "guest_actions": "none"
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.ssh.final.en",
+      "guest_actions": "none",
+      "source_dirty": true,
+      "source_base_commit": "6dd08fb",
+      "review_note": "Actual SSH settings candidate; visible address/port/user labels reviewed; no interactive save or Guest action."
     },
     {
       "path": "docs/images/en/settings-updates.png",
       "language": "en",
-      "sha256": "e4a409b0b848641d9bca1f7f4849cd7ec21d42c9dee043c1b8df6b23aae212a2",
+      "sha256": "108d7f17a73fbe0cb17686416e5d248d6273c585b88d90739366b156790885b6",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-04T15:39:22Z",
+      "captured_at": "2026-11-04T18:54:18Z",
       "app_version": "0.1.0",
-      "app_build": "2026110411",
+      "app_build": "2026110501",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.mergefirst.en",
-      "guest_actions": "none"
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.ssh.final.en",
+      "guest_actions": "none",
+      "source_dirty": true,
+      "source_base_commit": "6dd08fb",
+      "review_note": "Actual SSH settings candidate; visible address/port/user labels reviewed; no interactive save or Guest action."
     },
     {
       "path": "docs/images/en/first-run-setup.png",
@@ -270,5 +282,6 @@
       "guest_actions": "none"
     }
   ],
-  "review_scope": "Seven-page real UI with retained main network/credential controls; all secure inputs empty; no live Guest/installation/game acceptance."
+  "review_scope": "Seven-page real UI with retained main network/credential controls; all secure inputs empty; no live Guest/installation/game acceptance.",
+  "ssh_settings_review": "2026-11-05: only Settings and ten-language SSH labels changed; Settings recaptured from dirty Debug candidate, other page screenshots retained as unchanged UI. Live SSH and interactive save pending."
 }

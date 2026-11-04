@@ -27,6 +27,7 @@ struct SettingsView: View {
             }
             BuildIdentityView(state: state)
             ConfigurationBackupView(state: state)
+            SSHConnectionSettingsView(state: state, tasks: state.tasks)
             CredentialManagementView(state: state, credentials: state.credentials, tasks: state.tasks)
             SoftwareUpdateView(manager: state.updates, language: state.languageCode)
             DisclosureGroup(state.t("ui.008")) { LegacyOperationsView(state: state, scope: "settings") }
@@ -452,5 +453,68 @@ struct SSHDiagnosisView: View {
                 TacticalInfoRow(title: state.t(row.0), value: value(row.1))
             }
         }
+    }
+}
+
+/// Edits only launcher connection metadata through the existing guarded save path.
+private struct SSHConnectionSettingsView: View {
+    @ObservedObject var state: AppState
+    @ObservedObject var tasks: TaskManager
+    @State private var host = ""
+    @State private var port = ""
+    @State private var username = ""
+    @State private var revision = ""
+    @State private var original: [String: JSONValue] = [:]
+    @State private var saved = false
+    private var patch: [String: JSONValue]? {
+        guard let number = Int(port), port.allSatisfy({ $0.isASCII && $0.isNumber }), !port.isEmpty else { return nil }
+        var ssh = original
+        ssh["host"] = .string(host.trimmingCharacters(in: .whitespacesAndNewlines))
+        ssh["port"] = .number(Double(number))
+        ssh["username"] = .string(username.trimmingCharacters(in: .whitespacesAndNewlines))
+        guard (try? ConfigurationService.validatedSSH(ssh)) != nil else { return nil }
+        return ["host": ssh["host"]!, "port": ssh["port"]!, "username": ssh["username"]!]
+    }
+    private var changed: Bool {
+        guard let patch else { return true }
+        return patch.contains { original[$0.key] != $0.value }
+    }
+    var body: some View {
+        TacticalPanel(number: "S", title: state.t("ui.ssh.settings"), symbol: "network") {
+            Text(state.t("ui.ssh.settingsHelp")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+            LabeledContent(state.t("ui.ssh.host")) {
+                TextField(state.t("ui.ssh.host"), text: $host).accessibilityIdentifier("settings.ssh.host")
+            }
+            LabeledContent(state.t("ui.ssh.port")) {
+                TextField(state.t("ui.ssh.port"), text: $port).accessibilityIdentifier("settings.ssh.port")
+            }
+            LabeledContent(state.t("ui.ssh.user")) {
+                TextField(state.t("ui.ssh.user"), text: $username).accessibilityIdentifier("settings.ssh.user")
+            }
+            if !revision.isEmpty && patch == nil {
+                TacticalWarningBanner(text: state.t("ui.ssh.settingsInvalid"), isError: true)
+            }
+            HStack {
+                TacticalButton(title: state.t("ui.ssh.settingsSave"), symbol: "square.and.arrow.down", primary: true) {
+                    guard let patch else { return }
+                    saved = false
+                    state.runOperation("save_configuration", params: ["configuration": .object(["ssh": .object(patch), "ssh_configured": .bool(true)]),
+                        "expected_revision": .string(revision), "confirmed": .bool(true)])
+                }.disabled(tasks.busy || revision.isEmpty || patch == nil || !changed)
+                Button(state.t("ui.266")) { saved = false; state.runOperation("read_configuration") }.disabled(tasks.busy)
+            }
+            if saved && !changed { Text(state.t("ui.ssh.settingsSaved")).font(TacticalTypography.caption) }
+            if let error = state.operationError, ["read_configuration", "save_configuration"].contains(error.method) {
+                TacticalWarningBanner(text: error.message(state.languageCode), isError: true)
+            }
+        }
+        .disabled(tasks.busy)
+        .task { if !tasks.busy { state.runOperation("read_configuration") } }
+        .onReceive(state.$sshConfiguration) { result in
+            guard let config = result["configuration"]?.object["ssh"]?.object, let value = result["revision"]?.text else { return }
+            original = config; revision = value
+            host = config["host"]?.text ?? ""; port = config["port"]?.integer.map(String.init) ?? ""; username = config["username"]?.text ?? ""
+        }
+        .onReceive(state.$operationResult) { result in if result["saved"]?.boolean == true { saved = true } }
     }
 }
