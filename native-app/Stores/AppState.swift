@@ -86,7 +86,7 @@ final class AppState: ObservableObject {
                     let plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(value))
                     try self.credentials.bindGuest(plan.snapshot.boot)
                     self.firstRunPlan = plan
-                    self.firstRunState = plan.operations.allSatisfy { $0.blocked == "UNSUPPORTED" } ? .Unsupported : plan.operations.allSatisfy { $0.blocked == nil && $0.changes.isEmpty } ? .Ready : .NeedsConfiguration
+                    self.firstRunState = plan.detectionState
                 }
                 if let value = reply.result["receipt"] {
                     let receipt = try JSONDecoder().decode(DeploymentReceipt.self, from: JSONEncoder().encode(value))

@@ -588,7 +588,11 @@
   "ui.ssh.settingsSaved": "Saved. Enter credentials again before connecting.",
   "ui.fx.localTestCopy": "Local test copy · custom identity",
   "ui.credentials.saved": "Saved encrypted on this Mac; filled in automatically next time.",
-  "ui.credentials.storageIssue": "Local password storage is unavailable. Enter passwords manually to continue; saving or deletion has not completed."
+  "ui.credentials.storageIssue": "Local password storage is unavailable. Enter passwords manually to continue; saving or deletion has not completed.",
+  "ui.setup.status.found": "Found · integrity unverified",
+  "ui.setup.status.advisory": "Optional warning",
+  "ui.setup.artifactUnavailable": "Automatic deployment unavailable: no reviewed package. This does not establish a fault in an installed component.",
+  "ui.setup.ipv6Advisory": "IPv6 is advisory only and does not block other configuration."
  },
  "zh-CN": {
   "ui.193": "导航",
@@ -1179,7 +1183,11 @@
   "ui.ssh.settingsSaved": "已保存。连接前请重新输入凭据。",
   "ui.fx.localTestCopy": "本地测试副本 · 自定义身份",
   "ui.credentials.saved": "已在本机加密保存，下次自动填充。",
-  "ui.credentials.storageIssue": "本机密码存储不可用。可手动输入继续；保存或删除操作尚未完成。"
+  "ui.credentials.storageIssue": "本机密码存储不可用。可手动输入继续；保存或删除操作尚未完成。",
+  "ui.setup.status.found": "已发现，完整性待验证",
+  "ui.setup.status.advisory": "可选警告",
+  "ui.setup.artifactUnavailable": "自动部署不可用：没有审核后的安装包。这不表示已安装组件存在故障。",
+  "ui.setup.ipv6Advisory": "IPv6 仅作提示，不阻塞其他配置。"
  },
  "ja": {
   "ui.193": "移動",
@@ -1770,7 +1778,11 @@
   "ui.ssh.settingsSaved": "保存しました。接続前に認証情報を再入力してください。",
   "ui.fx.localTestCopy": "ローカルテスト用コピー · カスタム識別情報",
   "ui.credentials.saved": "このMacに暗号化して保存済み。次回は自動入力されます。",
-  "ui.credentials.storageIssue": "ローカルのパスワード保存先を利用できません。手動入力で続行できます。保存または削除は未完了です。"
+  "ui.credentials.storageIssue": "ローカルのパスワード保存先を利用できません。手動入力で続行できます。保存または削除は未完了です。",
+  "ui.setup.status.found": "検出済み・整合性未確認",
+  "ui.setup.status.advisory": "任意の警告",
+  "ui.setup.artifactUnavailable": "審査済みパッケージがないため自動導入は利用できません。既存コンポーネントの障害を示すものではありません。",
+  "ui.setup.ipv6Advisory": "IPv6 は参考情報のみで、他の設定を妨げません。"
  },
  "ko": {
   "ui.193": "탐색",
@@ -2361,7 +2373,11 @@
   "ui.ssh.settingsSaved": "저장했습니다. 연결하기 전에 인증 정보를 다시 입력하세요.",
   "ui.fx.localTestCopy": "로컬 테스트 사본 · 사용자 지정 ID",
   "ui.credentials.saved": "이 Mac에 암호화하여 저장됨. 다음에 자동 입력됩니다.",
-  "ui.credentials.storageIssue": "로컬 암호 저장소를 사용할 수 없습니다. 직접 입력하여 계속할 수 있으며 저장 또는 삭제는 완료되지 않았습니다."
+  "ui.credentials.storageIssue": "로컬 암호 저장소를 사용할 수 없습니다. 직접 입력하여 계속할 수 있으며 저장 또는 삭제는 완료되지 않았습니다.",
+  "ui.setup.status.found": "발견됨 · 무결성 미확인",
+  "ui.setup.status.advisory": "선택 사항 경고",
+  "ui.setup.artifactUnavailable": "검토된 패키지가 없어 자동 배포를 사용할 수 없습니다. 설치된 구성 요소의 오류를 의미하지 않습니다.",
+  "ui.setup.ipv6Advisory": "IPv6는 참고 사항이며 다른 설정을 차단하지 않습니다."
  },
  "ru": {
   "ui.193": "Навигация",
@@ -2952,7 +2968,11 @@
   "ui.ssh.settingsSaved": "Сохранено. Перед подключением введите учётные данные заново.",
   "ui.fx.localTestCopy": "Локальная тестовая копия · изменённый идентификатор",
   "ui.credentials.saved": "Сохранено на этом Mac в зашифрованном виде; автозаполнение при следующем запуске.",
-  "ui.credentials.storageIssue": "Локальное хранилище паролей недоступно. Введите пароли вручную. Сохранение или удаление не завершено."
+  "ui.credentials.storageIssue": "Локальное хранилище паролей недоступно. Введите пароли вручную. Сохранение или удаление не завершено.",
+  "ui.setup.status.found": "Найдено · целостность не проверена",
+  "ui.setup.status.advisory": "Необязательное предупреждение",
+  "ui.setup.artifactUnavailable": "Автоматическая установка недоступна: нет проверенного пакета. Это не означает неисправность установленного компонента.",
+  "ui.setup.ipv6Advisory": "IPv6 носит рекомендательный характер и не блокирует другие настройки."
  },
  "es": {
   "ui.193": "Navegación",
@@ -3543,7 +3563,11 @@
   "ui.ssh.settingsSaved": "Guardado. Vuelve a introducir las credenciales antes de conectar.",
   "ui.fx.localTestCopy": "Copia de prueba local · identidad personalizada",
   "ui.credentials.saved": "Guardada cifrada en este Mac; se rellenará automáticamente la próxima vez.",
-  "ui.credentials.storageIssue": "El almacenamiento local no está disponible. Introduce las contraseñas manualmente; no se ha completado el guardado o la eliminación."
+  "ui.credentials.storageIssue": "El almacenamiento local no está disponible. Introduce las contraseñas manualmente; no se ha completado el guardado o la eliminación.",
+  "ui.setup.status.found": "Encontrado · integridad sin verificar",
+  "ui.setup.status.advisory": "Advertencia opcional",
+  "ui.setup.artifactUnavailable": "Instalación automática no disponible: no hay un paquete revisado. Esto no indica un fallo del componente instalado.",
+  "ui.setup.ipv6Advisory": "IPv6 es solo informativo y no bloquea otras configuraciones."
  },
  "de": {
   "ui.193": "Navigation",
@@ -4134,7 +4158,11 @@
   "ui.ssh.settingsSaved": "Gespeichert. Zugangsdaten vor dem Verbinden erneut eingeben.",
   "ui.fx.localTestCopy": "Lokale Testkopie · angepasste Identität",
   "ui.credentials.saved": "Auf diesem Mac verschlüsselt gespeichert; beim nächsten Mal automatisch ausgefüllt.",
-  "ui.credentials.storageIssue": "Der lokale Passwortspeicher ist nicht verfügbar. Manuelle Eingabe ist möglich; Speichern oder Löschen wurde nicht abgeschlossen."
+  "ui.credentials.storageIssue": "Der lokale Passwortspeicher ist nicht verfügbar. Manuelle Eingabe ist möglich; Speichern oder Löschen wurde nicht abgeschlossen.",
+  "ui.setup.status.found": "Gefunden · Integrität ungeprüft",
+  "ui.setup.status.advisory": "Optionaler Hinweis",
+  "ui.setup.artifactUnavailable": "Automatische Installation nicht verfügbar: kein geprüftes Paket. Dies belegt keinen Fehler einer installierten Komponente.",
+  "ui.setup.ipv6Advisory": "IPv6 dient nur als Hinweis und blockiert keine anderen Einstellungen."
  },
  "fr": {
   "ui.193": "Navigation",
@@ -4725,7 +4753,11 @@
   "ui.ssh.settingsSaved": "Enregistré. Saisissez à nouveau les identifiants avant de vous connecter.",
   "ui.fx.localTestCopy": "Copie de test locale · identité personnalisée",
   "ui.credentials.saved": "Enregistré et chiffré sur ce Mac ; remplissage automatique la prochaine fois.",
-  "ui.credentials.storageIssue": "Le stockage local est indisponible. Saisissez les mots de passe manuellement ; l’enregistrement ou la suppression n’est pas terminé."
+  "ui.credentials.storageIssue": "Le stockage local est indisponible. Saisissez les mots de passe manuellement ; l’enregistrement ou la suppression n’est pas terminé.",
+  "ui.setup.status.found": "Détecté · intégrité non vérifiée",
+  "ui.setup.status.advisory": "Avertissement facultatif",
+  "ui.setup.artifactUnavailable": "Installation automatique indisponible : aucun paquet examiné. Cela ne prouve pas une panne du composant installé.",
+  "ui.setup.ipv6Advisory": "IPv6 est indicatif et ne bloque pas les autres réglages."
  },
  "pt-BR": {
   "ui.193": "Navegação",
@@ -5316,7 +5348,11 @@
   "ui.ssh.settingsSaved": "Salvo. Insira as credenciais novamente antes de conectar.",
   "ui.fx.localTestCopy": "Cópia de teste local · identidade personalizada",
   "ui.credentials.saved": "Salva com criptografia neste Mac; preenchimento automático na próxima vez.",
-  "ui.credentials.storageIssue": "O armazenamento local está indisponível. Digite as senhas manualmente; o salvamento ou a exclusão não foi concluído."
+  "ui.credentials.storageIssue": "O armazenamento local está indisponível. Digite as senhas manualmente; o salvamento ou a exclusão não foi concluído.",
+  "ui.setup.status.found": "Encontrado · integridade não verificada",
+  "ui.setup.status.advisory": "Aviso opcional",
+  "ui.setup.artifactUnavailable": "Instalação automática indisponível: não há pacote revisado. Isso não indica falha no componente instalado.",
+  "ui.setup.ipv6Advisory": "IPv6 é apenas informativo e não bloqueia outras configurações."
  },
  "zh-TW": {
   "ui.270": "無需外部執行環境；檢測後按 ⌘R 重新讀取全部唯讀快照。",
@@ -5907,6 +5943,10 @@
   "ui.ssh.settingsSaved": "已儲存。連線前請重新輸入憑證。",
   "ui.fx.localTestCopy": "本機測試副本 · 自訂身分",
   "ui.credentials.saved": "已在本機加密儲存，下次自動填入。",
-  "ui.credentials.storageIssue": "本機密碼儲存空間無法使用。可手動輸入繼續；儲存或刪除尚未完成。"
+  "ui.credentials.storageIssue": "本機密碼儲存空間無法使用。可手動輸入繼續；儲存或刪除尚未完成。",
+  "ui.setup.status.found": "已發現，完整性待驗證",
+  "ui.setup.status.advisory": "可選警告",
+  "ui.setup.artifactUnavailable": "自動部署不可用：沒有審核後的安裝包。這不表示已安裝元件存在故障。",
+  "ui.setup.ipv6Advisory": "IPv6 僅作提示，不阻擋其他設定。"
  }
 }

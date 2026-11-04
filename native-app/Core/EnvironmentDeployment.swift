@@ -68,11 +68,24 @@ struct DeploymentSnapshot: Codable, Equatable {
     var facts: [String: String]
     var values: [String: String]
 }
+enum DeploymentObservation { case advisory, passed, found, unverified, blocked, unchanged, change }
 struct DeploymentOperation: Codable, Identifiable, Equatable {
     let id: String, component: String, currentVersion: String, targetVersion: String
     let changes: [String: String], permission: String, estimatedBytes: Int64, needsRestart: Bool
     let backupLocation: String, rollback: String, verification: String
     let requirement: Requirement, blocked: String?
+    var observation: DeploymentObservation {
+        if component == "ipv6", !detectionPassed { return .advisory }
+        if detectionPassed { return .passed }
+        if ["fex", "proton"].contains(component), currentVersion == "present" { return .found }
+        if currentVersion == "UNKNOWN", changes.isEmpty { return .unverified }
+        if blocked != nil { return .blocked }
+        return changes.isEmpty ? .unchanged : .change
+    }
+    var warning: Bool {
+        component == "ipv6" && !detectionPassed || (blocked != nil && !detectionPassed && currentVersion != "present" && currentVersion != "UNKNOWN")
+    }
+    var advisory: Bool { component == "ipv6" }
     // A successful bounded observation is independent of permission to deploy changes.
     var detectionPassed: Bool {
         ["steam", "game", "vulkan", "kosmickrisp", "network", "gvproxy", "ipv4", "ipv6"].contains(component)
@@ -82,7 +95,12 @@ struct DeploymentOperation: Codable, Identifiable, Equatable {
 struct DeploymentPlan: Codable {
     let id: UUID, profileID: String, profileVersion: Int, snapshot: DeploymentSnapshot
     let operations: [DeploymentOperation]
-    var executable: [DeploymentOperation] { operations.filter { $0.blocked == nil && !$0.changes.isEmpty } }
+    var executable: [DeploymentOperation] { operations.filter { !$0.advisory && $0.blocked == nil && !$0.changes.isEmpty } }
+    var detectionState: DeploymentState {
+        let required = operations.filter { !$0.advisory }
+        if !required.isEmpty && required.allSatisfy({ $0.blocked == "UNSUPPORTED" }) { return .Unsupported }
+        return required.allSatisfy { $0.blocked == nil && $0.changes.isEmpty && $0.detectionPassed } ? .Ready : .NeedsConfiguration
+    }
 }
 enum DeploymentPlanBuilder {
     static func build(_ snapshot: DeploymentSnapshot, profile: EnvironmentProfile) -> DeploymentPlan {
@@ -103,7 +121,7 @@ enum DeploymentPlanBuilder {
         }
         for component in ["steam", "game", "vulkan", "kosmickrisp", "network", "gvproxy", "ipv4", "ipv6"] {
             let fact = snapshot.facts[component] ?? "UNKNOWN"
-            add(component, target: component == "vulkan" ? profile.vulkan : "detect", block: ["present", "configured", "available"].contains(fact) ? nil : "USER_ACTION_REQUIRED")
+            add(component, target: component == "vulkan" ? profile.vulkan : "detect", block: component == "ipv6" || fact == "UNKNOWN" || ["present", "configured", "available"].contains(fact) ? nil : "USER_ACTION_REQUIRED")
         }
         do {
             let before = snapshot.values["launch"] ?? ""
