@@ -126,7 +126,7 @@ Existing clones need the intended branch and `git submodule update --init --recu
 No official release has been published yet; the current Native version `0.1.0` is a development preview. Recent unreleased changes:
 
 - Native six-page interface, bounded FX discovery, validated configuration editing, redacted logs and read-only performance comparison.
-- GUI-driven FX/SSH actions and optional SSH/sudo credential remembering.
+- GUI-driven FX/SSH actions and independent, memory-only SSH/sudo session credentials.
 - Sparkle 2 update integration (feed/signing service not configured).
 
 See the full history in [CHANGELOG.md](CHANGELOG.md).
@@ -134,7 +134,7 @@ See the full history in [CHANGELOG.md](CHANGELOG.md).
 ## FAQ
 
 - **Why are stop/restart or some Apply actions disabled?** Graceful exit is unverified. Performance editing requires the pinned FX 1.9.4 build, valid preferences, stopped FX and explicit preview/consent. Invalid backups or external changes block restore. The App does not force-stop FX.
-- **Must I retype passwords?** Session reuse is the default. Optional remembering stores independently verified SSH/sudo credentials in a new App-owned macOS Keychain namespace; automatic reads suppress authorization dialogs. Locked/access-restricted storage falls back to secure input. Explicit access or App identity/signature changes may still require system authorization. Old script items are untouched.
+- **Must I retype passwords?** SSH and sudo passwords are independent and reused only during this App process. They are never stored in macOS Keychain, preferences or local files. Fully quitting the App requires reentry; changing FX/Guest identity clears authorization. Old saved items are neither read, migrated nor deleted.
 - **Are automatic updates ready?** Manual GitHub Native-release checks work in Settings → Software Update. Stable is the default; Preview and automatic checks remain closed until verified service setup. A verified-download backend requires a trusted Ed25519 key and signed manifest; installation remains disabled without the signed Appcast, Developer ID and notarization/distribution conditions. Manual checks never install automatically. The automatic-check toggle stays disabled until the signed service is ready. Download verification includes signature, size and SHA-256; installation stays with official Sparkle. No production update package is published yet. Failures leave the current App intact; no installed/relaunched success is inferred. Release preparation verifies signed feed history before reusing it. [Setup and release gates](docs/NATIVE_UPDATES.md).
 
 <a id="en-legacy"></a>
@@ -160,3 +160,5 @@ FX selection V2 + automatic selection V2.1: the FX page, overview and launch pan
 Launch resources: `/Applications` and the FX `.app` are not the original script resource directory. Select the complete existing launcher folder containing `launcher-20261026/steam-cdp.mjs`, `tools/check_node.cjs` and `goal-fx-multiplayer-20261026/gvproxy-eim-wrapper`. Inspection and execution share the same bundled-archive comparison, with exact expected/actual paths and SHA-256 diagnostics. Missing, altered or symlinked resources fail closed; no FX files are changed. FX 1.9.4/1.9.8 path and signature checks are covered; live gameplay remains unverified.
 
 Sudo investigation (2026-11-04): build 2026110402 has a remote empty-prompt quoting defect. The fix and distinct sudo/SSH failure classification are under validation; no replacement build is released. Full Guest identity passed a live read-only check; passworded sudo and subsequent launch stages remain unverified.
+
+**Memory-only candidate:** session credential management replaces all Keychain controls. Each approved privileged SSH call authenticates in that call and isolates command stdin from password input. Guest IPv6 changes require an exact preview, consent and a local rollback receipt; live Guest changes, Steam/game and multiplayer acceptance remain NOT TESTED for this candidate. Settings screenshots show the real memory-only working candidate (build 2026110403, dirty pre-freeze snapshot); other pages retain their recorded UI-simplification provenance.

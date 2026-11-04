@@ -90,6 +90,8 @@ private extension Dictionary where Key == String, Value == JSONValue {
         "test_network": "ui.278",
         "test_ssh": "ui.329",
         "test_guest_sudo": "ui.378",
+        "restore_guest_ipv6": "ui.session.restoreIPv6",
+        "list_guest_ipv6_backups": "ui.session.backups",
         "connect_fx": "ui.076",
         "inspect_guest_environment": "ui.159",
         "check_fx_state": "ui.048",
@@ -133,7 +135,7 @@ struct LegacyOperationSheet: View {
     @State private var note = ""
     @State private var channel = "preview"
     @State private var inputError = false
-    private var needsRoot: Bool { ["connect_fx","inspect_guest_environment","check_fx_state","start_fx","start_steam","inspect_legacy_runtime","test_ssh","test_guest_sudo","inspect_guest","launch_game","preflight_launch","observe_launch","apply_performance","save_network_snapshot"].contains(operation) }
+    private var needsRoot: Bool { ["connect_fx","inspect_guest_environment","check_fx_state","start_fx","start_steam","inspect_legacy_runtime","test_ssh","test_guest_sudo","restore_guest_ipv6","inspect_guest","launch_game","preflight_launch","observe_launch","apply_performance","save_network_snapshot"].contains(operation) }
     private var needsConsent: Bool {
         state.rows("get_legacy_catalog", "operations").first { $0["method"]?.text == operation }?["confirmation"]?.boolean ?? true
     }
@@ -161,6 +163,9 @@ struct LegacyOperationSheet: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(operationTitle(operation, state)).font(TacticalTypography.page)
                 TacticalWarningBanner(text: effect)
+                if operation == "restore_guest_ipv6" {
+                    Text(state.guestRestorePath).font(TacticalTypography.log).textSelection(.enabled)
+                }
                 if operation == "apply_network_profile" {
                     TacticalWarningBanner(text: state.t("ui.342"))
                 }
@@ -172,7 +177,7 @@ struct LegacyOperationSheet: View {
                         Text(state.t("ui.195")).font(TacticalTypography.caption)
                     }
                 }
-                if ["connect_fx","inspect_guest_environment","start_steam","test_ssh","test_guest_sudo","inspect_guest","launch_game","apply_performance","save_network_snapshot"].contains(operation) {
+                if ["connect_fx","inspect_guest_environment","start_steam","test_ssh","test_guest_sudo","restore_guest_ipv6","inspect_guest","launch_game","apply_performance","save_network_snapshot"].contains(operation) {
                     CredentialInputFields(state: state, credentials: credentials, tasks: tasks, operation: operation)
                 }
                 if operation == "save_configuration" {
@@ -258,6 +263,7 @@ struct LegacyOperationSheet: View {
         var params: [String: JSONValue] = [:]
         if needsConsent { params["confirmed"] = .bool(confirmed) }
         params["approved_changes"] = .array(approved)
+        if operation == "restore_guest_ipv6" { params["backup_path"] = .string(state.guestRestorePath) }
         if operation == "save_configuration" {
             guard !revision.isEmpty, let data = configuration.data(using: .utf8), let value = try? JSONDecoder().decode(JSONValue.self, from: data), case .object = value else { inputError = true; return }
             params["configuration"] = value; params["expected_revision"] = .string(revision)
@@ -276,17 +282,14 @@ private struct CredentialInputFields: View {
     let operation: String
     @State private var expanded = false
     var body: some View {
-        DisclosureGroup(state.t("ui.084"), isExpanded: $expanded) {
+        DisclosureGroup(state.t("ui.session.title"), isExpanded: $expanded) {
             VStack(alignment: .leading, spacing: 10) {
                 SecureField(state.t("ui.305"), text: $credentials.password)
-                Toggle(state.t("ui.268"), isOn: Binding(get: { credentials.rememberSSH }, set: { credentials.setRemember(.ssh, $0) }))
                 SecureField(state.t("ui.168"), text: $credentials.passphrase)
                 SecureField(state.t("ui.304"), text: $credentials.sudoPassword)
-                Toggle(state.t("ui.267"), isOn: Binding(get: { credentials.rememberSudo }, set: { credentials.setRemember(.sudo, $0) }))
-                Text(state.t("ui.307"))
+                Text(state.t("ui.session.policy"))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
-                CredentialVaultNotice(state: state, credentials: credentials)
-                Button(state.t("ui.067")) { credentials.clear() }
+                Button(state.t("ui.067")) { state.clearSessionCredentials() }
             }.padding(.top, 8).disabled(tasks.busy)
         }
         .onAppear { expanded = ["test_ssh","test_guest_sudo"].contains(operation) || needsInput }
@@ -295,62 +298,47 @@ private struct CredentialInputFields: View {
     private var needsInput: Bool { ["AUTH_REQUIRED","SSH_AUTH_FAILED","SUDO_AUTH_FAILED"].contains(state.operationError?.code ?? "") }
 }
 
-private struct CredentialVaultNotice: View {
-    @ObservedObject var state: AppState
-    @ObservedObject var credentials: SessionCredentialManager
-    var body: some View {
-        if let error = credentials.vaultError {
-            Text(message(error)).font(TacticalTypography.caption).foregroundStyle(.orange)
-        }
-    }
-    private func message(_ error: CredentialVaultError) -> String {
-        switch error {
-        case .locked: return state.t("ui.343")
-        case .permission: return state.t("ui.169")
-        default: return state.t("ui.299")
-        }
-    }
-}
-
 private struct CredentialManagementView: View {
     @ObservedObject var state: AppState
     @ObservedObject var credentials: SessionCredentialManager
     @ObservedObject var tasks: TaskManager
-    @State private var clearing: CredentialKind?
-    @State private var clearAll = false
     var body: some View {
-        TacticalPanel(number: "K", title: state.t("ui.083"), symbol: "key") {
-            Text(state.t("ui.189"))
-                .font(TacticalTypography.caption).foregroundStyle(.secondary)
+        TacticalPanel(number: "K", title: state.t("ui.session.title"), symbol: "key") {
+            Text(state.t("ui.session.policy")).font(TacticalTypography.caption).foregroundStyle(.secondary)
             ForEach(CredentialKind.allCases, id: \.self) { kind in
                 VStack(alignment: .leading, spacing: 8) {
-                    TacticalInfoRow(title: kind == .ssh ? state.t("ui.288") : state.t("ui.148"), value: status(kind))
+                    TacticalInfoRow(title: state.t(kind == .ssh ? "ui.session.ssh" : "ui.session.sudo"), value: status(kind))
                     HStack {
-                        Button(state.t("ui.371")) {
+                        Button(state.t(kind == .ssh ? "ui.session.updateSSH" : "ui.session.updateSudo")) {
                             credentials.update(kind)
                             state.operationSelection = NativeOperation(method: kind == .ssh ? "test_ssh" : "test_guest_sudo")
                         }
-                        Button(state.t("ui.066")) { clearing = kind }
+                        Button(state.t(kind == .ssh ? "ui.session.testSSH" : "ui.session.testSudo")) {
+                            state.operationSelection = NativeOperation(method: kind == .ssh ? "test_ssh" : "test_guest_sudo")
+                        }
                     }
                 }
             }
-            CredentialVaultNotice(state: state, credentials: credentials)
-            Button(state.t("ui.028")) { Task { await state.prepareCredentials(interactive: true) } }
-            Button(state.t("ui.065")) { clearAll = true }
-        }
-        .disabled(tasks.busy)
-        .task(id: state.runtimeRoot) { if !tasks.busy { await state.prepareCredentials() } }
-        .confirmationDialog(state.t("ui.068"), isPresented: Binding(get: { clearing != nil }, set: { if !$0 { clearing = nil } })) {
-            if let kind = clearing { Button(state.t("ui.074"), role: .destructive) { Task { await credentials.remove(kind) }; clearing = nil } }
-        }
-        .confirmationDialog(state.t("ui.063"), isPresented: $clearAll) {
-            Button(state.t("ui.064"), role: .destructive) { Task { await credentials.removeAll() } }
-        }
+            Button(state.t("ui.session.backups")) { state.runOperation("list_guest_ipv6_backups") }
+            ForEach(state.operationResult["guest_backups"]?.array.map(\.object) ?? [], id: \.selfName) { row in
+                Button(state.t("ui.session.restoreIPv6") + " · " + (row["name"]?.text ?? "")) {
+                    state.guestRestorePath = row["path"]?.text ?? ""
+                    state.operationSelection = NativeOperation(method: "restore_guest_ipv6")
+                }
+            }
+            HStack {
+                Button(state.t("ui.session.clear")) { state.clearSessionCredentials() }
+                Button(state.t("ui.session.revalidate")) { state.operationSelection = NativeOperation(method: "test_ssh") }
+            }
+        }.disabled(tasks.busy)
     }
     private func status(_ kind: CredentialKind) -> String {
-        if credentials.vaultError != nil { return state.t("ui.042") }
-        if credentials.rejected.contains(kind) { return state.t("ui.027") }
-        return credentials.saved.contains(kind) ? state.t("ui.296") : state.t("ui.215")
+        switch credentials.status(kind) {
+        case .notProvided: return state.t("ui.session.empty")
+        case .provided: return state.t("ui.session.provided")
+        case .verified: return state.t("ui.session.verified")
+        case .failed: return state.t("ui.session.failed")
+        }
     }
 }
 
@@ -374,7 +362,7 @@ private struct ConfigurationBackupView: View {
                 TacticalButton(title: state.t("ui.native.backupCreate"), symbol: "plus", disabledReason: tasks.busy ? state.t("ui.016") : nil) {
                     state.runOperation("backup_configuration", params: ["note": .string("manual"), "confirmed": .bool(true)])
                 }
-                TacticalButton(title: state.t("ui.371"), symbol: "arrow.clockwise", disabledReason: tasks.busy ? state.t("ui.016") : nil) {
+                TacticalButton(title: state.t("ui.262"), symbol: "arrow.clockwise", disabledReason: tasks.busy ? state.t("ui.016") : nil) {
                     state.runOperation("list_configuration_backups")
                 }
             }

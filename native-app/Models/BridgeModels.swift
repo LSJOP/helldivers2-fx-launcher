@@ -67,6 +67,7 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
         case "FX_INSTANCE_MISMATCH": return NativeStrings.text("ui.351", language: language)
         case "FX_ENTRY_MISMATCH": return NativeStrings.text("ui.341", language: language)
         case "SSH_CONNECTION_FAILED", "SSH_CONNECTION_REFUSED", "SSH_CONNECTION_TIMEOUT", "SSH_CONNECTION_UNREACHABLE", "SSH_PROTOCOL_ERROR", "SSH_GUEST_NOT_READY", "SSH_HOST_KEY_MISMATCH": return NativeStrings.text("ui.143", language: language)
+        case "CREDENTIAL_SCOPE_CHANGED", "CREDENTIAL_SCOPE_CHANGED_DURING_REQUEST": return NativeStrings.text("ui.session.targetChanged", language: language)
         case "AUTH_REQUIRED":
             if details["credential_kind"]?.text == "sudo_password" { return NativeStrings.text("ui.333", language: language) }
             if details["credential_kind"]?.text == "passphrase" { return NativeStrings.text("ui.335", language: language) }
@@ -77,7 +78,6 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
         case "GUEST_INSPECTION_FAILED": return NativeStrings.text("ui.146", language: language)
         case "SSH_AUTH_FAILED": return NativeStrings.text("ui.289", language: language)
         case "SUDO_AUTH_FAILED": return NativeStrings.text("ui.147", language: language)
-        case "CREDENTIAL_SCOPE_CHANGED": return NativeStrings.text("ui.354", language: language)
         case "SENSITIVE_CONFIGURATION", "SENSITIVE_CHANGE_BLOCKED": return NativeStrings.text("ui.231", language: language)
         case "COMPATIBILITY_CHECK_FAILED": return NativeStrings.text("ui.070", language: language)
         case "STEAM_START_FAILED": return NativeStrings.text("ui.322", language: language)

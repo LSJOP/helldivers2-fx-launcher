@@ -20,6 +20,8 @@ actor NativeCoreService {
         Operation(method: "inspect_network", scope: "environment", confirmation: false, external: false),
         Operation(method: "test_network", scope: "environment", confirmation: false, external: false),
         Operation(method: "test_ssh", scope: "environment", confirmation: true, external: true),
+        Operation(method: "list_guest_ipv6_backups", scope: "settings", confirmation: false, external: false),
+        Operation(method: "restore_guest_ipv6", scope: "settings", confirmation: true, external: true),
         Operation(method: "test_guest_sudo", scope: "settings", confirmation: true, external: true),
         Operation(method: "connect_fx", scope: "environment", confirmation: true, external: true),
         Operation(method: "inspect_guest_environment", scope: "environment", confirmation: true, external: true),
@@ -50,11 +52,11 @@ actor NativeCoreService {
 
     static let readMethods: Set<String> = ["handshake", "get_launcher_version", "get_system_info",
                                            "get_environment_status", "get_dependencies", "list_fx_versions",
-                                           "get_logs", "inspect_launch_target"]
+                                           "get_logs", "inspect_launch_target", "credential_target"]
 
     private static let allowedParams: Set<String> = [
         "fx_path", "confirmed", "runtime_root", "password", "passphrase", "sudo_password",
-        "credential_revision", "approved_changes", "configuration", "expected_revision",
+        "credential_guest_boot", "credential_host_identity", "credential_revision", "approved_changes", "configuration", "expected_revision",
         "channel", "match_result", "note", "values", "preview_token", "backup_path",
         "selected_paths"]
 
@@ -89,10 +91,13 @@ actor NativeCoreService {
                                     onEvent: (@Sendable ([String: JSONValue]) -> Void)?) throws -> CoreReply {
         let requestID = UUID().uuidString
         let secrets = ["password", "passphrase", "sudo_password"].compactMap { params[$0]?.text }
+        var eventSequence = 0
         func emit(_ level: String, _ message: String, _ extra: [String: JSONValue] = [:]) {
+            eventSequence += 1
             var row: [String: JSONValue] = ["at": .string(CoreClock.stamp()), "source": .string("native_core"),
                                             "level": .string(level), "message": .string(CoreRedaction.scrub(message, secrets: secrets))]
             for (key, value) in extra { row[key] = value }
+            row["sequence"] = .number(Double(eventSequence))
             onEvent?(row)
         }
         do {
@@ -105,6 +110,9 @@ actor NativeCoreService {
             if let operation = operations.first(where: { $0.method == method }), operation.confirmation,
                params["confirmed"]?.boolean != true {
                 throw CoreError("CONFIRMATION_REQUIRED")
+            }
+            if let expected = params["credential_host_identity"]?.text {
+                guard try credentialTarget(params, context: context)["identity"]?.text == expected else { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
             }
             let result = try dispatch(method, params: params, context: context, emit: emit)
             return CoreReply(result: result, observedAt: CoreClock.stamp(), requestID: requestID)
@@ -120,6 +128,7 @@ actor NativeCoreService {
     nonisolated static func dispatch(_ method: String, params: [String: JSONValue], context: CoreContext,
                                      emit: @escaping (String, String, [String: JSONValue]) -> Void) throws -> [String: JSONValue] {
         switch method {
+        case "credential_target": return try credentialTarget(params, context: context)
         case "handshake":
             return ["protocol_min": .number(1), "protocol_max": .number(1),
                     "capabilities": .array((Array(readMethods).sorted() + operations.map(\.method)).map { .string($0) }),
@@ -205,6 +214,30 @@ actor NativeCoreService {
             return try NetworkProfileService.toggleCheck()
         case "test_ssh":
             return try testSSH(params, context: context, emit: emit)
+        case "list_guest_ipv6_backups":
+            let directory = LaunchService.guestChangesDirectory
+            let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+            return ["guest_backups": .array(names.filter { $0.hasPrefix("ipv6-") && $0.hasSuffix(".json") }.sorted().suffix(30).map {
+                .object(["name": .string($0), "path": .string(directory.appendingPathComponent($0).path)])
+            })]
+        case "restore_guest_ipv6":
+            let request = try launchRequest(params, context: context, emit: emit, confirmed: true)
+            let fx = try LaunchService.selectedFX(request)
+            let transport = SSHTransport.make(request.configuration)
+            let (session, _, _) = try LaunchService.connect(request, fx: fx, transport: transport)
+            if let expected = params["credential_guest_boot"]?.text, expected != session.boot { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
+            guard let path = params["backup_path"]?.text else { throw CoreError("INVALID_ARGUMENT") }
+            var result = try LaunchService.restoreIPv4(transport, session: session, path: path, password: request.sudoPassword, context: context, approvedChanges: request.approvedChanges) {
+                _ = try GuestService.verify(transport, session: session, context: context) {
+                    try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
+                }
+            }
+            if result["password_verified"]?.boolean == true {
+                emit("INFO", "Guest sudo authenticated", ["kind": .string("credential_status"),
+                    "credential_kind": .string("sudo"), "status": .string("authenticated")])
+            }
+            result["guest_boot"] = .string(session.boot)
+            return result
         case "test_guest_sudo":
             return try testSudo(params, context: context, emit: emit)
         case "check_fx_state":
@@ -303,6 +336,26 @@ actor NativeCoreService {
                 "reason": .string("legacy_broad_profile_apply_disabled_use_scoped_performance_panel")]
     }
 
+    static func credentialTarget(_ params: [String: JSONValue], context: CoreContext) throws -> [String: JSONValue] {
+        let (configuration, revision) = try ConfigurationService.read()
+        guard let path = params["fx_path"]?.text, let identity = FXDiscoveryService.identity(of: path), identity.valid else { throw CoreError("FX_UNAVAILABLE") }
+        let fx = URL(fileURLWithPath: identity.path)
+        let digest = try CoreHash.sha256File(fx.appendingPathComponent("Contents/MacOS/steamac-vm"))
+        let rows = try LaunchService.processTable(context: context)
+        let executable = LaunchService.normalizedExecutable(fx)
+        let processes = rows.values.filter { LaunchService.normalizedCommand($0.command) == executable }
+            .sorted { $0.pid < $1.pid }.map { "\($0.pid):\($0.ppid):\($0.start)" }.joined(separator: "|")
+        let key = CoreHash.sha256(Data((identity.path + "|" + digest + "|" + revision + "|" + processes).utf8))
+        var value: [String: JSONValue] = ["identity": .string(key), "revision": .string(revision)]
+        let transport = SSHTransport.make(configuration)
+        if !processes.isEmpty { _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context) }
+        if transport.masterPID(context: context) != nil {
+            _ = try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
+            value["guest_boot"] = try GuestService.inspect(transport, context: context)["boot"]
+        }
+        return value
+    }
+
     static func launchRequest(_ params: [String: JSONValue], context: CoreContext,
                               emit: @escaping (String, String, [String: JSONValue]) -> Void,
                               confirmed: Bool) throws -> LaunchRequest {
@@ -323,11 +376,9 @@ actor NativeCoreService {
                         emit: @escaping (String, String, [String: JSONValue]) -> Void) throws -> [String: JSONValue] {
         let request = try launchRequest(params, context: context, emit: emit, confirmed: true)
         let fx = try LaunchService.selectedFX(request)
-        let base = SSHTransport.make(request.configuration)
-        let transport = SSHTransport(settings: .init(host: base.settings.host, port: base.settings.port,
-            username: base.settings.username, auth: base.settings.auth, identityFile: base.settings.identityFile,
-            cdpLocalPort: base.settings.cdpLocalPort, rememberPassword: false,
-            socketPath: "/tmp/hd2fx-test-\(getuid())-\(UUID().uuidString.prefix(8)).sock"))
+        let transport = SSHTransport.make(request.configuration)
+        // Explicit connection test reauthenticates only this process-owned connection.
+        transport.closeMaster()
         guard SSHTransport.localHost(transport.settings.host) else { throw CoreError("LOCAL_FX_REQUIRED") }
         var result: [String: JSONValue] = ["host": .string(transport.settings.host),
             "port": .number(Double(transport.settings.port)), "username": .string(transport.settings.username),
@@ -339,15 +390,15 @@ actor NativeCoreService {
             stage = name
             emit("INFO", name, result.merging(["stage": .string(name)]) { _, new in new })
         }
-        defer { transport.closeMaster() }
         do {
             let host = try LaunchService.fxState(request: request, fx: fx)
             result["fx_host_running"] = host["fx_host_running"] ?? .bool(false)
             progress("CheckingSSHPort")
+            _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
             // OpenSSH supplies bounded port/protocol errors; avoid a second divergent socket implementation.
             transport.setSecret(password: request.password, passphrase: request.passphrase)
             progress("AuthenticatingSSH")
-            try transport.connectOnce(context: context, forwarding: false)
+            try transport.connectOnce(context: context)
             result["port_reachable"] = .bool(true)
             result["protocol"] = .string("negotiated")
             result["authentication"] = .string("authenticated")
@@ -358,14 +409,15 @@ actor NativeCoreService {
             }
             progress("VerifyingGuestIdentity")
             let before = try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!,
-                transport: transport, context: context, requireCDP: false, allowPublisherNetwork: true)
+                transport: transport, context: context)
             let probe = try transport.run("id -un; cat /proc/sys/kernel/random/boot_id; grep '^ID=' /etc/os-release\n", timeout: 15, context: context)
             let lines = probe.stdout.split(whereSeparator: \.isNewline).map(String.init)
             guard probe.status == 0, lines.count == 3, lines[0] == transport.settings.username,
                   UUID(uuidString: lines[1]) != nil, ["ID=steamos", "ID=\"steamos\""].contains(lines[2]) else { throw CoreError("SSH_GUEST_NOT_READY") }
             let after = try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!,
-                transport: transport, context: context, requireCDP: false, allowPublisherNetwork: true)
+                transport: transport, context: context)
             guard before == after else { throw CoreError("FX_IDENTITY_UNVERIFIED") }
+            result["guest_boot"] = .string(lines[1])
             result["guest_identity"] = .string("verified")
             result["stage"] = .string("Complete")
             return result
@@ -391,27 +443,26 @@ actor NativeCoreService {
         let transport = SSHTransport.make(request.configuration)
         guard LaunchService.networkReady(context: context) else { throw CoreError("FX_NOT_RUNNING") }
         _ = try LaunchService.checkFXEntry(request: request, fx: fx, requireRunning: true)
+        _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
         let session = try GuestService.connect(transport, password: request.password, passphrase: request.passphrase,
                                                context: context) {
             try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!,
                                            transport: transport, context: context)
         }
-        let probe = try CoreProcess.run("/usr/bin/ssh", transport.commandArgs(), input: "LC_ALL=C sudo -n -v\n", timeout: 15, context: context)
-        if probe.status == 0 {
-            return ["sudo": .string("available_without_password_prompt"), "password_verified": .bool(false),
-                    "configuration_changed": .bool(false), "guest_boot": .string(session.boot)]
+        if let expected = params["credential_guest_boot"]?.text, expected != session.boot { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
+        var result = try GuestPrivilegedExecutor.run(transport, operation: .verify, password: request.sudoPassword,
+            context: context) {
+                _ = try GuestService.verify(transport, session: session, context: context) {
+                    try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
+                }
+            }
+        if result["password_verified"]?.boolean == true {
+            emit("INFO", "Guest sudo authenticated", ["kind": .string("credential_status"),
+                "credential_kind": .string("sudo"), "status": .string("authenticated")])
         }
-        let probeFailure = LaunchService.sudoFailure(probe)
-        guard probeFailure == "AUTH_REQUIRED" else { throw CoreError(probeFailure) }
-        guard let password = request.sudoPassword, !password.isEmpty, !password.contains("\n") else {
-            throw CoreError("AUTH_REQUIRED", ["credential_kind": .string("sudo_password")])
-        }
-        let verify = try CoreProcess.run("/usr/bin/ssh", transport.sudoVerifyArgs(), input: password + "\n", timeout: 20, context: context)
-        guard verify.status == 0 else { throw CoreError(LaunchService.sudoFailure(verify)) }
-        emit("INFO", "Guest sudo authenticated", ["kind": .string("credential_status"),
-                                                  "credential_kind": .string("sudo"), "status": .string("authenticated")])
-        return ["sudo": .string("authenticated"), "password_verified": .bool(true),
-                "configuration_changed": .bool(false), "guest_boot": .string(session.boot)]
+        result["guest_boot"] = .string(session.boot)
+        result["configuration_changed"] = .bool(false)
+        return result
     }
 
     static func runGUI(_ method: String, params: [String: JSONValue], context: CoreContext,
@@ -444,7 +495,11 @@ actor NativeCoreService {
             _ = try LaunchService.checkFXEntry(request: request, fx: fx, requireRunning: true)
             if method == "check_fx_state" { return host }
             stageEmit("WaitingForGuest", "running")
+            if let expected = params["credential_host_identity"]?.text {
+                guard try Self.credentialTarget(params, context: context)["identity"]?.text == expected else { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
+            }
             let (session, state, plan) = try LaunchService.connect(request, fx: fx, transport: transport)
+            if let expected = params["credential_guest_boot"]?.text, expected != session.boot { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
             if transport.passwordWasSent {
                 emit("INFO", "Guest identity verified", ["kind": .string("credential_status"),
                     "credential_kind": .string("ssh"), "status": .string("authenticated")])
@@ -570,7 +625,15 @@ printf '{"guest_os":"%s","guest_arch":"%s","components":{"steam_files":%s,"game_
         if let apps = state["apps"]?.text, !apps.isEmpty, !apps.split(separator: " ").allSatisfy({ $0 == "553850" }) {
             throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("other_steam_game_running")])
         }
-        _ = try LaunchService.ensureIPv4(transport, session: session, sudoPassword: request.sudoPassword, context: context)
+        _ = try LaunchService.ensureIPv4(transport, session: session, sudoPassword: request.sudoPassword, context: context,
+            approvedChanges: request.approvedChanges, onPasswordVerified: {
+                emit("INFO", "Guest sudo authenticated", ["kind": .string("credential_status"),
+                    "credential_kind": .string("sudo"), "status": .string("authenticated")])
+            }) { checkContext in
+                _ = try GuestService.verify(transport, session: session, context: checkContext) {
+                    try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: checkContext)
+                }
+            }
         advance("CheckingCompatibility", "done")
         advance("StartingSteam", "running")
         let steamResult = try GuestService.steam(transport, session: session, context: context)
@@ -582,7 +645,7 @@ printf '{"guest_os":"%s","guest_arch":"%s","components":{"steam_files":%s,"game_
             try context.check()
             Thread.sleep(forTimeInterval: 1)
             let current = try GuestService.state(transport, context: context)
-            if current["steam_logged_on"]?.boolean == true { loggedOn = true; break }
+            if GuestService.steamReady(current) { loggedOn = true; break }
             if let count = current["game_count"]?.integer, count > 0 {
                 var value = connected
                 value["game_process_detected"] = .bool(true)

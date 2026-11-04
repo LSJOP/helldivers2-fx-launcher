@@ -9,6 +9,6 @@
 "updates.finished" = "Cycle terminé ; installation et relancement non confirmés.";
 "updates.failed" = "Échec de la mise à jour";
 "updates.scope" = "Seul le lanceur est mis à jour. Jeu, Steam, FX Runtime, invité et EAC sont exclus.";
-"updates.languageRestart" = "La langue et l’interpréteur sont enregistrés pour cette application ; redémarrez-la pour appliquer la langue des menus. L’apparence ne vaut que pour cette session. Le choix de FX et les ressources de lancement sont conservés séparément. L’interface couvre les dix langues.";
+"updates.languageRestart" = "La langue est enregistrée pour cette app uniquement ; redémarrez pour appliquer celle des menus. L’apparence vaut pour cette session. L’interface prend en charge dix langues.";
 "updates.automaticOff" = "Vérification automatique désactivée. Sparkle gérera le consentement une fois le service signé prêt.";
 "updates.automaticOn" = "Vérification automatique activée (Sparkle).";

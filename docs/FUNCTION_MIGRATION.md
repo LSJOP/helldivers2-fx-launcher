@@ -30,3 +30,27 @@ Status vocabulary: **COMPLETE** (native implementation + automated checks), **PA
 | Original script directory | `CoreSnapshot` packaging + runtime root | no runtime root required | — | none | bundle resources only | real preflight | REMOVED (submodule retained as history) |
 
 Known constraints: no live Guest authentication, FX start, Steam start, game launch or multiplayer verification was performed (user authorization required). FX preference writes require stopping FX. Distribution needs Developer ID signing and notarization.
+
+## Unified candidate audit - 2026-11-04
+
+This section supersedes older credential/live-acceptance wording above. Source-level implementation and isolated tests are distinct from live configuration or gameplay acceptance.
+
+| Capability | Actual Native implementation | Python/reference comparison | Current boundary |
+| --- | --- | --- | --- |
+| FX discovery / selection / version | FXDiscoveryService + FXSelectionManager, bounded scans and canonical identities | dependency_discovery / fx_versions | Implemented; host checks and fixtures, not Guest readiness |
+| CPU / memory / Vulkan / Metal HUD | PerformanceConfigurationService: 1.9.4/1.9.8, ranges/driver evidence, stopped-FX guard, scoped preview/backup/apply/restore | performance_configuration.py | PARTIAL product flow; no real FX preference write this task; no unsupported hardware tuning claim |
+| FX backup / restore | Revision/token receipts and unrelated-key preservation | CFPreferences scope | Implemented; isolated store tests; running FX blocks writes |
+| Credentials | SessionCredentialManager, independent SSH/sudo memory states and target scope | Replaces historical keychain_store/preferences persistence | Memory-only; no old credential read/delete; real candidate authentication NOT TESTED |
+| Independent sudo | GuestPrivilegedExecutor: stdin-only per-call auth, no cache dependency, closed operations | Original forkpty/SSH helpers; fixes migrated two-call cache assumption | Synthetic multi-call checks; real new executor acceptance NOT TESTED |
+| Guest identity | Host supervisor/network/listener/SSH peer plus Guest boot/marker | launch_safety / guest_safety | Preserved and extended to pre-send credential binding |
+| Guest IPv6 | Four validated runtime proc switches, exact preview/approval, receipt, verification, recovery and manual restore | Original ensure_ipv4 behavior | PARTIAL; no real writes authorized/performed; no persistent sysctl-file edits |
+| Guest proxy | Read-only environment/drop-in inspection; game launch option is checked, not auto-written | Legacy per-game proxy vs Steam drop-in distinction | PARTIAL; automatic proxy repair/rollback not implemented |
+| Compatibility files | Pinned FEX, NTDLL, Wine DLLs and Proton tool checks | Verified historical launch constants | Read-only validation, not install/repair; no anti-cheat changes |
+| Steam installation/login | GuestScripts inspect service/process and bounded login log evidence | Original state() checks process before Logged On | PARTIAL; readiness now requires service + process + login evidence; log alone is insufficient |
+| Game install / launch options | Steam library hashes/launch-option read-only checks; missing prerequisites fail closed | Original BASE_LAUNCH/PROXY_LAUNCH | PARTIAL; no one-click install or SetAppLaunchOptions equivalent implemented |
+| DX11 | Not injected by current Native launcher | Historical diagnostics mention --use-d3d11; current original BASE_LAUNCH/PROXY_LAUNCH has no DX11 suffix | No new DX11 option added; do not infer renderer compatibility |
+| Game launch | Guarded Steam service start then steam -applaunch 553850, bounded process wait | Original Steam startup and launch request | Implemented path, live menu/playability/EAC/multiplayer NOT TESTED |
+| Update system | Sparkle + signed-feed/service trust gates retained; Security APIs validate code | Original updater distinct from FX/Guest | No signing credentials modified; no public release configured by this task |
+| Theme, icon, ten languages | Shared SwiftUI/AppKit UI; UI bar removal integrated; new session credential panel | Existing HELLDIVERS assets retained | Candidate build gates; refreshed credential screenshots pending if capture unavailable |
+
+Overall automated “download FX -> install Guest/game -> configure everything -> play” workflow is PARTIAL. Native buttons and read-only snapshots do not establish that missing install/configuration backends exist. No runtime Python Bridge or original-script dependency is restored.

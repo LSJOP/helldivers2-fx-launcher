@@ -104,25 +104,6 @@ printf '{"ok":true,"started":true,"service":"started"}\n'
 """#
     }
 
-    /// Sets IPv6 disable switches only after the caller re-verified the Guest boot id.
-    static func ipv6(boot: String) -> String {
-        #"""
-set -u
-boot_now=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || printf 'unknown')
-[ "$boot_now" = "\#(boot)" ] || { printf '{"ok":false,"reason":"guest_identity_changed"}\n'; exit 0; }
-for k in all default eth0 lo; do
-  f="/proc/sys/net/ipv6/conf/$k/disable_ipv6"
-  [ -f "$f" ] || { printf '{"ok":false,"reason":"ipv6_path_missing"}\n'; exit 0; }
-  printf '1' > "$f" 2>/dev/null || { printf '{"ok":false,"reason":"ipv6_write_failed"}\n'; exit 0; }
-done
-for k in all default eth0 lo; do
-  v=$(cat "/proc/sys/net/ipv6/conf/$k/disable_ipv6" 2>/dev/null || printf '?')
-  [ "$v" = "1" ] || { printf '{"ok":false,"reason":"ipv6_verify_failed"}\n'; exit 0; }
-done
-printf '{"ok":true,"ipv6":"1"}\n'
-"""#
-    }
-
     static func launchGame(boot: String) -> String {
         #"""
 set -u
@@ -135,11 +116,7 @@ printf '{"ok":true,"started":true}\n'
 """#
     }
 
-    static func sudoVerify(marker: String) -> String {
-        #"""
-sudo -S -p '\#(marker)' -v >/dev/null 2>&1 && printf 'OK\n' || printf 'FAILED\n'
-"""#
-    }
+
 }
 
 struct GuestSession {
@@ -149,6 +126,9 @@ struct GuestSession {
 }
 
 enum GuestService {
+    static func steamReady(_ state: [String: JSONValue]) -> Bool {
+        state["steam_logged_on"]?.boolean == true && (state["steam_count"]?.integer ?? 0) > 0 && state["service"]?.text == "running"
+    }
     static func parse(_ text: String, expected: String) throws -> [String: JSONValue] {
         guard let data = text.data(using: .utf8),
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -206,19 +186,6 @@ enum GuestService {
             throw CoreError("STEAM_START_FAILED", ["reason": .string(value["reason"]?.text ?? "unknown")])
         }
         return value
-    }
-
-    static func ensureIPv4(_ transport: SSHTransport, session: GuestSession, context: CoreContext?) throws -> Bool {
-        let plan = try inspect(transport, context: context)
-        let ipv6 = plan["ipv6"]?.object ?? [:]
-        let keys = ["all", "default", "eth0", "lo"]
-        if keys.allSatisfy({ ipv6[$0]?.text == "1" }) { return false }
-        let result = try transport.run(GuestScripts.ipv6(boot: session.boot), timeout: 30, context: context)
-        guard result.status == 0, let value = try? parse(result.stdout, expected: "COMPATIBILITY_CHECK_FAILED"),
-              value["ok"]?.boolean == true else {
-            throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("ipv6_write_failed")])
-        }
-        return true
     }
 
     static func launchGame(_ transport: SSHTransport, session: GuestSession, context: CoreContext?) throws -> [String: JSONValue] {

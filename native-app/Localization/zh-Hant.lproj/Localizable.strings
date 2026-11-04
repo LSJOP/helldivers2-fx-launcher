@@ -9,6 +9,6 @@
 "updates.finished" = "更新週期結束，安裝和重新啟動尚未確認。";
 "updates.failed" = "更新失敗";
 "updates.scope" = "僅更新啟動器，不更新遊戲、Steam、FX Runtime、Guest 或 EAC。";
-"updates.languageRestart" = "語言和直譯器僅為此 App 儲存；選單語言需重新啟動生效。外觀僅在目前工作階段有效。FX 選擇和啟動資源目錄分別儲存。原生介面涵蓋全部十種語言。";
+"updates.languageRestart" = "語言僅為此 App 儲存；選單語言需重新啟動生效。外觀僅在目前工作階段有效。原生介面涵蓋全部十種語言。";
 "updates.automaticOff" = "自動檢查已關閉。簽章服務就緒後，由 Sparkle 管理授權。";
 "updates.automaticOn" = "自動檢查已開啟（Sparkle 偏好）。";

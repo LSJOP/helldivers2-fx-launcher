@@ -50,8 +50,13 @@ struct NativeCoreIntegrationChecks {
 
         let scan = run("list_fx_versions")
         ok(scan.result["candidates"] != nil && scan.result["scan_incomplete"]?.boolean != nil, "fx scan contract")
-        let realFX = (scan.result["candidates"]?.array ?? []).contains { $0.object["version"]?.text == "1.9.8" }
-        ok(realFX, "real FX 1.9.8 discovered")
+        let installedPath = "/Applications/FX Steam Launcher.app"
+        let installedInfo = NSDictionary(contentsOfFile: installedPath + "/Contents/Info.plist")
+        let installedVersion = installedInfo?["CFBundleShortVersionString"] as? String
+        let realFX = (scan.result["candidates"]?.array ?? []).contains {
+            $0.object["version"]?.text == installedVersion && installedVersion != nil
+        }
+        ok(realFX, "real FX version agrees with installed Info.plist")
 
         let catalog = run("get_legacy_catalog")
         ok(catalog.result["runtime"]?.text == "swift_native_core", "catalog native runtime")
@@ -74,7 +79,7 @@ struct NativeCoreIntegrationChecks {
         let fxState = run("check_fx_state", ["fx_path": .string("/Applications/FX Steam Launcher.app")])
         if let running = fxState.result["fx_host_running"]?.boolean {
             ok(true, "check_fx_state returns running flag")
-            ok(fxState.result["fx_version"]?.text == "1.9.8", "fx state version")
+            ok(installedVersion != nil && fxState.result["fx_version"]?.text == installedVersion, "fx state version agrees with installed Info.plist")
             _ = running
         } else {
             ok(fxState.error == "FX_INSTANCE_MISMATCH", "check_fx_state honest foreign-FX detection")

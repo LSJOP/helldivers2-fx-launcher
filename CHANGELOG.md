@@ -8,6 +8,14 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+### Memory-only candidate (not released)
+
+- Replace credential-vault access and remember/delete/authorize controls with independent SSH/sudo session credentials and explicit provided/verified/failed states. Existing saved items are never read, migrated or deleted.
+- Consolidate the UI simplification branch while retaining the 1188d59 sudo quoting repair. Each approved privileged SSH call now authenticates independently without cross-session timestamp assumptions, with password-free argv/env and detached command stdin.
+- Bind credentials to canonical FX/executable/config/process evidence and verified Guest boot; clear on identity change/loss or exit.
+- Require exact-change approval and backup/recovery receipts for Guest IPv6 changes; manual restore re-verifies boot, identity and current values. Historical Steam login alone no longer establishes Steam readiness.
+- Candidate only: live authentication/configuration/game acceptance remains unverified; no Latest update or main merge.
+
 - Fix remote sudo empty-prompt shell quoting and distinguish missing credentials, rejected authentication, policy denial, transport and command failures. Live passworded sudo acceptance and a replacement App release remain pending.
 - Remove the shared FX status bar from all six pages without a replacement or placeholder. Preserve the sidebar, page styling, FX detection/management and launch services; content fills the available top area.
 
@@ -80,7 +88,7 @@ No official release has been published yet. The current Native App version `0.1.
 - Searchable, filtered, bounded and redacted logs, plus diagnostic report export.
 - Read-only hardware detection (chip/CPU/GPU/memory/macOS) and current FX preference baseline comparison in Game Performance.
 - GUI-driven FX/SSH actions: connect, read-only Guest inspection, original-entry FX/Steam start and the existing game-launch panel.
-- Optional SSH/sudo credential remembering in a new App-owned Keychain namespace (session memory by default; old script Keychain items are untouched).
+- Historical preview implemented optional credential remembering; superseded by the memory-only candidate above. No current credential-store access remains.
 - Manual anonymous Native-release checks and a guarded signed-manifest download backend; official Sparkle remains the only installer. Appcast history is signature-verified before release preparation. Production automatic update installation remains unavailable without trusted distribution setup.
 - Scoped, preview-confirmed FX 1.9.4 preference editing, verified backup/restore and external-change protection; stopped pinned FX required. Inferred recommendations remain read-only.
 - Real English and Simplified Chinese screenshot sets, provenance hashes and documentation checks; the release-check Actions code is preserved as an inactive template under docs/ci.

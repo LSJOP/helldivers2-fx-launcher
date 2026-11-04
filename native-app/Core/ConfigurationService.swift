@@ -86,7 +86,7 @@ enum ConfigurationService {
         let (configuration, revision) = try read()
         return ["configuration": .object(configuration), "revision": .string(revision),
                 "target": .string(settingsURL.path),
-                "credential_policy": .string("session_memory_only_keychain_ignored")]
+                "credential_policy": .string("session_memory_only")]
     }
 
     static func save(patch rawPatch: JSONValue, expectedRevision: String) throws -> [String: JSONValue] {

@@ -4,6 +4,16 @@ import Darwin
 /// Controlled OpenSSH transport. Secrets reach ssh only through the allocated PTY,
 /// never argv, environment, files or logs.
 final class SSHTransport {
+    // Multiplexed authorization belongs to this App process, never another copy/restart.
+    private static let namespace = "\(getpid())-" + String(UUID().uuidString.prefix(8))
+    private static let ownershipLock = NSLock()
+    private static var owned: Set<String> = []
+    static func closeOwnedMasters() {
+        ownershipLock.lock(); let paths = owned; owned = []; ownershipLock.unlock()
+        for path in paths {
+            _ = try? CoreProcess.run("/usr/bin/ssh", ["-S", path, "-O", "exit", "127.0.0.1"], timeout: 3)
+        }
+    }
     struct Settings: Sendable, Equatable {
         var host: String
         var port: Int
@@ -11,7 +21,6 @@ final class SSHTransport {
         var auth: String
         var identityFile: String
         var cdpLocalPort: Int
-        var rememberPassword: Bool
         var socketPath: String
     }
 
@@ -38,8 +47,7 @@ final class SSHTransport {
                                               auth: ssh["auth"]?.text ?? "password",
                                               identityFile: ssh["identity_file"]?.text ?? "",
                                               cdpLocalPort: cdp,
-                                              rememberPassword: ssh["remember_password"]?.boolean ?? false,
-                                              socketPath: "/tmp/hd2fx-\(getuid())-\(suffix).sock"))
+                                              socketPath: "/tmp/hd2fx-\(getuid())-\(namespace)-\(suffix).sock"))
     }
 
     static func localHost(_ host: String) -> Bool {
@@ -203,6 +211,7 @@ final class SSHTransport {
             throw CoreError(code)
         }
         guard masterPID(context: context) != nil else { throw CoreError("SSH_PROTOCOL_ERROR") }
+        Self.ownershipLock.lock(); Self.owned.insert(settings.socketPath); Self.ownershipLock.unlock()
     }
 
     func setSecret(password: String?, passphrase: String?) {
@@ -221,6 +230,7 @@ final class SSHTransport {
     }
 
     func closeMaster() {
+        Self.ownershipLock.lock(); Self.owned.remove(settings.socketPath); Self.ownershipLock.unlock()
         _ = try? CoreProcess.run("/usr/bin/ssh", ["-S", settings.socketPath, "-O", "exit", settings.host], timeout: 8)
     }
 }

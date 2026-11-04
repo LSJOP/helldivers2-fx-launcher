@@ -3,6 +3,7 @@ import Darwin
 
 @main struct SSHChecks {
     static func main() throws {
+        if CommandLine.arguments.contains("--socket-probe") { print(SSHTransport.make([:]).settings.socketPath); return }
         if CommandLine.arguments.contains("--tty-child") {
             let fd = open("/dev/tty", O_RDWR | O_NOCTTY)
             guard fd >= 0 else { exit(41) }
@@ -31,6 +32,9 @@ import Darwin
         check(command.1.filter { $0 == "/usr/bin/ssh" }.count == 1, "exactly one OpenSSH executable")
         check(command.1.contains("StrictHostKeyChecking=accept-new"), "host identity checking retained")
         check(transport.settings.port == 2222 && transport.settings.username == "steamos", "effective configured endpoint")
+        check(SSHTransport.make([:]).settings.socketPath == transport.settings.socketPath, "same process reuses its own transport namespace")
+        let childSocket = try CoreProcess.run(URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL.path, ["--socket-probe"])
+        check(childSocket.status == 0 && childSocket.stdout.trimmingCharacters(in: .whitespacesAndNewlines) != transport.settings.socketPath, "new process cannot restore old SSH master authorization")
         let cases = [("Connection refused", "SSH_CONNECTION_REFUSED"),
                      ("Operation timed out", "SSH_CONNECTION_TIMEOUT"),
                      ("Permission denied", "SSH_AUTH_FAILED"),

@@ -354,7 +354,7 @@ import ApplicationServices
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             try await waitForTask(state)
-            guard state.hasLoaded, state.error == nil,
+            guard state.hasLoaded, state.error == nil, state.credentials.isEmpty,
                   let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }),
                   let metadataURL = Bundle.main.url(forResource: "BuildMetadata", withExtension: "json"),
                   let metadata = try JSONSerialization.jsonObject(with: Data(contentsOf: metadataURL)) as? [String: Any],
