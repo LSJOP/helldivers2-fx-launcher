@@ -8,6 +8,11 @@ import ApplicationServices
     private static var started = false
     static func runIfRequested(state: AppState) async {
         let args = ProcessInfo.processInfo.arguments
+        if !started, let i = args.firstIndex(of: "--takeover-smoke"), args.count > i + 1 {
+            started = true
+            await takeoverReview(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true))
+            return
+        }
         if !started, let i = args.firstIndex(of: "--readme-screenshots"), args.count > i + 2 {
             started = true
             await readmeScreenshots(state, directory: URL(fileURLWithPath: args[i + 1], isDirectory: true), language: args[i + 2])
@@ -138,12 +143,10 @@ import ApplicationServices
             window.setFrame(original, display: true)
             // Exercise a genuine client failure and successful recovery; no Core mutation.
             state.selection = .dashboard
-            let python = state.pythonURL
-            state.pythonURL = directory.appendingPathComponent("missing-python")
+            state.runOperation("preflight_launch"); try await waitForTask(state)
+            evidence["error_propagation"] = state.operationError?.code == "FX_UNAVAILABLE" ? "PASS" : "FAIL"
+            _ = try await capture(window, name: "error-native.png", directory: directory, external: externalCapture)
             state.refresh(); try await waitForTask(state)
-            evidence["error_propagation"] = state.error?.code == "PYTHON_UNAVAILABLE" && state.stale ? "PASS" : "FAIL"
-            _ = try await capture(window, name: "error-python.png", directory: directory, external: externalCapture)
-            state.pythonURL = python; state.refresh(); try await waitForTask(state)
             evidence["error_recovery"] = state.error == nil && !state.stale ? "PASS" : "FAIL"
             evidence["native_menu_actions"] = menuActions
             evidence["captures"] = captures
@@ -162,7 +165,7 @@ import ApplicationServices
     }
     // One focused check after the user's menu-label feedback; no five-page sweep.
     private static func phase2Live(_ state: AppState, directory: URL, root: String) async {
-        var result: [String: Any] = ["entry":"Native AppState -> supervised Bridge -> pinned legacy Core", "kind":"explicit_live_launch", "main_menu":"unverified", "single_player":"unverified", "multiplayer":"not_requested"]
+        var result: [String: Any] = ["entry":"Native AppState -> Swift Native Core", "kind":"explicit_live_launch", "main_menu":"unverified", "single_player":"unverified", "multiplayer":"not_requested"]
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             try await waitForTask(state)
@@ -281,7 +284,7 @@ import ApplicationServices
                 }
                 guard try await capture(window, name: name + ".png", directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
                 files.append(name + ".png")
-                if page == .performance || page == .settings {
+                if page == .performance || page == .settings || page == .environment {
                     func scrollViews(_ view: NSView) -> [NSScrollView] {
                         (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews)
                     }
@@ -289,11 +292,11 @@ import ApplicationServices
                        let scroll = scrollViews(root).filter({ $0.bounds.width > 600 }).max(by: { $0.bounds.width < $1.bounds.width }),
                        let document = scroll.documentView {
                         let maximum = max(0, document.bounds.height - scroll.contentView.bounds.height)
-                        let fraction: CGFloat = page == .performance ? 1 : 0.7
+                        let fraction: CGFloat = page == .performance ? 1 : page == .environment ? 0.35 : 0.7
                         scroll.contentView.scroll(to: NSPoint(x: 0, y: maximum * (document.isFlipped ? fraction : 1 - fraction)))
                         scroll.reflectScrolledClipView(scroll.contentView)
                         try await Task.sleep(nanoseconds: 500_000_000)
-                        let detail = page == .performance ? "performance-actions.png" : "settings-updates.png"
+                        let detail = page == .performance ? "performance-actions.png" : page == .environment ? "environment-network.png" : "settings-updates.png"
                         guard try await capture(window, name: detail, directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
                         files.append(detail)
                     }
@@ -345,6 +348,63 @@ import ApplicationServices
         if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted,.sortedKeys]) { try? data.write(to: directory.appendingPathComponent("queue-review.json")) }
         NSApp.terminate(nil)
     }
+    /// Pure Native regression; the historical UX harness assumes an external Python runtime.
+    private static func takeoverReview(_ state: AppState, directory: URL) async {
+        var result: [String: Any] = [:]
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try await waitForTask(state)
+            guard state.hasLoaded, state.error == nil, state.credentials.isEmpty,
+                  let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }),
+                  let metadataURL = Bundle.main.url(forResource: "BuildMetadata", withExtension: "json"),
+                  let metadata = try JSONSerialization.jsonObject(with: Data(contentsOf: metadataURL)) as? [String: Any],
+                  (metadata["commit"] as? String)?.count == 40,
+                  metadata["build"] as? String == Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String else {
+                throw ErrorState("BUILD_METADATA_INVALID")
+            }
+            var renders = 0
+            var resizeRenders = 0
+            for (language, _) in NativeLocalization.languages {
+                state.languageCode = language
+                for key in ["ui.build.about", "ui.build.copy", "ui.ssh.test", "ui.ssh.scope"] {
+                    guard !state.t(key).contains("⟦") else { throw ErrorState("LOCALE_MISSING") }
+                }
+                for page in Page.allCases {
+                    state.selection = page
+                    window.setContentSize(NSSize(width: 1060, height: 850))
+                    try await Task.sleep(nanoseconds: 100_000_000)
+                    window.contentView?.layoutSubtreeIfNeeded()
+                    renders += 1
+                }
+            }
+            for language in ["zh-CN", "en"] {
+                state.languageCode = language
+                for width in [850.0, 1180.0] {
+                    window.setContentSize(NSSize(width: width, height: 600))
+                    for page in Page.allCases {
+                        state.selection = page
+                        try await Task.sleep(nanoseconds: 100_000_000)
+                        window.contentView?.layoutSubtreeIfNeeded()
+                        guard let content = window.contentView, content.bounds.width >= 850,
+                              content.bounds.height >= 560 else { throw ErrorState("WINDOW_UNAVAILABLE") }
+                        resizeRenders += 1
+                    }
+                    state.selection = .dashboard
+                    let name = language == "en" ? (width == 850 ? "en-narrow.png" : "en-wide.png") : (width == 850 ? "zh-narrow.png" : "zh-wide.png")
+                    guard try await capture(window, name: name, directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
+                }
+            }
+            result = ["result": "PASS", "page_language_renders": renders, "languages": 10,
+                      "resize_page_renders": resizeRenders, "widths": [850, 1180],
+                      "build_metadata": metadata, "live_guest_actions": "NONE", "credential_access": "DISABLED",
+                      "interactive_clicks_and_translation_naturalness": "NOT_TESTED"]
+        } catch { result = ["result": "FAIL", "code": (error as? ErrorState)?.code ?? "TAKEOVER_UI_FAILED"] }
+        if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]) {
+            try? data.write(to: directory.appendingPathComponent("takeover-review.json"))
+        }
+        NSApp.terminate(nil)
+    }
+
     private static func uxReview(_ state: AppState, directory: URL) async {
         var result: [String: Any] = [:]
         do {

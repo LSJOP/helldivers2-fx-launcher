@@ -12,6 +12,13 @@ struct DashboardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: TacticalSpacing.panel) {
             hero
+            TacticalAdaptiveLayout(minimumWidth: 120, maximumColumns: 5) {
+                TacticalMetric(title: "FX", value: observed("fx_host_running"), symbol: "shippingbox")
+                TacticalMetric(title: state.t("ui.144"), value: observed("ssh_connected"), symbol: "link")
+                TacticalMetric(title: "Steam", value: observed("steam_running"), symbol: "play.circle")
+                TacticalMetric(title: "EAC", value: unverified, symbol: "shield.lefthalf.filled")
+                TacticalMetric(title: state.t("ui.191"), value: unverified, symbol: "person.2")
+            }
             GUIActionFeedback(state: state, methods: [GUIAction.game.rawValue])
             if state.launchSession.current != .idle { LaunchProgressView(state: state, tasks: tasks) }
             if let error = state.error {
@@ -20,13 +27,6 @@ struct DashboardView: View {
             }
             if state.stale {
                 TacticalWarningBanner(text: state.t("ui.309"))
-            }
-            TacticalAdaptiveLayout(minimumWidth: 120, maximumColumns: 5) {
-                TacticalMetric(title: "FX", value: observed("fx_host_running"), symbol: "shippingbox")
-                TacticalMetric(title: state.t("ui.144"), value: observed("ssh_connected"), symbol: "link")
-                TacticalMetric(title: "Steam", value: observed("steam_running"), symbol: "play.circle")
-                TacticalMetric(title: "EAC", value: unverified, symbol: "shield.lefthalf.filled")
-                TacticalMetric(title: state.t("ui.191"), value: unverified, symbol: "person.2")
             }
             TacticalStatusLayout {
                 runtimeCard
@@ -68,9 +68,9 @@ struct DashboardView: View {
         .overlay(alignment: .top) { Rectangle().fill(c.yellow).frame(height: 3) }
     }
     private var launchButton: some View {
-        TacticalButton(title: state.t("ui.176"), symbol: "play.fill", primary: true, loading: tasks.busy) { state.perform(.game) }
+        TacticalButton(title: state.t("ui.176"), symbol: "play.fill", primary: true, loading: tasks.busy && !state.networkDiagnosticRunning) { state.perform(.game) }
             .accessibilityIdentifier("dashboard.launch")
-            .disabled(tasks.busy)
+            .disabled(tasks.busy && !state.networkDiagnosticRunning)
     }
     private var inspectButton: some View {
         TacticalButton(title: tasks.busy ? state.t("ui.055") : state.t("ui.049"),
@@ -79,15 +79,34 @@ struct DashboardView: View {
     }
     private var runtimeCard: some View {
         TacticalPanel(number: "02", title: state.t("ui.118"), symbol: "shippingbox") {
-            TacticalInfoRow(title: state.t("ui.100"), value: state.fxVersion)
-            TacticalInfoRow(title: state.t("ui.285"), value: state.fxStatus)
-            Text(state.t("ui.018"))
+            TacticalInfoRow(title: state.t("ui.fx.installState"),
+                            value: state.fxSelection.selected == nil ? state.t("ui.fx.statusNotDetected") : state.t("ui.fx.statusDetected"))
+            TacticalInfoRow(title: state.t("ui.fx.runState"), value: runStateText)
+            TacticalInfoRow(title: state.t("ui.fx.resourceCheck"), value: resourceCheckText)
+            Text(state.t("ui.fx.actionHint"))
                 .font(TacticalTypography.caption).foregroundStyle(c.muted)
             if state.results["list_fx_versions"]?["scan_incomplete"]?.boolean == true {
                 Label(state.t("ui.034"), systemImage: "exclamationmark.triangle")
                     .font(TacticalTypography.caption).foregroundStyle(c.warning)
             }
         }
+    }
+    private var runStateText: String {
+        let recent = state.guiRecords.values.filter { ["start_fx", "launch_game", "check_fx_state", "connect_fx"].contains($0.method) }
+            .max { $0.startedAt < $1.startedAt }
+        if let recent, recent.status == .running { return state.t("ui.fx.statusStarting") }
+        if let recent, recent.status == .failed { return state.t("ui.fx.statusFailed") }
+        switch state.latestGUIEvidence["fx_host_running"]?.boolean {
+        case .some(true): return state.t("ui.fx.statusRunning")
+        case .some(false): return state.t("ui.fx.statusNotRunning")
+        case .none: return state.t("ui.fx.statusUnknown")
+        }
+    }
+    private var resourceCheckText: String {
+        if state.targetInspection["archive_files_match"]?.boolean == true { return state.t("ui.190") }
+        if let error = state.targetInspectionError { return error.code }
+        if !state.targetInspection.isEmpty { return state.t("ui.fx.statusFailed") }
+        return state.t("ui.208")
     }
     private var versions: String {
         guard state.hasLoaded else { return state.t("ui.217") }
@@ -101,7 +120,7 @@ struct DashboardView: View {
         TacticalPanel(number: "03", title: state.t("ui.104"), symbol: "desktopcomputer") {
             TacticalInfoRow(title: "macOS", value: state.value("get_system_info", "os_version"))
             TacticalInfoRow(title: state.t("ui.026"), value: architecture)
-            TacticalInfoRow(title: "Python", value: state.value("get_system_info", "python"))
+            TacticalInfoRow(title: state.t("ui.native.runtime"), value: state.value("get_system_info", "native_runtime"))
             TacticalInfoRow(title: state.t("ui.093"), value: dependencySummary)
         }
     }

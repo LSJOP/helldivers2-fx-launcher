@@ -29,7 +29,7 @@ def validate(root):
     errors, coverage = [], {}
     app = root / 'native-app'
     try:
-        catalogs = read_catalog(app / 'bridge/native-locales.json')
+        catalogs = read_catalog(app / 'Resources/native-locales.json')
     except (ValueError, OSError) as e:
         return [str(e)], coverage
     if set(catalogs) != LANGUAGES:
@@ -89,7 +89,7 @@ def documentation_review(root, base=None):
         changed.update(subprocess.check_output(command, cwd=root, text=True).splitlines())
     readmes = changed & {'README.md', 'README.zh-CN.md'}
     errors = ['README edits must update both language versions'] if len(readmes) == 1 else []
-    relevant = sorted(p for p in changed if p.startswith(('native-app/Views/', 'native-app/App/', 'native-app/bridge/', 'native-app/Info.plist')))
+    relevant = sorted(p for p in changed if p.startswith(('native-app/Views/', 'native-app/App/', 'native-app/Core/','native-app/Resources/', 'native-app/Info.plist')))
     return errors, {'review_candidates': relevant, 'readmes_updated': sorted(readmes),
                     'note': 'Human review must assess capability claims, screenshots and semantic parity; source edits alone do not require README changes.'}
 

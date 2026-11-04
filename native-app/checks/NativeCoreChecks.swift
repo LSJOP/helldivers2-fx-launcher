@@ -1,0 +1,216 @@
+import Foundation
+
+// Isolated native-core checks. Uses a temporary Application Support root and a
+// temporary resource directory; never reads or writes real FX preferences.
+enum CheckFailure: Error { case failed(String) }
+
+var passed = 0
+var failed = 0
+func check(_ condition: Bool, _ name: String) {
+    if condition { passed += 1; print("PASS \(name)") }
+    else { failed += 1; print("FAIL \(name)") }
+}
+func checkThrows(_ code: String, _ name: String, _ body: () throws -> Void) {
+    do { try body(); failed += 1; print("FAIL \(name) (no error)") }
+    catch let error as CoreError { check(error.code == code, "\(name) [\(error.code)]") }
+    catch let error as ErrorState { check(error.code == code, "\(name) [\(error.code)]") }
+    catch { failed += 1; print("FAIL \(name) (unexpected)") }
+}
+
+func runChecks() {
+    let root = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("hd2-native-checks-\(UUID().uuidString)")
+    try! FileManager.default.createDirectory(at: root, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+    setenv("HD2FX_NATIVE_TEST_ROOT", root.path, 1)
+    let resources = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("Resources/launch")
+    setenv("HD2FX_LAUNCH_RESOURCES", resources.path, 1)
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    // MARK: SHA-256 / bounded file reads
+    check(CoreHash.sha256(Data("abc".utf8)) == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", "sha256 abc")
+    check(CoreHash.sha256(Data()) == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "sha256 empty")
+    let small = root.appendingPathComponent("digest.txt")
+    try! Data("payload".utf8).write(to: small)
+    check(CoreHash.digestFile(root, relative: "digest.txt").0 == CoreHash.sha256(Data("payload".utf8)), "digestFile")
+    let link = root.appendingPathComponent("link.txt")
+    try! FileManager.default.createSymbolicLink(atPath: link.path, withDestinationPath: small.path)
+    check(CoreHash.digestFile(root, relative: "link.txt").1 == "unsafe_path", "symlink rejected")
+
+    // MARK: Bundled launch resources
+    let resourceState = LaunchResources.gvproxyState()
+    check(resourceState.state == "ready", "bundled gvproxy hash")
+    check(LaunchResources.wrapperState().state == "ready", "bundled wrapper hash")
+    check(LaunchResources.report()["archive_files_match"]?.boolean == true, "resource report matches")
+    let tamper = root.appendingPathComponent("launch", isDirectory: true)
+    try! FileManager.default.createDirectory(at: tamper, withIntermediateDirectories: true)
+    try! Data("tampered".utf8).write(to: tamper.appendingPathComponent("gvproxy-eim"))
+    try! Data("x".utf8).write(to: tamper.appendingPathComponent("gvproxy-eim-wrapper"))
+    setenv("HD2FX_LAUNCH_RESOURCES", tamper.path, 1)
+    check(LaunchResources.gvproxyState().state == "hash_mismatch", "tampered resource detected")
+    checkThrows("GVPROXY_UNAVAILABLE", "launch refuses tampered resource") { _ = try LaunchResources.verifiedForLaunch() }
+    setenv("HD2FX_LAUNCH_RESOURCES", resources.path, 1)
+    let missingDirectory = root.appendingPathComponent("missing-resources")
+    _ = missingDirectory
+    setenv("HD2FX_LAUNCH_RESOURCES", missingDirectory.path, 1)
+    check(LaunchResources.gvproxyState().state == "missing", "missing resource detected")
+    setenv("HD2FX_LAUNCH_RESOURCES", resources.path, 1)
+
+    // MARK: FX fixture + discovery
+    func makeApp(_ name: String, bundleID: String, version: String) throws -> URL {
+        let app = root.appendingPathComponent("\(name).app")
+        let macos = app.appendingPathComponent("Contents/MacOS", isDirectory: true)
+        try FileManager.default.createDirectory(at: macos, withIntermediateDirectories: true)
+        let info: [String: Any] = ["CFBundleIdentifier": bundleID, "CFBundleShortVersionString": version, "CFBundleExecutable": "steamac-vm"]
+        let data = try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
+        try data.write(to: app.appendingPathComponent("Contents/Info.plist"))
+        try Data("#!/bin/sh\nexit 0\n".utf8).write(to: macos.appendingPathComponent("steamac-vm"))
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: macos.appendingPathComponent("steamac-vm").path)
+        return app
+    }
+    let fx194 = try! makeApp("FX194", bundleID: "es.fxgam.steamac", version: "1.9.4")
+    let fx198 = try! makeApp("FX198", bundleID: "es.fxgam.steamac", version: "1.9.8")
+    let foreign = try! makeApp("Other", bundleID: "com.example.other", version: "1.0")
+    check(FXDiscoveryService.identity(of: fx194.path)?.version == "1.9.4", "FX 1.9.4 identity")
+    check(FXDiscoveryService.identity(of: fx198.path)?.version == "1.9.8", "FX 1.9.8 identity")
+    check(FXDiscoveryService.identity(of: foreign.path)?.valid == false, "foreign bundle rejected")
+    check(FXDiscoveryService.identity(of: "/tmp/not-an-app.txt") == nil, "non-app path rejected")
+    let scan = FXDiscoveryService.scan(selectedPaths: [fx194.path, fx198.path, fx194.path], runtimeRoot: nil)
+    let fixtureCount = (scan["candidates"]?.array ?? []).filter { ($0.object["path"]?.text ?? "").hasPrefix(root.path) }.count
+    check(fixtureCount == 2, "duplicate hint de-duplicated")
+    check(scan["scope"]?.text == "two_shallow_application_directories_metadata_only", "scan scope explicit")
+    let target = FXDiscoveryService.launchTarget(fxPath: fx198.path)
+    check(target["fx_version"]?.text == "1.9.8", "launch target version")
+    check(target["archive_files_match"]?.boolean == true, "launch target resources")
+    check(target["launch"]?.text == "unverified", "launch target not launch proof")
+    check(FXDiscoveryService.launchTarget(fxPath: "/tmp/missing.app")["fx_executable_present"]?.boolean == false, "missing target fails closed")
+
+    // MARK: Configuration read/save/backup/restore
+    let read = try! ConfigurationService.resultRead()
+    check(read["configuration"]?.object["version"]?.integer == 1, "default settings")
+    let revision = read["revision"]?.text ?? ""
+    check(revision == CoreHash.sha256(Data()), "empty-file revision")
+    let saved = try! ConfigurationService.save(patch: .object(["ssh": .object(["port": .number(2223)])]), expectedRevision: revision)
+    check(saved["saved"]?.boolean == true, "settings saved")
+    check(saved["backup"]?.text == nil, "missing original has no backup")
+    let afterSave = try! ConfigurationService.read()
+    check(afterSave.configuration["ssh"]?.object["port"]?.integer == 2223, "settings value written")
+    checkThrows("CONFIG_CHANGED", "stale revision rejected") {
+        _ = try ConfigurationService.save(patch: .object(["ssh": .object(["port": .number(2224)])]), expectedRevision: revision)
+    }
+    checkThrows("INVALID_ARGUMENT", "port range validated") {
+        _ = try ConfigurationService.save(patch: .object(["ssh": .object(["port": .number(70000)])]),
+                                          expectedRevision: afterSave.revision)
+    }
+    checkThrows("INVALID_ARGUMENT", "unknown field rejected") {
+        _ = try ConfigurationService.save(patch: .object(["unknown": .bool(true)]), expectedRevision: afterSave.revision)
+    }
+    checkThrows("SENSITIVE_CONFIGURATION", "secret rejected") {
+        _ = try ConfigurationService.save(patch: .object(["appearance": .object(["language": .string("password=abc123")])]),
+                                          expectedRevision: afterSave.revision)
+    }
+    let snapshot = try! ConfigurationService.snapshot(reason: "checks")
+    check(FileManager.default.fileExists(atPath: snapshot["path"]?.text ?? ""), "manual backup file")
+    let secondSave = try! ConfigurationService.save(patch: .object(["ssh": .object(["port": .number(2224)])]),
+                                                    expectedRevision: afterSave.revision)
+    check(secondSave["backup"]?.text != nil, "existing settings backed up before write")
+    let restoredOK = try! ConfigurationService.restore(path: snapshot["path"]!.text!, confirmed: true)
+    check(restoredOK["restored"]?.boolean == true, "settings restored")
+    check(try! ConfigurationService.read().configuration["ssh"]?.object["port"]?.integer == 2223, "restored value")
+    checkThrows("CONFIRMATION_REQUIRED", "restore requires confirmation") {
+        _ = try ConfigurationService.restore(path: snapshot["path"]!.text!, confirmed: false)
+    }
+    checkThrows("UNSAFE_PATH", "restore outside backup folder rejected") {
+        _ = try ConfigurationService.restore(path: "/etc/passwd", confirmed: true)
+    }
+    check(ConfigurationService.backups()["backups"]?.array.isEmpty == false, "backup list")
+
+    // MARK: Performance scoped preferences (in-memory store)
+    let store = MemoryPreferencesStore(["cpus": .number(8), "memMiB": .number(8192),
+                                        "vulkanDriver": .string("kosmickrisp"),
+                                        "metalHUD": .bool(false), "superResolution": .bool(false),
+                                        "unrelated": .string("keep")])
+    let rules = PerformanceRules(version: "1.9.8", cpuMin: 1, cpuMax: 12, memoryMin: 4096, memoryMax: 12288,
+                                 memoryStep: 256, drivers: ["kosmickrisp", "moltenvk"],
+                                 writable: ["cpus", "memMiB", "vulkanDriver", "metalHUD"])
+    let snapshotResult = try! PerformanceConfigurationService.snapshot(store: store, rules: rules)
+    check(snapshotResult["current"]?.object["cpus"]?.integer == 8, "performance snapshot")
+    check(snapshotResult["effective"]?.text == "unverified", "performance not claimed effective")
+    let values: [String: JSONValue] = ["cpus": .number(10), "memMiB": .number(10240),
+                                       "vulkanDriver": .string("moltenvk"), "metalHUD": .bool(true),
+                                       "superResolution": .bool(false)]
+    let preview = try! PerformanceConfigurationService.preview(values: values, revision: snapshotResult["revision"]!.text!,
+                                                               restore: false, store: store, rules: rules, probe: {})
+    check(preview["changes"]?.object.count == 4, "preview changes")
+    let applied = try! PerformanceConfigurationService.commit(values: values, revision: snapshotResult["revision"]!.text!,
+                                                              token: preview["token"]!.text!, restore: false,
+                                                              store: store, rules: rules, probe: {}, emit: { _ in })
+    check(applied["status"]?.text == "saved", "performance saved")
+    check(store.box.values["cpus"]?.integer == 10, "preference write")
+    check(store.box.values["unrelated"]?.text == "keep", "unrelated preference preserved")
+    check(applied["can_restore"]?.boolean == true, "restore receipt recorded")
+    let restorePreview = try! PerformanceConfigurationService.preview(values: nil, revision: applied["revision"]!.text!,
+                                                                      restore: true, store: store, rules: rules, probe: {})
+    let restoredPerformance = try! PerformanceConfigurationService.commit(values: nil, revision: applied["revision"]!.text!,
+                                                                         token: restorePreview["token"]!.text!, restore: true,
+                                                                         store: store, rules: rules, probe: {}, emit: { _ in })
+    check(restoredPerformance["status"]?.text == "restored", "performance restored")
+    check(store.box.values["cpus"]?.integer == 8, "restored preference value")
+    checkThrows("PERF_RANGE", "out-of-range memory rejected") {
+        _ = try PerformanceConfigurationService.preview(values: ["cpus": .number(10), "memMiB": .number(999),
+                                                                 "vulkanDriver": .string("kosmickrisp"),
+                                                                 "metalHUD": .bool(false), "superResolution": .bool(false)],
+                                                        revision: try PerformanceConfigurationService.snapshot(store: store, rules: rules)["revision"]!.text!,
+                                                        restore: false, store: store, rules: rules, probe: {})
+    }
+    checkThrows("PERF_CONFLICT", "stale performance revision rejected") {
+        _ = try PerformanceConfigurationService.preview(values: values, revision: "stale", restore: false,
+                                                        store: store, rules: rules, probe: {})
+    }
+
+    // MARK: Guest protocol parsing
+    let guestFixture = #"{"boot":"abc","marker":true,"ipv6":{"all":"1","default":"1","eth0":"1","lo":"1"},"proxy":"none","service":"stopped","game_count":0,"steam_count":0,"steam_logged_on":false,"apps":"","vulkan":true,"fex":"h","ntdll":"n","tool":"proton-je-11.0-20261014-3","launch":"","wine_core":{},"uid":1000}"#
+    let guest = try! GuestService.parse(guestFixture, expected: "GUEST_INSPECTION_FAILED")
+    check(guest["boot"]?.text == "abc", "guest state parsed")
+    check(guest["service"]?.text == "stopped", "guest service parsed")
+    checkThrows("GUEST_INSPECTION_FAILED", "corrupt guest output rejected") {
+        _ = try GuestService.parse("not json", expected: "GUEST_INSPECTION_FAILED")
+    }
+
+    // MARK: Native dispatch contract
+    let handshake = try! NativeCoreService.perform("handshake", params: [:], context: CoreContext(timeout: 5), onEvent: nil)
+    check(handshake.result["protocol_min"]?.integer == 1, "handshake protocol")
+    check(handshake.result["python_required"]?.boolean == false, "handshake no python")
+    let system = try! NativeCoreService.perform("get_system_info", params: [:], context: CoreContext(timeout: 5), onEvent: nil)
+    check(system.result["arch"]?.text == "arm64", "system arch")
+    check(system.result["native_runtime"]?.text == "Swift Native Core", "native runtime")
+    let dependencies = try! NativeCoreService.perform("get_dependencies", params: [:], context: CoreContext(timeout: 5), onEvent: nil)
+    let dependencyRows = dependencies.result["items"]?.array.compactMap(\.object) ?? []
+    check(!dependencyRows.contains(where: { $0["name"]?.text == "Python" }), "no Python dependency row")
+    check((dependencies.result["items"]?.array.count ?? 0) > 0, "dependency rows")
+    let catalog = try! NativeCoreService.perform("get_legacy_catalog", params: [:], context: CoreContext(timeout: 5), onEvent: nil)
+    check((catalog.result["operations"]?.array.count ?? 0) > 10, "native catalog")
+    check(catalog.result["runtime"]?.text == "swift_native_core", "catalog runtime")
+    let settings = try! NativeCoreService.perform("read_configuration", params: [:], context: CoreContext(timeout: 5), onEvent: nil)
+    check(settings.result["revision"]?.text != nil, "dispatch read configuration")
+    checkThrows("CONFIRMATION_REQUIRED", "dispatch confirmation gate") {
+        _ = try NativeCoreService.perform("save_configuration", params: ["expected_revision": .string("x")],
+                                          context: CoreContext(timeout: 5), onEvent: nil)
+    }
+
+    // MARK: Localization catalogs
+    let catalogURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("Resources/native-locales.json")
+    let catalogs = (try? JSONSerialization.jsonObject(with: Data(contentsOf: catalogURL)) as? [String: [String: String]]) ?? [:]
+    check(catalogs.count == 10, "ten language catalogs")
+    let nativeKeys = ["ui.native.runtime", "ui.native.engine", "ui.native.noPython", "ui.native.resources",
+                      "ui.native.bundled", "ui.native.backup", "ui.native.backupHelp",
+                      "ui.native.backupCreate", "ui.native.backupNone", "ui.native.backupRestore",
+                      "ui.native.backupDone", "ui.native.restoreDone"]
+    check(catalogs.allSatisfy { pair in nativeKeys.allSatisfy { pair.value[$0] != nil } }, "native keys complete")
+
+    print("TOTAL \(passed) passed, \(failed) failed")
+        exit(failed == 0 ? 0 : 1)
+}
+
+@main
+struct NativeCoreChecksEntry {
+    static func main() { runChecks() }
+}

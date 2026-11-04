@@ -18,14 +18,20 @@
 
 <a id="zh-overview"></a>
 
-以 **SwiftUI + AppKit** 构建的原生界面，通过原有 Python Core 启动游戏、检查所选 FX 环境、读取性能配置。六个页面职责清晰，默认深色，操作进度和结果在页面内显示，技术细节按需展开。
+以 **SwiftUI + AppKit** 构建、**Swift 原生核心**驱动：启动游戏、检查所选 FX 环境、管理性能配置。六个页面职责清晰，默认深色，操作进度和结果在页面内显示，技术细节按需展开。正式运行不使用 Python 解释器、Python Bridge 或外部脚本目录。
 
 > [!IMPORTANT]
 > **开发预览。** 正式安装包尚未发布。已完成的 Native 成果已整合到 [main](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main)；[feature/macos-native-app](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app) 保留开发历史。仓库不包含运行时二进制、游戏文件或 Guest 镜像。
 
 <a id="zh-screenshots"></a>
 
+六个页面直接展示主要内容，已移除重复的全局 FX 状态栏。FX 检测、版本、运行状态及资源诊断仍保留在 FX 管理与运行环境等对应页面。
+
 ## 软件截图
+
+**Native 接管预览：** Guest SSH 已修正 OpenSSH 参数并使用控制终端，运行环境新增只读的“测试 Guest SSH 连接”。仅在 App 安全输入框中输入凭据。设置 → 关于显示并可复制随包构建身份。真实 Guest 密码认证与游戏仍需用户验收；隔离测试不代表真实验收。运行环境与设置截图已于 2026-11-04 使用真实 Debug App 更新；屏幕外的关于信息另做 Release 验收。全部页面截图现已展示本次精简后的布局。 SSH 专项检查在验证发布者签名与父子关系后，可检查已运行的 FX 自带网络进程；游戏启动仍要求固定的内置后端。
+
+六个页面及性能／更新详情视口已于 2026-11-04 在移除全局 FX 状态栏后重新拍摄，没有替代栏或预留占位。
 
 [![总览](docs/images/zh-CN/dashboard.png)](docs/images/zh-CN/dashboard.png)
 
@@ -51,7 +57,7 @@
 </details>
 
 
-八张简体中文截图均于 2026-11-03 从当前真实 Native Debug App（0.1.0，构建 1）采集，使用只读本机元数据，原始像素未改动，没有合成界面或状态；滚动视图展示性能操作和软件更新。截图副本隔离偏好并禁用凭据自动读取，未执行 FX／Guest 操作或配置写入。插画是在真实 App 内渲染的素材。截图不证明游戏、性能提升或安装已就绪。[采集来源与限制](docs/images/README.md)。
+八张当前简体中文截图均来自真实 Native Debug App（0.1.0，构建 2026110402），拍摄于 2026-11-04。原始像素未改动，没有合成界面或状态。截图副本隔离偏好并禁用凭据自动读取，未执行 FX／Guest 操作或配置写入。截图不证明游戏或安装已就绪。[采集来源与限制](docs/images/README.md)。
 
 <a id="zh-features"></a>
 
@@ -78,7 +84,7 @@
 
 **正式安装包尚未发布。** 仓库 [Releases 页面](https://github.com/LSJOP/helldivers2-fx-launcher/releases) 当前没有已发布版本；此链接不是不存在的安装包下载按钮。
 
-源码预览需要 **Apple Silicon、macOS 14+、完整 Xcode／macOS SDK、Python 3.9+**。游戏操作还需要既有完整旧启动器目录、原验证组合中的 FX／gvproxy 资源和可用的 Guest 认证配置。
+源码预览需要 **Apple Silicon、macOS 14+、完整 Xcode／macOS SDK**。游戏操作需要已安装且由发行方签名的 FX Steam Launcher，以及可通过 SSH 连接的 FX Guest。启动所需的 gvproxy 资源已内置并通过 SHA-256 校验。
 
 ```sh
 git clone --branch main --recurse-submodules https://github.com/LSJOP/helldivers2-fx-launcher.git
@@ -93,7 +99,7 @@ open build/Debug/HD2FXNative.app
 
 ## 快速开始
 
-1. 打开 App，在设置中选择语言、外观及已有 Python 解释器。
+1. 打开 App，在设置中选择语言与外观，然后在 FX 管理中选用已安装的 FX Steam Launcher。
 2. 首次操作选择已有启动器目录。“一键检测”只读检查 Guest，要求 FX 已运行；需要时先在 FX 管理中点击“启动 FX”。
 3. 在总览点击“启动 HELLDIVERS 2”，原有启动流程自动完成必要检查。核对启动确认及具体配置变更预览；密码仅填写 App 安全输入框。
 4. 在游戏性能配置页查看硬件与基准差异，在日志页查看错误详情。检测到进程不代表已经进入主菜单。
@@ -121,7 +127,7 @@ open build/Debug/HD2FXNative.app
 尚未发布任何正式版本；当前原生版本 `0.1.0` 为开发预览。近期未发布改动：
 
 - 原生六页界面、限定范围 FX 发现、带校验的配置编辑、脱敏日志与只读性能比较。
-- GUI 化 FX／SSH 操作与可选 SSH／sudo 凭据记忆。
+- GUI 化 FX／SSH 操作与独立的 SSH／sudo 会话内存凭据。
 - Sparkle 2 更新集成（Feed／签名服务尚未配置）。
 
 完整历史见 [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md)。
@@ -129,7 +135,7 @@ open build/Debug/HD2FXNative.app
 ## 常见问题
 
 - **为什么停止／重启或部分应用按钮禁用？** 正常退出后端尚未验证。性能编辑只支持固定 FX 1.9.4 构建，需读取合法配置、FX 停止并预览确认；无有效备份或外部修改会阻止恢复。App 不强制停止 FX。
-- **每次都要输入密码吗？** 默认会话内复用。主动选择记住后，经实际验证的 SSH／sudo 凭据分别保存在本 App 新建的 macOS Keychain namespace；自动读取禁止授权弹窗。钥匙串锁定／访问受限时回退安全输入，主动授权访问或 App 身份／签名变化时仍可能出现系统授权。旧脚本钥匙串项目保持不动。
+- **每次都要输入密码吗？** SSH 与 sudo 密码独立，仅在当前 App 进程内存中复用，不使用 macOS 钥匙串、偏好设置或本地文件保存。完全退出 App 后需重新输入，切换 FX／Guest 身份后需重新授权。旧条目不会被读取、迁移或删除。
 - **自动更新能用了吗？** 在「设置 → 软件更新」可手动检查 GitHub Native 发布。默认稳定版；正式服务未就绪前，预览渠道及自动检查保持关闭。安全下载需要可信 Ed25519 公钥与签名清单；缺少签名 Appcast、Developer ID、公证及分发条件时禁止安装。手动检查不会自动安装；自动检查开关需签名服务就绪才可启用。下载校验包含签名、大小与 SHA-256，安装仅由官方 Sparkle 执行。目前尚无正式更新包，失败保留当前 App，不把下载成功视为安装或重启成功。发布准备复用历史更新源前会先验证其签名。[配置和发布条件](docs/NATIVE_UPDATES.md)。
 
 <a id="zh-legacy"></a>
@@ -148,8 +154,17 @@ open build/Debug/HD2FXNative.app
 
 本项目非官方，不宣称获得官方认可，不保证兼容性。HELLDIVERS 2 及相关标识归各权利人所有。项目统一源码许可证**尚未选定**，不应推定均可自由再分发。见[权利与来源说明](THIRD_PARTY_NOTICES.md)，其中保留 Sparkle 的独立许可证和用户提供素材的来源。
 
-开发检查：`python3 native-app/script/check_localization.py` 报告十语言键／格式覆盖和 README 待审范围；`native-app/script/run_checks.sh` 及提交钩子包含此门槛。界面变更必须审查中英文 README 及真实截图。中英文截图均针对整合后的界面更新；译文自然度仍需人工审校。发布检查 Actions 模板保持未启用，尚未配置 CI 工作流。
+开发检查：`native-app/script/run_checks.sh` 编译并运行原生核心契约检查、十语言门槛与文档检查。Python 仅用于可选开发脚本；App Bundle 与正式运行流程不含 Python。界面变更必须审查中英文 README 及真实截图。中英文截图均针对整合后的界面更新；译文自然度仍需人工审校。发布检查 Actions 模板保持未启用，尚未配置 CI 工作流。
 
 FX 选择 V2 + 自动选择 V2.1：FX 管理、总览和启动窗口共享并持久化同一个默认 FX。扫描结果中只有一个通过身份和路径验证的 FX 时自动选择；多个 FX 时保留有效默认，否则请用户选择。默认 FX 删除、移动或更新后重新验证。选择后仍显示**启动能力待验证**，不会自动启动游戏。每次启动先重扫默认 FX，并为检查、预检和执行固定同一份所选路径。完整性校验接受历史精确哈希，或通过 Apple 信任锚、Bundle ID 与 Team ID 校验的 FX 发布者完整签名；再次核对已验证摘要，并保留全部原有配置、进程和 Guest 检查。这不代表游戏兼容性已经验证。FX 应用和辅助脚本／gvproxy 的启动资源目录明确区分：优先从所选应用的有限上级目录或已有资源目录解析，无法解析时才请用户定位一次**启动资源**，不再重复选择 FX 目录。刷新与自动检查不会启动 FX、SSH 或游戏。停止／重启仍不可用。限定参数的性能编辑与备份恢复要求固定版本 FX 1.9.4 已停止，并需明确预览和确认；推算推荐仍只读。
 
 启动资源：`/Applications` 和 FX `.app` 不是原始脚本资源目录。请选择包含 `launcher-20261026/steam-cdp.mjs`、`tools/check_node.cjs` 和 `goal-fx-multiplayer-20261026/gvproxy-eim-wrapper` 的完整现有脚本目录。检查与执行共用内置归档对比，提供预期／实际完整路径与 SHA-256 诊断。资源缺失、改动或符号链接均拒绝执行，不修改 FX 文件。FX 1.9.4／1.9.8 的路径和签名检查已有覆盖，真实游戏仍未验证。
+
+sudo 排查（2026-11-04）：构建 2026110402 存在远程空提示符参数引用缺陷。相关修复及 sudo/SSH 错误分类正在验证，尚未发布替代构建。真实只读检查已通过完整 Guest 身份确认；带密码 sudo 及后续启动阶段仍未验证。
+
+**纯内存候选版本：** 会话凭据管理替换全部钥匙串操作。每次获准的特权 SSH 调用在自身调用中认证，密码输入与目标命令标准输入隔离。Guest IPv6 修改须经过精确预览、确认并保留本地回滚记录；本候选的真实 Guest 修改、Steam／游戏与联机验收仍为 NOT TESTED。设置截图来自真实的纯内存工作候选（构建 2026110403、冻结前未提交快照）；其他页面保留各自记录的界面简化版本来源。
+
+
+**SteamOS 网络候选（未发布）：** 运行环境 → SteamOS 网络设置提供主动开启/关闭 IPv6、精确确认、备份与验证恢复。IPv6 不再是启动前提，游戏启动不会修改它。VM、Steam TLS、PlayFab、UDP 为手动只读探测，不申请 sudo，检测通过不代表多人联机已验证。凭据仅存进程内存。真实 Guest 写入及游戏启动仍为 NOT TESTED。[网络使用说明](docs/STEAMOS_NETWORK_SETTINGS.md) · [Python → Swift 功能矩阵](docs/PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md)。
+
+[![SteamOS 网络设置与诊断](docs/images/zh-CN/environment-network.png)](docs/STEAMOS_NETWORK_SETTINGS.md)

@@ -109,7 +109,7 @@ struct UpdateConfiguration {
     private let preferences: UserDefaults
     var isConfigured: Bool { configuration.isValid && configuration.distributionReady && UpdateConfiguration.trustedDistribution() }
     var canDownload: Bool { candidate?.signatureVerified == true && canCheck }
-    var canInstall: Bool { isConfigured && canCheck && !BridgeWorkerStatus.isActive && FileManager.default.isWritableFile(atPath: Bundle.main.bundleURL.deletingLastPathComponent().path) }
+    var canInstall: Bool { isConfigured && canCheck && !CoreWorkerStatus.isActive && FileManager.default.isWritableFile(atPath: Bundle.main.bundleURL.deletingLastPathComponent().path) }
     var version: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?" }
     var build: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?" }
     var service: NativeReleaseService { NativeReleaseService(publicKey: Data(base64Encoded: configuration.publicKey).flatMap { $0.count == 32 ? $0 : nil }) }
@@ -229,7 +229,7 @@ struct UpdateConfiguration {
         "https://lsjop.github.io/helldivers2-fx-launcher/updates/" + (channel == "preview" && configuration.previewEnabled ? "preview" : "stable") + "/appcast.xml"
     }
     func updater(_ updater: SPUUpdater, shouldProceedWithUpdate updateItem: SUAppcastItem, updateCheck: SPUUpdateCheck) throws {
-        guard isConfigured, !BridgeWorkerStatus.isActive,
+        guard isConfigured, !CoreWorkerStatus.isActive,
               FileManager.default.isWritableFile(atPath: Bundle.main.bundleURL.deletingLastPathComponent().path),
               let url = updateItem.fileURL, NativeUpdateHTTP.trusted(url), url.pathExtension == "zip",
               updateItem.installationType == "application", updateItem.isMacOsUpdate,
@@ -239,9 +239,9 @@ struct UpdateConfiguration {
     }
     func allowedChannels(for updater: SPUUpdater) -> Set<String> { channel == "preview" && configuration.previewEnabled ? ["preview"] : [] }
     func updater(_ updater: SPUUpdater, shouldPostponeRelaunchForUpdate item: SUAppcastItem, untilInvokingBlock installHandler: @escaping () -> Void) -> Bool {
-        guard BridgeWorkerStatus.isActive else { return false }
+        guard CoreWorkerStatus.isActive else { return false }
         Task { @MainActor in
-            while BridgeWorkerStatus.isActive { try? await Task.sleep(nanoseconds: 200_000_000) }
+            while CoreWorkerStatus.isActive { try? await Task.sleep(nanoseconds: 200_000_000) }
             installHandler()
         }
         return true

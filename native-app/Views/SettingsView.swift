@@ -1,15 +1,8 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-// View-local panel presentation, never business state or persisted preferences.
-private final class SettingsPresentation: ObservableObject {
-    @Published var choosingPython = false
-    @Published var invalidPython = false
-}
-
 struct SettingsView: View {
     @ObservedObject var state: AppState
-    @StateObject private var presentation = SettingsPresentation()
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             TacticalPageHeader(title: state.t("ui.308"))
@@ -23,32 +16,26 @@ struct SettingsView: View {
                 Text(UpdateString.languageRestart.text(state.languageCode))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
             }
-            TacticalPanel(number: "B", title: state.t("ui.284"), symbol: "cpu") {
-                TacticalInfoRow(title: state.t("ui.239"), value: state.pythonURL.lastPathComponent)
+            TacticalPanel(number: "B", title: state.t("ui.native.runtime"), symbol: "cpu") {
+                TacticalInfoRow(title: state.t("ui.native.engine"), value: state.t("ui.native.bundled"))
                 TacticalInfoRow(title: state.t("ui.035"), value: state.error != nil ? state.t("ui.242") : state.hasLoaded ? state.t("ui.241") : state.t("ui.217"))
-                TacticalButton(title: state.t("ui.061"), symbol: "folder") { presentation.choosingPython = true }
+                TacticalInfoRow(title: state.t("ui.native.resources"), value: LaunchResourceSummary.text)
+                Text(state.t("ui.native.noPython"))
+                    .font(TacticalTypography.caption).foregroundStyle(.secondary)
                 Text(state.t("ui.270"))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
-                if presentation.invalidPython {
-                    TacticalWarningBanner(text: state.t("ui.300"), isError: true)
-                }
             }
+            BuildIdentityView(state: state)
+            ConfigurationBackupView(state: state)
             CredentialManagementView(state: state, credentials: state.credentials, tasks: state.tasks)
             SoftwareUpdateView(manager: state.updates, language: state.languageCode)
             DisclosureGroup(state.t("ui.008")) { LegacyOperationsView(state: state, scope: "settings") }
 
         }
-        .fileImporter(isPresented: $presentation.choosingPython, allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
-            guard case .success(let urls) = result, let url = urls.first else { return }
-            let name = url.lastPathComponent
-            guard name.range(of: "^python3(?:\\.[0-9]+)?$", options: .regularExpression) != nil,
-                  FileManager.default.isExecutableFile(atPath: url.path) else { presentation.invalidPython = true; return }
-            presentation.invalidPython = false; state.pythonURL = url
-        }
     }
 }
 
-// One native operation surface; all execution is delegated to AppState/BridgeService.
+// One native operation surface; all execution is delegated to AppState/NativeCoreService.
 struct LegacyOperationsView: View {
     @ObservedObject var state: AppState
     let scope: String
@@ -103,6 +90,8 @@ private extension Dictionary where Key == String, Value == JSONValue {
         "test_network": "ui.278",
         "test_ssh": "ui.329",
         "test_guest_sudo": "ui.378",
+        "restore_guest_ipv6": "ui.session.restoreIPv6",
+        "list_guest_ipv6_backups": "ui.session.backups",
         "connect_fx": "ui.076",
         "inspect_guest_environment": "ui.159",
         "check_fx_state": "ui.048",
@@ -146,14 +135,14 @@ struct LegacyOperationSheet: View {
     @State private var note = ""
     @State private var channel = "preview"
     @State private var inputError = false
-    private var needsRoot: Bool { ["connect_fx","inspect_guest_environment","check_fx_state","start_fx","start_steam","inspect_legacy_runtime","test_ssh","test_guest_sudo","inspect_guest","launch_game","preflight_launch","observe_launch","apply_performance","save_network_snapshot"].contains(operation) }
+    private var needsRoot: Bool { ["connect_fx","inspect_guest_environment","check_fx_state","start_fx","start_steam","inspect_legacy_runtime","test_ssh","test_guest_sudo","restore_guest_ipv6","inspect_guest","launch_game","preflight_launch","observe_launch","apply_performance","save_network_snapshot"].contains(operation) }
     private var needsConsent: Bool {
         state.rows("get_legacy_catalog", "operations").first { $0["method"]?.text == operation }?["confirmation"]?.boolean ?? true
     }
     private var disabledReason: String? {
         if tasks.busy { return state.t("ui.014") }
         if operation == "launch_game" && state.fxSelection.selected == nil { return state.t("ui.fx.choose") }
-        if needsRoot && state.runtimeRoot.isEmpty { return state.t("ui.059") }
+        if needsRoot && state.fxSelection.selected == nil { return state.t("ui.fx.choose") }
         if operation == "launch_game" && state.targetInspection["archive_files_match"]?.boolean == false { return state.t("ui.178") }
         if needsConsent && !confirmed { return state.t("ui.276") }
         return nil
@@ -174,6 +163,9 @@ struct LegacyOperationSheet: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(operationTitle(operation, state)).font(TacticalTypography.page)
                 TacticalWarningBanner(text: effect)
+                if operation == "restore_guest_ipv6" {
+                    Text(state.guestRestorePath).font(TacticalTypography.log).textSelection(.enabled)
+                }
                 if operation == "apply_network_profile" {
                     TacticalWarningBanner(text: state.t("ui.342"))
                 }
@@ -181,11 +173,11 @@ struct LegacyOperationSheet: View {
                 if operation == "launch_game" {
                     DisclosureGroup(state.t("ui.ux.details")) {
                         TacticalButton(title: state.t("ui.279"), symbol: "checklist") { state.runOperation("preflight_launch") }
-                            .disabled(tasks.busy || state.runtimeRoot.isEmpty)
+                            .disabled(tasks.busy || state.fxSelection.selected == nil)
                         Text(state.t("ui.195")).font(TacticalTypography.caption)
                     }
                 }
-                if ["connect_fx","inspect_guest_environment","start_steam","test_ssh","test_guest_sudo","inspect_guest","launch_game","apply_performance","save_network_snapshot"].contains(operation) {
+                if ["connect_fx","inspect_guest_environment","start_steam","test_ssh","test_guest_sudo","restore_guest_ipv6","inspect_guest","launch_game","apply_performance","save_network_snapshot"].contains(operation) {
                     CredentialInputFields(state: state, credentials: credentials, tasks: tasks, operation: operation)
                 }
                 if operation == "save_configuration" {
@@ -210,6 +202,9 @@ struct LegacyOperationSheet: View {
                 }
                 if needsConsent {
                     Toggle(state.t("ui.153"), isOn: $confirmed)
+                }
+                if operation == "test_ssh" {
+                    SSHDiagnosisView(state: state)
                 }
                 if let error = state.operationError {
                     TacticalWarningBanner(text: error.message(state.languageCode), isError: true)
@@ -268,6 +263,7 @@ struct LegacyOperationSheet: View {
         var params: [String: JSONValue] = [:]
         if needsConsent { params["confirmed"] = .bool(confirmed) }
         params["approved_changes"] = .array(approved)
+        if operation == "restore_guest_ipv6" { params["backup_path"] = .string(state.guestRestorePath) }
         if operation == "save_configuration" {
             guard !revision.isEmpty, let data = configuration.data(using: .utf8), let value = try? JSONDecoder().decode(JSONValue.self, from: data), case .object = value else { inputError = true; return }
             params["configuration"] = value; params["expected_revision"] = .string(revision)
@@ -286,17 +282,14 @@ private struct CredentialInputFields: View {
     let operation: String
     @State private var expanded = false
     var body: some View {
-        DisclosureGroup(state.t("ui.084"), isExpanded: $expanded) {
+        DisclosureGroup(state.t("ui.session.title"), isExpanded: $expanded) {
             VStack(alignment: .leading, spacing: 10) {
                 SecureField(state.t("ui.305"), text: $credentials.password)
-                Toggle(state.t("ui.268"), isOn: Binding(get: { credentials.rememberSSH }, set: { credentials.setRemember(.ssh, $0) }))
                 SecureField(state.t("ui.168"), text: $credentials.passphrase)
-                SecureField(state.t("ui.304"), text: $credentials.sudoPassword)
-                Toggle(state.t("ui.267"), isOn: Binding(get: { credentials.rememberSudo }, set: { credentials.setRemember(.sudo, $0) }))
-                Text(state.t("ui.307"))
+                if operation == "test_guest_sudo" { SecureField(state.t("ui.304"), text: $credentials.sudoPassword) }
+                Text(state.t("ui.session.policy"))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
-                CredentialVaultNotice(state: state, credentials: credentials)
-                Button(state.t("ui.067")) { credentials.clear() }
+                Button(state.t("ui.067")) { state.clearSessionCredentials() }
             }.padding(.top, 8).disabled(tasks.busy)
         }
         .onAppear { expanded = ["test_ssh","test_guest_sudo"].contains(operation) || needsInput }
@@ -305,61 +298,159 @@ private struct CredentialInputFields: View {
     private var needsInput: Bool { ["AUTH_REQUIRED","SSH_AUTH_FAILED","SUDO_AUTH_FAILED"].contains(state.operationError?.code ?? "") }
 }
 
-private struct CredentialVaultNotice: View {
-    @ObservedObject var state: AppState
-    @ObservedObject var credentials: SessionCredentialManager
-    var body: some View {
-        if let error = credentials.vaultError {
-            Text(message(error)).font(TacticalTypography.caption).foregroundStyle(.orange)
-        }
-    }
-    private func message(_ error: CredentialVaultError) -> String {
-        switch error {
-        case .locked: return state.t("ui.343")
-        case .permission: return state.t("ui.169")
-        default: return state.t("ui.299")
-        }
-    }
-}
-
 private struct CredentialManagementView: View {
     @ObservedObject var state: AppState
     @ObservedObject var credentials: SessionCredentialManager
     @ObservedObject var tasks: TaskManager
-    @State private var clearing: CredentialKind?
-    @State private var clearAll = false
     var body: some View {
-        TacticalPanel(number: "K", title: state.t("ui.083"), symbol: "key") {
-            Text(state.t("ui.189"))
-                .font(TacticalTypography.caption).foregroundStyle(.secondary)
+        TacticalPanel(number: "K", title: state.t("ui.session.title"), symbol: "key") {
+            Text(state.t("ui.session.policy")).font(TacticalTypography.caption).foregroundStyle(.secondary)
             ForEach(CredentialKind.allCases, id: \.self) { kind in
                 VStack(alignment: .leading, spacing: 8) {
-                    TacticalInfoRow(title: kind == .ssh ? state.t("ui.288") : state.t("ui.148"), value: status(kind))
+                    TacticalInfoRow(title: state.t(kind == .ssh ? "ui.session.ssh" : "ui.session.sudo"), value: status(kind))
                     HStack {
-                        Button(state.t("ui.371")) {
+                        Button(state.t(kind == .ssh ? "ui.session.updateSSH" : "ui.session.updateSudo")) {
                             credentials.update(kind)
                             state.operationSelection = NativeOperation(method: kind == .ssh ? "test_ssh" : "test_guest_sudo")
                         }
-                        Button(state.t("ui.066")) { clearing = kind }
+                        Button(state.t(kind == .ssh ? "ui.session.testSSH" : "ui.session.testSudo")) {
+                            state.operationSelection = NativeOperation(method: kind == .ssh ? "test_ssh" : "test_guest_sudo")
+                        }
                     }
                 }
             }
-            CredentialVaultNotice(state: state, credentials: credentials)
-            Button(state.t("ui.028")) { Task { await state.prepareCredentials(interactive: true) } }
-            Button(state.t("ui.065")) { clearAll = true }
-        }
-        .disabled(tasks.busy)
-        .task(id: state.runtimeRoot) { if !tasks.busy { await state.prepareCredentials() } }
-        .confirmationDialog(state.t("ui.068"), isPresented: Binding(get: { clearing != nil }, set: { if !$0 { clearing = nil } })) {
-            if let kind = clearing { Button(state.t("ui.074"), role: .destructive) { Task { await credentials.remove(kind) }; clearing = nil } }
-        }
-        .confirmationDialog(state.t("ui.063"), isPresented: $clearAll) {
-            Button(state.t("ui.064"), role: .destructive) { Task { await credentials.removeAll() } }
-        }
+            HStack {
+                Button(state.t("ui.session.clear")) { state.clearSessionCredentials() }
+                Button(state.t("ui.session.revalidate")) { state.operationSelection = NativeOperation(method: "test_ssh") }
+            }
+        }.disabled(tasks.busy)
     }
     private func status(_ kind: CredentialKind) -> String {
-        if credentials.vaultError != nil { return state.t("ui.042") }
-        if credentials.rejected.contains(kind) { return state.t("ui.027") }
-        return credentials.saved.contains(kind) ? state.t("ui.296") : state.t("ui.215")
+        switch credentials.status(kind) {
+        case .notProvided: return state.t("ui.session.empty")
+        case .provided: return state.t("ui.session.provided")
+        case .verified: return state.t("ui.session.verified")
+        case .failed: return state.t("ui.session.failed")
+        }
+    }
+}
+
+
+enum LaunchResourceSummary {
+    static var text: String {
+        guard let url = Bundle.main.resourceURL?.appendingPathComponent("launch/gvproxy-eim") else { return "—" }
+        return FileManager.default.fileExists(atPath: url.path) ? "gvproxy-eim · SHA-256" : "gvproxy-eim · missing"
+    }
+}
+
+private struct ConfigurationBackupView: View {
+    @ObservedObject var state: AppState
+    @ObservedObject private var tasks: TaskManager
+    init(state: AppState) { self.state = state; self._tasks = ObservedObject(wrappedValue: state.tasks) }
+    private var backups: [[String: JSONValue]] { state.operationResult["backups"]?.array.map(\.object) ?? [] }
+    var body: some View {
+        TacticalPanel(number: "B2", title: state.t("ui.native.backup"), symbol: "externaldrive") {
+            Text(state.t("ui.native.backupHelp")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+            HStack {
+                TacticalButton(title: state.t("ui.native.backupCreate"), symbol: "plus", disabledReason: tasks.busy ? state.t("ui.016") : nil) {
+                    state.runOperation("backup_configuration", params: ["note": .string("manual"), "confirmed": .bool(true)])
+                }
+                TacticalButton(title: state.t("ui.262"), symbol: "arrow.clockwise", disabledReason: tasks.busy ? state.t("ui.016") : nil) {
+                    state.runOperation("list_configuration_backups")
+                }
+            }
+            if let path = state.operationResult["path"]?.text {
+                TacticalInfoRow(title: state.t("ui.native.backupDone"), value: URL(fileURLWithPath: path).lastPathComponent)
+            }
+            if let revision = state.operationResult["revision"]?.text, state.operationResult["restored"]?.boolean == true {
+                TacticalInfoRow(title: state.t("ui.native.restoreDone"), value: String(revision.prefix(12)))
+            }
+            if !backups.isEmpty {
+                ForEach(backups, id: \.selfName) { row in
+                    HStack {
+                        Text(row["name"]?.text ?? "—").font(TacticalTypography.log).lineLimit(1)
+                        Spacer(minLength: 8)
+                        Button(state.t("ui.native.backupRestore")) {
+                            if let path = row["path"]?.text {
+                                state.runOperation("restore_configuration", params: ["backup_path": .string(path), "confirmed": .bool(true)])
+                            }
+                        }.disabled(tasks.busy)
+                    }
+                }
+            } else {
+                Text(state.t("ui.native.backupNone")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+private extension Dictionary where Key == String, Value == JSONValue {
+    var selfName: String { self["name"]?.text ?? "backup" }
+}
+
+/// Read only signed bundle resources, never the development checkout.
+struct BuildIdentityView: View {
+    @ObservedObject var state: AppState
+    private var metadata: [String: JSONValue] {
+        guard let url = Bundle.main.url(forResource: "BuildMetadata", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let result = try? JSONDecoder().decode([String: JSONValue].self, from: data) else { return [:] }
+        return result
+    }
+    private var rows: [(String, String)] {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let unknown = state.t("ui.368")
+        return [("ui.build.version", info["CFBundleShortVersionString"] as? String ?? unknown),
+                ("ui.build.number", info["CFBundleVersion"] as? String ?? unknown),
+                ("ui.build.commit", (metadata["commit"]?.text ?? unknown) + (metadata["source_dirty"]?.boolean == true ? " (DIRTY)" : "")),
+                ("ui.build.time", metadata["built_at"]?.text ?? unknown),
+                ("ui.build.core", metadata["core_version"]?.text ?? unknown),
+                ("ui.build.path", Bundle.main.bundleURL.path)]
+    }
+    var body: some View {
+        TacticalPanel(number: "i", title: state.t("ui.build.about"), symbol: "info.circle") {
+            ForEach(rows, id: \.0) { row in
+                TacticalInfoRow(title: state.t(row.0), value: row.1)
+            }
+            Button(state.t("ui.build.copy")) {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(rows.map { state.t($0.0) + ": " + $0.1 }.joined(separator: "\n"), forType: .string)
+            }
+        }
+    }
+}
+
+struct SSHDiagnosisView: View {
+    @ObservedObject var state: AppState
+    private var facts: [String: JSONValue] {
+        if !state.operationResult.isEmpty { return state.operationResult }
+        if let error = state.operationError { return error.details }
+        return state.operationEvents.last ?? [:]
+    }
+    private func value(_ field: String) -> String {
+        let itemValue = ["host", "port", "username"].contains(field) ? state.sshConnectionTarget[field] ?? facts[field] : facts[field]
+        guard let item = itemValue else { return state.t("ui.368") }
+        if let text = item.text {
+            if let stage = LaunchStage(rawValue: text) { return stage.title(state.languageCode) }
+            let keys = ["unverified": "ui.368", "negotiated": "ui.241", "authenticated": "ui.241", "verified": "ui.241",
+                        "Complete": "ui.071", "CheckingSSHPort": "ui.ssh.reachable", "AuthenticatingSSH": "ui.ssh.auth",
+                        "VerifyingGuestIdentity": "ui.ssh.identity", "NegotiatingSSH": "ui.ssh.protocol"]
+            return keys[text].map { state.t($0) } ?? text
+        }
+        if let number = item.integer { return String(number) }
+        if let flag = item.boolean { return state.t(flag ? "ui.241" : "ui.242") }
+        return state.t("ui.368")
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(state.t("ui.ssh.scope")).font(TacticalTypography.caption)
+            ForEach([("ui.ssh.fx", "fx_host_running"), ("ui.ssh.host", "host"),
+                     ("ui.ssh.port", "port"), ("ui.ssh.user", "username"),
+                     ("ui.ssh.reachable", "port_reachable"), ("ui.ssh.protocol", "protocol"),
+                     ("ui.ssh.auth", "authentication"), ("ui.ssh.identity", "guest_identity"),
+                     ("ui.ssh.stage", "stage")], id: \.0) { row in
+                TacticalInfoRow(title: state.t(row.0), value: value(row.1))
+            }
+        }
     }
 }
