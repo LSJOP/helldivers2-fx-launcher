@@ -61,6 +61,16 @@ struct NativeCoreIntegrationChecks {
         let realFX = (scan.result["candidates"]?.array ?? []).contains { $0.object["version"]?.text == "1.9.8" }
         ok(realFX, "fixture FX 1.9.8 discovered")
 
+        let bindingOne = run("credential_target", ["fx_path": .string(fixture.path)])
+        let configurationBefore = try! ConfigurationService.read()
+        _ = try! ConfigurationService.save(patch: .object(["appearance": .object(["language": .string("fr")])]), expectedRevision: configurationBefore.revision)
+        let bindingTwo = run("credential_target", ["fx_path": .string(fixture.path)])
+        ok(bindingOne.result["persistence_identity"]?.text != nil && bindingOne.result["persistence_identity"] == bindingTwo.result["persistence_identity"], "saved credential target ignores unrelated preference revisions")
+        ok(bindingOne.result["identity"] != bindingTwo.result["identity"], "live scope still changes with configuration revision")
+        _ = try! ConfigurationService.save(patch: .object(["ssh": .object(["port": .number(2223)])]), expectedRevision: try! ConfigurationService.read().revision)
+        let bindingThree = run("credential_target", ["fx_path": .string(fixture.path)])
+        ok(bindingThree.result["persistence_identity"] != bindingTwo.result["persistence_identity"], "SSH endpoint change isolates stored credentials")
+
         let catalog = run("get_legacy_catalog")
         ok(catalog.result["runtime"]?.text == "swift_native_core", "catalog native runtime")
         ok((catalog.result["operations"]?.array.count ?? 0) > 10, "catalog operations")

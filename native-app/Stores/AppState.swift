@@ -28,7 +28,7 @@ final class AppState: ObservableObject {
     @Published var networkShowConfirmation = false
     @Published var guestRestorePath = ""
     @Published var pendingAction: GUIAction?
-    let credentials = SessionCredentialManager()
+    let credentials = SessionCredentialManager(store: NativeLocalization.isolatedUXSmoke ? nil : LocalCredentialStore.production())
     @Published var firstRunPlan: DeploymentPlan?
     @Published var firstRunState: DeploymentState = .NotChecked
     @Published var firstRunReceipt: DeploymentReceipt?
@@ -54,7 +54,7 @@ final class AppState: ObservableObject {
                     guard let identity = binding.result["identity"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
                     let target = root + "|" + revision + "|" + identity
                     if let scope = self.credentials.scope, scope != target { self.clearSessionCredentials() }
-                    await self.credentials.prepare(for: target)
+                    await self.credentials.prepare(for: target, savedTarget: binding.result["persistence_identity"]?.text)
                     try self.credentials.bindGuest(binding.result["guest_boot"]?.text)
                     input.merge(try self.credentials.parameters(for: target)) { _, value in value }
                     input["credential_revision"] = .string(revision)
@@ -66,12 +66,20 @@ final class AppState: ObservableObject {
                     self.firstRunState = .Deploying
                 }
                 if let receipt { input["receipt_id"] = .string(receipt.uuidString); input["approved_steps"] = .array(selected.sorted().map { .string($0) }) }
+                let credentialTarget = root + "|" + (input["credential_revision"]?.text ?? "") + "|" + (input["credential_host_identity"]?.text ?? "")
+                let authInput = input
                 let reply = try await self.core.request(method, timeout: 180, params: input) { [weak self] event in
-                    guard let raw = event["deployment_state"]?.text, let status = DeploymentState(rawValue: raw) else { return }
                     Task { @MainActor in
                         guard let self, self.firstRunEventGeneration == generation else { return }
-                        self.firstRunState = status
+                        if event["kind"]?.text == "credential_status", event["status"]?.text == "authenticated",
+                           let role = event["credential_kind"]?.text.flatMap(CredentialKind.init(rawValue:)), let value = authInput[role.bridgeField]?.text {
+                            await self.credentials.authenticated(role, value: value, target: credentialTarget)
+                        }
+                        if let raw = event["deployment_state"]?.text, let status = DeploymentState(rawValue: raw) { self.firstRunState = status }
                     }
+                }
+                if reply.result["ssh_password_verified"]?.boolean == true, let value = authInput["password"]?.text {
+                    await self.credentials.authenticated(.ssh, value: value, target: credentialTarget)
                 }
                 self.firstRunEventGeneration = nil
                 if let value = reply.result["plan"] {
@@ -253,7 +261,7 @@ final class AppState: ObservableObject {
                     guard let identity = binding.result["identity"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
                     let target = selectedRoot + "|" + revision + "|" + identity
                     if let scope = self.credentials.scope, scope != target { self.clearSessionCredentials() }
-                    await self.credentials.prepare(for: target)
+                    await self.credentials.prepare(for: target, savedTarget: binding.result["persistence_identity"]?.text)
                     try self.credentials.bindGuest(binding.result["guest_boot"]?.text)
                     input.merge(try self.credentials.parameters(for: target)) { _, new in new }
                     input["credential_host_identity"] = .string(identity)
@@ -289,6 +297,11 @@ final class AppState: ObservableObject {
                 if let action = GUIAction(rawValue: method), !action.accepts(reply.result) { throw ErrorState("PROTOCOL_ERROR", method: method) }
                 if reply.result["fx_host_running"]?.boolean == false { self.guiSnapshots = [:] }
                 if let boot = reply.result["guest_boot"]?.text { try self.credentials.bindGuest(boot) }
+                for role in CredentialKind.allCases {
+                    if reply.result[role.rawValue + "_password_verified"]?.boolean == true, let value = authInput[role.bridgeField]?.text {
+                        await self.credentials.authenticated(role, value: value, target: credentialTarget)
+                    }
+                }
                 if method == "read_configuration" { self.sshConfiguration = reply.result }
                 if ["save_configuration", "restore_configuration"].contains(method) {
                     self.clearSessionCredentials()
@@ -415,7 +428,7 @@ final class AppState: ObservableObject {
             guard let revision = binding.result["revision"]?.text, let identity = binding.result["identity"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
             let target = runtimeRoot + "|" + revision + "|" + identity
             if let scope = credentials.scope, scope != target { clearSessionCredentials() }
-            await credentials.prepare(for: target)
+            await credentials.prepare(for: target, savedTarget: binding.result["persistence_identity"]?.text)
             try credentials.bindGuest(binding.result["guest_boot"]?.text)
         } catch { clearSessionCredentials(); appendLog("credential target unavailable") }
     }
@@ -432,6 +445,7 @@ final class AppState: ObservableObject {
     }
     func confirmMainMenu() { launchSession.confirmMainMenu(); recordLaunch() }
     func confirmSinglePlayer() { launchSession.confirmSinglePlayer(); recordLaunch() }
+    func forgetSavedCredentials() { credentials.forgetSaved(); SSHTransport.closeOwnedMasters() }
     func clearSessionCredentials() { credentials.clear(); SSHTransport.closeOwnedMasters() }
     func endSession() { networkLaunchPending = false; tasks.cancel(); clearSessionCredentials() }
     func value(_ method: String, _ key: String) -> String { results[method]?[key]?.text ?? t("ui.366") }

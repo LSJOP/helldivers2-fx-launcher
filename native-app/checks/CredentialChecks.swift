@@ -60,7 +60,7 @@ import Foundation
         try check(!CoreString.encode(nested).contains(fake), "nested event redaction")
         try check(!CoreString.encode(redactor.diagnostic(["other": .object(["secret": .string(fake)])])).contains(fake), "nested diagnostic redaction")
         try check(!CredentialRedactor(secrets: []).text("{\"password\":\"" + fake + "\"}").contains(fake), "unregistered structured password redaction")
-        print("\(count) memory-only credential checks PASS")
+        print("\(count) session credential checks PASS (persistence disabled in these fixtures)")
     }
 }
 // Keep this executable independent of Native Core for the service-layer checks.

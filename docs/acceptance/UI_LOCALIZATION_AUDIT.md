@@ -27,3 +27,7 @@ GUI 总体验收与十语言完整验收均 NOT TESTED。首次安装不是干�
 ## FX 本地测试副本
 
 用户要求显示和允许本地测试副本启动；已加入相应识别和十语言本地副本标记。中英文FX管理页build2026110505真实截图均显示标准版与测试版两个条目。截图不包含实际FX启动或Guest密码认证；这两项不由截图推断。
+
+## Encrypted local remembering
+
+Current user policy is local encrypted persistence, no macOS Keychain. Ten-language Settings and First-Run Setup credential text, saved status, deletion action and storage error text updated. Refresh only affected bilingual Settings/First-Run Setup screenshots; other screenshots retain their own provenance. Historical memory-only results remain historical.

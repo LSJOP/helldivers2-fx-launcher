@@ -362,7 +362,15 @@ actor NativeCoreService {
         let processes = rows.values.filter { LaunchService.normalizedCommand($0.command) == executable }
             .sorted { $0.pid < $1.pid }.map { "\($0.pid):\($0.ppid):\($0.start)" }.joined(separator: "|")
         let key = CoreHash.sha256(Data((identity.path + "|" + digest + "|" + revision + "|" + processes).utf8))
-        var value: [String: JSONValue] = ["identity": .string(key), "revision": .string(revision)]
+        let ssh = configuration["ssh"]?.object ?? [:]
+        let persistentBinding: [String: JSONValue] = [
+            "fx": .string(LaunchService.normalizedExecutable(fx)), "executable_sha256": .string(digest),
+            "host": ssh["host"] ?? .null, "port": ssh["port"] ?? .null,
+            "username": ssh["username"] ?? .null, "auth": ssh["auth"] ?? .null,
+            "identity_file": ssh["identity_file"] ?? .null]
+        let persistentKey = CoreHash.sha256(Data(CoreJSON.encode(.object(persistentBinding)).utf8))
+        var value: [String: JSONValue] = ["identity": .string(key), "revision": .string(revision),
+                                         "persistence_identity": .string(persistentKey)]
         let transport = SSHTransport.make(configuration)
         if !processes.isEmpty { _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context) }
         if transport.masterPID(context: context) != nil {
@@ -419,10 +427,6 @@ actor NativeCoreService {
             result["protocol"] = .string("negotiated")
             result["authentication"] = .string("authenticated")
             // A fresh master only counts as password proof if our secret was challenged.
-            if transport.passwordWasSent {
-                emit("INFO", "SSH authenticated", ["kind": .string("credential_status"),
-                    "credential_kind": .string("ssh"), "status": .string("authenticated")])
-            }
             progress("VerifyingGuestIdentity")
             let before = try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!,
                 transport: transport, context: context)
@@ -435,6 +439,12 @@ actor NativeCoreService {
             guard before == after else { throw CoreError("FX_IDENTITY_UNVERIFIED") }
             result["guest_boot"] = .string(lines[1])
             result["guest_identity"] = .string("verified")
+            result["ssh_password_verified"] = .bool(transport.passwordWasSent)
+            if transport.passwordWasSent {
+                emit("INFO", "SSH authenticated", ["kind": .string("credential_status"),
+                    "credential_kind": .string("ssh"), "status": .string("authenticated")])
+            }
+
             result["stage"] = .string("Complete")
             return result
         } catch let error as CoreError {
@@ -476,6 +486,8 @@ actor NativeCoreService {
             emit("INFO", "Guest sudo authenticated", ["kind": .string("credential_status"),
                 "credential_kind": .string("sudo"), "status": .string("authenticated")])
         }
+        result["ssh_password_verified"] = .bool(transport.passwordWasSent)
+        result["sudo_password_verified"] = result["password_verified"] ?? .bool(false)
         result["guest_boot"] = .string(session.boot)
         result["configuration_changed"] = .bool(false)
         return result

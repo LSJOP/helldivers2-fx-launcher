@@ -8,6 +8,8 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+- Remember successfully verified SSH/sudo passwords across App restarts using installation-local AES-GCM encrypted files, without macOS Keychain. Keep environments and roles separate, stop reusing rejected values, and provide deletion and visible storage errors.
+
 - First-Run Setup now uses the same local FX copy eligibility as launch; intact local test copies no longer fail the entry check solely because they lack an official publisher signature. Guest authentication and deployment profile/artifact checks remain separate.
 
 - Show local FX test copies using the custom test identity and allow their intact locally signed bundles to launch through normal confirmation. Preserve target/process/SSH binding and distinguish local copies from publisher-verified builds.

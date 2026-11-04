@@ -267,7 +267,7 @@ import ApplicationServices
             guard let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
             var files: [String] = []
             let pages: [(Page, String)] = [(.dashboard,"dashboard"),(.environment,"environment"),(.fx,"fx-manager"),(.performance,"performance"),(.logs,"logs"),(.settings,"settings"),(.setup,"first-run-setup")]
-            let capturePages = ProcessInfo.processInfo.arguments.contains("--fx-only") ? pages.filter { $0.0 == .fx } : pages
+            let capturePages = ProcessInfo.processInfo.arguments.contains("--fx-only") ? pages.filter { $0.0 == .fx } : ProcessInfo.processInfo.arguments.contains("--credentials-only") ? pages.filter { $0.0 == .settings || $0.0 == .setup } : pages
             for (page, name) in capturePages {
                 state.selection = page
                 window.setContentSize(NSSize(width: 1180, height: page == .fx ? (ProcessInfo.processInfo.arguments.contains("--fx-only") ? 1100 : 700) : 850))

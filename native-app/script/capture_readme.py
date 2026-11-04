@@ -14,6 +14,7 @@ parser.add_argument('bundle',type=Path);parser.add_argument('output',type=Path)
 parser.add_argument('--language',required=True,choices=['zh-CN','en'])
 parser.add_argument('--bootstrap-chinese',action='store_true',help='Use only with an isolated capture-copy bundle identifier')
 parser.add_argument('--fx-only',action='store_true',help='Capture only FX Manager in an isolated read-only window')
+parser.add_argument('--credentials-only',action='store_true',help='Capture only Settings and First-Run Setup, with no credential-store access')
 args=parser.parse_args();bundle=args.bundle.resolve();output=args.output.resolve()
 info=plistlib.loads((bundle/'Contents/Info.plist').read_bytes())
 if args.bootstrap_chinese and not info.get('CFBundleIdentifier','').startswith('com.lsjop.helldivers2fx.native.readme.'):
@@ -27,6 +28,7 @@ launch_args=['--readme-screenshots',str(output),args.language,
              '-NativeRememberedRuntimeRoot','',
              '-NativeCredentialAutoLoadDisabled','YES','-ApplePersistenceIgnoreState','YES','-NSQuitAlwaysKeepsWindows','NO']
 if args.fx_only: launch_args.append('--fx-only')
+if args.credentials_only: launch_args.append('--credentials-only')
 subprocess.run(['/usr/bin/open','-n',str(bundle),'--args',*launch_args],check=True)
 seen=set();started=time.monotonic();deadline=started+90;reopened=False
 while time.monotonic()<deadline:

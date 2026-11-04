@@ -292,8 +292,11 @@ extension NativeCoreService {
         let service = EnvironmentDeploymentService(backend: backend, receipts: deploymentReceipts)
         if method == "first_run_detect" {
             let snapshot = try backend.snapshot()
+            if transport.passwordWasSent {
+                emit("INFO", "SSH authenticated", ["kind": .string("credential_status"), "credential_kind": .string("ssh"), "status": .string("authenticated")])
+            }
             let plan = DeploymentPlanBuilder.build(snapshot, profile: try EnvironmentProfile.bundled())
-            return ["plan": try json(plan)]
+            return ["plan": try json(plan), "ssh_password_verified": .bool(transport.passwordWasSent)]
         }
         if method == "first_run_deploy" {
             guard let raw = params["deployment_plan"] else { throw CoreError("INVALID_ARGUMENT") }
