@@ -26,6 +26,16 @@ import Darwin
         }
         let transport = SSHTransport.make(["ssh": .object(["host": .string("127.0.0.1"),
             "port": .number(2222), "username": .string("steamos"), "auth": .string("password")])])
+        let isolatedA = SSHTransport.isolatedSetup([:]), isolatedB = SSHTransport.isolatedSetup([:])
+        check(isolatedA.settings.socketPath != isolatedB.settings.socketPath, "setup actions own distinct SSH masters")
+        check(isolatedA.settings.socketPath != transport.settings.socketPath, "setup never occupies the launch tunnel socket")
+        check(isolatedA.settings.host == transport.settings.host && isolatedA.settings.port == transport.settings.port, "setup retains effective local endpoint")
+        let binding = try SSHEnvironmentBackend.deploymentBinding("100|[200]|300|127.0.0.1:2222|fixture-start", fxPath: "/fixture/FX.app")
+        check(binding == (try SSHEnvironmentBackend.deploymentBinding("100|[200]|301|127.0.0.1:2222|fixture-start", fxPath: "/fixture/FX.app")), "new authenticated master preserves deployment target")
+        check(binding != (try SSHEnvironmentBackend.deploymentBinding("101|[200]|301|127.0.0.1:2222|fixture-start", fxPath: "/fixture/FX.app")), "changed FX process invalidates deployment target")
+        check(binding != (try SSHEnvironmentBackend.deploymentBinding("100|[200]|301|127.0.0.1:2222|fixture-start", fxPath: "/fixture/Other.app")), "changed FX selection invalidates deployment target")
+        do { _ = try SSHEnvironmentBackend.deploymentBinding("malformed", fxPath: "/fixture/FX.app"); check(false, "malformed target rejected") }
+        catch { check(true, "malformed target rejected") }
         check(transport.commandPrefix.first == "-S", "argv begins with option, never duplicate executable")
         let command = SSHTransport.interactiveCommand(transport.commandPrefix)
         check(command.1.filter { $0 == "/usr/bin/ssh" }.count == 1, "exactly one OpenSSH executable")

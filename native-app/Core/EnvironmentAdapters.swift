@@ -93,6 +93,16 @@ final class SSHEnvironmentBackend: DeploymentBackend {
         return try LaunchService.hostIdentity(fx: fx, gvproxy: resources.binary, transport: transport,
                                              context: context, requireCDP: false, allowPublisherNetwork: true)
     }
+    /// The authenticated master is verified for every probe, but its transient PID is
+    /// excluded from the plan identity so a separately authenticated action can apply it.
+    /// FX/network process identities, peer, selected path and Guest boot remain bound.
+    static func deploymentBinding(_ signature: String, fxPath: String) throws -> String {
+        let fields = signature.split(separator: "|", omittingEmptySubsequences: false).map(String.init)
+        guard fields.count == 5, Int(fields[0]) != nil, Int(fields[2]) != nil,
+              !fields[1].isEmpty, !fields[3].isEmpty, !fields[4].isEmpty else { throw CoreError("TARGET_CHANGED") }
+        let stable = [fxPath, fields[0], fields[1], fields[3], fields[4]].joined(separator: "|")
+        return CoreHash.sha256(Data(stable.utf8))
+    }
     func snapshot() throws -> DeploymentSnapshot {
         let identity = try hostIdentity()
         let result = try transport.run(Self.probe, timeout: 40, context: context)
@@ -130,7 +140,7 @@ final class SSHEnvironmentBackend: DeploymentBackend {
         }
         let revisionFields = fields.filter { !$0.key.hasSuffix("_count") && !["free"].contains($0.key) }
         let revision = CoreHash.sha256(Data((CoreJSON.encode(.object(revisionFields.mapValues { .string($0) })) + configurationRevision).utf8))
-        return .init(target: identity, boot: boot, revision: revision, fxVersion: fxVersion,
+        return .init(target: try Self.deploymentBinding(identity, fxPath: fx.path), boot: boot, revision: revision, fxVersion: fxVersion,
                      osVersion: fields["os_version"] ?? "UNKNOWN", architecture: fields["arch"] ?? "UNKNOWN",
                      steamRunning: sp > 0, gameRunning: gp > 0 || (fields["reaper_count"].flatMap(Int.init) ?? 1) > 0, freeBytes: free, facts: facts, values: values)
     }
@@ -265,7 +275,8 @@ extension NativeCoreService {
         let request = try launchRequest(params, context: context, emit: emit, confirmed: true)
         let fx = try LaunchService.selectedFX(request)
         guard FXDiscoveryService.integrity(app: fx)["state"]?.text == "verified" else { throw CoreError("FX_ENTRY_MISMATCH") }
-        let transport = SSHTransport.make(request.configuration)
+        let transport = SSHTransport.isolatedSetup(request.configuration)
+        defer { transport.closeMaster() }
         guard SSHTransport.localHost(transport.settings.host) else { throw CoreError("LOCAL_FX_REQUIRED") }
         transport.setSecret(password: request.password, passphrase: request.passphrase)
         try transport.connectOnce(context: context, forwarding: false)

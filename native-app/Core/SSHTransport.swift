@@ -42,6 +42,13 @@ final class SSHTransport {
                                               socketPath: "/tmp/hd2fx-\(getuid())-\(suffix).sock"))
     }
 
+    /// Setup/sudo checks own a fresh master and never alter/reuse the launch CDP tunnel.
+    static func isolatedSetup(_ configuration: [String: JSONValue]) -> SSHTransport {
+        var settings = make(configuration).settings
+        settings.socketPath = "/tmp/hd2fx-setup-\(getuid())-\(UUID().uuidString).sock"
+        return SSHTransport(settings: settings)
+    }
+
     static func localHost(_ host: String) -> Bool {
         ["127.0.0.1", "localhost", "::1"].contains(host)
     }

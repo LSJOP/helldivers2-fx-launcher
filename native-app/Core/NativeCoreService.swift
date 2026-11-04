@@ -395,7 +395,8 @@ actor NativeCoreService {
                          emit: @escaping (String, String, [String: JSONValue]) -> Void) throws -> [String: JSONValue] {
         let request = try launchRequest(params, context: context, emit: emit, confirmed: true)
         let fx = try LaunchService.selectedFX(request)
-        let transport = SSHTransport.make(request.configuration)
+        let transport = SSHTransport.isolatedSetup(request.configuration)
+        defer { transport.closeMaster() }
         guard SSHTransport.localHost(transport.settings.host) else { throw CoreError("LOCAL_FX_REQUIRED") }
         transport.setSecret(password: request.password, passphrase: request.passphrase)
         try transport.connectOnce(context: context, forwarding: false)

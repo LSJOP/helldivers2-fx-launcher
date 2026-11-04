@@ -11,7 +11,7 @@ Scope: isolated temporary filesystem, synthetic FX bundle, local PTY/closed-port
 | Deployment | 66 | Production engine on real isolated files; generated package install/recovery shell on fixture HOME, boot read and Linux utility adapters |
 | Native Core | 62 | Contracts, configuration, bounds, integrity, fail-closed behavior |
 | Native integration | 22 | Real service dispatch; FX version discovery uses a synthetic bundle instead of installed FX |
-| SSH | 26 | Controlled PTY, no echo, closed local port, remote sudo quoting/error classification |
+| SSH | 33 | Controlled PTY, no echo, closed local port, remote sudo quoting/error classification |
 | FX identity | 16 | Process ancestry and signature-bound failure paths |
 | Launch / GUI state | 18 | Actual timing, terminal status, no inferred gameplay success |
 | Memory-only credentials | 10 | Independent roles, rejection/scope/clear, no persistence API |
@@ -22,7 +22,7 @@ Scope: isolated temporary filesystem, synthetic FX bundle, local PTY/closed-port
 | Release history | 10 | Existing authenticated history protections |
 | Update resources | 5 | Existing resource/bundle behavior |
 
-Swift checks: 252. Python negative/regression fixtures: 31. Documentation gate: 15 checks. Ten languages have identical active-key coverage and no missing translations. Inspect final evidence/artifact metadata for the exact completed build/run. Human naturalness review of all ten languages is NOT_TESTED.
+Swift checks: 259. Python negative/regression fixtures: 31. Documentation gate: 15 checks. Ten languages have identical active-key coverage and no missing translations. Inspect final evidence/artifact metadata for the exact completed build/run. Human naturalness review of all ten languages is NOT_TESTED.
 
 Deployment cases include absent/unapproved FEX/Proton, historical fingerprint insufficient for readiness, unsupported versions, unknown/mixed/corrupt files, exact consent, insufficient space, Steam/game active, SSH-like disconnection, boot/target/revision drift, cancellation before write, mid-write failure, pending-receipt recovery, restore failure, external updates, repeat detection, preserve custom launch options, conflicting/duplicate/quoted assignment rejection, duplicate/malformed VDF rejection, package installation, known-tree backup replacement, unknown-tree rejection, full inventory readback, interrupted directory swap and recovery, and conditional network consent. Actual generated package shell is executed against a fixture filesystem; mapping `/proc` and Linux utilities is expressly not a real Guest test.
 
