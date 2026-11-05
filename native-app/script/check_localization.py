@@ -76,7 +76,7 @@ def validate(root):
     # Explicit finite dynamic namespaces used by FirstRunSetupView.
     if (app / 'Views/FirstRunSetupView.swift').is_file():
         used.update('ui.setup.component.' + v for v in ['fex','proton','steam','game','vulkan','kosmickrisp','network','gvproxy','ipv4','ipv6','launch','tool'])
-        used.update('ui.setup.state.' + v for v in ['NotChecked','Checking','Ready','NeedsConfiguration','AwaitingAuthorization','Deploying','Verifying','Completed','Failed','RecoveryRequired','Unsupported'])
+        used.update('ui.setup.state.' + v for v in ['Rebooting','Reconnecting','CheckingSteam','NotChecked','Checking','Ready','NeedsConfiguration','AwaitingAuthorization','Deploying','Verifying','Completed','Failed','RecoveryRequired','Unsupported'])
     if used - set(english):
         errors.append('missing referenced keys: ' + str(sorted(used - set(english))))
     if set(english) - used:

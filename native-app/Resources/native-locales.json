@@ -593,8 +593,13 @@
   "ui.setup.ipv6Advisory": "IPv6 is advisory only and does not block other configuration.",
   "ui.setup.steamManual": "Keep SteamOS and Steam running. In HELLDIVERS 2 Properties, set Launch Options under General and select an installed, verified tool under Compatibility, then detect again. Automatic writes to Steam-managed files are deferred while Steam runs; missing approved tools remain blocked.",
   "ui.setup.noExecutable": "No automatic changes are available. Review the item details for manual steps or missing prerequisites.",
-  "ui.setup.protonInstall": "Download Proton-JE from its pinned upstream release (about 332 MiB; at least 4 GiB free). Verify the full file and link inventory, then install into Steam compatibilitytools.d. Keep Steam running. SteamOS requires curl and Python 3. Existing installations are never overwritten.",
-  "ui.setup.toolDiscovery": "Proton is installed, but Steam has not listed it yet. Restart SteamOS when convenient, then detect again to select the compatibility tool. The app will not restart Steam or the VM."
+  "ui.setup.protonInstall": "SHA-256 + SHA-512 / Download Proton-JE from its pinned upstream release (about 332 MiB; at least 4 GiB free). Verify the full file and link inventory, then install into Steam compatibilitytools.d. Keep Steam running. SteamOS requires curl and Python 3. Existing installations are never overwritten.",
+  "ui.setup.toolDiscovery": "After installation, automatically reboot the selected FX virtual machine, reconnect SSH and configure Steam. This requires sudo and interrupts the VM session; running games block the operation. No forced shutdown or repeated reboot is used.",
+  "ui.setup.autoReboot": "After installation, automatically reboot the selected FX virtual machine, reconnect SSH and configure Steam. This requires sudo and interrupts the VM session; running games block the operation. No forced shutdown or repeated reboot is used.",
+  "ui.setup.apiFailure": "Steam settings could not be read; technical reason",
+  "ui.setup.state.Rebooting": "Rebooting the selected FX virtual machine",
+  "ui.setup.state.Reconnecting": "Reconnecting SSH after reboot",
+  "ui.setup.state.CheckingSteam": "Waiting for Steam settings after reboot"
  },
  "zh-CN": {
   "ui.193": "导航",
@@ -1190,8 +1195,13 @@
   "ui.setup.ipv6Advisory": "IPv6 仅作提示，不阻塞其他配置。",
   "ui.setup.steamManual": "保持 SteamOS 与 Steam 运行。在 HELLDIVERS 2 的属性中，通过“通用”设置启动选项，通过“兼容性”选择已安装且已验证的工具，再重新检测。Steam 运行时暂不自动写入其管理的文件；缺少审核工具的项目仍受阻。",
   "ui.setup.noExecutable": "当前没有可自动执行的修改。请查看各项详情，完成手动步骤或补齐前提。",
-  "ui.setup.protonInstall": "从固定的上游发行版下载 Proton-JE（约 332 MiB，至少需 4 GiB 可用空间），校验全部文件与链接后安装到 Steam compatibilitytools.d。保持 Steam 运行；SteamOS 内需有 curl 和 Python 3。不覆盖已有安装。",
-  "ui.setup.toolDiscovery": "Proton 已安装，但 Steam 尚未列出它。方便时重启 SteamOS，再重新检测以选择兼容工具。应用不会自动重启 Steam 或虚拟机。"
+  "ui.setup.protonInstall": "SHA-256 + SHA-512 / 从固定的上游发行版下载 Proton-JE（约 332 MiB，至少需 4 GiB 可用空间），校验全部文件与链接后安装到 Steam compatibilitytools.d。保持 Steam 运行；SteamOS 内需有 curl 和 Python 3。不覆盖已有安装。",
+  "ui.setup.toolDiscovery": "安装后自动重启所选 FX 虚拟机、重新连接 SSH 并配置 Steam。此操作需要 sudo，会中断虚拟机会话；游戏运行时禁止执行。不强制关机，也不重复发送重启命令。",
+  "ui.setup.autoReboot": "安装后自动重启所选 FX 虚拟机、重新连接 SSH 并配置 Steam。此操作需要 sudo，会中断虚拟机会话；游戏运行时禁止执行。不强制关机，也不重复发送重启命令。",
+  "ui.setup.apiFailure": "无法读取 Steam 设置；具体原因",
+  "ui.setup.state.Rebooting": "正在重启所选 FX 虚拟机",
+  "ui.setup.state.Reconnecting": "重启后正在重新连接 SSH",
+  "ui.setup.state.CheckingSteam": "重启后正在等待 Steam 设置就绪"
  },
  "ja": {
   "ui.193": "移動",
@@ -1787,8 +1797,13 @@
   "ui.setup.ipv6Advisory": "IPv6 は参考情報のみで、他の設定を妨げません。",
   "ui.setup.steamManual": "SteamOS と Steam は起動したままにしてください。HELLDIVERS 2 のプロパティで「一般」の起動オプションと「互換性」のインストール済み・検証済みツールを設定し、再検出してください。Steam 起動中は管理ファイルへの自動書き込みを保留します。承認済みツールがない項目は引き続きブロックされます。",
   "ui.setup.noExecutable": "自動実行できる変更はありません。各項目の詳細で手動手順と前提条件を確認してください。",
-  "ui.setup.protonInstall": "固定された上流リリースから Proton-JE をダウンロードします（約 332 MiB、空き容量 4 GiB 以上）。全ファイルとリンクを検証し Steam compatibilitytools.d にインストールします。Steam は起動したままにしてください。SteamOS 内に curl と Python 3 が必要です。既存の環境は上書きしません。",
-  "ui.setup.toolDiscovery": "Proton はインストール済みですが、Steam の一覧にまだありません。都合のよいときに SteamOS を再起動し、再検出して互換ツールを選択してください。アプリは Steam や仮想マシンを自動再起動しません。"
+  "ui.setup.protonInstall": "SHA-256 + SHA-512 / 固定された上流リリースから Proton-JE をダウンロードします（約 332 MiB、空き容量 4 GiB 以上）。全ファイルとリンクを検証し Steam compatibilitytools.d にインストールします。Steam は起動したままにしてください。SteamOS 内に curl と Python 3 が必要です。既存の環境は上書きしません。",
+  "ui.setup.toolDiscovery": "インストール後、選択した FX 仮想マシンを自動再起動し、SSH に再接続して Steam を設定します。sudo が必要で、仮想マシンのセッションが中断されます。ゲーム起動中は実行できません。強制終了や再起動の再送信は行いません。",
+  "ui.setup.autoReboot": "インストール後、選択した FX 仮想マシンを自動再起動し、SSH に再接続して Steam を設定します。sudo が必要で、仮想マシンのセッションが中断されます。ゲーム起動中は実行できません。強制終了や再起動の再送信は行いません。",
+  "ui.setup.apiFailure": "Steam 設定を読み取れません。詳細な原因",
+  "ui.setup.state.Rebooting": "選択した FX 仮想マシンを再起動中",
+  "ui.setup.state.Reconnecting": "再起動後に SSH へ再接続中",
+  "ui.setup.state.CheckingSteam": "再起動後に Steam 設定の準備を待機中"
  },
  "ko": {
   "ui.193": "탐색",
@@ -2384,8 +2399,13 @@
   "ui.setup.ipv6Advisory": "IPv6는 참고 사항이며 다른 설정을 차단하지 않습니다.",
   "ui.setup.steamManual": "SteamOS와 Steam은 계속 실행하세요. HELLDIVERS 2 속성의 일반에서 실행 옵션을 설정하고 호환성에서 설치 및 검증된 도구를 선택한 후 다시 감지하세요. Steam 실행 중에는 관리 파일의 자동 쓰기를 보류합니다. 승인된 도구가 없는 항목은 계속 차단됩니다.",
   "ui.setup.noExecutable": "자동으로 실행할 변경 사항이 없습니다. 각 항목의 세부 정보에서 수동 단계와 필수 조건을 확인하세요.",
-  "ui.setup.protonInstall": "고정된 업스트림 릴리스에서 Proton-JE를 다운로드합니다(약 332 MiB, 여유 공간 최소 4 GiB). 모든 파일과 링크를 검증한 후 Steam compatibilitytools.d에 설치합니다. Steam은 계속 실행하세요. SteamOS에 curl과 Python 3이 필요합니다. 기존 설치는 덮어쓰지 않습니다.",
-  "ui.setup.toolDiscovery": "Proton은 설치되었지만 Steam 목록에 아직 없습니다. 편할 때 SteamOS를 다시 시작하고 다시 감지하여 호환 도구를 선택하세요. 앱은 Steam이나 가상 머신을 자동으로 다시 시작하지 않습니다."
+  "ui.setup.protonInstall": "SHA-256 + SHA-512 / 고정된 업스트림 릴리스에서 Proton-JE를 다운로드합니다(약 332 MiB, 여유 공간 최소 4 GiB). 모든 파일과 링크를 검증한 후 Steam compatibilitytools.d에 설치합니다. Steam은 계속 실행하세요. SteamOS에 curl과 Python 3이 필요합니다. 기존 설치는 덮어쓰지 않습니다.",
+  "ui.setup.toolDiscovery": "설치 후 선택한 FX 가상 머신을 자동으로 다시 시작하고 SSH에 다시 연결하여 Steam을 설정합니다. sudo가 필요하며 가상 머신 세션이 중단됩니다. 게임 실행 중에는 차단됩니다. 강제 종료하거나 재시작 명령을 반복하지 않습니다.",
+  "ui.setup.autoReboot": "설치 후 선택한 FX 가상 머신을 자동으로 다시 시작하고 SSH에 다시 연결하여 Steam을 설정합니다. sudo가 필요하며 가상 머신 세션이 중단됩니다. 게임 실행 중에는 차단됩니다. 강제 종료하거나 재시작 명령을 반복하지 않습니다.",
+  "ui.setup.apiFailure": "Steam 설정을 읽을 수 없습니다. 구체적인 원인",
+  "ui.setup.state.Rebooting": "선택한 FX 가상 머신을 다시 시작하는 중",
+  "ui.setup.state.Reconnecting": "다시 시작한 후 SSH에 다시 연결하는 중",
+  "ui.setup.state.CheckingSteam": "다시 시작한 후 Steam 설정을 기다리는 중"
  },
  "ru": {
   "ui.193": "Навигация",
@@ -2981,8 +3001,13 @@
   "ui.setup.ipv6Advisory": "IPv6 носит рекомендательный характер и не блокирует другие настройки.",
   "ui.setup.steamManual": "Оставьте SteamOS и Steam запущенными. В свойствах HELLDIVERS 2 задайте параметры запуска в разделе «Общие» и выберите установленный и проверенный инструмент в разделе «Совместимость», затем повторите проверку. Автоматическая запись в файлы Steam отложена, пока Steam работает; отсутствие одобренного инструмента по-прежнему блокирует изменение.",
   "ui.setup.noExecutable": "Нет доступных автоматических изменений. Проверьте ручные шаги и необходимые условия в сведениях об отдельных пунктах.",
-  "ui.setup.protonInstall": "Загрузить Proton-JE из закреплённого исходного выпуска (около 332 MiB; нужно не менее 4 GiB свободного места). Проверить все файлы и ссылки и установить в Steam compatibilitytools.d. Steam остаётся запущенным. В SteamOS нужны curl и Python 3. Существующие установки не перезаписываются.",
-  "ui.setup.toolDiscovery": "Proton установлен, но Steam ещё не включил его в список. Перезапустите SteamOS в удобное время и повторите проверку, чтобы выбрать инструмент совместимости. Приложение не перезапускает Steam или ВМ автоматически."
+  "ui.setup.protonInstall": "SHA-256 + SHA-512 / Загрузить Proton-JE из закреплённого исходного выпуска (около 332 MiB; нужно не менее 4 GiB свободного места). Проверить все файлы и ссылки и установить в Steam compatibilitytools.d. Steam остаётся запущенным. В SteamOS нужны curl и Python 3. Существующие установки не перезаписываются.",
+  "ui.setup.toolDiscovery": "После установки автоматически перезапустить выбранную виртуальную машину FX, переподключить SSH и настроить Steam. Требуется sudo; сеанс ВМ прервётся. Запущенная игра блокирует операцию. Принудительное выключение и повторные команды перезагрузки не используются.",
+  "ui.setup.autoReboot": "После установки автоматически перезапустить выбранную виртуальную машину FX, переподключить SSH и настроить Steam. Требуется sudo; сеанс ВМ прервётся. Запущенная игра блокирует операцию. Принудительное выключение и повторные команды перезагрузки не используются.",
+  "ui.setup.apiFailure": "Не удалось прочитать настройки Steam; техническая причина",
+  "ui.setup.state.Rebooting": "Перезапуск выбранной виртуальной машины FX",
+  "ui.setup.state.Reconnecting": "Повторное подключение SSH после перезапуска",
+  "ui.setup.state.CheckingSteam": "Ожидание настроек Steam после перезапуска"
  },
  "es": {
   "ui.193": "Navegación",
@@ -3578,8 +3603,13 @@
   "ui.setup.ipv6Advisory": "IPv6 es solo informativo y no bloquea otras configuraciones.",
   "ui.setup.steamManual": "Mantén SteamOS y Steam en ejecución. En Propiedades de HELLDIVERS 2, configura las opciones de lanzamiento en General y elige una herramienta instalada y verificada en Compatibilidad; después vuelve a detectar. Las escrituras automáticas en archivos de Steam se aplazan mientras Steam está abierto; las herramientas sin aprobar siguen bloqueadas.",
   "ui.setup.noExecutable": "No hay cambios automáticos disponibles. Consulta los detalles para ver los pasos manuales o requisitos pendientes.",
-  "ui.setup.protonInstall": "Descargar Proton-JE desde la versión original fijada (unos 332 MiB; al menos 4 GiB libres). Verificar todos los archivos y enlaces e instalar en Steam compatibilitytools.d. Steam sigue abierto. SteamOS necesita curl y Python 3. No se sobrescriben instalaciones existentes.",
-  "ui.setup.toolDiscovery": "Proton está instalado, pero Steam aún no lo muestra. Reinicia SteamOS cuando te convenga y vuelve a detectar para seleccionar la herramienta. La aplicación no reiniciará Steam ni la máquina virtual automáticamente."
+  "ui.setup.protonInstall": "SHA-256 + SHA-512 / Descargar Proton-JE desde la versión original fijada (unos 332 MiB; al menos 4 GiB libres). Verificar todos los archivos y enlaces e instalar en Steam compatibilitytools.d. Steam sigue abierto. SteamOS necesita curl y Python 3. No se sobrescriben instalaciones existentes.",
+  "ui.setup.toolDiscovery": "Tras instalar, reiniciar automáticamente la máquina virtual FX seleccionada, reconectar SSH y configurar Steam. Requiere sudo e interrumpe la sesión de la máquina virtual. Los juegos en ejecución bloquean la operación. Sin apagado forzado ni reinicios repetidos.",
+  "ui.setup.autoReboot": "Tras instalar, reiniciar automáticamente la máquina virtual FX seleccionada, reconectar SSH y configurar Steam. Requiere sudo e interrumpe la sesión de la máquina virtual. Los juegos en ejecución bloquean la operación. Sin apagado forzado ni reinicios repetidos.",
+  "ui.setup.apiFailure": "No se pudieron leer los ajustes de Steam; motivo técnico",
+  "ui.setup.state.Rebooting": "Reiniciando la máquina virtual FX seleccionada",
+  "ui.setup.state.Reconnecting": "Reconectando SSH después del reinicio",
+  "ui.setup.state.CheckingSteam": "Esperando los ajustes de Steam después del reinicio"
  },
  "de": {
   "ui.193": "Navigation",
@@ -4175,8 +4205,13 @@
   "ui.setup.ipv6Advisory": "IPv6 dient nur als Hinweis und blockiert keine anderen Einstellungen.",
   "ui.setup.steamManual": "Lass SteamOS und Steam laufen. Stelle in den Eigenschaften von HELLDIVERS 2 unter Allgemein die Startoptionen und unter Kompatibilität ein installiertes, geprüftes Werkzeug ein. Prüfe danach erneut. Automatische Schreibzugriffe auf Steam-Dateien warten, solange Steam läuft; fehlende freigegebene Werkzeuge bleiben gesperrt.",
   "ui.setup.noExecutable": "Keine automatischen Änderungen verfügbar. Prüfe die Details auf manuelle Schritte und fehlende Voraussetzungen.",
-  "ui.setup.protonInstall": "Proton-JE aus der festgelegten Originalversion laden (etwa 332 MiB; mindestens 4 GiB frei). Alle Dateien und Links prüfen und unter Steam compatibilitytools.d installieren. Steam bleibt geöffnet. SteamOS benötigt curl und Python 3. Bestehende Installationen werden nicht überschrieben.",
-  "ui.setup.toolDiscovery": "Proton ist installiert, wird aber von Steam noch nicht aufgelistet. Starte SteamOS bei Gelegenheit neu und prüfe erneut, um das Kompatibilitätswerkzeug auszuwählen. Die App startet weder Steam noch die VM automatisch neu."
+  "ui.setup.protonInstall": "SHA-256 + SHA-512 / Proton-JE aus der festgelegten Originalversion laden (etwa 332 MiB; mindestens 4 GiB frei). Alle Dateien und Links prüfen und unter Steam compatibilitytools.d installieren. Steam bleibt geöffnet. SteamOS benötigt curl und Python 3. Bestehende Installationen werden nicht überschrieben.",
+  "ui.setup.toolDiscovery": "Nach der Installation die gewählte FX-VM automatisch neu starten, SSH neu verbinden und Steam konfigurieren. sudo ist erforderlich; die VM-Sitzung wird unterbrochen. Laufende Spiele sperren den Vorgang. Kein erzwungenes Ausschalten und kein wiederholter Neustart.",
+  "ui.setup.autoReboot": "Nach der Installation die gewählte FX-VM automatisch neu starten, SSH neu verbinden und Steam konfigurieren. sudo ist erforderlich; die VM-Sitzung wird unterbrochen. Laufende Spiele sperren den Vorgang. Kein erzwungenes Ausschalten und kein wiederholter Neustart.",
+  "ui.setup.apiFailure": "Steam-Einstellungen konnten nicht gelesen werden; technischer Grund",
+  "ui.setup.state.Rebooting": "Gewählte FX-VM wird neu gestartet",
+  "ui.setup.state.Reconnecting": "SSH wird nach dem Neustart neu verbunden",
+  "ui.setup.state.CheckingSteam": "Steam-Einstellungen nach dem Neustart werden erwartet"
  },
  "fr": {
   "ui.193": "Navigation",
@@ -4772,8 +4807,13 @@
   "ui.setup.ipv6Advisory": "IPv6 est indicatif et ne bloque pas les autres réglages.",
   "ui.setup.steamManual": "Laissez SteamOS et Steam fonctionner. Dans les propriétés de HELLDIVERS 2, réglez les options de lancement sous Général et choisissez un outil installé et vérifié sous Compatibilité, puis relancez la détection. Les écritures automatiques dans les fichiers Steam sont différées tant que Steam fonctionne ; les outils non approuvés restent bloqués.",
   "ui.setup.noExecutable": "Aucune modification automatique disponible. Consultez les détails pour les étapes manuelles et les prérequis manquants.",
-  "ui.setup.protonInstall": "Télécharger la version amont fixée de Proton-JE (environ 332 MiB ; au moins 4 GiB libres). Vérifier tous les fichiers et liens puis installer dans Steam compatibilitytools.d. Laisser Steam ouvert. SteamOS nécessite curl et Python 3. Aucune installation existante ne sera écrasée.",
-  "ui.setup.toolDiscovery": "Proton est installé, mais Steam ne le liste pas encore. Redémarrez SteamOS quand cela vous convient, puis relancez la détection pour sélectionner cet outil. L’application ne redémarre ni Steam ni la VM automatiquement."
+  "ui.setup.protonInstall": "SHA-256 + SHA-512 / Télécharger la version amont fixée de Proton-JE (environ 332 MiB ; au moins 4 GiB libres). Vérifier tous les fichiers et liens puis installer dans Steam compatibilitytools.d. Laisser Steam ouvert. SteamOS nécessite curl et Python 3. Aucune installation existante ne sera écrasée.",
+  "ui.setup.toolDiscovery": "Après installation, redémarrer automatiquement la VM FX sélectionnée, reconnecter SSH et configurer Steam. sudo est requis et la session de la VM sera interrompue. Un jeu en cours bloque l’opération. Aucun arrêt forcé ni redémarrage répété.",
+  "ui.setup.autoReboot": "Après installation, redémarrer automatiquement la VM FX sélectionnée, reconnecter SSH et configurer Steam. sudo est requis et la session de la VM sera interrompue. Un jeu en cours bloque l’opération. Aucun arrêt forcé ni redémarrage répété.",
+  "ui.setup.apiFailure": "Impossible de lire les réglages Steam ; cause technique",
+  "ui.setup.state.Rebooting": "Redémarrage de la VM FX sélectionnée",
+  "ui.setup.state.Reconnecting": "Reconnexion SSH après le redémarrage",
+  "ui.setup.state.CheckingSteam": "Attente des réglages Steam après le redémarrage"
  },
  "pt-BR": {
   "ui.193": "Navegação",
@@ -5369,8 +5409,13 @@
   "ui.setup.ipv6Advisory": "IPv6 é apenas informativo e não bloqueia outras configurações.",
   "ui.setup.steamManual": "Mantenha o SteamOS e o Steam em execução. Nas propriedades de HELLDIVERS 2, ajuste as opções de inicialização em Geral e selecione uma ferramenta instalada e verificada em Compatibilidade; depois detecte novamente. A gravação automática nos arquivos do Steam fica adiada enquanto ele está aberto; ferramentas sem aprovação continuam bloqueadas.",
   "ui.setup.noExecutable": "Nenhuma alteração automática disponível. Consulte os detalhes para ver etapas manuais ou requisitos pendentes.",
-  "ui.setup.protonInstall": "Baixar Proton-JE da versão original fixada (cerca de 332 MiB; pelo menos 4 GiB livres). Verificar todos os arquivos e links e instalar em Steam compatibilitytools.d. O Steam continua aberto. O SteamOS precisa de curl e Python 3. Instalações existentes não são sobrescritas.",
-  "ui.setup.toolDiscovery": "O Proton está instalado, mas o Steam ainda não o lista. Reinicie o SteamOS quando for conveniente e detecte novamente para selecionar a ferramenta. O aplicativo não reiniciará o Steam nem a VM automaticamente."
+  "ui.setup.protonInstall": "SHA-256 + SHA-512 / Baixar Proton-JE da versão original fixada (cerca de 332 MiB; pelo menos 4 GiB livres). Verificar todos os arquivos e links e instalar em Steam compatibilitytools.d. O Steam continua aberto. O SteamOS precisa de curl e Python 3. Instalações existentes não são sobrescritas.",
+  "ui.setup.toolDiscovery": "Após instalar, reiniciar automaticamente a VM FX selecionada, reconectar o SSH e configurar o Steam. Exige sudo e interrompe a sessão da VM. Jogos em execução bloqueiam a operação. Sem desligamento forçado nem reinicializações repetidas.",
+  "ui.setup.autoReboot": "Após instalar, reiniciar automaticamente a VM FX selecionada, reconectar o SSH e configurar o Steam. Exige sudo e interrompe a sessão da VM. Jogos em execução bloqueiam a operação. Sem desligamento forçado nem reinicializações repetidas.",
+  "ui.setup.apiFailure": "Não foi possível ler as configurações do Steam; motivo técnico",
+  "ui.setup.state.Rebooting": "Reiniciando a VM FX selecionada",
+  "ui.setup.state.Reconnecting": "Reconectando o SSH após a reinicialização",
+  "ui.setup.state.CheckingSteam": "Aguardando as configurações do Steam após a reinicialização"
  },
  "zh-TW": {
   "ui.270": "無需外部執行環境；檢測後按 ⌘R 重新讀取全部唯讀快照。",
@@ -5966,7 +6011,12 @@
   "ui.setup.ipv6Advisory": "IPv6 僅作提示，不阻擋其他設定。",
   "ui.setup.steamManual": "保持 SteamOS 與 Steam 執行。在 HELLDIVERS 2 的內容中，透過「一般」設定啟動選項，透過「相容性」選擇已安裝且已驗證的工具，再重新偵測。Steam 執行時暫不自動寫入其管理的檔案；缺少審核工具的項目仍受阻。",
   "ui.setup.noExecutable": "目前沒有可自動執行的修改。請查看各項詳細資訊，完成手動步驟或補齊前提。",
-  "ui.setup.protonInstall": "從固定的上游發行版下載 Proton-JE（約 332 MiB，至少需 4 GiB 可用空間），校驗全部檔案與連結後安裝到 Steam compatibilitytools.d。保持 Steam 執行；SteamOS 內需有 curl 和 Python 3。不覆寫既有安裝。",
-  "ui.setup.toolDiscovery": "Proton 已安裝，但 Steam 尚未列出它。方便時重新啟動 SteamOS，再重新偵測以選擇相容性工具。應用程式不會自動重新啟動 Steam 或虛擬機。"
+  "ui.setup.protonInstall": "SHA-256 + SHA-512 / 從固定的上游發行版下載 Proton-JE（約 332 MiB，至少需 4 GiB 可用空間），校驗全部檔案與連結後安裝到 Steam compatibilitytools.d。保持 Steam 執行；SteamOS 內需有 curl 和 Python 3。不覆寫既有安裝。",
+  "ui.setup.toolDiscovery": "安裝後自動重新啟動所選 FX 虛擬機、重新連線 SSH 並設定 Steam。此操作需要 sudo，會中斷虛擬機工作階段；遊戲執行時禁止執行。不強制關機，也不重複傳送重新啟動命令。",
+  "ui.setup.autoReboot": "安裝後自動重新啟動所選 FX 虛擬機、重新連線 SSH 並設定 Steam。此操作需要 sudo，會中斷虛擬機工作階段；遊戲執行時禁止執行。不強制關機，也不重複傳送重新啟動命令。",
+  "ui.setup.apiFailure": "無法讀取 Steam 設定；具體原因",
+  "ui.setup.state.Rebooting": "正在重新啟動所選 FX 虛擬機",
+  "ui.setup.state.Reconnecting": "重新啟動後正在重新連線 SSH",
+  "ui.setup.state.CheckingSteam": "重新啟動後正在等待 Steam 設定就緒"
  }
 }

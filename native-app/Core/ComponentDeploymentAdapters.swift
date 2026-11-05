@@ -220,7 +220,10 @@ enum ProtonJERelease {
 import os,sys,json,base64,hashlib,pathlib,stat,subprocess,tempfile,tarfile,shutil,posixpath
 m=json.loads(base64.b64decode(MANIFEST))
 mode=MODE
-root=pathlib.Path.home()/'.local/share/Steam/compatibilitytools.d'
+steam=pathlib.Path.home()/'.local/share/Steam'
+alias=pathlib.Path.home()/'.steam/root'
+if os.path.lexists(alias) and alias.resolve()!=steam.resolve():raise RuntimeError('STEAM_ROOT_CONFLICT')
+root=steam/'compatibilitytools.d'
 p=root/m['version']
 def digest(path):
  h=hashlib.sha256()
@@ -276,6 +279,14 @@ try:
   archive=stage/'payload.tar.xz'
   subprocess.run(['curl','--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','600','--max-filesize',str(m['archiveBytes']),'--output',str(archive),m['url']],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=610)
   if archive.stat().st_size!=m['archiveBytes'] or digest(archive)!=m['archiveSHA256']:raise RuntimeError('ARTIFACT_HASH')
+  checksum=stage/'payload.sha512sum'
+  subprocess.run(['curl','--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','30','--max-filesize','4096','--output',str(checksum),m['url'].replace('.tar.xz','.sha512sum')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=40)
+  published=checksum.read_text().split()
+  if len(published)!=2 or published[0]!=m['archiveSHA512'] or published[1] not in [m['version']+'.tar.xz','*'+m['version']+'.tar.xz']:raise RuntimeError('ARTIFACT_HASH')
+  sha512=hashlib.sha512()
+  with open(archive,'rb') as f:
+   for b in iter(lambda:f.read(1048576),b''):sha512.update(b)
+  if sha512.hexdigest()!=published[0]:raise RuntimeError('ARTIFACT_HASH')
   unpack=stage/'unpack';unpack.mkdir()
   with tarfile.open(archive,'r:xz') as t:
    members=t.getmembers();seen=set()

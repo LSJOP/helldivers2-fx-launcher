@@ -54,7 +54,9 @@ struct FirstRunSetupView: View {
                                 Text(state.t(statusKey(operation)))
                                     .foregroundStyle(operation.detectionPassed ? .green : operation.warning ? .orange : .secondary)
                             }
-                            Text(operation.changes.isEmpty ? operation.currentVersion : operation.currentVersion + " → " + operation.targetVersion).font(.caption.monospaced())
+                            Text(operation.component == "proton" && operation.detectionPassed ? operation.targetVersion : operation.changes.isEmpty ? operation.currentVersion : operation.currentVersion + " → " + operation.targetVersion).font(.caption.monospaced())
+                            if operation.component == "fex", operation.blocked != nil { Text(state.t("ui.setup.artifactUnavailable")).font(.caption) }
+                            if operation.blocked == "COMPONENT_CONFLICT" { Text(state.t("ui.setup.blocked") + " / COMPONENT_CONFLICT").font(.caption) }
                             DisclosureGroup(state.t("ui.setup.details")) {
                                 if !operation.changes.isEmpty {
                                     Text(operation.permission + " · " + String(operation.estimatedBytes))
@@ -85,6 +87,10 @@ struct FirstRunSetupView: View {
                 }
                 TacticalPanel(number: "5", title: state.t("ui.setup.deploy"), symbol: "wrench.and.screwdriver") {
                     Text(state.t("ui.setup.authorization"))
+                    if plan.executable.contains(where: { $0.needsRestart }) { Text(state.t("ui.setup.autoReboot")) }
+                    ForEach(["steam_api_error", "steam_tool_api_error"].filter { plan.snapshot.facts[$0] != nil }, id: \.self) { key in
+                        Text(state.t("ui.setup.apiFailure") + " · " + (plan.snapshot.facts[key] ?? "UNKNOWN")).foregroundStyle(.orange)
+                    }
                     Button(state.t("ui.setup.deploy")) { authorize = true }.buttonStyle(.borderedProminent)
                         .disabled(plan.executable.isEmpty || plan.snapshot.gameRunning)
                     if plan.snapshot.gameRunning { Text(state.t("ui.setup.closeSteam")).foregroundStyle(.orange) }
@@ -131,7 +137,9 @@ struct FirstRunSetupView: View {
         .disabled(tasks.busy)
         .confirmationDialog(state.t("ui.setup.authorization"), isPresented: $authorize, titleVisibility: .visible) {
             Button(state.t("ui.setup.deploy")) { state.firstRunAction("first_run_deploy") }
-        } message: { Text(state.t("ui.setup.rollback")) }
+        } message: {
+            Text(state.t(plan?.executable.contains(where: { $0.needsRestart }) == true ? "ui.setup.autoReboot" : "ui.setup.rollback"))
+        }
         .confirmationDialog(state.t("ui.setup.recovery"), isPresented: Binding(get: { recoverID != nil }, set: { if !$0 { recoverID = nil } }), titleVisibility: .visible) {
             Button(state.t("ui.setup.recovery")) {
                 if let id = recoverID { state.firstRunAction("first_run_recover", receipt: id, selected: recoverySelection) }

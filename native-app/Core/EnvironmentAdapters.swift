@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 /// Lossless, bounded Valve KeyValues editor. Reject duplicate keys and unsupported syntax.
 /// Writes are offline only: Steam must be closed, and files are backed up and CAS-guarded.
@@ -80,6 +81,7 @@ final class SSHEnvironmentBackend: DeploymentBackend {
     let transport: SSHTransport, fx: URL, context: CoreContext, configurationRevision: String
     var expectedGuestBoot: String?
     let fxVersion: String
+    var restartCompleted = false
     var sudoPassword: String? // Memory only; never included in a snapshot or receipt.
     private var documents: [String: String] = [:]
     private var paths: [String: String] = [:]
@@ -122,6 +124,11 @@ final class SSHEnvironmentBackend: DeploymentBackend {
         if let expectedGuestBoot, boot != expectedGuestBoot { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
         documents = [:]; paths = [:]
         var values: [String: String] = [:], facts = fields
+        facts["fx_path"] = fx.resolvingSymlinksInPath().path
+        facts["fx_executable_sha256"] = try CoreHash.sha256File(fx.appendingPathComponent("Contents/MacOS/steamac-vm"))
+        let connection: [String: JSONValue] = ["host": .string(transport.settings.host), "port": .number(Double(transport.settings.port)),
+            "user": .string(transport.settings.username), "auth": .string(transport.settings.auth), "identity": .string(transport.settings.identityFile)]
+        facts["ssh_connection"] = CoreHash.sha256(Data(CoreJSON.encode(.object(connection)).utf8))
         for (key, vdfPath) in [("launch", SteamVDF.launchPath), ("tool", SteamVDF.toolPath)] {
             if let raw = fields[key + "_data"], let data = Data(base64Encoded: raw), let doc = String(data: data, encoding: .utf8),
                let parsed = try? SteamVDF(doc), let current = try? parsed.value(vdfPath) {
@@ -140,18 +147,28 @@ final class SSHEnvironmentBackend: DeploymentBackend {
         let package = fields["proton_package"] ?? "unknown"
         values["proton_package"] = package
         facts["proton_manifest"] = package == ProtonJERelease.digest ? "verified" : "UNKNOWN"
-        facts["proton"] = package == "missing" ? "missing" : package == ProtonJERelease.digest ? "present" : "UNKNOWN"
+        facts["proton"] = package == "missing" ? "missing" : package == ProtonJERelease.digest ? "verified" : "UNKNOWN"
+        facts["restart_completed"] = restartCompleted ? "true" : "false"
         if sp > 0 {
             do {
                 try verifySteamTunnel()
                 let live = try SteamSetupClient.evaluate(SteamSetupClient.launchExpression(), port: transport.settings.cdpLocalPort, context: context)
-                guard let launch = live["launch"]?.text else { throw CoreError("STEAM_API_UNAVAILABLE") }
+                guard let launch = live["launch"]?.text else { throw CoreError("STEAM_LAUNCH_READ_FAILED") }
                 values["launch"] = launch; values["launch_present"] = "true"; facts["steam_api"] = "available"
-                let tools = try SteamSetupClient.evaluate(SteamSetupClient.toolExpression(), port: transport.settings.cdpLocalPort, context: context)
-                facts["proton_discovered"] = tools["tools"]?.array.compactMap(\.text).contains(ProtonJERelease.version) == true ? "true" : "false"
             } catch {
                 values.removeValue(forKey: "launch"); values.removeValue(forKey: "launch_present")
-                facts["steam_api"] = "UNKNOWN"; facts["proton_discovered"] = "UNKNOWN"
+                facts["steam_api"] = "UNKNOWN"; facts["steam_api_error"] = Self.steamError(error)
+            }
+            do {
+                try verifySteamTunnel()
+                let live = try SteamSetupClient.evaluate(SteamSetupClient.toolExpression(), port: transport.settings.cdpLocalPort, context: context)
+                guard let tool = live["tool"]?.text else { throw CoreError("STEAM_TOOL_READ_FAILED") }
+                values["tool"] = tool; values["tool_present"] = "true"
+                facts["steam_tool_api"] = "available"
+                facts["proton_discovered"] = tool == ProtonJERelease.version && !(live["display"]?.text ?? "").isEmpty ? "true" : "UNKNOWN"
+            } catch {
+                values.removeValue(forKey: "tool"); values.removeValue(forKey: "tool_present")
+                facts["steam_tool_api"] = "UNKNOWN"; facts["steam_tool_api_error"] = Self.steamError(error)
             }
         }
         for (key, value) in fields where key.hasPrefix("net6_") { values["ipv6." + key.dropFirst(5)] = value }
@@ -165,6 +182,11 @@ final class SSHEnvironmentBackend: DeploymentBackend {
         return .init(target: try Self.deploymentBinding(identity, fxPath: fx.path), boot: boot, revision: revision, fxVersion: fxVersion,
                      osVersion: fields["os_version"] ?? "UNKNOWN", architecture: fields["arch"] ?? "UNKNOWN",
                      steamRunning: sp > 0, gameRunning: gp > 0 || (fields["reaper_count"].flatMap(Int.init) ?? 1) > 0, freeBytes: free, facts: facts, values: values)
+    }
+    static func steamError(_ error: Error) -> String {
+        if let error = error as? CoreError { return error.code }
+        if let error = error as? URLError { return "STEAM_CDP_NETWORK_" + String(error.code.rawValue) }
+        return "STEAM_API_UNAVAILABLE"
     }
     func verifySteamTunnel() throws {
         _ = try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport,
@@ -180,7 +202,10 @@ final class SSHEnvironmentBackend: DeploymentBackend {
             let script = try ProtonJERelease.script(mode: target == "missing" ? "recover" : "install", manifest: ProtonJERelease.manifest(), boot: current.boot)
             _ = try hostIdentity()
             let result = try transport.run(script, timeout: 750, context: context)
-            guard result.status == 0 else { throw CoreError("COMPONENT_INSTALL_FAILED") }
+            if result.status != 0 {
+                let reasons = ["ARTIFACT_HASH", "STEAM_ROOT_CONFLICT", "INSUFFICIENT_SPACE", "GAME_RUNNING", "TARGET_CHANGED", "EXTERNAL_DRIFT", "UNSAFE_PATH"]
+                throw CoreError(reasons.first { result.stderr.contains($0) } ?? "COMPONENT_INSTALL_FAILED")
+            }
             return
         }
         if expected.steamRunning, let key = changes.keys.first(where: { ["launch", "tool"].contains($0) }) {
@@ -198,29 +223,10 @@ final class SSHEnvironmentBackend: DeploymentBackend {
                 expression = SteamSetupClient.launchExpression(previous: previous, desired: desired)
             } else {
                 guard current.facts["proton_manifest"] == "verified" else { throw CoreError("ARTIFACT_UNAPPROVED") }
-                expression = SteamSetupClient.toolExpression(desired: desired)
+                expression = SteamSetupClient.toolExpression(desired: desired, previous: current.values["tool"])
             }
             let reply = try SteamSetupClient.evaluate(expression, port: transport.settings.cdpLocalPort, context: context)
-            guard reply[key == "launch" ? "saved" : "requested"]?.boolean == true else { throw CoreError("VERIFY_FAILED") }
-            if key == "tool" {
-                // Selection setters do not return the selected value. Confirm Steam's own
-                // persisted mapping without rewriting its live config file.
-                guard let path = paths["tool"], path.range(of: "^[A-Za-z0-9_./ -]+$", options: .regularExpression) != nil else { throw CoreError("STEAM_TOOL_UNCONFIRMED") }
-                var confirmed = false
-                for _ in 0..<20 {
-                    try context.check()
-                    let readback = try transport.run("head -c 262145 " + Self.quote(path) + " | base64", timeout: 5, context: context)
-                    if readback.status == 0, let bytes = Data(base64Encoded: readback.stdout, options: .ignoreUnknownCharacters),
-                       bytes.count <= CoreLimits.maxSmallFile, let text = String(data: bytes, encoding: .utf8),
-                       let parsed = try? SteamVDF(text) {
-                        let selected = try parsed.value(SteamVDF.toolPath) ?? ""
-                        if selected == desired { confirmed = true; break }
-                        guard selected == current.values["tool"] else { throw CoreError("STEAM_TOOL_UNCONFIRMED") }
-                    }
-                    Thread.sleep(forTimeInterval: 0.25)
-                }
-                guard confirmed else { throw CoreError("STEAM_TOOL_UNCONFIRMED") }
-            }
+            guard reply["saved"]?.boolean == true else { throw CoreError("VERIFY_FAILED") }
             return
         }
 
@@ -274,6 +280,7 @@ final class SSHEnvironmentBackend: DeploymentBackend {
     static let probe = #"""
 set -eu
 S="$HOME/.local/share/Steam"
+printf 'machine_id=%s\n' "$(cat /etc/machine-id)"
 printf 'boot=%s\nuser=%s\narch=%s\n' "$(cat /proc/sys/kernel/random/boot_id)" "$(id -un)" "$(uname -m)"
 os=$(sed -n 's/^ID=//p' /etc/os-release | tr -d '"')
 os_version=$(sed -n 's/^VERSION_ID=//p' /etc/os-release | tr -d '"')
@@ -419,12 +426,63 @@ extension NativeCoreService {
             guard actual.values == plan.snapshot.values else { throw CoreError("CONFIG_CHANGED") }
             let rebuilt = DeploymentPlanBuilder.build(actual, profile: policy)
             guard plan.operations == rebuilt.operations, plan.profileID == policy.id, plan.profileVersion == policy.version else { throw CoreError("PROFILE_INVALID") }
-            let receipt = try service.execute(plan, approved: Set(params["approved_steps"]?.array.compactMap(\.text) ?? []), context: context) { status in
+            let restartApproved = params["restart_vm_approved"]?.boolean == true
+            let needsRestart = plan.executable.contains { $0.needsRestart }
+            guard !needsRestart || restartApproved else { throw CoreError("CONFIRMATION_REQUIRED") }
+            if needsRestart {
+                let verification = try GuestPrivilegedExecutor.run(transport, operation: .verify, password: request.sudoPassword, context: context) {
+                    let current = try backend.snapshot()
+                    guard EnvironmentDeploymentService.identity(current, actual), current.values == actual.values else { throw CoreError("CONFIG_CHANGED") }
+                    try EnvironmentDeploymentService.idle(current, requiresStoppedSteam: false)
+                }
+                if verification["password_verified"]?.boolean == true {
+                    emit("INFO", "Sudo authenticated", ["kind": .string("credential_status"), "credential_kind": .string("sudo"), "status": .string("authenticated")])
+                }
+            }
+            var receipt = try service.execute(plan, approved: Set(params["approved_steps"]?.array.compactMap(\.text) ?? []), context: context) { status in
                 emit("INFO", "Environment deployment", ["deployment_state": .string(status.rawValue)])
             }
-            var result: [String: JSONValue] = ["receipt": try json(receipt)]
-            if [.Completed, .NeedsConfiguration].contains(receipt.state), let refreshed = try? backend.snapshot() {
+            var active = backend
+            var rebooted: SSHEnvironmentBackend?
+            var keepReconnected = false
+            defer { if !keepReconnected { rebooted?.transport.closeMaster() } }
+            var result: [String: JSONValue] = [:]
+            if restartApproved && needsRestart && [.Completed, .NeedsConfiguration].contains(receipt.state) {
+                let before = try backend.snapshot()
+                let connected = try SetupVMReboot.run(backend: backend, old: before, request: request, ticket: plan.id) { status in
+                    emit("INFO", "VM configuration workflow", ["deployment_state": .string(status.rawValue)])
+                }
+                rebooted = connected; active = connected
+                let after = try connected.snapshot()
+                try SetupVMReboot.validateTransition(old: before, new: after)
+                // Explicitly rebind existing receipts across this one verified machine reboot.
+                // Originals and applied IDs remain unchanged for compare-and-swap recovery.
+                var rebound = receipt.plan.snapshot; rebound.boot = after.boot; rebound.target = after.target
+                receipt.plan = DeploymentPlan(id: receipt.plan.id, profileID: receipt.plan.profileID, profileVersion: receipt.plan.profileVersion,
+                                              snapshot: rebound, operations: receipt.plan.operations)
+                try deploymentReceipts.save(receipt)
+                let reboundIdentity = try credentialTarget(params, context: context)["identity"]?.text
+                guard let reboundIdentity else { throw CoreError("TARGET_CHANGED") }
+                result["reboot_transition"] = .object(["from": .string(before.boot), "to": .string(after.boot), "host_identity": .string(reboundIdentity)])
+                result["ssh_password_verified"] = .bool(connected.transport.passwordWasSent)
+                let fresh = DeploymentPlanBuilder.build(after, profile: policy)
+                let nextPlan = SetupVMReboot.approvedFollowup(original: plan, fresh: fresh)
+                if !nextPlan.executable.isEmpty {
+                    let nextService = EnvironmentDeploymentService(backend: connected, receipts: deploymentReceipts)
+                    receipt = try nextService.execute(nextPlan, approved: Set(nextPlan.executable.map(\.id)), context: context) { status in
+                        emit("INFO", "Steam configuration after VM reboot", ["deployment_state": .string(status.rawValue)])
+                    }
+                }
+            }
+            result["receipt"] = try json(receipt)
+            if [.Completed, .NeedsConfiguration].contains(receipt.state), let refreshed = try? active.snapshot() {
                 result["next_plan"] = try json(DeploymentPlanBuilder.build(refreshed, profile: policy))
+            }
+            if let rebooted, [.Completed, .NeedsConfiguration].contains(receipt.state) {
+                _ = try rebooted.hostIdentity()
+                try SSHTransport.adoptReconnected(rebooted.transport, configuration: request.configuration, context: context)
+                keepReconnected = true
+                result["ssh_connected"] = .bool(true)
             }
             return result
         }
@@ -606,8 +664,13 @@ enum SteamSetupClient {
                 switch message { case .data(let d): bytes = d; case .string(let s): bytes = Data(s.utf8); @unknown default: throw CoreError("STEAM_API_UNAVAILABLE") }
                 guard bytes.count <= CoreLimits.maxSmallFile, let reply = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else { throw CoreError("STEAM_API_UNAVAILABLE") }
                 if reply["id"] as? Int != 1 { continue }
-                guard reply["error"] == nil, let result = reply["result"] as? [String: Any], result["exceptionDetails"] == nil,
-                      let value = (result["result"] as? [String: Any])?["value"] as? String,
+                guard reply["error"] == nil, let result = reply["result"] as? [String: Any] else { throw CoreError("STEAM_CDP_PROTOCOL_ERROR") }
+                if let exception = result["exceptionDetails"] as? [String: Any] {
+                    let description = ((exception["exception"] as? [String: Any])?["description"] as? String) ?? ""
+                    let codes = ["game_running":"GAME_RUNNING", "running_state_unavailable":"STEAM_RUNNING_STATE_UNAVAILABLE", "changed":"CONFIG_CHANGED", "tool_unconfirmed":"STEAM_TOOL_UNCONFIRMED", "tool_read_unavailable":"STEAM_TOOL_READ_FAILED", "tool_api_unavailable":"STEAM_TOOL_API_UNAVAILABLE"]
+                    throw CoreError(codes.first { description.contains($0.key) }?.value ?? "STEAM_SCRIPT_FAILED")
+                }
+                guard let value = (result["result"] as? [String: Any])?["value"] as? String,
                       let decoded = value.data(using: .utf8) else { throw CoreError("STEAM_API_UNAVAILABLE") }
                 return try JSONDecoder().decode([String: JSONValue].self, from: decoded)
             }
@@ -626,8 +689,10 @@ enum SteamSetupClient {
             for(let i=0;i<30 && observed===null;i++) await new Promise(r=>setTimeout(r,200));
             if(observed===null) throw Error('unavailable');
             if(desired===null) return JSON.stringify({launch:observed});
-            const running=await SteamClient.GameSessions.GetRunningApps();
-            if(!Array.isArray(running) || running.length) throw Error('game_running');
+            const running = Array.isArray(globalThis.SteamUIStore?.RunningApps) ? SteamUIStore.RunningApps :
+              typeof globalThis.SteamClient?.GameSessions?.GetRunningApps==='function' ? await SteamClient.GameSessions.GetRunningApps() : null;
+            if(!Array.isArray(running)) throw Error('running_state_unavailable');
+            if(running.length) throw Error('game_running');
             if(observed===desired) return JSON.stringify({saved:true});
             if(observed!==previous) throw Error('changed');
             SteamClient.Apps.SetAppLaunchOptions(553850,desired);
@@ -640,20 +705,149 @@ enum SteamSetupClient {
         })()
         """#.replacingOccurrences(of: "PAYLOAD", with: input)
     }
-    static func toolExpression(desired: String? = nil) -> String {
-        let target = desired.map { CoreJSON.encode(.string($0)) } ?? "null"
+    static func toolExpression(desired: String? = nil, previous: String? = nil) -> String {
+        let payload = CoreJSON.encode(.object(["desired": desired.map(JSONValue.string) ?? .null, "previous": previous.map(JSONValue.string) ?? .null]))
         return #"""
         (async()=>{
-          const desired=TARGET;
-          const tools=await SteamClient.Apps.GetAvailableCompatTools(553850);
-          if(!Array.isArray(tools)) throw Error('unavailable');
-          const available=tools.map(t=>t.strToolName).filter(t=>typeof t==='string');
-          if(desired===null) return JSON.stringify({tools:available});
-          const running=await SteamClient.GameSessions.GetRunningApps();
-          if(!Array.isArray(running) || running.length || (desired!=='' && !available.includes(desired))) throw Error('not_ready');
-          await SteamClient.Apps.SpecifyCompatTool(553850,desired);
-          return JSON.stringify({requested:true});
+          const {desired,previous}=PAYLOAD;
+          if(typeof globalThis.appDetailsStore?.RegisterForAppData!=='function' || typeof globalThis.SteamClient?.Apps?.SpecifyCompatTool!=='function') throw Error('tool_api_unavailable');
+          let tool=null,display='';
+          const sub=appDetailsStore.RegisterForAppData(553850,d=>{if(d && typeof d.strCompatToolName==='string'){tool=d.strCompatToolName;display=d.strCompatToolDisplayName||'';}});
+          try {
+            for(let i=0;i<30 && tool===null;i++) await new Promise(r=>setTimeout(r,200));
+            if(tool===null) throw Error('tool_read_unavailable');
+            if(desired===null) return JSON.stringify({tool,display});
+            const running = Array.isArray(globalThis.SteamUIStore?.RunningApps) ? SteamUIStore.RunningApps :
+              typeof globalThis.SteamClient?.GameSessions?.GetRunningApps==='function' ? await SteamClient.GameSessions.GetRunningApps() : null;
+            if(!Array.isArray(running)) throw Error('running_state_unavailable');
+            if(running.length) throw Error('game_running');
+            if(tool===desired && display) return JSON.stringify({saved:true});
+            if(tool!==previous) throw Error('changed');
+            SteamClient.Apps.SpecifyCompatTool(553850,desired);
+            for(let i=0;i<30;i++) {
+              if(tool===desired && display) return JSON.stringify({saved:true});
+              await new Promise(r=>setTimeout(r,200));
+            }
+            throw Error('tool_unconfirmed');
+          } finally {sub.unregister();}
         })()
-        """#.replacingOccurrences(of: "TARGET", with: target)
+        """#.replacingOccurrences(of: "PAYLOAD", with: payload)
+    }
+}
+
+/// One explicitly approved graceful reboot, never a forced FX stop or reboot retry.
+/// Durable phase records contain identity and receipt IDs only, never credentials.
+enum SetupVMReboot {
+    static func validateTransition(old: DeploymentSnapshot, new: DeploymentSnapshot) throws {
+        guard old.fxVersion == new.fxVersion, old.osVersion == new.osVersion,
+              let digest = old.facts["fx_executable_sha256"], ApprovedArtifact.hash(digest), new.facts["fx_executable_sha256"] == digest,
+              let connection = old.facts["ssh_connection"], ApprovedArtifact.hash(connection), new.facts["ssh_connection"] == connection,
+              let path = old.facts["fx_path"], !path.isEmpty, new.facts["fx_path"] == path,
+              old.architecture == new.architecture, old.boot != new.boot, UUID(uuidString: new.boot) != nil,
+              let machine = old.facts["machine_id"], machine.range(of: "^[a-f0-9]{32}$", options: .regularExpression) != nil,
+              new.facts["machine_id"] == machine else { throw CoreError("TARGET_CHANGED") }
+    }
+    static func approvedFollowup(original: DeploymentPlan, fresh: DeploymentPlan) -> DeploymentPlan {
+        let approved = Set(original.executable.map(\.id))
+        let operations = fresh.operations.filter { operation in
+            guard approved.contains(operation.id), !operation.changes.isEmpty,
+                  let before = original.operations.first(where: { $0.id == operation.id }), before.changes == operation.changes else { return false }
+            return operation.changes.keys.allSatisfy { fresh.snapshot.values[$0] == original.snapshot.values[$0] }
+        }
+        return DeploymentPlan(id: UUID(), profileID: fresh.profileID, profileVersion: fresh.profileVersion, snapshot: fresh.snapshot, operations: operations)
+    }
+    static func wait(context: CoreContext, seconds: TimeInterval, condition: () throws -> Bool) throws {
+        let end = CoreClock.monotonic + seconds
+        while true {
+            try context.check()
+            if try condition() { return }
+            guard CoreClock.monotonic < end else { throw CoreError("VM_RECONNECT_TIMEOUT") }
+            for _ in 0..<10 { try context.check(); Thread.sleep(forTimeInterval: 0.1) }
+        }
+    }
+    static func run(backend: SSHEnvironmentBackend, old: DeploymentSnapshot, request: LaunchRequest,
+                    ticket: UUID, progress: (DeploymentState) -> Void) throws -> SSHEnvironmentBackend {
+        let store = CoreFS.nativeData().appendingPathComponent("environment-reboots", isDirectory: true)
+        try CoreFS.ensurePrivateDirectory(store)
+        let lock = try CoreFileLock.acquire(store.appendingPathComponent(".reboot.lock")); defer { lock.release() }
+        let file = store.appendingPathComponent(ticket.uuidString + ".json")
+        guard !FileManager.default.fileExists(atPath: file.path), let machine = old.facts["machine_id"],
+              machine.range(of: "^[a-f0-9]{32}$", options: .regularExpression) != nil else { throw CoreError("VM_REBOOT_UNCONFIRMED") }
+        var record: [String: JSONValue] = ["receipt": .string(ticket.uuidString), "target": .string(old.target), "old_boot": .string(old.boot), "machine_id": .string(machine), "state": .string("prepared")]
+        func save(_ state: String) throws {
+            record["state"] = .string(state); try CoreFS.atomicWrite(try JSONEncoder().encode(record), to: file)
+            let handle = try FileHandle(forWritingTo: file); defer { try? handle.close() }; try handle.synchronize()
+            let fd = open(store.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW)
+            guard fd >= 0 else { throw CoreError("WRITE_FAILED") }; defer { close(fd) }
+            guard fsync(fd) == 0 else { throw CoreError("WRITE_FAILED") }
+        }
+        try save("prepared")
+        progress(.Rebooting)
+        do {
+            _ = try GuestPrivilegedExecutor.run(backend.transport, operation: .reboot(boot: old.boot, machine: machine, ticket: ticket),
+                    password: request.sudoPassword, approved: true, context: request.context) {
+                let current = try backend.snapshot()
+                guard EnvironmentDeploymentService.identity(current, old), current.values == old.values,
+                      current.facts["machine_id"] == machine else { throw CoreError("TARGET_CHANGED") }
+                try EnvironmentDeploymentService.idle(current, requiresStoppedSteam: false)
+            }
+            try save("reboot_scheduled")
+            // Observe the old SSH connection going away. Merely seeing a TCP listener is
+            // insufficient: FX's host listener can survive the Guest reboot.
+            try wait(context: request.context, seconds: 90) {
+                do {
+                    let result = try backend.transport.run("cat /proc/sys/kernel/random/boot_id", timeout: 5, context: request.context)
+                    if result.status != 0 { return true }
+                    return result.stdout.trimmingCharacters(in: .whitespacesAndNewlines) != old.boot
+                } catch let error as CoreError {
+                    if ["CANCELLED", "TARGET_CHANGED", "CONFIG_CHANGED"].contains(error.code) { throw error }
+                    return true
+                }
+            }
+            backend.transport.closeMaster()
+            progress(.Reconnecting); try save("waiting_for_ssh")
+            var connected: SSHEnvironmentBackend?
+            try wait(context: request.context, seconds: 240) {
+                _ = try LaunchService.endpointIdentity(fx: backend.fx, gvproxy: LaunchResources.gvproxyBinary!, transport: backend.transport, context: request.context)
+                let banner = try CoreProcess.run("/usr/bin/nc", ["-G", "2", "-w", "2", backend.transport.settings.host, String(backend.transport.settings.port)], timeout: 3, context: request.context)
+                guard banner.stdout.hasPrefix("SSH-2.0-") else { return false }
+                var settings = backend.transport.settings
+                settings.socketPath = "/tmp/hd2fx-setup-reboot-\(getuid())-\(UUID().uuidString).sock"
+                settings.cdpLocalPort = Int.random(in: 30000...59000)
+                let transport = SSHTransport(settings: settings)
+                transport.setSecret(password: request.password, passphrase: request.passphrase)
+                do { try transport.connectOnce(context: request.context, forwarding: true) }
+                catch let error as CoreError {
+                    transport.closeMaster()
+                    if transport.passwordWasSent || !["SSH_CONNECTION_REFUSED", "SSH_CONNECTION_UNREACHABLE", "SSH_CONNECTION_TIMEOUT"].contains(error.code) { throw error }
+                    return false
+                }
+                let next = try SSHEnvironmentBackend(fx: backend.fx, transport: transport, context: request.context, revision: backend.configurationRevision)
+                next.sudoPassword = request.sudoPassword; next.restartCompleted = true
+                do {
+                    let snapshot = try next.snapshot()
+                    try validateTransition(old: old, new: snapshot)
+                    next.expectedGuestBoot = snapshot.boot
+                    record["new_boot"] = .string(snapshot.boot)
+                    connected = next
+                } catch { transport.closeMaster(); throw error }
+                return true
+            }
+            guard let connected else { throw CoreError("VM_RECONNECT_TIMEOUT") }
+            do {
+                progress(.CheckingSteam); try save("ssh_reauthenticated")
+                try wait(context: request.context, seconds: 150) {
+                    let snapshot = try connected.snapshot()
+                    return snapshot.steamRunning && snapshot.facts["steam_api"] == "available" && snapshot.facts["steam_tool_api"] == "available"
+                }
+                try save("completed")
+                return connected
+            } catch { connected.transport.closeMaster(); throw error }
+        } catch {
+            // Never repeat a reboot after an ambiguous acknowledgement or lost connection.
+            record["error"] = .string((error as? CoreError)?.code ?? "VM_REBOOT_FAILED")
+            try save("attention_required")
+            throw error
+        }
     }
 }

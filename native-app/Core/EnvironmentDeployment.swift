@@ -3,7 +3,7 @@ import Darwin
 
 // Versioned policy is bundled, never inferred from a single historical fingerprint.
 enum DeploymentState: String, Codable, CaseIterable {
-    case NotChecked, Checking, Ready, NeedsConfiguration, AwaitingAuthorization, Deploying, Verifying
+    case Rebooting, Reconnecting, CheckingSteam, NotChecked, Checking, Ready, NeedsConfiguration, AwaitingAuthorization, Deploying, Verifying
     case Completed, Failed, RecoveryRequired, Unsupported
 }
 enum Requirement: String, Codable { case REQUIRED, CONDITIONAL, OPTIONAL, UNKNOWN }
@@ -113,7 +113,8 @@ struct DeploymentOperation: Codable, Identifiable, Equatable {
     var advisory: Bool { component == "ipv6" }
     // A successful bounded observation is independent of permission to deploy changes.
     var detectionPassed: Bool {
-        ["steam", "game", "vulkan", "kosmickrisp", "network", "gvproxy", "ipv4", "ipv6"].contains(component)
+        if component == "proton" && currentVersion == "verified" { return true }
+        return ["steam", "game", "vulkan", "kosmickrisp", "network", "gvproxy", "ipv4", "ipv6"].contains(component)
             && ["present", "configured", "available"].contains(currentVersion)
     }
 }
@@ -144,9 +145,9 @@ enum DeploymentPlanBuilder {
             let verified = snapshot.facts[component + "_manifest"] == "verified"
             let artifact = profile.artifacts.first { $0.component == component && $0.version == version }
             if component == "proton", snapshot.values["proton_package"] == "missing", version == ProtonJERelease.version {
-                add(component, target: version, changes: ["proton_package": ProtonJERelease.digest], bytes: 4 * 1_073_741_824)
+                add(component, target: version, changes: ["proton_package": ProtonJERelease.digest], restart: true, bytes: 4 * 1_073_741_824)
             } else {
-                add(component, target: version, block: verified ? nil : artifact == nil ? "ARTIFACT_UNAPPROVED" : "ARTIFACT_IMPORT_REQUIRED")
+                add(component, target: version, block: verified ? nil : component == "proton" && snapshot.values["proton_package"] == "unknown" ? "COMPONENT_CONFLICT" : artifact == nil ? "ARTIFACT_UNAPPROVED" : "ARTIFACT_IMPORT_REQUIRED")
             }
         }
         for component in ["steam", "game", "vulkan", "kosmickrisp", "network", "gvproxy", "ipv4", "ipv6"] {
@@ -165,11 +166,12 @@ enum DeploymentPlanBuilder {
             if snapshot.values["tool_present"] != nil { changes["tool_present"] = "true" }
             let installing = snapshot.values["proton_package"] == "missing" && profile.protonVersion == ProtonJERelease.version
             let verified = snapshot.facts["proton_manifest"] == "verified"
-            let online = snapshot.steamRunning && snapshot.facts["steam_api"] == "available"
-            let block = snapshot.values["tool"] == nil ? "USER_ACTION_REQUIRED" :
+            let toolOnline = snapshot.facts["steam_tool_api"] == "available"
+            let block = snapshot.values["tool"] == nil ? "STEAM_TOOL_READ_FAILED" :
                 !verified && !installing ? "ARTIFACT_UNAPPROVED" :
-                snapshot.steamRunning && (!online || !installing && snapshot.facts["proton_discovered"] != "true") ? "STEAM_TOOL_DISCOVERY_REQUIRED" : nil
-            add("tool", target: profile.protonVersion, changes: changes, block: block)
+                snapshot.steamRunning && !toolOnline ? "STEAM_TOOL_API_UNAVAILABLE" : nil
+            add("tool", target: profile.protonVersion, changes: changes, block: block,
+                restart: snapshot.steamRunning && snapshot.facts["restart_completed"] != "true")
         }
         if !baselineApplicable {
             ops = ops.map { $0.detectionPassed ? $0 : .init(id: $0.id, component: $0.component, currentVersion: $0.currentVersion, targetVersion: $0.targetVersion,
@@ -286,9 +288,8 @@ final class EnvironmentDeploymentService {
                 let current = try backend.snapshot()
                 guard Self.identity(current, expected), current.revision == expected.revision, current.values == expected.values else { throw CoreError("CONFIG_CHANGED") }
                 try Self.idle(current, requiresStoppedSteam: operation.requiresStoppedSteam)
-                if operation.component == "tool", current.steamRunning, current.facts["proton_manifest"] == "verified",
-                   current.facts["proton_discovered"] == "false" {
-                    deferred = true; continue // Steam has not discovered the new tool; no selection write was attempted.
+                if operation.component == "tool", current.steamRunning, operation.needsRestart {
+                    deferred = true; continue // The confirmed workflow restarts the VM before applying tool selection.
                 }
                 guard operation.changes.keys.allSatisfy({ current.values[$0] == plan.snapshot.values[$0] }) else { throw CoreError("CONFIG_CHANGED") }
                 receipt.pending = operation.id; try receipts.save(receipt)

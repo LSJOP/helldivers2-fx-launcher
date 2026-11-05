@@ -112,6 +112,8 @@ final class FileDeploymentBackend: DeploymentBackend {
             onlineBackend.state.freeBytes = 8 * 1_073_741_824
             onlineBackend.state.steamRunning = true
             onlineBackend.state.facts["steam_api"] = "available"
+            onlineBackend.state.facts["steam_tool_api"] = "available"
+            onlineBackend.state.facts["restart_completed"] = "true"
             onlineBackend.state.facts["proton_manifest"] = "verified"
             onlineBackend.state.facts["proton_discovered"] = "true"
             onlineBackend.state.values["proton_package"] = "missing"
@@ -126,8 +128,9 @@ final class FileDeploymentBackend: DeploymentBackend {
             discovered.steamRunning = true; discovered.facts["steam_api"] = "available"
             discovered.facts["proton_manifest"] = "verified"
             let pendingTool = DeploymentPlanBuilder.build(discovered, profile: profile)
-            try check(pendingTool.operations.first { $0.id == "tool" }?.blocked == "STEAM_TOOL_DISCOVERY_REQUIRED", "installed tool cannot be selected before Steam discovery")
-            discovered.facts["proton_discovered"] = "true"
+            try check(pendingTool.operations.first { $0.id == "tool" }?.blocked == "STEAM_TOOL_API_UNAVAILABLE", "tool selection requires its own live API read")
+            discovered.facts["steam_tool_api"] = "available"
+            discovered.facts["restart_completed"] = "true"
             try check(DeploymentPlanBuilder.build(discovered, profile: profile).executable.map(\.id).contains("tool"), "verified discovered tool can be selected online")
             discovered.values["proton_package"] = "unknown"; discovered.facts["proton_manifest"] = "UNKNOWN"
             try check(!DeploymentPlanBuilder.build(discovered, profile: profile).executable.map(\.id).contains("proton"), "unknown existing Proton is never overwritten")
@@ -137,6 +140,7 @@ final class FileDeploymentBackend: DeploymentBackend {
             deferredBackend.state.freeBytes = 8 * 1_073_741_824
             deferredBackend.state.steamRunning = true
             deferredBackend.state.facts["steam_api"] = "available"
+            deferredBackend.state.facts["steam_tool_api"] = "available"
             deferredBackend.state.facts["proton_manifest"] = "verified"
             deferredBackend.state.facts["proton_discovered"] = "false"
             deferredBackend.state.values["proton_package"] = "missing"
@@ -158,6 +162,70 @@ final class FileDeploymentBackend: DeploymentBackend {
             try check(result.state == .Failed && result.failure == "CONFIG_CHANGED" && (try driftBackend.snapshot()).values["launch"] == "%command% --external-edit",
                       "Steam settings changed during package download are preserved without overwrite")
         }
+        do {
+            var old = p.snapshot; old.facts["machine_id"] = String(repeating: "a", count: 32)
+            old.facts["fx_path"] = "/fixture/FX.app"
+            old.facts["fx_executable_sha256"] = String(repeating: "c", count: 64)
+            old.facts["ssh_connection"] = String(repeating: "d", count: 64)
+            var restarted = old; restarted.boot = UUID().uuidString; restarted.target = "fixture-new-process-binding"
+            try SetupVMReboot.validateTransition(old: old, new: restarted)
+            try check(true, "expected reboot accepts verified same installation and new boot/process binding")
+            var foreignExecutable = restarted; foreignExecutable.facts["fx_executable_sha256"] = String(repeating: "e", count: 64)
+            try fails("TARGET_CHANGED", "replaced FX executable cannot inherit reboot authorization") { try SetupVMReboot.validateTransition(old: old, new: foreignExecutable) }
+            try fails("TARGET_CHANGED", "unchanged boot cannot claim reboot completed") { try SetupVMReboot.validateTransition(old: old, new: old) }
+            restarted.facts["machine_id"] = String(repeating: "b", count: 32)
+            try fails("TARGET_CHANGED", "different Guest cannot reuse reboot credentials") { try SetupVMReboot.validateTransition(old: old, new: restarted) }
+            let cancelled = CoreContext(timeout: 3); cancelled.cancel(); var calls = 0
+            try fails("CANCELLED", "cancelled reconnect never probes or authenticates") { try SetupVMReboot.wait(context: cancelled, seconds: 1) { calls += 1; return true } }
+            try check(calls == 0, "cancellation stops reconnect before IO")
+            let script = try GuestPrivilegedExecutor.script(.reboot(boot: old.boot, machine: old.facts["machine_id"]!, ticket: UUID()))
+            try check(script.contains("systemd-run --on-active=5s --collect") && script.contains("/usr/bin/systemctl reboot") && !script.contains("pkill") && !script.contains("--force"), "VM reboot is one delayed graceful systemd request")
+            try check(script.contains("reaper helldivers2.exe") && script.contains("/etc/machine-id") && script.contains("/proc/sys/kernel/random/boot_id"), "reboot checks game and exact Guest immediately before scheduling")
+            var verified = old; verified.facts["proton"] = "verified"; verified.facts["proton_manifest"] = "verified"; verified.values["tool"] = profile.protonVersion
+            try check(DeploymentPlanBuilder.build(verified, profile: profile).operations.first { $0.id == "proton" }?.detectionPassed == true,
+                      "fully verified Proton is reported passed rather than merely found")
+        }
+        do {
+            let dir = root.appendingPathComponent("reboot-script"); try CoreFS.ensurePrivateDirectory(dir)
+            let bin = dir.appendingPathComponent("bin"); try CoreFS.ensurePrivateDirectory(bin)
+            let boot = UUID().uuidString, machine = String(repeating: "a", count: 32)
+            let bootFile = dir.appendingPathComponent("boot"), machineFile = dir.appendingPathComponent("machine")
+            try Data(boot.utf8).write(to: bootFile); try Data(machine.utf8).write(to: machineFile)
+            let commandFile = dir.appendingPathComponent("scheduled"), gameFile = dir.appendingPathComponent("game")
+            try CoreFS.atomicWrite(Data(("#!/bin/sh\nprintf '%s' \"$*\" > " + SSHEnvironmentBackend.quote(commandFile.path) + "\n").utf8), to: bin.appendingPathComponent("systemd-run"), mode: 0o755)
+            try CoreFS.atomicWrite(Data(("#!/bin/sh\n[ -f " + SSHEnvironmentBackend.quote(gameFile.path) + " ] && exit 0\nexit 1\n").utf8), to: bin.appendingPathComponent("pgrep"), mode: 0o755)
+            let fakeSystemctl = bin.appendingPathComponent("systemctl"); try CoreFS.atomicWrite(Data("#!/bin/sh\nexit 99\n".utf8), to: fakeSystemctl, mode: 0o755)
+            let script = try GuestPrivilegedExecutor.script(.reboot(boot: boot, machine: machine, ticket: UUID()))
+                .replacingOccurrences(of: "/proc/sys/kernel/random/boot_id", with: bootFile.path)
+                .replacingOccurrences(of: "/etc/machine-id", with: machineFile.path)
+                .replacingOccurrences(of: "/usr/bin/systemctl", with: fakeSystemctl.path)
+            let env = ["PATH": bin.path + ":/usr/bin:/bin", "HOME": dir.path]
+            let scheduled = try CoreProcess.run("/bin/sh", ["-c", script], timeout: 5, environment: env)
+            try check(scheduled.status == 0 && scheduled.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == "HD2FX_REBOOT_SCHEDULED" && FileManager.default.fileExists(atPath: commandFile.path), "production reboot script schedules only the fixture systemd command")
+            try FileManager.default.removeItem(at: commandFile); try Data().write(to: gameFile)
+            let blocked = try CoreProcess.run("/bin/sh", ["-c", script], timeout: 5, environment: env)
+            try check(blocked.status == 75 && !FileManager.default.fileExists(atPath: commandFile.path), "production reboot script blocks a running game before scheduling")
+            try FileManager.default.removeItem(at: gameFile); try Data(UUID().uuidString.utf8).write(to: bootFile)
+            let changed = try CoreProcess.run("/bin/sh", ["-c", script], timeout: 5, environment: env)
+            try check(changed.status == 73 && !FileManager.default.fileExists(atPath: commandFile.path), "production reboot script rejects changed boot without scheduling")
+        }
+        do {
+            var original = p.snapshot
+            original.steamRunning = true; original.facts["steam_api"] = "available"; original.facts["steam_tool_api"] = "available"
+            original.facts["proton_manifest"] = "verified"
+            let approved = DeploymentPlanBuilder.build(original, profile: profile)
+            var after = original; after.boot = UUID().uuidString; after.facts["restart_completed"] = "true"
+            let safe = SetupVMReboot.approvedFollowup(original: approved, fresh: DeploymentPlanBuilder.build(after, profile: profile))
+            try check(safe.executable.contains { $0.id == "tool" }, "post-reboot unchanged tool can complete the exact approved target")
+            after.values["tool"] = "external-user-tool"
+            let changed = SetupVMReboot.approvedFollowup(original: approved, fresh: DeploymentPlanBuilder.build(after, profile: profile))
+            try check(!changed.executable.contains { $0.id == "tool" }, "post-reboot user tool edit cannot be overwritten by old approval")
+        }
+        try fails("TARGET_CHANGED", "unowned or unauthenticated SSH cannot become the shared post-reboot session") {
+            var settings = SSHTransport.make([:]).settings
+            settings.socketPath = "/tmp/hd2-fixture-no-session-" + UUID().uuidString + ".sock"
+            try SSHTransport.adoptReconnected(SSHTransport(settings: settings), configuration: [:], context: CoreContext(timeout: 5))
+        }
         let stdinStart = CoreClock.monotonic
         let blockedInput = try CoreProcess.run("/bin/sleep", ["2"], input: String(repeating: "x", count: 2 * 1_048_576), timeout: 0.1)
         try check(blockedInput.timedOut && CoreClock.monotonic - stdinStart < 1.5, "large stdin obeys deadline when peer never reads")
@@ -165,7 +233,7 @@ final class FileDeploymentBackend: DeploymentBackend {
         for address in ["ws://example.com:8080/devtools/page/x", "wss://127.0.0.1:8080/devtools/page/x", "ws://127.0.0.1:9999/devtools/page/x", "ws://user@127.0.0.1:8080/devtools/page/x"] {
             try fails("STEAM_API_UNAVAILABLE", "untrusted CDP endpoint rejected") { _ = try SteamSetupClient.endpoint(address, port: 41234) }
         }
-        for (name, expression) in [("read", SteamSetupClient.launchExpression()), ("write", SteamSetupClient.launchExpression(previous: "%command%", desired: "FEX_DISKCACHE=0 %command%")), ("drift", SteamSetupClient.launchExpression(previous: "stale", desired: "FEX_DISKCACHE=0 %command%")), ("tool", SteamSetupClient.toolExpression(desired: ProtonJERelease.version))] {
+        for (name, expression) in [("read", SteamSetupClient.launchExpression()), ("write", SteamSetupClient.launchExpression(previous: "%command%", desired: "FEX_DISKCACHE=0 %command%")), ("drift", SteamSetupClient.launchExpression(previous: "stale", desired: "FEX_DISKCACHE=0 %command%")), ("tool", SteamSetupClient.toolExpression(desired: ProtonJERelease.version, previous: "proton_11-arm64"))] {
             try expression.write(to: root.appendingPathComponent(name + ".js"), atomically: true, encoding: .utf8)
         }
         let receipt = try execute(s, p)
@@ -271,28 +339,46 @@ final class FileDeploymentBackend: DeploymentBackend {
         try check(discovered.status == 0 && discovered.stdout.contains("proton=present"), "discover newer Proton-JE directory without executing it")
         let nodeCandidates = ["/opt/homebrew/bin/node", "/usr/local/bin/node", NSHomeDirectory() + "/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node"]
         if let node = nodeCandidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) {
+            let portFile = root.appendingPathComponent("cdp-port.txt")
+            let server = Process(); server.executableURL = URL(fileURLWithPath: node)
+            server.arguments = ["checks/steam_cdp_fixture.js", portFile.path]
+            server.standardOutput = FileHandle.nullDevice; server.standardError = FileHandle.nullDevice
+            try server.run(); defer { server.terminate(); server.waitUntilExit() }
+            try SetupVMReboot.wait(context: CoreContext(timeout: 5), seconds: 4) { FileManager.default.fileExists(atPath: portFile.path) }
+            guard let port = Int(try String(contentsOf: portFile)) else { throw CoreError("ASSERTION_FAILED") }
+            let socketRead = try SteamSetupClient.evaluate(SteamSetupClient.launchExpression(), port: port, context: CoreContext(timeout: 10))
+            try check(socketRead["launch"]?.text == "%command%", "native URLSession reads actual CDP HTTP and websocket protocol")
+            let socketTool = try SteamSetupClient.evaluate(SteamSetupClient.toolExpression(), port: port, context: CoreContext(timeout: 10))
+            try check(socketTool["tool"]?.text == "proton_11-arm64", "tool read is independent of missing legacy tools-list API")
+            let socketWrite = try SteamSetupClient.evaluate(SteamSetupClient.launchExpression(previous: "%command%", desired: "FEX_DISKCACHE=0 %command%"), port: port, context: CoreContext(timeout: 10))
+            try check(socketWrite["saved"]?.boolean == true, "native CDP confirms launch options through callback")
+            try fails("CONFIG_CHANGED", "native CDP preserves structured CAS failure") {
+                _ = try SteamSetupClient.evaluate(SteamSetupClient.launchExpression(previous: "stale", desired: "%command%"), port: port, context: CoreContext(timeout: 10))
+            }
             let fixtureJS = #"""
             const fs=require('fs');
             (async()=>{
-              let observed='%command%', callback=null, writes=0;
-              global.appDetailsStore={RegisterForAppData(_id, cb){callback=cb;cb({strLaunchOptions:observed});return {unregister(){callback=null;}};}};
-              global.SteamClient={Apps:{SetAppLaunchOptions(id,v){if(id!==553850)throw Error('appid');writes++;observed=v;callback({strLaunchOptions:v});},GetAvailableCompatTools:async()=>[{strToolName:'proton-je-11.0-20261014-3'}],SpecifyCompatTool:async(id,v)=>{if(id!==553850)throw Error('appid');writes++;}},GameSessions:{GetRunningApps:async()=>[]}};
+              let callback=null,writes=0;
+              let data={strLaunchOptions:'%command%',strCompatToolName:'proton_11-arm64',strCompatToolDisplayName:'Proton ARM64'};
+              global.appDetailsStore={RegisterForAppData(_id,cb){callback=cb;cb({...data});return {unregister(){callback=null;}};}};
+              global.SteamUIStore={RunningApps:[]};
+              global.SteamClient={Apps:{SetAppLaunchOptions(id,v){if(id!==553850)throw Error('appid');writes++;data.strLaunchOptions=v;callback({...data});},SpecifyCompatTool(id,v){if(id!==553850)throw Error('appid');writes++;data.strCompatToolName=v;data.strCompatToolDisplayName=v;callback({...data});}}};
               const read=JSON.parse(await eval(fs.readFileSync(process.argv[1]+'/read.js','utf8')));
               if(read.launch!=='%command%')throw Error('read');
               try {await eval(fs.readFileSync(process.argv[1]+'/drift.js','utf8'));throw Error('drift accepted');}catch(e){if(e.message!=='changed')throw e;}
               const saved=JSON.parse(await eval(fs.readFileSync(process.argv[1]+'/write.js','utf8')));
               if(!saved.saved||writes!==1||callback!==null)throw Error('write');
-              await eval(fs.readFileSync(process.argv[1]+'/tool.js','utf8'));
-              SteamClient.GameSessions.GetRunningApps=async()=>[553850];
+              const tool=JSON.parse(await eval(fs.readFileSync(process.argv[1]+'/tool.js','utf8')));
+              if(!tool.saved||data.strCompatToolName!=='proton-je-11.0-20261014-3')throw Error('tool');
+              SteamUIStore.RunningApps=[{}];
               try {await eval(fs.readFileSync(process.argv[1]+'/write.js','utf8'));throw Error('game accepted');}catch(e){if(e.message!=='game_running')throw e;}
-              SteamClient.GameSessions.GetRunningApps=async()=>[];
-              SteamClient.Apps.GetAvailableCompatTools=async()=>[];
-              try {await eval(fs.readFileSync(process.argv[1]+'/tool.js','utf8'));throw Error('tool accepted');}catch(e){if(e.message!=='not_ready')throw e;}
-              if(writes!==2)throw Error('unexpected writes');
+              SteamUIStore.RunningApps=undefined;
+              try {await eval(fs.readFileSync(process.argv[1]+'/tool.js','utf8'));throw Error('unknown running accepted');}catch(e){if(e.message!=='running_state_unavailable')throw e;}
+              if(writes!==2||callback!==null||SteamClient.Apps.GetAvailableCompatTools!==undefined)throw Error('unexpected state');
             })().catch(e=>{console.error(e);process.exitCode=1;});
             """#
             let jsResult = try CoreProcess.run(node, ["-e", fixtureJS, root.path], timeout: 10)
-            try check(jsResult.status == 0, "production Steam expressions read, CAS-write, confirm, unsubscribe and guard game/tool discovery")
+            try check(jsResult.status == 0, "production expressions use observed Steam API shape without absent tools/running methods")
         } else { throw CoreError("PROCESS_UNAVAILABLE", ["binary": .string("fixture-node")]) }
         let original = "CUSTOM=foo %command% --user-flag"
         let merged = try LaunchOptionsAdapter.merge(original, managed: profile.launchOptions)

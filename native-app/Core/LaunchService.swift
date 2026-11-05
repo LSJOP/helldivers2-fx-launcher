@@ -428,6 +428,7 @@ extension SSHTransport {
 enum GuestPrivilegedExecutor {
     enum Operation {
         case verify
+        case reboot(boot: String, machine: String, ticket: UUID)
         case ipv6(boot: String, values: [String: String])
         case networkIPv6(boot: String, before: [String: String], after: [String: String])
     }
@@ -436,6 +437,22 @@ enum GuestPrivilegedExecutor {
     static func script(_ operation: Operation) throws -> String {
         switch operation {
         case .verify: return "exec </dev/null\nid -u\n"
+        case .reboot(let boot, let machine, let ticket):
+            guard UUID(uuidString: boot) != nil, machine.range(of: "^[a-f0-9]{32}$", options: .regularExpression) != nil else { throw CoreError("INVALID_ARGUMENT") }
+            return """
+            exec </dev/null
+            set -eu
+            [ "$(cat /proc/sys/kernel/random/boot_id)" = \(quote(boot)) ] || exit 73
+            [ "$(cat /etc/machine-id)" = \(quote(machine)) ] || exit 73
+            command -v systemd-run >/dev/null && [ -x /usr/bin/systemctl ] && command -v pgrep >/dev/null || exit 77
+            for n in reaper helldivers2.exe; do
+              if pgrep -x "$n" >/dev/null; then exit 75; else [ "$?" -eq 1 ] || exit 77; fi
+            done
+            printf 'HD2FX_COMMAND_STARTED\\n' >&2
+            systemd-run --on-active=5s --collect --unit=hd2-native-reboot-\(ticket.uuidString.lowercased()) /usr/bin/systemctl reboot >/dev/null 2>&1 || exit 78
+            printf 'HD2FX_REBOOT_SCHEDULED\\n'
+            """
+
         case .networkIPv6(let boot, let before, let after):
             guard GuestIPv6Snapshot(boot: boot, values: before).valid,
                   GuestIPv6Snapshot(boot: boot, values: after).valid, Set(before.keys) == Set(after.keys) else { throw CoreError("INVALID_ARGUMENT") }
@@ -487,6 +504,7 @@ enum GuestPrivilegedExecutor {
         try context.check()
         if result.status != 0 {
             if result.status == 73 { throw CoreError("FX_ENTRY_MISMATCH", ["reason": .string("guest_boot_changed")]) }
+            if result.status == 78 { throw CoreError("VM_REBOOT_REQUEST_FAILED") }
             if result.status == 77 { throw CoreError("UNSUPPORTED_CONFIGURATION") }
             if result.status == 75 { throw CoreError("GAME_ALREADY_RUNNING") }
             if result.status == 76 { throw CoreError("CONFIG_CHANGED") }
@@ -496,11 +514,15 @@ enum GuestPrivilegedExecutor {
             if code == "AUTH_REQUIRED" { details["credential_kind"] = .string("sudo_password") }
             throw CoreError(code, details)
         }
-        try verifyTarget()
+        // A scheduled reboot intentionally invalidates the old connection; the dedicated
+        // workflow must observe the new boot and reauthenticate before reporting success.
+        if case .reboot = operation {} else { try verifyTarget() }
         let output = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
         switch operation {
         case .verify:
             guard output == "0" else { throw CoreError("SUDO_COMMAND_FAILED") }
+        case .reboot:
+            guard output == "HD2FX_REBOOT_SCHEDULED" else { throw CoreError("VM_REBOOT_UNCONFIRMED") }
         case .ipv6, .networkIPv6:
             guard output == "HD2FX_IPV6_OK" else { throw CoreError("COMPATIBILITY_CHECK_FAILED") }
         }

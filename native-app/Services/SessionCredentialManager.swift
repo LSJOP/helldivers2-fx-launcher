@@ -39,6 +39,15 @@ enum SessionCredentialStatus: String { case notProvided, provided, verified, fai
         }
         if let boot { guestBoot = boot }
     }
+    /// Called only for the configuration reply of a user-approved, identity-verified reboot.
+    /// Retains process-memory input while revoking all old live authorization.
+    func acceptExpectedReboot(from old: String, to new: String, target: String, reboundTarget: String? = nil) throws {
+        guard scope == target, guestBoot == old, old != new, UUID(uuidString: new) != nil else {
+            clear(); throw ErrorState("CREDENTIAL_SCOPE_CHANGED")
+        }
+        verified = []; guestBoot = new
+        if let reboundTarget { scope = reboundTarget }
+    }
     func parameters(for target: String) throws -> [String: JSONValue] {
         if let scope, scope != target { clear(); throw ErrorState("CREDENTIAL_SCOPE_CHANGED") }
         scope = target

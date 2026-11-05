@@ -7,7 +7,7 @@
   "timezone": "Asia/Shanghai",
   "fx_guest_actions": "none",
   "credential_autoload": "disabled by isolated capture arguments",
-  "reviewed_ui_source_sha256": "7c9408cc7a254cc3e12e1b2b38a1d79549408b6204af989182a48c22db7df31d",
+  "reviewed_ui_source_sha256": "3add97ec3255b9d2dce375a4d369c4f80749085e05e507d5d06c8fc23f0493eb",
   "screenshots": [
     {
       "path": "docs/images/zh-CN/dashboard.png",
@@ -311,5 +311,6 @@
   "memory_only_review_note": "2026-11-05: English and Simplified Chinese Settings screenshots recaptured from real App windows after restoring memory-only credentials. First-Run Setup was also captured and visually reviewed but remains absent from README embeds. No Guest action or credential entry occurred.",
   "setup_steam_review_20261106": "FirstRunSetupView guidance and setup-only translations changed. Existing README page screenshots do not show setup. Setup captures are pending, explicitly stated in both READMEs; existing image provenance remains historical. No live Guest validation.",
   "proton_setup_review_20261106": "Setup-only install/discovery guidance changed. Existing README screenshot pages do not show setup. New setup screenshots and live SteamOS acceptance explicitly pending in both READMEs; historical screenshot provenance unchanged.",
-  "ssh_defaults_review_20261106": "English and Simplified Chinese Settings captures refreshed from integrated Debug 2026110601; visually reviewed text, SSH effective placeholders and memory-only credentials. Existing saved port 2223 is intentionally preserved. Deployment-state setup screenshot remains pending; no Guest interaction."
+  "ssh_defaults_review_20261106": "English and Simplified Chinese Settings captures refreshed from integrated Debug 2026110601; visually reviewed text, SSH effective placeholders and memory-only credentials. Existing saved port 2223 is intentionally preserved. Deployment-state setup screenshot remains pending; no Guest interaction.",
+  "steam_reboot_review_20261106": "First-run-only state/error/verified-package indicators and reboot confirmation changed in build 2026110602. Real deployment/reboot-state screenshot acceptance pending and stated in both READMEs. Existing Settings captures remain historical build 2026110601; no new Guest screenshot or live writes claimed."
 }

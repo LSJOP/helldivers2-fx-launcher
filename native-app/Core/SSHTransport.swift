@@ -8,8 +8,9 @@ final class SSHTransport {
     private static let namespace = "\(getpid())-" + String(UUID().uuidString.prefix(8))
     private static let ownershipLock = NSLock()
     private static var owned: Set<String> = []
+    private static var reconnected: [String: Settings] = [:]
     static func closeOwnedMasters() {
-        ownershipLock.lock(); let paths = owned; owned = []; ownershipLock.unlock()
+        ownershipLock.lock(); let paths = owned; owned = []; reconnected = [:]; ownershipLock.unlock()
         for path in paths {
             _ = try? CoreProcess.run("/usr/bin/ssh", ["-S", path, "-O", "exit", "127.0.0.1"], timeout: 3)
         }
@@ -33,7 +34,7 @@ final class SSHTransport {
         self.settings = settings
     }
 
-    static func make(_ configuration: [String: JSONValue]) -> SSHTransport {
+    private static func configuredSettings(_ configuration: [String: JSONValue]) -> Settings {
         let ssh = configuration["ssh"]?.object ?? [:]
         let host = ssh["host"]?.text ?? "127.0.0.1"
         let port = ssh["port"]?.integer ?? 2222
@@ -43,11 +44,27 @@ final class SSHTransport {
                                                "port": .number(Double(port)), "user": .string(username),
                                                "cdp": .number(Double(cdp))]))
         let suffix = String(CoreHash.sha256(Data(encoded.utf8)).prefix(14))
-        return SSHTransport(settings: Settings(host: host, port: port, username: username,
-                                              auth: ssh["auth"]?.text ?? "password",
-                                              identityFile: ssh["identity_file"]?.text ?? "",
-                                              cdpLocalPort: cdp,
-                                              socketPath: "/tmp/hd2fx-\(getuid())-\(namespace)-\(suffix).sock"))
+        return Settings(host: host, port: port, username: username,
+                        auth: ssh["auth"]?.text ?? "password", identityFile: ssh["identity_file"]?.text ?? "",
+                        cdpLocalPort: cdp, socketPath: "/tmp/hd2fx-\(getuid())-\(namespace)-\(suffix).sock")
+    }
+
+    static func make(_ configuration: [String: JSONValue]) -> SSHTransport {
+        let configured = configuredSettings(configuration)
+        ownershipLock.lock(); let active = reconnected[configured.socketPath]; ownershipLock.unlock()
+        return SSHTransport(settings: active ?? configured)
+    }
+
+    /// Adopt only this process's freshly authenticated, verified post-reboot master.
+    /// Only connection metadata is registered; no password or authorization is persisted.
+    static func adoptReconnected(_ transport: SSHTransport, configuration: [String: JSONValue], context: CoreContext) throws {
+        let configured = configuredSettings(configuration), actual = transport.settings
+        guard actual.host == configured.host, actual.port == configured.port, actual.username == configured.username,
+              actual.auth == configured.auth, actual.identityFile == configured.identityFile,
+              transport.masterPID(context: context) != nil else { throw CoreError("TARGET_CHANGED") }
+        ownershipLock.lock(); defer { ownershipLock.unlock() }
+        guard owned.contains(actual.socketPath) else { throw CoreError("TARGET_CHANGED") }
+        reconnected[configured.socketPath] = actual
     }
 
     /// Setup/sudo checks own a fresh master and never alter/reuse the launch CDP tunnel.
@@ -237,7 +254,9 @@ final class SSHTransport {
     }
 
     func closeMaster() {
-        Self.ownershipLock.lock(); Self.owned.remove(settings.socketPath); Self.ownershipLock.unlock()
+        Self.ownershipLock.lock(); Self.owned.remove(settings.socketPath)
+        Self.reconnected = Self.reconnected.filter { $0.value.socketPath != settings.socketPath }
+        Self.ownershipLock.unlock()
         _ = try? CoreProcess.run("/usr/bin/ssh", ["-S", settings.socketPath, "-O", "exit", settings.host], timeout: 8)
     }
 }

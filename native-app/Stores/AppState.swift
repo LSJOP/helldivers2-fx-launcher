@@ -55,7 +55,10 @@ final class AppState: ObservableObject {
                     let target = root + "|" + revision + "|" + identity
                     if let scope = self.credentials.scope, scope != target { self.clearSessionCredentials() }
                     await self.credentials.prepare(for: target)
-                    try self.credentials.bindGuest(binding.result["guest_boot"]?.text)
+                    // Setup owns an isolated SSH master; host-only metadata can omit a
+                    // boot ID. Keep the prior expected boot for the newly authenticated
+                    // backend to verify, rather than treating omission as identity loss.
+                    if let boot = binding.result["guest_boot"]?.text { try self.credentials.bindGuest(boot) }
                     input.merge(try self.credentials.parameters(for: target)) { _, value in value }
                     input["credential_revision"] = .string(revision)
                     input["credential_host_identity"] = .string(identity)
@@ -63,20 +66,30 @@ final class AppState: ObservableObject {
                 if method == "first_run_deploy", let plan {
                     input["deployment_plan"] = try JSONDecoder().decode(JSONValue.self, from: JSONEncoder().encode(plan))
                     input["approved_steps"] = .array(plan.executable.map { .string($0.id) })
+                    input["restart_vm_approved"] = .bool(plan.executable.contains { $0.needsRestart })
                     self.firstRunState = .Deploying
                 }
                 if let receipt { input["receipt_id"] = .string(receipt.uuidString); input["approved_steps"] = .array(selected.sorted().map { .string($0) }) }
-                let credentialTarget = root + "|" + (input["credential_revision"]?.text ?? "") + "|" + (input["credential_host_identity"]?.text ?? "")
+                var credentialTarget = root + "|" + (input["credential_revision"]?.text ?? "") + "|" + (input["credential_host_identity"]?.text ?? "")
                 let authInput = input
-                let reply = try await self.core.request(method, timeout: method == "first_run_deploy" ? 900 : 180, params: input) { [weak self] event in
+                let requestCredentialTarget = credentialTarget
+                let reply = try await self.core.request(method, timeout: method == "first_run_deploy" ? 1500 : 180, params: input) { [weak self] event in
                     Task { @MainActor in
                         guard let self, self.firstRunEventGeneration == generation else { return }
                         if event["kind"]?.text == "credential_status", event["status"]?.text == "authenticated",
                            let role = event["credential_kind"]?.text.flatMap(CredentialKind.init(rawValue:)), let value = authInput[role.bridgeField]?.text {
-                            await self.credentials.authenticated(role, value: value, target: credentialTarget)
+                            await self.credentials.authenticated(role, value: value, target: requestCredentialTarget)
                         }
                         if let raw = event["deployment_state"]?.text, let status = DeploymentState(rawValue: raw) { self.firstRunState = status }
                     }
+                }
+                if let transition = reply.result["reboot_transition"]?.object {
+                    guard method == "first_run_deploy", authInput["restart_vm_approved"]?.boolean == true,
+                          let old = transition["from"]?.text, let new = transition["to"]?.text,
+                          let identity = transition["host_identity"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
+                    let reboundTarget = root + "|" + (authInput["credential_revision"]?.text ?? "") + "|" + identity
+                    try self.credentials.acceptExpectedReboot(from: old, to: new, target: credentialTarget, reboundTarget: reboundTarget)
+                    credentialTarget = reboundTarget
                 }
                 if reply.result["ssh_password_verified"]?.boolean == true, let value = authInput["password"]?.text {
                     await self.credentials.authenticated(.ssh, value: value, target: credentialTarget)

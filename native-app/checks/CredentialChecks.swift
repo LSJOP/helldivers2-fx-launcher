@@ -54,6 +54,18 @@ import Foundation
         try check(weakOwned == nil, "no persistent manager owner after exit")
         let nextProcessModel = SessionCredentialManager()
         try check(nextProcessModel.isEmpty && !nextProcessModel.reusable(.ssh), "new process model cannot restore credentials")
+        let rebootManager = SessionCredentialManager()
+        await rebootManager.prepare(for: "fixture-reboot-target")
+        rebootManager.password = fake; rebootManager.sudoPassword = fake
+        let oldBoot = UUID().uuidString, newBoot = UUID().uuidString
+        try rebootManager.bindGuest(oldBoot)
+        await rebootManager.authenticated(.ssh, value: fake, target: "fixture-reboot-target")
+        try rebootManager.acceptExpectedReboot(from: oldBoot, to: newBoot, target: "fixture-reboot-target")
+        try check(rebootManager.password == fake && rebootManager.guestBoot == newBoot && !rebootManager.reusable(.ssh), "approved reboot retains memory input while revoking old authorization")
+        do {
+            try rebootManager.acceptExpectedReboot(from: newBoot, to: UUID().uuidString, target: "other-target")
+            try check(false, "foreign target rejected")
+        } catch { try check(rebootManager.isEmpty, "foreign reboot target clears credentials") }
         let redactor = CredentialRedactor(secrets: [fake])
         try check(!redactor.text(fake + " Authorization: Bearer " + fake).contains(fake), "secret and authorization redacted")
         let nested = redactor.event(["nested": .object(["password": .string(fake)]), "items": .array([.string(fake)])])

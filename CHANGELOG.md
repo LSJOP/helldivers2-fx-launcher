@@ -4,9 +4,12 @@
 
 All notable changes to the HELLDIVERS 2 FX Launcher Native App are recorded here, newest first. Unreleased entries have no release date. This file is the single source of truth for user-facing release notes; the README summary, GitHub Release notes and the future Sparkle appcast reuse this reviewed text. Do not paste raw, unreviewed Git commit messages into it.
 
-No official release has been published yet. The current Native App version `0.1.0` (build `2026110601`) is a development preview, not a downloadable package.
+No official release has been published yet. The current Native App version `0.1.0` (build `2026110602`) is a development preview, not a downloadable package.
 
 ## Unreleased
+
+- Fix the actual Steam API mismatch without clearing independent launch-option reads; show technical failures and distinguish a verified Proton package from an unverified or conflicting installation.
+- Verify the upstream SHA-512 checksum in addition to SHA-256 and the full inventory. After configuration confirmation, gracefully reboot the FX VM once, reconnect and authenticate SSH, verify the expected machine/boot transition, then apply Steam settings. Live reboot/write acceptance remains pending.
 
 - Restore process-memory-only SSH/sudo credentials for the verified-environment candidate. Remove the encrypted credential files and restart restoration added by the superseded candidate; target/session changes clear both roles.
 
