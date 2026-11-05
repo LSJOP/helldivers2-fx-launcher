@@ -67,6 +67,12 @@ struct FirstRunSetupView: View {
                                 }
                                 if operation.advisory { Text(state.t("ui.setup.ipv6Advisory")) }
                                 if !operation.changes.isEmpty { Text(state.t("ui.setup.rollback")) }
+                                if plan.snapshot.steamRunning && ["launch", "tool"].contains(operation.component) {
+                                    Text(state.t("ui.setup.steamManual"))
+                                    if operation.component == "launch", operation.blocked == nil, let value = operation.changes["launch"] {
+                                        Text(value).font(.caption.monospaced()).textSelection(.enabled)
+                                    }
+                                }
                             }
                         }.padding(.vertical, 4)
                     }
@@ -79,8 +85,13 @@ struct FirstRunSetupView: View {
                 TacticalPanel(number: "5", title: state.t("ui.setup.deploy"), symbol: "wrench.and.screwdriver") {
                     Text(state.t("ui.setup.authorization"))
                     Button(state.t("ui.setup.deploy")) { authorize = true }.buttonStyle(.borderedProminent)
-                        .disabled(plan.executable.isEmpty || plan.snapshot.gameRunning || plan.snapshot.steamRunning)
-                    if plan.snapshot.steamRunning || plan.snapshot.gameRunning { Text(state.t("ui.setup.closeSteam")).foregroundStyle(.orange) }
+                        .disabled(plan.executable.isEmpty || plan.snapshot.gameRunning)
+                    if plan.snapshot.gameRunning { Text(state.t("ui.setup.closeSteam")).foregroundStyle(.orange) }
+                    if plan.snapshot.steamRunning {
+                        Text(state.t("ui.setup.steamManual"))
+                        Button(state.t("ui.setup.detect")) { state.firstRunAction("first_run_detect") }
+                    }
+                    if plan.executable.isEmpty { Text(state.t("ui.setup.noExecutable")) }
                     Button(state.t("ui.setup.graphics")) { state.selection = .performance }
                 }
             }

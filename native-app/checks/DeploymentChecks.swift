@@ -68,6 +68,17 @@ final class FileDeploymentBackend: DeploymentBackend {
         try check(p.operations.first { $0.id == "proton" }?.blocked == "ARTIFACT_UNAPPROVED", "missing Proton is blocked")
         try check(p.executable.map(\.id) == ["launch"], "only approved available configuration is executable")
         try fails("CONFIRMATION_REQUIRED", "exact operation consent required") { _ = try s.execute(p, approved: [], context: CoreContext(timeout: 10)) }
+        var runningSteam = p.snapshot
+        runningSteam.steamRunning = true
+        let runningPlan = DeploymentPlanBuilder.build(runningSteam, profile: profile)
+        try check(runningPlan.executable.isEmpty, "running Steam defers managed file writes per operation")
+        try check(runningPlan.operations.first { $0.id == "launch" }?.changes == p.operations.first { $0.id == "launch" }?.changes, "deferred launch target remains available for manual Steam properties")
+        try check(runningPlan.operations.first { $0.id == "tool" }?.blocked == "ARTIFACT_UNAPPROVED", "manual guidance never approves an unverified compatibility tool")
+        try EnvironmentDeploymentService.idle(runningSteam, requiresStoppedSteam: false)
+        try check(true, "SteamOS Steam is not a global idle prerequisite")
+        try fails("STEAM_RUNNING", "Steam-owned writes retain process guard") { try EnvironmentDeploymentService.idle(runningSteam) }
+        runningSteam.gameRunning = true
+        try fails("GAME_RUNNING", "game guard remains even without Steam stop requirement") { try EnvironmentDeploymentService.idle(runningSteam, requiresStoppedSteam: false) }
         let receipt = try execute(s, p)
         try check(receipt.state == .Completed && b.writes == 1, "real config written and verified")
         try check(try s.receipts.read(receipt.id).applied == ["launch"], "durable receipt readback")

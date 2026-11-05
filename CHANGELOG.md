@@ -8,6 +8,8 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+- Replace the global first-run Steam shutdown requirement with per-operation deferral of Steam-managed file writes, manual SteamOS Properties guidance, and an explicit no-automatic-changes explanation. Game, artifact and offline write guards remain. Live SteamOS validation and refreshed screenshots are pending.
+
 - Separate detected components from deployment permissions; show unknown evidence neutrally, keep IPv6 advisory and non-blocking, and discover Proton-JE across bounded tool directories without executing candidates.
 
 - Passed component detections remain green independently of unrelated deployment restrictions.

@@ -74,6 +74,7 @@ struct DeploymentOperation: Codable, Identifiable, Equatable {
     let changes: [String: String], permission: String, estimatedBytes: Int64, needsRestart: Bool
     let backupLocation: String, rollback: String, verification: String
     let requirement: Requirement, blocked: String?
+    var requiresStoppedSteam: Bool { component != "ipv6" }
     var observation: DeploymentObservation {
         if component == "ipv6", !detectionPassed { return .advisory }
         if detectionPassed { return .passed }
@@ -95,7 +96,7 @@ struct DeploymentOperation: Codable, Identifiable, Equatable {
 struct DeploymentPlan: Codable {
     let id: UUID, profileID: String, profileVersion: Int, snapshot: DeploymentSnapshot
     let operations: [DeploymentOperation]
-    var executable: [DeploymentOperation] { operations.filter { !$0.advisory && $0.blocked == nil && !$0.changes.isEmpty } }
+    var executable: [DeploymentOperation] { operations.filter { !$0.advisory && $0.blocked == nil && !$0.changes.isEmpty && !(snapshot.steamRunning && $0.requiresStoppedSteam) } }
     var detectionState: DeploymentState {
         let required = operations.filter { !$0.advisory }
         if !required.isEmpty && required.allSatisfy({ $0.blocked == "UNSUPPORTED" }) { return .Unsupported }
@@ -226,16 +227,16 @@ final class EnvironmentDeploymentService {
     static func identity(_ a: DeploymentSnapshot, _ b: DeploymentSnapshot) -> Bool {
         a.target == b.target && a.boot == b.boot && a.fxVersion == b.fxVersion && a.osVersion == b.osVersion && a.architecture == b.architecture
     }
-    static func idle(_ live: DeploymentSnapshot) throws {
+    static func idle(_ live: DeploymentSnapshot, requiresStoppedSteam: Bool = true) throws {
         guard !live.gameRunning else { throw CoreError("GAME_RUNNING") }
-        guard !live.steamRunning else { throw CoreError("STEAM_RUNNING") }
+        guard !requiresStoppedSteam || !live.steamRunning else { throw CoreError("STEAM_RUNNING") }
     }
     func execute(_ plan: DeploymentPlan, approved: Set<String>, context: CoreContext, progress: (DeploymentState) -> Void = { _ in }) throws -> DeploymentReceipt {
         guard !plan.executable.isEmpty, approved == Set(plan.executable.map(\.id)) else { throw CoreError("CONFIRMATION_REQUIRED") }
         let lock = try CoreFileLock.acquire(receipts.directory.appendingPathComponent(".deployment.lock")); defer { lock.release() }
         let live = try backend.snapshot()
         guard Self.identity(live, plan.snapshot), live.revision == plan.snapshot.revision, live.values == plan.snapshot.values else { throw CoreError("CONFIG_CHANGED") }
-        try Self.idle(live)
+        try Self.idle(live, requiresStoppedSteam: plan.executable.contains { $0.requiresStoppedSteam })
         guard live.freeBytes >= plan.executable.reduce(0, { $0 + $1.estimatedBytes }) + 1_048_576 else { throw CoreError("INSUFFICIENT_SPACE") }
         guard !(try receipts.list()).contains(where: { [.Deploying, .Verifying, .RecoveryRequired].contains($0.state) }) else { throw CoreError("RECOVERY_REQUIRED") }
         var receipt = DeploymentReceipt(id: plan.id, plan: plan, state: .Deploying, applied: [], pending: nil, failure: nil)
@@ -247,7 +248,7 @@ final class EnvironmentDeploymentService {
                 try context.check()
                 let current = try backend.snapshot()
                 guard Self.identity(current, expected), current.revision == expected.revision else { throw CoreError("CONFIG_CHANGED") }
-                try Self.idle(current)
+                try Self.idle(current, requiresStoppedSteam: operation.requiresStoppedSteam)
                 receipt.pending = operation.id; try receipts.save(receipt)
                 try backend.replace(operation.changes, expected: current)
                 receipt.state = .Verifying; progress(.Verifying); try receipts.save(receipt)
@@ -275,7 +276,7 @@ final class EnvironmentDeploymentService {
             for operation in receipt.plan.executable.reversed() where selected.contains(operation.id) {
                 let current = try backend.snapshot()
                 guard Self.identity(current, receipt.plan.snapshot) else { throw CoreError("TARGET_CHANGED") }
-                try Self.idle(current)
+                try Self.idle(current, requiresStoppedSteam: operation.requiresStoppedSteam)
                 var before: [String: String] = [:]
                 for (key, after) in operation.changes {
                     let original = receipt.plan.snapshot.values[key] ?? ""

@@ -7,7 +7,7 @@
   "timezone": "Asia/Shanghai",
   "fx_guest_actions": "none",
   "credential_autoload": "disabled by isolated capture arguments",
-  "reviewed_ui_source_sha256": "e46d848d19c9b65baad7d4eb32c0c7c36586367e067fc36fe5bc660e7e68d8fb",
+  "reviewed_ui_source_sha256": "07e1a1e88f9d1997c7c421e2026f283e02c96606455779f348cb9e795db3fe60",
   "screenshots": [
     {
       "path": "docs/images/zh-CN/dashboard.png",
@@ -307,5 +307,6 @@
   "ssh_settings_update_note": "2026-11-05: SSH settings screenshots from reviewed original dirty Debug build 2026110501; Dashboard remains build 2026110503. Entries retain individual source provenance.",
   "local_copy_review_note": "FX Manager zh-CN/en build2026110505 recaptured: both official and local test copy shown, metadata-only; other page layouts unchanged.",
   "version_policy_review_note": "2026-11-05: setup status presentation and performance capability error changed. Removed first-run screenshots from current README display; recapture pending. Other page layouts unchanged; retained captures keep their original provenance. No live Guest capture or acceptance.",
-  "component_status_review_note": "2026-11-05: setup observations separated from deployment restrictions; unknowns neutral and IPv6 advisory. Setup screenshot recapture pending and absent from current README image embeds. Other layouts unchanged; historical screenshot provenance retained."
+  "component_status_review_note": "2026-11-05: setup observations separated from deployment restrictions; unknowns neutral and IPv6 advisory. Setup screenshot recapture pending and absent from current README image embeds. Other layouts unchanged; historical screenshot provenance retained.",
+  "setup_steam_review_20261106": "FirstRunSetupView guidance and setup-only translations changed. Existing README page screenshots do not show setup. Setup captures are pending, explicitly stated in both READMEs; existing image provenance remains historical. No live Guest validation."
 }

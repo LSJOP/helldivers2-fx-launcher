@@ -549,7 +549,7 @@
   "ui.setup.evidence": "View inspection evidence",
   "ui.setup.deploy": "Configure environment",
   "ui.setup.authorization": "Confirm the available changes shown above",
-  "ui.setup.closeSteam": "Close Steam and the game, then inspect again.",
+  "ui.setup.closeSteam": "Exit the game, then detect again. Keep SteamOS running.",
   "ui.setup.graphics": "Review hardware and FX graphics",
   "ui.setup.result": "Deployment result",
   "ui.setup.applied": "Applied items",
@@ -592,7 +592,9 @@
   "ui.setup.status.found": "Found · integrity unverified",
   "ui.setup.status.advisory": "Optional warning",
   "ui.setup.artifactUnavailable": "Automatic deployment unavailable: no reviewed package. This does not establish a fault in an installed component.",
-  "ui.setup.ipv6Advisory": "IPv6 is advisory only and does not block other configuration."
+  "ui.setup.ipv6Advisory": "IPv6 is advisory only and does not block other configuration.",
+  "ui.setup.steamManual": "Keep SteamOS and Steam running. In HELLDIVERS 2 Properties, set Launch Options under General and select an installed, verified tool under Compatibility, then detect again. Automatic writes to Steam-managed files are deferred while Steam runs; missing approved tools remain blocked.",
+  "ui.setup.noExecutable": "No automatic changes are available. Review the item details for manual steps or missing prerequisites."
  },
  "zh-CN": {
   "ui.193": "导航",
@@ -1144,7 +1146,7 @@
   "ui.setup.evidence": "查看检测证据",
   "ui.setup.deploy": "配置运行环境",
   "ui.setup.authorization": "确认执行上方可用的修改项",
-  "ui.setup.closeSteam": "请自行退出 Steam 与游戏，再重新检测。",
+  "ui.setup.closeSteam": "请退出游戏后重新检测，保持 SteamOS 运行。",
   "ui.setup.graphics": "查看硬件与 FX 图形配置",
   "ui.setup.result": "部署结果",
   "ui.setup.applied": "已应用项目",
@@ -1187,7 +1189,9 @@
   "ui.setup.status.found": "已发现，完整性待验证",
   "ui.setup.status.advisory": "可选警告",
   "ui.setup.artifactUnavailable": "自动部署不可用：没有审核后的安装包。这不表示已安装组件存在故障。",
-  "ui.setup.ipv6Advisory": "IPv6 仅作提示，不阻塞其他配置。"
+  "ui.setup.ipv6Advisory": "IPv6 仅作提示，不阻塞其他配置。",
+  "ui.setup.steamManual": "保持 SteamOS 与 Steam 运行。在 HELLDIVERS 2 的属性中，通过“通用”设置启动选项，通过“兼容性”选择已安装且已验证的工具，再重新检测。Steam 运行时暂不自动写入其管理的文件；缺少审核工具的项目仍受阻。",
+  "ui.setup.noExecutable": "当前没有可自动执行的修改。请查看各项详情，完成手动步骤或补齐前提。"
  },
  "ja": {
   "ui.193": "移動",
@@ -1739,7 +1743,7 @@
   "ui.setup.evidence": "検査の証拠を表示",
   "ui.setup.deploy": "実行環境を設定",
   "ui.setup.authorization": "上記の実行可能な変更を承認",
-  "ui.setup.closeSteam": "Steam とゲームを終了して再検査してください。",
+  "ui.setup.closeSteam": "ゲームを終了して再検出してください。SteamOS は起動したままにしてください。",
   "ui.setup.graphics": "ハードウェアと FX 描画設定を確認",
   "ui.setup.result": "展開結果",
   "ui.setup.applied": "適用済み項目",
@@ -1782,7 +1786,9 @@
   "ui.setup.status.found": "検出済み・整合性未確認",
   "ui.setup.status.advisory": "任意の警告",
   "ui.setup.artifactUnavailable": "審査済みパッケージがないため自動導入は利用できません。既存コンポーネントの障害を示すものではありません。",
-  "ui.setup.ipv6Advisory": "IPv6 は参考情報のみで、他の設定を妨げません。"
+  "ui.setup.ipv6Advisory": "IPv6 は参考情報のみで、他の設定を妨げません。",
+  "ui.setup.steamManual": "SteamOS と Steam は起動したままにしてください。HELLDIVERS 2 のプロパティで「一般」の起動オプションと「互換性」のインストール済み・検証済みツールを設定し、再検出してください。Steam 起動中は管理ファイルへの自動書き込みを保留します。承認済みツールがない項目は引き続きブロックされます。",
+  "ui.setup.noExecutable": "自動実行できる変更はありません。各項目の詳細で手動手順と前提条件を確認してください。"
  },
  "ko": {
   "ui.193": "탐색",
@@ -2334,7 +2340,7 @@
   "ui.setup.evidence": "검사 근거 보기",
   "ui.setup.deploy": "실행 환경 구성",
   "ui.setup.authorization": "위의 사용 가능한 변경 확인",
-  "ui.setup.closeSteam": "Steam과 게임을 종료한 후 다시 검사하세요.",
+  "ui.setup.closeSteam": "게임을 종료한 후 다시 감지하세요. SteamOS는 계속 실행하세요.",
   "ui.setup.graphics": "하드웨어 및 FX 그래픽 검토",
   "ui.setup.result": "배포 결과",
   "ui.setup.applied": "적용된 항목",
@@ -2377,7 +2383,9 @@
   "ui.setup.status.found": "발견됨 · 무결성 미확인",
   "ui.setup.status.advisory": "선택 사항 경고",
   "ui.setup.artifactUnavailable": "검토된 패키지가 없어 자동 배포를 사용할 수 없습니다. 설치된 구성 요소의 오류를 의미하지 않습니다.",
-  "ui.setup.ipv6Advisory": "IPv6는 참고 사항이며 다른 설정을 차단하지 않습니다."
+  "ui.setup.ipv6Advisory": "IPv6는 참고 사항이며 다른 설정을 차단하지 않습니다.",
+  "ui.setup.steamManual": "SteamOS와 Steam은 계속 실행하세요. HELLDIVERS 2 속성의 일반에서 실행 옵션을 설정하고 호환성에서 설치 및 검증된 도구를 선택한 후 다시 감지하세요. Steam 실행 중에는 관리 파일의 자동 쓰기를 보류합니다. 승인된 도구가 없는 항목은 계속 차단됩니다.",
+  "ui.setup.noExecutable": "자동으로 실행할 변경 사항이 없습니다. 각 항목의 세부 정보에서 수동 단계와 필수 조건을 확인하세요."
  },
  "ru": {
   "ui.193": "Навигация",
@@ -2929,7 +2937,7 @@
   "ui.setup.evidence": "Данные проверки",
   "ui.setup.deploy": "Настроить среду",
   "ui.setup.authorization": "Подтвердите доступные изменения выше",
-  "ui.setup.closeSteam": "Закройте Steam и игру и повторите проверку.",
+  "ui.setup.closeSteam": "Закройте игру и повторите проверку. Оставьте SteamOS запущенной.",
   "ui.setup.graphics": "Оборудование и графика FX",
   "ui.setup.result": "Результат развёртывания",
   "ui.setup.applied": "Применённые пункты",
@@ -2972,7 +2980,9 @@
   "ui.setup.status.found": "Найдено · целостность не проверена",
   "ui.setup.status.advisory": "Необязательное предупреждение",
   "ui.setup.artifactUnavailable": "Автоматическая установка недоступна: нет проверенного пакета. Это не означает неисправность установленного компонента.",
-  "ui.setup.ipv6Advisory": "IPv6 носит рекомендательный характер и не блокирует другие настройки."
+  "ui.setup.ipv6Advisory": "IPv6 носит рекомендательный характер и не блокирует другие настройки.",
+  "ui.setup.steamManual": "Оставьте SteamOS и Steam запущенными. В свойствах HELLDIVERS 2 задайте параметры запуска в разделе «Общие» и выберите установленный и проверенный инструмент в разделе «Совместимость», затем повторите проверку. Автоматическая запись в файлы Steam отложена, пока Steam работает; отсутствие одобренного инструмента по-прежнему блокирует изменение.",
+  "ui.setup.noExecutable": "Нет доступных автоматических изменений. Проверьте ручные шаги и необходимые условия в сведениях об отдельных пунктах."
  },
  "es": {
   "ui.193": "Navegación",
@@ -3524,7 +3534,7 @@
   "ui.setup.evidence": "Ver pruebas de inspección",
   "ui.setup.deploy": "Configurar entorno",
   "ui.setup.authorization": "Confirma los cambios disponibles arriba",
-  "ui.setup.closeSteam": "Cierra Steam y el juego y vuelve a inspeccionar.",
+  "ui.setup.closeSteam": "Cierra el juego y vuelve a detectar. Mantén SteamOS en ejecución.",
   "ui.setup.graphics": "Revisar hardware y gráficos FX",
   "ui.setup.result": "Resultado de instalación",
   "ui.setup.applied": "Elementos aplicados",
@@ -3567,7 +3577,9 @@
   "ui.setup.status.found": "Encontrado · integridad sin verificar",
   "ui.setup.status.advisory": "Advertencia opcional",
   "ui.setup.artifactUnavailable": "Instalación automática no disponible: no hay un paquete revisado. Esto no indica un fallo del componente instalado.",
-  "ui.setup.ipv6Advisory": "IPv6 es solo informativo y no bloquea otras configuraciones."
+  "ui.setup.ipv6Advisory": "IPv6 es solo informativo y no bloquea otras configuraciones.",
+  "ui.setup.steamManual": "Mantén SteamOS y Steam en ejecución. En Propiedades de HELLDIVERS 2, configura las opciones de lanzamiento en General y elige una herramienta instalada y verificada en Compatibilidad; después vuelve a detectar. Las escrituras automáticas en archivos de Steam se aplazan mientras Steam está abierto; las herramientas sin aprobar siguen bloqueadas.",
+  "ui.setup.noExecutable": "No hay cambios automáticos disponibles. Consulta los detalles para ver los pasos manuales o requisitos pendientes."
  },
  "de": {
   "ui.193": "Navigation",
@@ -4119,7 +4131,7 @@
   "ui.setup.evidence": "Prüfnachweise anzeigen",
   "ui.setup.deploy": "Umgebung einrichten",
   "ui.setup.authorization": "Die verfügbaren Änderungen oben bestätigen",
-  "ui.setup.closeSteam": "Steam und Spiel beenden, dann erneut prüfen.",
+  "ui.setup.closeSteam": "Beende das Spiel und prüfe erneut. Lass SteamOS laufen.",
   "ui.setup.graphics": "Hardware und FX-Grafik prüfen",
   "ui.setup.result": "Bereitstellungsergebnis",
   "ui.setup.applied": "Angewendete Punkte",
@@ -4162,7 +4174,9 @@
   "ui.setup.status.found": "Gefunden · Integrität ungeprüft",
   "ui.setup.status.advisory": "Optionaler Hinweis",
   "ui.setup.artifactUnavailable": "Automatische Installation nicht verfügbar: kein geprüftes Paket. Dies belegt keinen Fehler einer installierten Komponente.",
-  "ui.setup.ipv6Advisory": "IPv6 dient nur als Hinweis und blockiert keine anderen Einstellungen."
+  "ui.setup.ipv6Advisory": "IPv6 dient nur als Hinweis und blockiert keine anderen Einstellungen.",
+  "ui.setup.steamManual": "Lass SteamOS und Steam laufen. Stelle in den Eigenschaften von HELLDIVERS 2 unter Allgemein die Startoptionen und unter Kompatibilität ein installiertes, geprüftes Werkzeug ein. Prüfe danach erneut. Automatische Schreibzugriffe auf Steam-Dateien warten, solange Steam läuft; fehlende freigegebene Werkzeuge bleiben gesperrt.",
+  "ui.setup.noExecutable": "Keine automatischen Änderungen verfügbar. Prüfe die Details auf manuelle Schritte und fehlende Voraussetzungen."
  },
  "fr": {
   "ui.193": "Navigation",
@@ -4714,7 +4728,7 @@
   "ui.setup.evidence": "Voir les preuves de détection",
   "ui.setup.deploy": "Configurer l’environnement",
   "ui.setup.authorization": "Confirmer les changements disponibles ci-dessus",
-  "ui.setup.closeSteam": "Fermez Steam et le jeu, puis relancez la détection.",
+  "ui.setup.closeSteam": "Quittez le jeu puis relancez la détection. Laissez SteamOS fonctionner.",
   "ui.setup.graphics": "Examiner le matériel et les graphismes FX",
   "ui.setup.result": "Résultat du déploiement",
   "ui.setup.applied": "Éléments appliqués",
@@ -4757,7 +4771,9 @@
   "ui.setup.status.found": "Détecté · intégrité non vérifiée",
   "ui.setup.status.advisory": "Avertissement facultatif",
   "ui.setup.artifactUnavailable": "Installation automatique indisponible : aucun paquet examiné. Cela ne prouve pas une panne du composant installé.",
-  "ui.setup.ipv6Advisory": "IPv6 est indicatif et ne bloque pas les autres réglages."
+  "ui.setup.ipv6Advisory": "IPv6 est indicatif et ne bloque pas les autres réglages.",
+  "ui.setup.steamManual": "Laissez SteamOS et Steam fonctionner. Dans les propriétés de HELLDIVERS 2, réglez les options de lancement sous Général et choisissez un outil installé et vérifié sous Compatibilité, puis relancez la détection. Les écritures automatiques dans les fichiers Steam sont différées tant que Steam fonctionne ; les outils non approuvés restent bloqués.",
+  "ui.setup.noExecutable": "Aucune modification automatique disponible. Consultez les détails pour les étapes manuelles et les prérequis manquants."
  },
  "pt-BR": {
   "ui.193": "Navegação",
@@ -5309,7 +5325,7 @@
   "ui.setup.evidence": "Ver evidências da inspeção",
   "ui.setup.deploy": "Configurar ambiente",
   "ui.setup.authorization": "Confirmar as alterações disponíveis acima",
-  "ui.setup.closeSteam": "Feche Steam e o jogo e inspecione novamente.",
+  "ui.setup.closeSteam": "Feche o jogo e detecte novamente. Mantenha o SteamOS em execução.",
   "ui.setup.graphics": "Revisar hardware e gráficos FX",
   "ui.setup.result": "Resultado da implantação",
   "ui.setup.applied": "Itens aplicados",
@@ -5352,7 +5368,9 @@
   "ui.setup.status.found": "Encontrado · integridade não verificada",
   "ui.setup.status.advisory": "Aviso opcional",
   "ui.setup.artifactUnavailable": "Instalação automática indisponível: não há pacote revisado. Isso não indica falha no componente instalado.",
-  "ui.setup.ipv6Advisory": "IPv6 é apenas informativo e não bloqueia outras configurações."
+  "ui.setup.ipv6Advisory": "IPv6 é apenas informativo e não bloqueia outras configurações.",
+  "ui.setup.steamManual": "Mantenha o SteamOS e o Steam em execução. Nas propriedades de HELLDIVERS 2, ajuste as opções de inicialização em Geral e selecione uma ferramenta instalada e verificada em Compatibilidade; depois detecte novamente. A gravação automática nos arquivos do Steam fica adiada enquanto ele está aberto; ferramentas sem aprovação continuam bloqueadas.",
+  "ui.setup.noExecutable": "Nenhuma alteração automática disponível. Consulte os detalhes para ver etapas manuais ou requisitos pendentes."
  },
  "zh-TW": {
   "ui.270": "無需外部執行環境；檢測後按 ⌘R 重新讀取全部唯讀快照。",
@@ -5904,7 +5922,7 @@
   "ui.setup.evidence": "查看偵測證據",
   "ui.setup.deploy": "設定執行環境",
   "ui.setup.authorization": "確認執行上方可用的修改項",
-  "ui.setup.closeSteam": "請自行結束 Steam 與遊戲，再重新偵測。",
+  "ui.setup.closeSteam": "請退出遊戲後重新偵測，保持 SteamOS 執行。",
   "ui.setup.graphics": "查看硬體與 FX 圖形設定",
   "ui.setup.result": "部署結果",
   "ui.setup.applied": "已套用項目",
@@ -5947,6 +5965,8 @@
   "ui.setup.status.found": "已發現，完整性待驗證",
   "ui.setup.status.advisory": "可選警告",
   "ui.setup.artifactUnavailable": "自動部署不可用：沒有審核後的安裝包。這不表示已安裝元件存在故障。",
-  "ui.setup.ipv6Advisory": "IPv6 僅作提示，不阻擋其他設定。"
+  "ui.setup.ipv6Advisory": "IPv6 僅作提示，不阻擋其他設定。",
+  "ui.setup.steamManual": "保持 SteamOS 與 Steam 執行。在 HELLDIVERS 2 的內容中，透過「一般」設定啟動選項，透過「相容性」選擇已安裝且已驗證的工具，再重新偵測。Steam 執行時暫不自動寫入其管理的檔案；缺少審核工具的項目仍受阻。",
+  "ui.setup.noExecutable": "目前沒有可自動執行的修改。請查看各項詳細資訊，完成手動步驟或補齊前提。"
  }
 }
