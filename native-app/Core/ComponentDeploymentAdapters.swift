@@ -196,3 +196,113 @@ extension ComponentDeploymentAdapter {
     }
 
 }
+
+/// Pinned upstream compressed release; full regular-file, mode, link and inventory review.
+/// Python is required only inside SteamOS, never on the Mac at App runtime.
+enum ProtonJERelease {
+    static let version = "proton-je-11.0-20261014-3"
+    static let digest = "aa5430696ca39451299e2f007ef652bc030e6419242776343d48947e21827485"
+    static func manifest() throws -> Data {
+        guard let url = Bundle.main.url(forResource: "proton-je-approved", withExtension: "json") else { throw CoreError("ARTIFACT_UNAPPROVED") }
+        let data = try Data(contentsOf: url)
+        guard data.count <= CoreLimits.maxResourceFile,
+              let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              object["archiveSHA256"] as? String == digest, object["version"] as? String == version else { throw CoreError("ARTIFACT_UNAPPROVED") }
+        return data
+    }
+    static func script(mode: String, manifest: Data, boot: String = "", suffix: String = UUID().uuidString) throws -> String {
+        guard ["probe", "install", "recover"].contains(mode), mode == "probe" || UUID(uuidString: boot) != nil,
+              UUID(uuidString: suffix) != nil else { throw CoreError("INVALID_ARGUMENT") }
+        let prefix = "MANIFEST=" + CoreJSON.encode(.string(manifest.base64EncodedString())) + "\nMODE=" + CoreJSON.encode(.string(mode)) + "\nBOOT=" + CoreJSON.encode(.string(boot)) + "\nSUFFIX=" + CoreJSON.encode(.string(suffix)) + "\n"
+        return "python3 - <<'HD2_PROTON_PY'\n" + prefix + python + "\nHD2_PROTON_PY\n"
+    }
+    static let python = #"""
+import os,sys,json,base64,hashlib,pathlib,stat,subprocess,tempfile,tarfile,shutil,posixpath
+m=json.loads(base64.b64decode(MANIFEST))
+mode=MODE
+root=pathlib.Path.home()/'.local/share/Steam/compatibilitytools.d'
+p=root/m['version']
+def digest(path):
+ h=hashlib.sha256()
+ with open(path,'rb') as f:
+  for b in iter(lambda:f.read(1048576),b''):h.update(b)
+ return h.hexdigest()
+def safe_parents(path):
+ for part in [path,*path.parents]:
+  if part.is_symlink():raise RuntimeError('UNSAFE_PATH')
+def verified(path):
+ if not path.is_dir() or path.is_symlink():return False
+ expected=set(m['files'])|set(m['links'])|set(m['directories'])
+ actual=set()
+ for d,dirs,files in os.walk(path,followlinks=False):
+  for name in dirs+files:actual.add(str((pathlib.Path(d)/name).relative_to(path)))
+ if actual!=expected:return False
+ for name,(sha,permissions) in m['files'].items():
+  f=path/name
+  if not stat.S_ISREG(f.lstat().st_mode) or f.is_symlink() or digest(f)!=sha or (f.stat().st_mode&0o111)!=(permissions&0o111):return False
+ for name,target in m['links'].items():
+  f=path/name
+  if not f.is_symlink() or os.readlink(f)!=target:return False
+ return all(stat.S_ISDIR((path/name).lstat().st_mode) for name in m['directories'])
+def state():
+ safe_parents(p)
+ if not os.path.lexists(p):return 'missing'
+ return m['archiveSHA256'] if verified(p) else 'unknown'
+def idle():
+ if pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip()!=BOOT:raise RuntimeError('TARGET_CHANGED')
+ for name in ['reaper','helldivers2.exe']:
+  r=subprocess.run(['pgrep','-x',name],stdout=subprocess.DEVNULL)
+  if r.returncode!=1:raise RuntimeError('GAME_RUNNING')
+if mode=='probe':
+ print('proton_package='+state())
+ sys.exit(0)
+safe_parents(root)
+root.mkdir(parents=True,exist_ok=True)
+lock=pathlib.Path.home()/'.hd2-native-deployment-lock'
+lock.mkdir(mode=0o700)
+try:
+ idle()
+ if mode=='recover':
+  if state()=='missing':sys.exit(0)
+  if state()!=m['archiveSHA256']:raise RuntimeError('EXTERNAL_DRIFT')
+  retained=root/(m['version']+'.hd2-recovered-'+SUFFIX)
+  if os.path.lexists(retained):raise RuntimeError('EXTERNAL_DRIFT')
+  idle();p.rename(retained)
+  sys.exit(0)
+ if state()!='missing':raise RuntimeError('EXTERNAL_DRIFT')
+ if shutil.disk_usage(root).free < m['archiveBytes']+m['unpackedBytes']*2+67108864:raise RuntimeError('INSUFFICIENT_SPACE')
+ stage=pathlib.Path(tempfile.mkdtemp(prefix='.hd2-proton-stage-',dir=root))
+ try:
+  archive=stage/'payload.tar.xz'
+  subprocess.run(['curl','--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','600','--max-filesize',str(m['archiveBytes']),'--output',str(archive),m['url']],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=610)
+  if archive.stat().st_size!=m['archiveBytes'] or digest(archive)!=m['archiveSHA256']:raise RuntimeError('ARTIFACT_HASH')
+  unpack=stage/'unpack';unpack.mkdir()
+  with tarfile.open(archive,'r:xz') as t:
+   members=t.getmembers();seen=set()
+   for member in members:
+    name=member.name.rstrip('/')
+    if name in seen or name.startswith('/') or '..' in name.split('/') or member.mode&0o7000:raise RuntimeError('UNSAFE_PATH')
+    seen.add(name)
+    if name!=m['version'] and not name.startswith(m['version']+'/'):raise RuntimeError('UNSAFE_PATH')
+    if not (member.isfile() or member.isdir() or member.issym()):raise RuntimeError('UNSAFE_PATH')
+    if member.issym():
+     target=posixpath.normpath(posixpath.join(posixpath.dirname(name),member.linkname))
+     if member.linkname.startswith('/') or not target.startswith(m['version']+'/'):raise RuntimeError('UNSAFE_PATH')
+   # Parents must be real directories, never links, before extracting any file.
+   names={x.name.rstrip('/'):x for x in members}
+   for member in members:
+    for parent in pathlib.PurePosixPath(member.name).parents:
+     if str(parent) in names and not names[str(parent)].isdir():raise RuntimeError('UNSAFE_PATH')
+   t.extractall(unpack,members=members)
+  candidate=unpack/m['version']
+  if not verified(candidate):raise RuntimeError('ARTIFACT_HASH')
+  idle();safe_parents(p)
+  if os.path.lexists(p):raise RuntimeError('EXTERNAL_DRIFT')
+  candidate.rename(p)
+  if not verified(p):raise RuntimeError('VERIFY_FAILED')
+ finally:
+  shutil.rmtree(stage)
+finally:
+ lock.rmdir()
+"""#
+}

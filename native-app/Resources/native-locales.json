@@ -417,7 +417,7 @@
   "ui.integrated.069": "Remind me later",
   "ui.native.runtime": "Native runtime",
   "ui.native.engine": "Runtime engine",
-  "ui.native.noPython": "No Python interpreter, Python Bridge or external script directory is used at runtime.",
+  "ui.native.noPython": "The Mac app needs no Python interpreter, Python Bridge or external script directory. The optional Proton installer requires Python 3 inside SteamOS.",
   "ui.native.resources": "Launch resources",
   "ui.native.bundled": "Bundled · SHA-256 verified",
   "ui.native.backup": "Configuration backup",
@@ -582,7 +582,7 @@
   "ui.setup.component.tool": "Steam compatibility tool selection",
   "ui.setup.current": "Current detected value",
   "ui.ssh.settings": "SSH connection settings",
-  "ui.ssh.settingsHelp": "Save the launcher address, port and user without changing FX or connecting. Saving clears live authorization; saved passwords remain separate for each connection.",
+  "ui.ssh.settingsHelp": "Default: 127.0.0.1, port 2222, user steamos. Leave fields blank to keep the current connection; only filled fields are changed. Saving changes only launcher settings, clears live authorization and keeps saved passwords separate by connection.",
   "ui.ssh.settingsInvalid": "Enter a valid host, port (1–65535) and user. The SSH port must differ from the local forwarding port.",
   "ui.ssh.settingsSave": "Save connection settings",
   "ui.ssh.settingsSaved": "Saved. Enter credentials again before connecting.",
@@ -594,7 +594,9 @@
   "ui.setup.artifactUnavailable": "Automatic deployment unavailable: no reviewed package. This does not establish a fault in an installed component.",
   "ui.setup.ipv6Advisory": "IPv6 is advisory only and does not block other configuration.",
   "ui.setup.steamManual": "Keep SteamOS and Steam running. In HELLDIVERS 2 Properties, set Launch Options under General and select an installed, verified tool under Compatibility, then detect again. Automatic writes to Steam-managed files are deferred while Steam runs; missing approved tools remain blocked.",
-  "ui.setup.noExecutable": "No automatic changes are available. Review the item details for manual steps or missing prerequisites."
+  "ui.setup.noExecutable": "No automatic changes are available. Review the item details for manual steps or missing prerequisites.",
+  "ui.setup.protonInstall": "Download Proton-JE from its pinned upstream release (about 332 MiB; at least 4 GiB free). Verify the full file and link inventory, then install into Steam compatibilitytools.d. Keep Steam running. SteamOS requires curl and Python 3. Existing installations are never overwritten.",
+  "ui.setup.toolDiscovery": "Proton is installed, but Steam has not listed it yet. Restart SteamOS when convenient, then detect again to select the compatibility tool. The app will not restart Steam or the VM."
  },
  "zh-CN": {
   "ui.193": "导航",
@@ -1014,7 +1016,7 @@
   "ui.integrated.069": "稍后提醒",
   "ui.native.runtime": "原生运行时",
   "ui.native.engine": "运行时引擎",
-  "ui.native.noPython": "正式运行流程不使用 Python 解释器、Python Bridge 或外部脚本目录。",
+  "ui.native.noPython": "Mac App 无需 Python 解释器、Python Bridge 或外部脚本目录。可选的 Proton 安装功能需要 SteamOS 内的 Python 3。",
   "ui.native.resources": "启动资源",
   "ui.native.bundled": "已内置 · SHA-256 已验证",
   "ui.native.backup": "配置备份",
@@ -1179,7 +1181,7 @@
   "ui.setup.component.tool": "Steam 兼容工具选择",
   "ui.setup.current": "当前检测值",
   "ui.ssh.settings": "SSH 连接设置",
-  "ui.ssh.settingsHelp": "仅保存启动器使用的地址、端口和用户名，不修改 FX 或建立连接。保存后清除本次授权；不同连接的已保存密码相互独立。",
+  "ui.ssh.settingsHelp": "默认地址 127.0.0.1、端口 2222、用户名 steamos。留空保持当前连接，仅填写的项会修改。保存只修改启动器设置并清除本次授权；已保存密码按连接独立保留。",
   "ui.ssh.settingsInvalid": "请输入有效地址、端口（1–65535）和用户名。SSH 端口不能与本地转发端口相同。",
   "ui.ssh.settingsSave": "保存连接设置",
   "ui.ssh.settingsSaved": "已保存。连接前请重新输入凭据。",
@@ -1191,7 +1193,9 @@
   "ui.setup.artifactUnavailable": "自动部署不可用：没有审核后的安装包。这不表示已安装组件存在故障。",
   "ui.setup.ipv6Advisory": "IPv6 仅作提示，不阻塞其他配置。",
   "ui.setup.steamManual": "保持 SteamOS 与 Steam 运行。在 HELLDIVERS 2 的属性中，通过“通用”设置启动选项，通过“兼容性”选择已安装且已验证的工具，再重新检测。Steam 运行时暂不自动写入其管理的文件；缺少审核工具的项目仍受阻。",
-  "ui.setup.noExecutable": "当前没有可自动执行的修改。请查看各项详情，完成手动步骤或补齐前提。"
+  "ui.setup.noExecutable": "当前没有可自动执行的修改。请查看各项详情，完成手动步骤或补齐前提。",
+  "ui.setup.protonInstall": "从固定的上游发行版下载 Proton-JE（约 332 MiB，至少需 4 GiB 可用空间），校验全部文件与链接后安装到 Steam compatibilitytools.d。保持 Steam 运行；SteamOS 内需有 curl 和 Python 3。不覆盖已有安装。",
+  "ui.setup.toolDiscovery": "Proton 已安装，但 Steam 尚未列出它。方便时重启 SteamOS，再重新检测以选择兼容工具。应用不会自动重启 Steam 或虚拟机。"
  },
  "ja": {
   "ui.193": "移動",
@@ -1611,7 +1615,7 @@
   "ui.integrated.069": "後で通知",
   "ui.native.runtime": "ネイティブランタイム",
   "ui.native.engine": "ランタイムエンジン",
-  "ui.native.noPython": "実行時に Python インタプリタ、Python Bridge、外部スクリプトディレクトリは使用しません。",
+  "ui.native.noPython": "Mac アプリに Python インタプリタ、Python Bridge、外部スクリプトディレクトリは不要です。任意の Proton インストール機能には SteamOS 内の Python 3 が必要です。",
   "ui.native.resources": "起動リソース",
   "ui.native.bundled": "同梱 · SHA-256 検証済み",
   "ui.native.backup": "設定バックアップ",
@@ -1776,7 +1780,7 @@
   "ui.setup.component.tool": "Steam 互換ツールの選択",
   "ui.setup.current": "現在の検出値",
   "ui.ssh.settings": "SSH 接続設定",
-  "ui.ssh.settingsHelp": "ランチャーのアドレス、ポート、ユーザーのみ保存します。FXの変更や接続は行いません。現在の認証は解除され、保存済みパスワードは接続先ごとに分離されます。",
+  "ui.ssh.settingsHelp": "既定値：127.0.0.1、ポート 2222、ユーザー steamos。空欄は現在の接続を保持し、入力した項目だけ変更します。保存はランチャー設定のみを変更し、現在の認証を解除します。保存済みパスワードは接続先ごとに保持します。",
   "ui.ssh.settingsInvalid": "有効なホスト、ポート（1–65535）、ユーザーを入力してください。SSH ポートはローカル転送ポートと異なる必要があります。",
   "ui.ssh.settingsSave": "接続設定を保存",
   "ui.ssh.settingsSaved": "保存しました。接続前に認証情報を再入力してください。",
@@ -1788,7 +1792,9 @@
   "ui.setup.artifactUnavailable": "審査済みパッケージがないため自動導入は利用できません。既存コンポーネントの障害を示すものではありません。",
   "ui.setup.ipv6Advisory": "IPv6 は参考情報のみで、他の設定を妨げません。",
   "ui.setup.steamManual": "SteamOS と Steam は起動したままにしてください。HELLDIVERS 2 のプロパティで「一般」の起動オプションと「互換性」のインストール済み・検証済みツールを設定し、再検出してください。Steam 起動中は管理ファイルへの自動書き込みを保留します。承認済みツールがない項目は引き続きブロックされます。",
-  "ui.setup.noExecutable": "自動実行できる変更はありません。各項目の詳細で手動手順と前提条件を確認してください。"
+  "ui.setup.noExecutable": "自動実行できる変更はありません。各項目の詳細で手動手順と前提条件を確認してください。",
+  "ui.setup.protonInstall": "固定された上流リリースから Proton-JE をダウンロードします（約 332 MiB、空き容量 4 GiB 以上）。全ファイルとリンクを検証し Steam compatibilitytools.d にインストールします。Steam は起動したままにしてください。SteamOS 内に curl と Python 3 が必要です。既存の環境は上書きしません。",
+  "ui.setup.toolDiscovery": "Proton はインストール済みですが、Steam の一覧にまだありません。都合のよいときに SteamOS を再起動し、再検出して互換ツールを選択してください。アプリは Steam や仮想マシンを自動再起動しません。"
  },
  "ko": {
   "ui.193": "탐색",
@@ -2208,7 +2214,7 @@
   "ui.integrated.069": "나중에 알림",
   "ui.native.runtime": "네이티브 런타임",
   "ui.native.engine": "런타임 엔진",
-  "ui.native.noPython": "실행 시 Python 인터프리터, Python Bridge 또는 외부 스크립트 디렉터리를 사용하지 않습니다.",
+  "ui.native.noPython": "Mac 앱에는 Python 인터프리터, Python Bridge 또는 외부 스크립트 디렉터리가 필요하지 않습니다. 선택적 Proton 설치 기능에는 SteamOS 내부의 Python 3이 필요합니다.",
   "ui.native.resources": "실행 리소스",
   "ui.native.bundled": "내장됨 · SHA-256 검증됨",
   "ui.native.backup": "구성 백업",
@@ -2373,7 +2379,7 @@
   "ui.setup.component.tool": "Steam 호환 도구 선택",
   "ui.setup.current": "현재 검사 값",
   "ui.ssh.settings": "SSH 연결 설정",
-  "ui.ssh.settingsHelp": "런처의 주소, 포트와 사용자만 저장합니다. FX를 변경하거나 연결하지 않습니다. 현재 인증은 해제되며 암호는 연결 대상별로 분리됩니다.",
+  "ui.ssh.settingsHelp": "기본값: 127.0.0.1, 포트 2222, 사용자 steamos. 빈 항목은 현재 연결을 유지하며 입력한 항목만 변경됩니다. 저장은 실행기 설정만 변경하고 현재 인증을 해제합니다. 저장된 비밀번호는 연결별로 유지됩니다.",
   "ui.ssh.settingsInvalid": "유효한 호스트, 포트(1–65535), 사용자를 입력하세요. SSH 포트는 로컬 전달 포트와 달라야 합니다.",
   "ui.ssh.settingsSave": "연결 설정 저장",
   "ui.ssh.settingsSaved": "저장했습니다. 연결하기 전에 인증 정보를 다시 입력하세요.",
@@ -2385,7 +2391,9 @@
   "ui.setup.artifactUnavailable": "검토된 패키지가 없어 자동 배포를 사용할 수 없습니다. 설치된 구성 요소의 오류를 의미하지 않습니다.",
   "ui.setup.ipv6Advisory": "IPv6는 참고 사항이며 다른 설정을 차단하지 않습니다.",
   "ui.setup.steamManual": "SteamOS와 Steam은 계속 실행하세요. HELLDIVERS 2 속성의 일반에서 실행 옵션을 설정하고 호환성에서 설치 및 검증된 도구를 선택한 후 다시 감지하세요. Steam 실행 중에는 관리 파일의 자동 쓰기를 보류합니다. 승인된 도구가 없는 항목은 계속 차단됩니다.",
-  "ui.setup.noExecutable": "자동으로 실행할 변경 사항이 없습니다. 각 항목의 세부 정보에서 수동 단계와 필수 조건을 확인하세요."
+  "ui.setup.noExecutable": "자동으로 실행할 변경 사항이 없습니다. 각 항목의 세부 정보에서 수동 단계와 필수 조건을 확인하세요.",
+  "ui.setup.protonInstall": "고정된 업스트림 릴리스에서 Proton-JE를 다운로드합니다(약 332 MiB, 여유 공간 최소 4 GiB). 모든 파일과 링크를 검증한 후 Steam compatibilitytools.d에 설치합니다. Steam은 계속 실행하세요. SteamOS에 curl과 Python 3이 필요합니다. 기존 설치는 덮어쓰지 않습니다.",
+  "ui.setup.toolDiscovery": "Proton은 설치되었지만 Steam 목록에 아직 없습니다. 편할 때 SteamOS를 다시 시작하고 다시 감지하여 호환 도구를 선택하세요. 앱은 Steam이나 가상 머신을 자동으로 다시 시작하지 않습니다."
  },
  "ru": {
   "ui.193": "Навигация",
@@ -2805,7 +2813,7 @@
   "ui.integrated.069": "Напомнить позже",
   "ui.native.runtime": "Нативная среда",
   "ui.native.engine": "Движок среды",
-  "ui.native.noPython": "Во время работы не используются интерпретатор Python, Python Bridge или внешний каталог скриптов.",
+  "ui.native.noPython": "Приложению Mac не нужны интерпретатор Python, Python Bridge или внешний каталог скриптов. Для необязательной установки Proton нужен Python 3 внутри SteamOS.",
   "ui.native.resources": "Ресурсы запуска",
   "ui.native.bundled": "Встроено · SHA-256 проверено",
   "ui.native.backup": "Резервная копия конфигурации",
@@ -2970,7 +2978,7 @@
   "ui.setup.component.tool": "Выбор инструмента совместимости Steam",
   "ui.setup.current": "Текущее обнаруженное значение",
   "ui.ssh.settings": "Настройки подключения SSH",
-  "ui.ssh.settingsHelp": "Сохраняются только адрес, порт и пользователь лаунчера, без изменения FX и подключения. Текущая авторизация сбрасывается; пароли разделены по подключениям.",
+  "ui.ssh.settingsHelp": "По умолчанию: 127.0.0.1, порт 2222, пользователь steamos. Пустые поля сохраняют текущее подключение; меняются только заполненные поля. Сохранение меняет лишь настройки запуска и сбрасывает активную авторизацию. Сохранённые пароли разделены по подключениям.",
   "ui.ssh.settingsInvalid": "Укажите допустимый адрес, порт (1–65535) и пользователя. Порт SSH должен отличаться от локального порта перенаправления.",
   "ui.ssh.settingsSave": "Сохранить подключение",
   "ui.ssh.settingsSaved": "Сохранено. Перед подключением введите учётные данные заново.",
@@ -2982,7 +2990,9 @@
   "ui.setup.artifactUnavailable": "Автоматическая установка недоступна: нет проверенного пакета. Это не означает неисправность установленного компонента.",
   "ui.setup.ipv6Advisory": "IPv6 носит рекомендательный характер и не блокирует другие настройки.",
   "ui.setup.steamManual": "Оставьте SteamOS и Steam запущенными. В свойствах HELLDIVERS 2 задайте параметры запуска в разделе «Общие» и выберите установленный и проверенный инструмент в разделе «Совместимость», затем повторите проверку. Автоматическая запись в файлы Steam отложена, пока Steam работает; отсутствие одобренного инструмента по-прежнему блокирует изменение.",
-  "ui.setup.noExecutable": "Нет доступных автоматических изменений. Проверьте ручные шаги и необходимые условия в сведениях об отдельных пунктах."
+  "ui.setup.noExecutable": "Нет доступных автоматических изменений. Проверьте ручные шаги и необходимые условия в сведениях об отдельных пунктах.",
+  "ui.setup.protonInstall": "Загрузить Proton-JE из закреплённого исходного выпуска (около 332 MiB; нужно не менее 4 GiB свободного места). Проверить все файлы и ссылки и установить в Steam compatibilitytools.d. Steam остаётся запущенным. В SteamOS нужны curl и Python 3. Существующие установки не перезаписываются.",
+  "ui.setup.toolDiscovery": "Proton установлен, но Steam ещё не включил его в список. Перезапустите SteamOS в удобное время и повторите проверку, чтобы выбрать инструмент совместимости. Приложение не перезапускает Steam или ВМ автоматически."
  },
  "es": {
   "ui.193": "Navegación",
@@ -3402,7 +3412,7 @@
   "ui.integrated.069": "Recordar más tarde",
   "ui.native.runtime": "Entorno nativo",
   "ui.native.engine": "Motor de ejecución",
-  "ui.native.noPython": "En ejecución no se usa intérprete de Python, Python Bridge ni un directorio externo de scripts.",
+  "ui.native.noPython": "La aplicación Mac no necesita intérprete Python, Python Bridge ni directorio de scripts externo. El instalador opcional de Proton necesita Python 3 dentro de SteamOS.",
   "ui.native.resources": "Recursos de lanzamiento",
   "ui.native.bundled": "Incluido · SHA-256 verificado",
   "ui.native.backup": "Copia de configuración",
@@ -3567,7 +3577,7 @@
   "ui.setup.component.tool": "Selección de herramienta de compatibilidad",
   "ui.setup.current": "Valor actual detectado",
   "ui.ssh.settings": "Configuración de conexión SSH",
-  "ui.ssh.settingsHelp": "Guarda solo la dirección, el puerto y el usuario del lanzador, sin modificar FX ni conectar. Se borra la autorización actual y las contraseñas se mantienen separadas por conexión.",
+  "ui.ssh.settingsHelp": "Valores predeterminados: 127.0.0.1, puerto 2222, usuario steamos. Los campos vacíos conservan la conexión actual; solo se cambian los campos rellenados. Guardar solo cambia los ajustes del lanzador y elimina la autorización activa. Las contraseñas se mantienen separadas por conexión.",
   "ui.ssh.settingsInvalid": "Introduce un host, un puerto (1–65535) y un usuario válidos. El puerto SSH debe ser distinto del puerto local de reenvío.",
   "ui.ssh.settingsSave": "Guardar conexión",
   "ui.ssh.settingsSaved": "Guardado. Vuelve a introducir las credenciales antes de conectar.",
@@ -3579,7 +3589,9 @@
   "ui.setup.artifactUnavailable": "Instalación automática no disponible: no hay un paquete revisado. Esto no indica un fallo del componente instalado.",
   "ui.setup.ipv6Advisory": "IPv6 es solo informativo y no bloquea otras configuraciones.",
   "ui.setup.steamManual": "Mantén SteamOS y Steam en ejecución. En Propiedades de HELLDIVERS 2, configura las opciones de lanzamiento en General y elige una herramienta instalada y verificada en Compatibilidad; después vuelve a detectar. Las escrituras automáticas en archivos de Steam se aplazan mientras Steam está abierto; las herramientas sin aprobar siguen bloqueadas.",
-  "ui.setup.noExecutable": "No hay cambios automáticos disponibles. Consulta los detalles para ver los pasos manuales o requisitos pendientes."
+  "ui.setup.noExecutable": "No hay cambios automáticos disponibles. Consulta los detalles para ver los pasos manuales o requisitos pendientes.",
+  "ui.setup.protonInstall": "Descargar Proton-JE desde la versión original fijada (unos 332 MiB; al menos 4 GiB libres). Verificar todos los archivos y enlaces e instalar en Steam compatibilitytools.d. Steam sigue abierto. SteamOS necesita curl y Python 3. No se sobrescriben instalaciones existentes.",
+  "ui.setup.toolDiscovery": "Proton está instalado, pero Steam aún no lo muestra. Reinicia SteamOS cuando te convenga y vuelve a detectar para seleccionar la herramienta. La aplicación no reiniciará Steam ni la máquina virtual automáticamente."
  },
  "de": {
   "ui.193": "Navigation",
@@ -3999,7 +4011,7 @@
   "ui.integrated.069": "Später erinnern",
   "ui.native.runtime": "Native Laufzeit",
   "ui.native.engine": "Laufzeit-Engine",
-  "ui.native.noPython": "Zur Laufzeit werden kein Python-Interpreter, keine Python Bridge und kein externes Skriptverzeichnis verwendet.",
+  "ui.native.noPython": "Die Mac-App benötigt weder Python-Interpreter noch Python Bridge oder externes Skriptverzeichnis. Der optionale Proton-Installer benötigt Python 3 innerhalb von SteamOS.",
   "ui.native.resources": "Startressourcen",
   "ui.native.bundled": "Integriert · SHA-256 geprüft",
   "ui.native.backup": "Konfigurationssicherung",
@@ -4164,7 +4176,7 @@
   "ui.setup.component.tool": "Steam-Kompatibilitätswerkzeug",
   "ui.setup.current": "Aktuell erkannter Wert",
   "ui.ssh.settings": "SSH-Verbindungseinstellungen",
-  "ui.ssh.settingsHelp": "Speichert nur Adresse, Port und Benutzer des Launchers, ohne FX zu ändern oder eine Verbindung aufzubauen. Die aktuelle Autorisierung wird gelöscht; Passwörter bleiben pro Verbindung getrennt.",
+  "ui.ssh.settingsHelp": "Standard: 127.0.0.1, Port 2222, Benutzer steamos. Leere Felder behalten die aktuelle Verbindung; nur ausgefüllte Felder werden geändert. Speichern ändert nur Launcher-Einstellungen und löscht die aktive Autorisierung. Gespeicherte Passwörter bleiben je Verbindung getrennt.",
   "ui.ssh.settingsInvalid": "Gültigen Host, Port (1–65535) und Benutzer eingeben. SSH-Port und lokaler Weiterleitungsport müssen verschieden sein.",
   "ui.ssh.settingsSave": "Verbindung speichern",
   "ui.ssh.settingsSaved": "Gespeichert. Zugangsdaten vor dem Verbinden erneut eingeben.",
@@ -4176,7 +4188,9 @@
   "ui.setup.artifactUnavailable": "Automatische Installation nicht verfügbar: kein geprüftes Paket. Dies belegt keinen Fehler einer installierten Komponente.",
   "ui.setup.ipv6Advisory": "IPv6 dient nur als Hinweis und blockiert keine anderen Einstellungen.",
   "ui.setup.steamManual": "Lass SteamOS und Steam laufen. Stelle in den Eigenschaften von HELLDIVERS 2 unter Allgemein die Startoptionen und unter Kompatibilität ein installiertes, geprüftes Werkzeug ein. Prüfe danach erneut. Automatische Schreibzugriffe auf Steam-Dateien warten, solange Steam läuft; fehlende freigegebene Werkzeuge bleiben gesperrt.",
-  "ui.setup.noExecutable": "Keine automatischen Änderungen verfügbar. Prüfe die Details auf manuelle Schritte und fehlende Voraussetzungen."
+  "ui.setup.noExecutable": "Keine automatischen Änderungen verfügbar. Prüfe die Details auf manuelle Schritte und fehlende Voraussetzungen.",
+  "ui.setup.protonInstall": "Proton-JE aus der festgelegten Originalversion laden (etwa 332 MiB; mindestens 4 GiB frei). Alle Dateien und Links prüfen und unter Steam compatibilitytools.d installieren. Steam bleibt geöffnet. SteamOS benötigt curl und Python 3. Bestehende Installationen werden nicht überschrieben.",
+  "ui.setup.toolDiscovery": "Proton ist installiert, wird aber von Steam noch nicht aufgelistet. Starte SteamOS bei Gelegenheit neu und prüfe erneut, um das Kompatibilitätswerkzeug auszuwählen. Die App startet weder Steam noch die VM automatisch neu."
  },
  "fr": {
   "ui.193": "Navigation",
@@ -4596,7 +4610,7 @@
   "ui.integrated.069": "Me le rappeler plus tard",
   "ui.native.runtime": "Exécution native",
   "ui.native.engine": "Moteur d’exécution",
-  "ui.native.noPython": "Aucun interpréteur Python, Python Bridge ni répertoire de scripts externe n’est utilisé à l’exécution.",
+  "ui.native.noPython": "L’application Mac ne nécessite ni interpréteur Python, ni Python Bridge, ni dossier de scripts externe. L’installation facultative de Proton nécessite Python 3 dans SteamOS.",
   "ui.native.resources": "Ressources de lancement",
   "ui.native.bundled": "Intégré · SHA-256 vérifié",
   "ui.native.backup": "Sauvegarde de configuration",
@@ -4761,7 +4775,7 @@
   "ui.setup.component.tool": "Choix de l’outil de compatibilité Steam",
   "ui.setup.current": "Valeur actuelle détectée",
   "ui.ssh.settings": "Paramètres de connexion SSH",
-  "ui.ssh.settingsHelp": "Enregistre uniquement l’adresse, le port et l’utilisateur du lanceur, sans modifier FX ni se connecter. L’autorisation actuelle est effacée et les mots de passe restent séparés par connexion.",
+  "ui.ssh.settingsHelp": "Valeurs par défaut : 127.0.0.1, port 2222, utilisateur steamos. Les champs vides conservent la connexion actuelle ; seuls les champs remplis changent. Enregistrer modifie uniquement les réglages du lanceur et efface l’autorisation active. Les mots de passe restent séparés par connexion.",
   "ui.ssh.settingsInvalid": "Saisissez un hôte, un port (1–65535) et un utilisateur valides. Le port SSH doit différer du port local de redirection.",
   "ui.ssh.settingsSave": "Enregistrer la connexion",
   "ui.ssh.settingsSaved": "Enregistré. Saisissez à nouveau les identifiants avant de vous connecter.",
@@ -4773,7 +4787,9 @@
   "ui.setup.artifactUnavailable": "Installation automatique indisponible : aucun paquet examiné. Cela ne prouve pas une panne du composant installé.",
   "ui.setup.ipv6Advisory": "IPv6 est indicatif et ne bloque pas les autres réglages.",
   "ui.setup.steamManual": "Laissez SteamOS et Steam fonctionner. Dans les propriétés de HELLDIVERS 2, réglez les options de lancement sous Général et choisissez un outil installé et vérifié sous Compatibilité, puis relancez la détection. Les écritures automatiques dans les fichiers Steam sont différées tant que Steam fonctionne ; les outils non approuvés restent bloqués.",
-  "ui.setup.noExecutable": "Aucune modification automatique disponible. Consultez les détails pour les étapes manuelles et les prérequis manquants."
+  "ui.setup.noExecutable": "Aucune modification automatique disponible. Consultez les détails pour les étapes manuelles et les prérequis manquants.",
+  "ui.setup.protonInstall": "Télécharger la version amont fixée de Proton-JE (environ 332 MiB ; au moins 4 GiB libres). Vérifier tous les fichiers et liens puis installer dans Steam compatibilitytools.d. Laisser Steam ouvert. SteamOS nécessite curl et Python 3. Aucune installation existante ne sera écrasée.",
+  "ui.setup.toolDiscovery": "Proton est installé, mais Steam ne le liste pas encore. Redémarrez SteamOS quand cela vous convient, puis relancez la détection pour sélectionner cet outil. L’application ne redémarre ni Steam ni la VM automatiquement."
  },
  "pt-BR": {
   "ui.193": "Navegação",
@@ -5193,7 +5209,7 @@
   "ui.integrated.069": "Lembrar mais tarde",
   "ui.native.runtime": "Runtime nativo",
   "ui.native.engine": "Motor de execução",
-  "ui.native.noPython": "Em execução não são usados interpretador Python, Python Bridge nem diretório externo de scripts.",
+  "ui.native.noPython": "O aplicativo Mac não precisa de interpretador Python, Python Bridge ou diretório de scripts externo. O instalador opcional do Proton precisa de Python 3 dentro do SteamOS.",
   "ui.native.resources": "Recursos de inicialização",
   "ui.native.bundled": "Incluído · SHA-256 verificado",
   "ui.native.backup": "Backup de configuração",
@@ -5358,7 +5374,7 @@
   "ui.setup.component.tool": "Seleção de ferramenta de compatibilidade",
   "ui.setup.current": "Valor atual detectado",
   "ui.ssh.settings": "Configurações de conexão SSH",
-  "ui.ssh.settingsHelp": "Salva apenas endereço, porta e usuário do iniciador, sem alterar o FX ou conectar. A autorização atual é limpa e as senhas ficam separadas por conexão.",
+  "ui.ssh.settingsHelp": "Padrão: 127.0.0.1, porta 2222, usuário steamos. Campos vazios mantêm a conexão atual; apenas campos preenchidos são alterados. Salvar altera somente as configurações do inicializador e limpa a autorização ativa. As senhas salvas ficam separadas por conexão.",
   "ui.ssh.settingsInvalid": "Informe um host, uma porta (1–65535) e um usuário válidos. A porta SSH deve ser diferente da porta local de encaminhamento.",
   "ui.ssh.settingsSave": "Salvar conexão",
   "ui.ssh.settingsSaved": "Salvo. Insira as credenciais novamente antes de conectar.",
@@ -5370,7 +5386,9 @@
   "ui.setup.artifactUnavailable": "Instalação automática indisponível: não há pacote revisado. Isso não indica falha no componente instalado.",
   "ui.setup.ipv6Advisory": "IPv6 é apenas informativo e não bloqueia outras configurações.",
   "ui.setup.steamManual": "Mantenha o SteamOS e o Steam em execução. Nas propriedades de HELLDIVERS 2, ajuste as opções de inicialização em Geral e selecione uma ferramenta instalada e verificada em Compatibilidade; depois detecte novamente. A gravação automática nos arquivos do Steam fica adiada enquanto ele está aberto; ferramentas sem aprovação continuam bloqueadas.",
-  "ui.setup.noExecutable": "Nenhuma alteração automática disponível. Consulte os detalhes para ver etapas manuais ou requisitos pendentes."
+  "ui.setup.noExecutable": "Nenhuma alteração automática disponível. Consulte os detalhes para ver etapas manuais ou requisitos pendentes.",
+  "ui.setup.protonInstall": "Baixar Proton-JE da versão original fixada (cerca de 332 MiB; pelo menos 4 GiB livres). Verificar todos os arquivos e links e instalar em Steam compatibilitytools.d. O Steam continua aberto. O SteamOS precisa de curl e Python 3. Instalações existentes não são sobrescritas.",
+  "ui.setup.toolDiscovery": "O Proton está instalado, mas o Steam ainda não o lista. Reinicie o SteamOS quando for conveniente e detecte novamente para selecionar a ferramenta. O aplicativo não reiniciará o Steam nem a VM automaticamente."
  },
  "zh-TW": {
   "ui.270": "無需外部執行環境；檢測後按 ⌘R 重新讀取全部唯讀快照。",
@@ -5790,7 +5808,7 @@
   "ui.integrated.069": "稍後提醒",
   "ui.native.runtime": "原生執行環境",
   "ui.native.engine": "執行引擎",
-  "ui.native.noPython": "正式執行流程不使用 Python 解譯器、Python Bridge 或外部腳本目錄。",
+  "ui.native.noPython": "Mac App 無需 Python 直譯器、Python Bridge 或外部指令碼目錄。可選的 Proton 安裝功能需要 SteamOS 內的 Python 3。",
   "ui.native.resources": "啟動資源",
   "ui.native.bundled": "已內建 · SHA-256 已驗證",
   "ui.native.backup": "設定備份",
@@ -5955,7 +5973,7 @@
   "ui.setup.component.tool": "Steam 相容工具選擇",
   "ui.setup.current": "目前偵測值",
   "ui.ssh.settings": "SSH 連線設定",
-  "ui.ssh.settingsHelp": "僅儲存啟動器使用的位址、連接埠和使用者名稱，不修改 FX 或建立連線。儲存後清除本次授權；各連線的已存密碼彼此獨立。",
+  "ui.ssh.settingsHelp": "預設位址 127.0.0.1、連接埠 2222、使用者名稱 steamos。留空保留目前連線，僅填寫的項目會修改。儲存只修改啟動器設定並清除本次授權；已儲存密碼依連線分開保留。",
   "ui.ssh.settingsInvalid": "請輸入有效位址、連接埠（1–65535）和使用者名稱。SSH 連接埠不能與本機轉送連接埠相同。",
   "ui.ssh.settingsSave": "儲存連線設定",
   "ui.ssh.settingsSaved": "已儲存。連線前請重新輸入憑證。",
@@ -5967,6 +5985,8 @@
   "ui.setup.artifactUnavailable": "自動部署不可用：沒有審核後的安裝包。這不表示已安裝元件存在故障。",
   "ui.setup.ipv6Advisory": "IPv6 僅作提示，不阻擋其他設定。",
   "ui.setup.steamManual": "保持 SteamOS 與 Steam 執行。在 HELLDIVERS 2 的內容中，透過「一般」設定啟動選項，透過「相容性」選擇已安裝且已驗證的工具，再重新偵測。Steam 執行時暫不自動寫入其管理的檔案；缺少審核工具的項目仍受阻。",
-  "ui.setup.noExecutable": "目前沒有可自動執行的修改。請查看各項詳細資訊，完成手動步驟或補齊前提。"
+  "ui.setup.noExecutable": "目前沒有可自動執行的修改。請查看各項詳細資訊，完成手動步驟或補齊前提。",
+  "ui.setup.protonInstall": "從固定的上游發行版下載 Proton-JE（約 332 MiB，至少需 4 GiB 可用空間），校驗全部檔案與連結後安裝到 Steam compatibilitytools.d。保持 Steam 執行；SteamOS 內需有 curl 和 Python 3。不覆寫既有安裝。",
+  "ui.setup.toolDiscovery": "Proton 已安裝，但 Steam 尚未列出它。方便時重新啟動 SteamOS，再重新偵測以選擇相容性工具。應用程式不會自動重新啟動 Steam 或虛擬機。"
  }
 }

@@ -68,7 +68,7 @@ final class AppState: ObservableObject {
                 if let receipt { input["receipt_id"] = .string(receipt.uuidString); input["approved_steps"] = .array(selected.sorted().map { .string($0) }) }
                 let credentialTarget = root + "|" + (input["credential_revision"]?.text ?? "") + "|" + (input["credential_host_identity"]?.text ?? "")
                 let authInput = input
-                let reply = try await self.core.request(method, timeout: 180, params: input) { [weak self] event in
+                let reply = try await self.core.request(method, timeout: method == "first_run_deploy" ? 900 : 180, params: input) { [weak self] event in
                     Task { @MainActor in
                         guard let self, self.firstRunEventGeneration == generation else { return }
                         if event["kind"]?.text == "credential_status", event["status"]?.text == "authenticated",
@@ -92,6 +92,11 @@ final class AppState: ObservableObject {
                     let receipt = try JSONDecoder().decode(DeploymentReceipt.self, from: JSONEncoder().encode(value))
                     self.firstRunReceipt = receipt; self.firstRunState = receipt.state; self.firstRunFailure = receipt.failure
                     self.firstRunPlan = nil // Every subsequent operation requires a fresh scan.
+                }
+                if let value = reply.result["next_plan"] {
+                    let next = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(value))
+                    try self.credentials.bindGuest(next.snapshot.boot)
+                    self.firstRunPlan = next
                 }
                 if let value = reply.result["receipts"] { self.firstRunReceipts = try JSONDecoder().decode([DeploymentReceipt].self, from: JSONEncoder().encode(value)) }
             } catch {

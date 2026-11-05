@@ -74,7 +74,7 @@ struct DeploymentOperation: Codable, Identifiable, Equatable {
     let changes: [String: String], permission: String, estimatedBytes: Int64, needsRestart: Bool
     let backupLocation: String, rollback: String, verification: String
     let requirement: Requirement, blocked: String?
-    var requiresStoppedSteam: Bool { component != "ipv6" }
+    var requiresStoppedSteam: Bool { !["ipv6", "launch", "tool"].contains(component) && !(component == "proton" && changes["proton_package"] != nil) }
     var observation: DeploymentObservation {
         if component == "ipv6", !detectionPassed { return .advisory }
         if detectionPassed { return .passed }
@@ -118,7 +118,11 @@ enum DeploymentPlanBuilder {
         for (component, version) in [("fex", profile.fexVersion), ("proton", profile.protonVersion)] {
             let verified = snapshot.facts[component + "_manifest"] == "verified"
             let artifact = profile.artifacts.first { $0.component == component && $0.version == version }
-            add(component, target: version, block: verified ? nil : artifact == nil ? "ARTIFACT_UNAPPROVED" : "ARTIFACT_IMPORT_REQUIRED")
+            if component == "proton", snapshot.values["proton_package"] == "missing", version == ProtonJERelease.version {
+                add(component, target: version, changes: ["proton_package": ProtonJERelease.digest], bytes: 4 * 1_073_741_824)
+            } else {
+                add(component, target: version, block: verified ? nil : artifact == nil ? "ARTIFACT_UNAPPROVED" : "ARTIFACT_IMPORT_REQUIRED")
+            }
         }
         for component in ["steam", "game", "vulkan", "kosmickrisp", "network", "gvproxy", "ipv4", "ipv6"] {
             let fact = snapshot.facts[component] ?? "UNKNOWN"
@@ -129,11 +133,18 @@ enum DeploymentPlanBuilder {
             let after = try LaunchOptionsAdapter.merge(before, managed: profile.launchOptions)
             var changes = before == after ? [:] : ["launch": after]
             if !changes.isEmpty, snapshot.values["launch_present"] != nil { changes["launch_present"] = "true" }
-            add("launch", target: "profile-v1", changes: changes, block: snapshot.values["launch"] == nil ? "USER_ACTION_REQUIRED" : nil)
+            add("launch", target: "profile-v1", changes: changes, block: snapshot.values["launch"] == nil ? "USER_ACTION_REQUIRED" : snapshot.steamRunning && snapshot.facts["steam_api"] != "available" ? "STEAM_API_UNAVAILABLE" : nil)
         } catch { add("launch", target: "profile-v1", block: "LAUNCH_OPTIONS_CONFLICT") }
         if snapshot.values["tool"] != profile.protonVersion {
-            add("tool", target: profile.protonVersion, changes: ["tool": profile.protonVersion],
-                block: snapshot.facts["proton_manifest"] == "verified" ? nil : "ARTIFACT_UNAPPROVED")
+            var changes = ["tool": profile.protonVersion]
+            if snapshot.values["tool_present"] != nil { changes["tool_present"] = "true" }
+            let installing = snapshot.values["proton_package"] == "missing" && profile.protonVersion == ProtonJERelease.version
+            let verified = snapshot.facts["proton_manifest"] == "verified"
+            let online = snapshot.steamRunning && snapshot.facts["steam_api"] == "available"
+            let block = snapshot.values["tool"] == nil ? "USER_ACTION_REQUIRED" :
+                !verified && !(installing && online) ? "ARTIFACT_UNAPPROVED" :
+                snapshot.steamRunning && (!online || !installing && snapshot.facts["proton_discovered"] != "true") ? "STEAM_TOOL_DISCOVERY_REQUIRED" : nil
+            add("tool", target: profile.protonVersion, changes: changes, block: block)
         }
         if !supported {
             ops = ops.map { $0.detectionPassed ? $0 : .init(id: $0.id, component: $0.component, currentVersion: $0.currentVersion, targetVersion: $0.targetVersion,
@@ -236,7 +247,7 @@ final class EnvironmentDeploymentService {
         let lock = try CoreFileLock.acquire(receipts.directory.appendingPathComponent(".deployment.lock")); defer { lock.release() }
         let live = try backend.snapshot()
         guard Self.identity(live, plan.snapshot), live.revision == plan.snapshot.revision, live.values == plan.snapshot.values else { throw CoreError("CONFIG_CHANGED") }
-        try Self.idle(live, requiresStoppedSteam: plan.executable.contains { $0.requiresStoppedSteam })
+        try Self.idle(live, requiresStoppedSteam: plan.executable.contains { $0.requiresStoppedSteam || (["launch", "tool"].contains($0.component) && plan.snapshot.facts["steam_api"] != "available") })
         guard live.freeBytes >= plan.executable.reduce(0, { $0 + $1.estimatedBytes }) + 1_048_576 else { throw CoreError("INSUFFICIENT_SPACE") }
         guard !(try receipts.list()).contains(where: { [.Deploying, .Verifying, .RecoveryRequired].contains($0.state) }) else { throw CoreError("RECOVERY_REQUIRED") }
         var receipt = DeploymentReceipt(id: plan.id, plan: plan, state: .Deploying, applied: [], pending: nil, failure: nil)
@@ -244,11 +255,17 @@ final class EnvironmentDeploymentService {
         try receipts.save(receipt) // Durable original values precede every write.
         do {
             var expected = live
+            var deferred = false
             for operation in plan.executable {
                 try context.check()
                 let current = try backend.snapshot()
-                guard Self.identity(current, expected), current.revision == expected.revision else { throw CoreError("CONFIG_CHANGED") }
+                guard Self.identity(current, expected), current.revision == expected.revision, current.values == expected.values else { throw CoreError("CONFIG_CHANGED") }
                 try Self.idle(current, requiresStoppedSteam: operation.requiresStoppedSteam)
+                if operation.component == "tool", current.steamRunning, current.facts["proton_manifest"] == "verified",
+                   current.facts["proton_discovered"] == "false" {
+                    deferred = true; continue // Steam has not discovered the new tool; no selection write was attempted.
+                }
+                guard operation.changes.keys.allSatisfy({ current.values[$0] == plan.snapshot.values[$0] }) else { throw CoreError("CONFIG_CHANGED") }
                 receipt.pending = operation.id; try receipts.save(receipt)
                 try backend.replace(operation.changes, expected: current)
                 receipt.state = .Verifying; progress(.Verifying); try receipts.save(receipt)
@@ -256,10 +273,12 @@ final class EnvironmentDeploymentService {
                 guard Self.identity(expected, live), operation.changes.allSatisfy({ expected.values[$0.key] == $0.value }) else { throw CoreError("VERIFY_FAILED") }
                 receipt.applied.append(operation.id); receipt.pending = nil; receipt.state = .Deploying; try receipts.save(receipt)
             }
-            receipt.state = .Completed; progress(.Completed); try receipts.save(receipt); return receipt
+            receipt.state = deferred ? .NeedsConfiguration : .Completed
+            progress(receipt.state); try receipts.save(receipt); return receipt
         } catch {
             receipt.failure = (error as? CoreError)?.code ?? "DEPLOYMENT_FAILED"
             receipt.state = .RecoveryRequired; try receipts.save(receipt)
+            if receipt.failure == "STEAM_TOOL_UNCONFIRMED" { throw CoreError("RECOVERY_REQUIRED", ["receipt": .string(receipt.id.uuidString)]) }
             if receipt.applied.isEmpty && receipt.pending == nil { receipt.state = .Failed; try receipts.save(receipt); return receipt }
             // Recovery has its own bounded context/connection. A disconnected SSH never
             // triggers a retry or a guessed success; its durable receipt remains pending.
@@ -277,6 +296,10 @@ final class EnvironmentDeploymentService {
                 let current = try backend.snapshot()
                 guard Self.identity(current, receipt.plan.snapshot) else { throw CoreError("TARGET_CHANGED") }
                 try Self.idle(current, requiresStoppedSteam: operation.requiresStoppedSteam)
+                if operation.component == "tool", receipt.pending == operation.id, receipt.failure == "STEAM_TOOL_UNCONFIRMED",
+                   current.steamRunning, current.values["tool"] == receipt.plan.snapshot.values["tool"] {
+                    throw CoreError("RECOVERY_REQUIRED") // A pending in-memory setter cannot be declared restored from an old disk value.
+                }
                 var before: [String: String] = [:]
                 for (key, after) in operation.changes {
                     let original = receipt.plan.snapshot.values[key] ?? ""

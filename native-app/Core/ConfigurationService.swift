@@ -40,6 +40,24 @@ enum ConfigurationService {
         return try validate(CoreJSON.value(object).object)
     }
 
+    /// Blank GUI fields are omitted, preserving saved overrides or the initial defaults.
+    static func connectionPatch(host: String, port: String, username: String, current: [String: JSONValue]) throws -> [String: JSONValue] {
+        var patch: [String: JSONValue] = [:]
+        let host = host.trimmingCharacters(in: .whitespacesAndNewlines)
+        let port = port.trimmingCharacters(in: .whitespacesAndNewlines)
+        let username = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !host.isEmpty { patch["host"] = .string(host) }
+        if !username.isEmpty { patch["username"] = .string(username) }
+        if !port.isEmpty {
+            guard port.allSatisfy({ $0.isASCII && $0.isNumber }), let number = Int(port) else { throw CoreError("INVALID_ARGUMENT") }
+            patch["port"] = .number(Double(number))
+        }
+        var effective = current
+        effective.merge(patch) { _, new in new }
+        let validated = try validatedSSH(effective)
+        return patch.filter { validated[$0.key] != (current[$0.key] ?? sshDefaults[$0.key]) }
+    }
+
     static func validatedSSH(_ raw: [String: JSONValue]) throws -> [String: JSONValue] {
         var ssh = sshDefaults
         for (key, value) in raw where ssh[key] != nil { ssh[key] = value }

@@ -128,6 +128,17 @@ func runChecks() {
         _ = try ConfigurationService.save(patch: .object(["appearance": .object(["language": .string("password=abc123")])]),
                                           expectedRevision: afterSave.revision)
     }
+    let blankPatch = try! ConfigurationService.connectionPatch(host: " ", port: "", username: "\t", current: ConfigurationService.sshDefaults)
+    check(blankPatch.isEmpty, "blank SSH fields keep defaults without writes")
+    let onlyPort = try! ConfigurationService.connectionPatch(host: "", port: " 2223 ", username: "", current: ConfigurationService.sshDefaults)
+    check(onlyPort == ["port": .number(2223)], "only populated SSH field changes")
+    let customSSH: [String: JSONValue] = ["host": .string("test-vm.local"), "port": .number(2223), "username": .string("customuser")]
+    check(try! ConfigurationService.connectionPatch(host: "", port: "", username: "", current: customSSH).isEmpty, "blank fields preserve saved custom connection")
+    let effectiveDefaults = try! ConfigurationService.validatedSSH([:])
+    check(effectiveDefaults["host"]?.text == "127.0.0.1" && effectiveDefaults["port"]?.integer == 2222 && effectiveDefaults["username"]?.text == "steamos", "initial SSH defaults need no manual input")
+    for invalidPort in ["abc", "0", "65536", "22.5", "２２２２"] {
+        checkThrows("INVALID_ARGUMENT", "invalid populated SSH port rejected") { _ = try ConfigurationService.connectionPatch(host: "", port: invalidPort, username: "", current: ConfigurationService.sshDefaults) }
+    }
     let endpoint = try! ConfigurationService.validatedSSH(["host": .string("test-vm.local"), "port": .number(2223), "username": .string("steamos")])
     check(endpoint["host"]?.text == "test-vm.local" && endpoint["port"]?.integer == 2223, "custom SSH endpoint accepted")
     for host in ["-oProxyCommand=bad", "host; command", "user@host", ""] {

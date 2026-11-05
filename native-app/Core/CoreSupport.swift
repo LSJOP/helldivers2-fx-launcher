@@ -266,8 +266,16 @@ enum CoreProcess {
         process.standardError = errors
         process.standardInput = input == nil ? FileHandle.nullDevice : stdin
         do { try process.run() } catch { throw CoreError("PROCESS_UNAVAILABLE", ["binary": .string(URL(fileURLWithPath: executable).lastPathComponent)]) }
-        if let input, let data = input.data(using: .utf8) { try? stdin.fileHandleForWriting.write(contentsOf: data) }
-        try? stdin.fileHandleForWriting.close()
+        // Large reviewed package manifests must not block cancellation while the peer
+        // stops reading. Pump stdin together with stdout/stderr under the same deadline.
+        let inputData = input?.data(using: .utf8) ?? Data()
+        var inputOffset = 0, inputOpen = input != nil
+        if inputOpen {
+            let fd = stdin.fileHandleForWriting.fileDescriptor
+            _ = fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK)
+            _ = fcntl(fd, F_SETNOSIGPIPE, 1)
+        } else { try? stdin.fileHandleForWriting.close() }
+        defer { if inputOpen { try? stdin.fileHandleForWriting.close() } }
         var handles = [output.fileHandleForReading, errors.fileHandleForReading]
         for handle in handles {
             let flags = fcntl(handle.fileDescriptor, F_GETFL)
@@ -293,6 +301,18 @@ enum CoreProcess {
         while true {
             if context?.isCancelled == true { process.terminate(); throw CoreError("CANCELLED") }
             if CoreClock.monotonic >= deadline { timedOut = true; process.terminate(); break }
+            if inputOpen {
+                if inputOffset < inputData.count {
+                    let written = inputData.withUnsafeBytes { raw in
+                        write(stdin.fileHandleForWriting.fileDescriptor, raw.baseAddress!.advanced(by: inputOffset), min(32768, inputData.count - inputOffset))
+                    }
+                    if written > 0 { inputOffset += written }
+                    else if written < 0 && ![EAGAIN, EWOULDBLOCK, EINTR].contains(errno) {
+                        try? stdin.fileHandleForWriting.close(); inputOpen = false
+                    }
+                }
+                if inputOpen && inputOffset == inputData.count { try? stdin.fileHandleForWriting.close(); inputOpen = false }
+            }
             try drain(output.fileHandleForReading, into: &out)
             try drain(errors.fileHandleForReading, into: &err)
             if !process.isRunning { break }

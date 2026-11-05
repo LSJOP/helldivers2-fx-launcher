@@ -38,16 +38,17 @@
   ],
   "sources": [
     "docs/STEAMOS_ENVIRONMENT_TRACE_20261104.zh-CN.md",
-    "https://github.com/fxgl/steamac/releases/tag/v1.9.8"
+    "https://github.com/fxgl/steamac/releases/tag/v1.9.8",
+    "https://github.com/jegglest/proton-je/releases/tag/proton-je-11.0-20261014-3"
   ],
   "licenses": [
     "FEX: provenance/license review required before distribution",
-    "Proton-JE: full redistribution manifest/license review required"
+    "Pinned Proton-JE archive: upstream LICENSE and LICENSE.OFL retained; direct upstream download only"
   ],
   "testedScope": [
     "historical personal environment only",
     "fresh VM NOT_TESTED",
     "FEX full release manifest BLOCKED",
-    "Proton full release manifest BLOCKED"
+    "Pinned Proton-JE archive and full file/link manifest reviewed; live SteamOS install NOT_TESTED"
   ]
 }

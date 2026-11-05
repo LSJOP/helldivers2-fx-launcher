@@ -7,7 +7,7 @@
   "timezone": "Asia/Shanghai",
   "fx_guest_actions": "none",
   "credential_autoload": "disabled by isolated capture arguments",
-  "reviewed_ui_source_sha256": "07e1a1e88f9d1997c7c421e2026f283e02c96606455779f348cb9e795db3fe60",
+  "reviewed_ui_source_sha256": "0850e15b93b32b05bfa94d71b67500b20dbc7e3e1d3988e5edcc30920fc74f3c",
   "screenshots": [
     {
       "path": "docs/images/zh-CN/dashboard.png",
@@ -308,5 +308,7 @@
   "local_copy_review_note": "FX Manager zh-CN/en build2026110505 recaptured: both official and local test copy shown, metadata-only; other page layouts unchanged.",
   "version_policy_review_note": "2026-11-05: setup status presentation and performance capability error changed. Removed first-run screenshots from current README display; recapture pending. Other page layouts unchanged; retained captures keep their original provenance. No live Guest capture or acceptance.",
   "component_status_review_note": "2026-11-05: setup observations separated from deployment restrictions; unknowns neutral and IPv6 advisory. Setup screenshot recapture pending and absent from current README image embeds. Other layouts unchanged; historical screenshot provenance retained.",
-  "setup_steam_review_20261106": "FirstRunSetupView guidance and setup-only translations changed. Existing README page screenshots do not show setup. Setup captures are pending, explicitly stated in both READMEs; existing image provenance remains historical. No live Guest validation."
+  "setup_steam_review_20261106": "FirstRunSetupView guidance and setup-only translations changed. Existing README page screenshots do not show setup. Setup captures are pending, explicitly stated in both READMEs; existing image provenance remains historical. No live Guest validation.",
+  "proton_setup_review_20261106": "Setup-only install/discovery guidance changed. Existing README screenshot pages do not show setup. New setup screenshots and live SteamOS acceptance explicitly pending in both READMEs; historical screenshot provenance unchanged.",
+  "ssh_defaults_review_20261106": "Settings SSH fields now show effective placeholders and accept blank unchanged fields; runtime text scopes Python requirement to the optional Guest installer. Historical Settings screenshots predate this behavior; refreshed Settings captures pending, explicitly stated in paired READMEs."
 }
