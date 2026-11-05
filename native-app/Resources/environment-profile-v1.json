@@ -1,8 +1,8 @@
 {
-  "id": "hd2-fx198-steamos045-aarch64",
+  "id": "hd2-fx194-steamos045-aarch64-success-20261026",
   "version": 1,
   "fx": [
-    "1.9.8"
+    "1.9.4"
   ],
   "steamOS": [
     "0.4.5"
@@ -30,24 +30,42 @@
     "ipv4": "OPTIONAL",
     "ipv6": "UNKNOWN"
   },
-  "artifacts": [],
+  "artifacts": [
+    {
+      "component": "proton",
+      "version": "proton-je-11.0-20261014-3",
+      "source": "https://github.com/jegglest/proton-je/releases/download/proton-je-11.0-20261014-3/proton-je-11.0-20261014-3.tar.xz",
+      "license": "Upstream LICENSE, LICENSE.OFL and patent notices included in the archive; direct upstream download only",
+      "buildRecord": "Official GitHub release asset; 348245820 bytes; SHA-512 fca903662898b5b117c926a7fa52f8053ff3c099a687c16851b15a81b2ad69bdecc4305962e67ddce2d0ec682c80ceffe59d601878894ef70a43529364747f25",
+      "archiveSHA256": "aa5430696ca39451299e2f007ef652bc030e6419242776343d48947e21827485",
+      "files": {
+        "proton": "4d8392f0ec4adebed83513589f4be30ad6a9c669230a94724a18dff0acdd203a",
+        "compatibilitytool.vdf": "43a068c09d826c90c2a67147293a58b8289244cb34302cda89f19b8e6f0b0eaa",
+        "toolmanifest.vdf": "bb81d44a687cc6f4ea7ae05fa9f0502f35c48e462051809dce3b2a58492e3498",
+        "files/lib/wine/x86_64-windows/ntdll.dll": "a699b73899f8a3ae464dd5ee237dd1f1f1587287a0941fbab5934698d633cbfe"
+      }
+    }
+  ],
   "networkCandidates": [
     "gvproxy-eim: opt-in, UDP acceptance unknown",
     "Guest IPv4-only: optional, no universal necessity evidence",
     "HTTPS proxy: user-specified only"
   ],
   "sources": [
-    "docs/STEAMOS_ENVIRONMENT_TRACE_20261104.zh-CN.md",
-    "https://github.com/fxgl/steamac/releases/tag/v1.9.8"
+    "docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md",
+    "https://github.com/fxgl/steamac/releases/tag/v1.9.4",
+    "https://github.com/jegglest/proton-je/releases/tag/proton-je-11.0-20261014-3"
   ],
   "licenses": [
     "FEX: provenance/license review required before distribution",
-    "Proton-JE: full redistribution manifest/license review required"
+    "Proton-JE: direct upstream download; upstream license and notices remain inside the archive"
   ],
   "testedScope": [
-    "historical personal environment only",
+    "historical personal environment reproduced after cold restart",
+    "single-player and four-player settlement observed",
     "fresh VM NOT_TESTED",
     "FEX full release manifest BLOCKED",
-    "Proton full release manifest BLOCKED"
+    "Proton pinned archive install and retained rollback passed isolated local execution",
+    "real Guest Proton install NOT_TESTED"
   ]
 }

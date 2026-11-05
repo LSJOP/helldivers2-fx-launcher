@@ -7,6 +7,30 @@ enum DeploymentState: String, Codable, CaseIterable {
     case Completed, Failed, RecoveryRequired, Unsupported
 }
 enum Requirement: String, Codable { case REQUIRED, CONDITIONAL, OPTIONAL, UNKNOWN }
+enum EvidenceLevel: String, Codable { case observed, reproduced, multiplayer, upstream, inferred, unknown }
+struct BaselineEvidence: Codable {
+    let value: String, level: EvidenceLevel, source: String
+}
+struct SuccessfulEnvironmentBaseline: Codable {
+    let id: String, schemaVersion: Int, fxVersion: BaselineEvidence, steamOSVersion: BaselineEvidence
+    let architecture: BaselineEvidence, fexVersion: BaselineEvidence, fexExecutableSHA256: BaselineEvidence
+    let protonVersion: BaselineEvidence, protonArchiveSHA256: BaselineEvidence, protonArchiveBytes: Int64
+    let protonNTDLLSHA256: BaselineEvidence, graphicsPath: BaselineEvidence, vulkanDriver: BaselineEvidence
+    let managedLaunchOptions: [String: BaselineEvidence], observedLaunchOptions: [String: BaselineEvidence]
+    let ipv6Policy: String, acceptance: [String: BaselineEvidence]
+    func validate() throws {
+        guard schemaVersion == 1, fxVersion.level != .inferred, steamOSVersion.level != .inferred,
+              architecture.value == "aarch64", ApprovedArtifact.hash(fexExecutableSHA256.value),
+              ApprovedArtifact.hash(protonArchiveSHA256.value), ApprovedArtifact.hash(protonNTDLLSHA256.value),
+              protonArchiveBytes > 0, ipv6Policy == "diagnostic_only_non_blocking" else { throw CoreError("BASELINE_INVALID") }
+    }
+    static func bundled() throws -> SuccessfulEnvironmentBaseline {
+        guard let url = Bundle.main.url(forResource: "successful-environment-baseline-v1", withExtension: "json") else { throw CoreError("BASELINE_INVALID") }
+        let data = try Data(contentsOf: url)
+        guard data.count < 1_048_576 else { throw CoreError("BASELINE_INVALID") }
+        let result = try JSONDecoder().decode(Self.self, from: data); try result.validate(); return result
+    }
+}
 struct EnvironmentProfile: Codable {
     let id: String, version: Int, fx: [String], steamOS: [String], architecture: String, appID: String
     let fexVersion: String, protonVersion: String, vulkan: String
@@ -112,12 +136,23 @@ enum DeploymentPlanBuilder {
                              rollback: "compare_current_then_restore_receipt", verification: "read_back_and_compare",
                              requirement: profile.requirements[component] ?? .UNKNOWN, blocked: block))
         }
-        // Version lists record historical evidence; actual capabilities govern deployment.
-        let supported = profile.architecture == snapshot.architecture
+        // Detection accepts future FX/SteamOS versions. Automatic mutation is limited to an
+        // evidence-backed baseline; unknown versions remain visible and read-only.
+        let baselineApplicable = profile.architecture == snapshot.architecture
+            && profile.fx.contains(snapshot.fxVersion) && profile.steamOS.contains(snapshot.osVersion)
+        var protonInstallable = false
         for (component, version) in [("fex", profile.fexVersion), ("proton", profile.protonVersion)] {
             let verified = snapshot.facts[component + "_manifest"] == "verified"
             let artifact = profile.artifacts.first { $0.component == component && $0.version == version }
-            add(component, target: version, block: verified ? nil : artifact == nil ? "ARTIFACT_UNAPPROVED" : "ARTIFACT_IMPORT_REQUIRED")
+            if component == "proton", !verified, snapshot.values["component.proton"] == "missing", let artifact,
+               artifact.source == "https://github.com/jegglest/proton-je/releases/download/proton-je-11.0-20261014-3/proton-je-11.0-20261014-3.tar.xz",
+               artifact.archiveSHA256 == "aa5430696ca39451299e2f007ef652bc030e6419242776343d48947e21827485",
+               let ntdll = artifact.files["files/lib/wine/x86_64-windows/ntdll.dll"] {
+                protonInstallable = true
+                add(component, target: version, changes: ["component.proton": ntdll], bytes: 348_245_820)
+            } else {
+                add(component, target: version, block: verified ? nil : artifact == nil ? "ARTIFACT_UNAPPROVED" : "COMPONENT_CONFLICT")
+            }
         }
         for component in ["steam", "game", "vulkan", "kosmickrisp", "network", "gvproxy", "ipv4", "ipv6"] {
             let fact = snapshot.facts[component] ?? "UNKNOWN"
@@ -132,13 +167,13 @@ enum DeploymentPlanBuilder {
         } catch { add("launch", target: "profile-v1", block: "LAUNCH_OPTIONS_CONFLICT") }
         if snapshot.values["tool"] != profile.protonVersion {
             add("tool", target: profile.protonVersion, changes: ["tool": profile.protonVersion],
-                block: snapshot.facts["proton_manifest"] == "verified" ? nil : "ARTIFACT_UNAPPROVED")
+                block: snapshot.facts["proton_manifest"] == "verified" || protonInstallable ? nil : "ARTIFACT_UNAPPROVED")
         }
-        if !supported {
+        if !baselineApplicable {
             ops = ops.map { $0.detectionPassed ? $0 : .init(id: $0.id, component: $0.component, currentVersion: $0.currentVersion, targetVersion: $0.targetVersion,
                                  changes: $0.changes, permission: $0.permission, estimatedBytes: $0.estimatedBytes, needsRestart: $0.needsRestart,
                                  backupLocation: $0.backupLocation, rollback: $0.rollback, verification: $0.verification,
-                                 requirement: $0.requirement, blocked: "UNSUPPORTED") }
+                                 requirement: $0.requirement, blocked: "BASELINE_UNAVAILABLE") }
         }
         return .init(id: UUID(), profileID: profile.id, profileVersion: profile.version, snapshot: snapshot, operations: ops)
     }

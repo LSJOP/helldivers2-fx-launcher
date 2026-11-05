@@ -10,20 +10,9 @@ enum CredentialKind: String, CaseIterable, Sendable {
 
 enum SessionCredentialStatus: String { case notProvided, provided, verified, failed }
 
-/// One owner for live credentials; optional installation-local encrypted persistence.
+/// One process-memory owner. No disk, preferences, Keychain or credential-vault access.
 /// Clearing releases references; Swift String cannot promise physical-memory erasure.
 @MainActor final class SessionCredentialManager: ObservableObject {
-    private let store: SavedCredentialStore?
-    private var savedTarget: String?
-    private var restoredScope: String?
-    @Published private(set) var saved: Set<CredentialKind> = []
-    @Published private(set) var storageIssue = false
-    private var storageFailures: Set<CredentialKind> = []
-    private func storageResult(_ kind: CredentialKind, failed: Bool) {
-        if failed { storageFailures.insert(kind) } else { storageFailures.remove(kind) }
-        storageIssue = !storageFailures.isEmpty
-    }
-    init(store: SavedCredentialStore? = nil) { self.store = store }
     @Published var password = "" { didSet { if oldValue != password { changed(.ssh) } } }
     @Published var passphrase = "" { didSet { if oldValue != passphrase { changed(.ssh) } } }
     @Published var sudoPassword = "" { didSet { if oldValue != sudoPassword { changed(.sudo) } } }
@@ -33,28 +22,16 @@ enum SessionCredentialStatus: String { case notProvided, provided, verified, fai
     private(set) var guestBoot: String?
     var isEmpty: Bool { password.isEmpty && passphrase.isEmpty && sudoPassword.isEmpty }
     var redactor: CredentialRedactor { CredentialRedactor(secrets: [password, passphrase, sudoPassword]) }
-    private func changed(_ kind: CredentialKind) { verified.remove(kind); rejected.remove(kind); saved.remove(kind) }
+    private func changed(_ kind: CredentialKind) { verified.remove(kind); rejected.remove(kind) }
     private func value(_ kind: CredentialKind) -> String { kind == .ssh ? password : sudoPassword }
     func status(_ kind: CredentialKind) -> SessionCredentialStatus {
         if rejected.contains(kind) { return .failed }
         if reusable(kind) { return .verified }
         return value(kind).isEmpty && !(kind == .ssh && !passphrase.isEmpty) ? .notProvided : .provided
     }
-    func prepare(for target: String, savedTarget: String? = nil) async {
+    func prepare(for target: String) async {
         if let scope, scope != target { clear() }
-        scope = target; self.savedTarget = savedTarget
-        guard let store, let savedTarget, restoredScope != target else { return }
-        restoredScope = target; storageFailures = []; storageIssue = false
-        for kind in CredentialKind.allCases {
-            do {
-                if let value = try store.load(scope: savedTarget, kind: kind) {
-                    if self.value(kind).isEmpty {
-                        if kind == .ssh { password = value } else { sudoPassword = value }
-                        saved.insert(kind)
-                    }
-                }
-            } catch { storageResult(kind, failed: true) }
-        }
+        scope = target
     }
     func bindGuest(_ boot: String?) throws {
         if let guestBoot, boot != guestBoot {
@@ -75,31 +52,18 @@ enum SessionCredentialStatus: String { case notProvided, provided, verified, fai
     func authenticated(_ kind: CredentialKind, value: String, target: String) async {
         guard scope == target, !value.isEmpty, self.value(kind) == value else { return }
         verified.insert(kind); rejected.remove(kind)
-        if !saved.contains(kind), let store, let savedTarget {
-            do { try store.save(value, scope: savedTarget, kind: kind); saved.insert(kind); storageResult(kind, failed: false) }
-            catch { storageResult(kind, failed: true) }
-        }
     }
     func reusable(_ kind: CredentialKind) -> Bool { !value(kind).isEmpty && verified.contains(kind) }
     func reject(_ kind: CredentialKind) {
         update(kind); rejected.insert(kind)
     }
     func update(_ kind: CredentialKind) {
-        if let store, let savedTarget {
-            do { try store.remove(scope: savedTarget, kind: kind); storageResult(kind, failed: false) }
-            catch { storageResult(kind, failed: true) }
-        }
-        saved.remove(kind)
         if kind == .ssh { password = ""; passphrase = "" } else { sudoPassword = "" }
         verified.remove(kind); rejected.remove(kind)
     }
-    func forgetSaved() {
-        for kind in CredentialKind.allCases { update(kind) }
-        clear()
-    }
     func clear() {
         password = ""; passphrase = ""; sudoPassword = ""
-        verified = []; rejected = []; scope = nil; guestBoot = nil; savedTarget = nil; restoredScope = nil; saved = []
+        verified = []; rejected = []; scope = nil; guestBoot = nil
     }
 }
 

@@ -7,7 +7,7 @@
   "timezone": "Asia/Shanghai",
   "fx_guest_actions": "none",
   "credential_autoload": "disabled by isolated capture arguments",
-  "reviewed_ui_source_sha256": "e46d848d19c9b65baad7d4eb32c0c7c36586367e067fc36fe5bc660e7e68d8fb",
+  "reviewed_ui_source_sha256": "5fd9e889061ccc70e3384e50dd9b30b4c4269fcd66d741f959724641acd1adcd",
   "screenshots": [
     {
       "path": "docs/images/zh-CN/dashboard.png",
@@ -108,36 +108,36 @@
     {
       "path": "docs/images/zh-CN/settings.png",
       "language": "zh-CN",
-      "sha256": "d6a8adfc98a4248839acfbed9468867b28549d4baf60f4aaf0d87251451526a9",
+      "sha256": "8c2e16e497d3c0742c5deda451018174346edeae950f2318ec65f9c514df2032",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-04T20:06:48Z",
+      "captured_at": "2026-11-05T09:53:56Z",
       "app_version": "0.1.0",
       "app_build": "2026110507",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.persistencezh",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.memoryonly20261105.zh-CN",
       "guest_actions": "none",
       "source_dirty": true,
-      "source_base_commit": "9ce68da3cacb98a818f2d5673f9bab6c055e3b1a",
-      "review_note": "Actual SSH settings candidate; visible address/port/user labels reviewed; no interactive save or Guest action.",
-      "capture_scope": "Credential policy text and controls; isolated credential store disabled; no live SSH/sudo acceptance"
+      "source_base_commit": "34be4f9fc8a4d4984045065714330137f6e6eef4",
+      "review_note": "Memory-only credential policy and controls visually reviewed; no interactive save or Guest action.",
+      "capture_scope": "Settings page and credential controls; no live SSH/sudo acceptance"
     },
     {
       "path": "docs/images/zh-CN/settings-updates.png",
       "language": "zh-CN",
-      "sha256": "62c027a1539f13709cfed870afbb3e41c86c34608f62b216c1576831aadd27eb",
+      "sha256": "d803f284aec0ad401aec485febd48f9afa0b596d0550a2920adc5428c451623c",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-04T20:06:48Z",
+      "captured_at": "2026-11-05T09:53:56Z",
       "app_version": "0.1.0",
       "app_build": "2026110507",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.persistencezh",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.memoryonly20261105.zh-CN",
       "guest_actions": "none",
       "source_dirty": true,
-      "source_base_commit": "9ce68da3cacb98a818f2d5673f9bab6c055e3b1a",
-      "review_note": "Actual SSH settings candidate; visible address/port/user labels reviewed; no interactive save or Guest action.",
-      "capture_scope": "Credential policy text and controls; isolated credential store disabled; no live SSH/sudo acceptance"
+      "source_base_commit": "34be4f9fc8a4d4984045065714330137f6e6eef4",
+      "review_note": "Memory-only credential policy and controls visually reviewed; no interactive save or Guest action.",
+      "capture_scope": "SSH settings and credential controls; no live SSH/sudo acceptance"
     },
     {
       "path": "docs/images/zh-CN/first-run-setup.png",
@@ -254,36 +254,36 @@
     {
       "path": "docs/images/en/settings.png",
       "language": "en",
-      "sha256": "d5229e38add9206cdaeb8aa2bf2cd1bacf21053e410ff67514101651025f3273",
+      "sha256": "cbcf6d44fe3900b0776a1a0ee3b94fe46ed0f7e2f342b70585882b5e29904b0e",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-04T20:07:01Z",
+      "captured_at": "2026-11-05T09:53:41Z",
       "app_version": "0.1.0",
       "app_build": "2026110507",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.persistenceen",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.phase1",
       "guest_actions": "none",
       "source_dirty": true,
-      "source_base_commit": "9ce68da3cacb98a818f2d5673f9bab6c055e3b1a",
-      "review_note": "Actual SSH settings candidate; visible address/port/user labels reviewed; no interactive save or Guest action.",
-      "capture_scope": "Credential policy text and controls; isolated credential store disabled; no live SSH/sudo acceptance"
+      "source_base_commit": "34be4f9fc8a4d4984045065714330137f6e6eef4",
+      "review_note": "Memory-only credential policy and controls visually reviewed; no interactive save or Guest action.",
+      "capture_scope": "Settings page and credential controls; no live SSH/sudo acceptance"
     },
     {
       "path": "docs/images/en/settings-updates.png",
       "language": "en",
-      "sha256": "3110631c387b0d65b55ac37eac740fdad16e0a365c8968396d16181e7d3de875",
+      "sha256": "c79ce0b7d70d4d8035b303c8cece7469e058fabb9a6fe20b07431938476ac4a2",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-04T20:07:01Z",
+      "captured_at": "2026-11-05T09:53:41Z",
       "app_version": "0.1.0",
       "app_build": "2026110507",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.persistenceen",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.phase1",
       "guest_actions": "none",
       "source_dirty": true,
-      "source_base_commit": "9ce68da3cacb98a818f2d5673f9bab6c055e3b1a",
-      "review_note": "Actual SSH settings candidate; visible address/port/user labels reviewed; no interactive save or Guest action.",
-      "capture_scope": "Credential policy text and controls; isolated credential store disabled; no live SSH/sudo acceptance"
+      "source_base_commit": "34be4f9fc8a4d4984045065714330137f6e6eef4",
+      "review_note": "Memory-only credential policy and controls visually reviewed; no interactive save or Guest action.",
+      "capture_scope": "SSH settings and credential controls; no live SSH/sudo acceptance"
     },
     {
       "path": "docs/images/en/first-run-setup.png",
@@ -307,5 +307,6 @@
   "ssh_settings_update_note": "2026-11-05: SSH settings screenshots from reviewed original dirty Debug build 2026110501; Dashboard remains build 2026110503. Entries retain individual source provenance.",
   "local_copy_review_note": "FX Manager zh-CN/en build2026110505 recaptured: both official and local test copy shown, metadata-only; other page layouts unchanged.",
   "version_policy_review_note": "2026-11-05: setup status presentation and performance capability error changed. Removed first-run screenshots from current README display; recapture pending. Other page layouts unchanged; retained captures keep their original provenance. No live Guest capture or acceptance.",
-  "component_status_review_note": "2026-11-05: setup observations separated from deployment restrictions; unknowns neutral and IPv6 advisory. Setup screenshot recapture pending and absent from current README image embeds. Other layouts unchanged; historical screenshot provenance retained."
+  "component_status_review_note": "2026-11-05: setup observations separated from deployment restrictions; unknowns neutral and IPv6 advisory. Setup screenshot recapture pending and absent from current README image embeds. Other layouts unchanged; historical screenshot provenance retained.",
+  "memory_only_review_note": "2026-11-05: English and Simplified Chinese Settings screenshots recaptured from real App windows after restoring memory-only credentials. First-Run Setup was also captured and visually reviewed but remains absent from README embeds. No Guest action or credential entry occurred."
 }

@@ -48,14 +48,22 @@ final class FileDeploymentBackend: DeploymentBackend {
             throw CoreError("EXPECTED_FAILURE", ["test": .string(name)])
         }
         let profile = try EnvironmentProfile.load(URL(fileURLWithPath: "Resources/environment-profile-v1.json"))
-        try check(profile.artifacts.isEmpty, "no unreviewed public artifacts")
+        let baselineData = try Data(contentsOf: URL(fileURLWithPath: "Resources/successful-environment-baseline-v1.json"))
+        let baseline = try JSONDecoder().decode(SuccessfulEnvironmentBaseline.self, from: baselineData)
+        try baseline.validate()
+        try check(baseline.fxVersion.value == "1.9.4" && baseline.protonArchiveBytes == 348_245_820, "successful baseline is machine-readable and evidence-bound")
+        try check(baseline.ipv6Policy == "diagnostic_only_non_blocking", "baseline cannot turn IPv6 into a mutation")
+        try check(profile.artifacts.count == 1 && profile.artifacts[0].component == "proton", "only the reviewed Proton release is approved")
         try check(profile.requirements["ipv4"] == .OPTIONAL, "IPv4-only stays optional")
         try check(profile.launchOptions["https_proxy"] == nil, "no hardcoded proxy")
         func fixture() throws -> (FileDeploymentBackend, EnvironmentDeploymentService, DeploymentPlan) {
             let dir = root.appendingPathComponent(UUID().uuidString); try CoreFS.ensurePrivateDirectory(dir)
             let snapshot = DeploymentSnapshot(target: "fixture-target", boot: UUID().uuidString, revision: "",
-                fxVersion: "1.9.8", osVersion: "0.4.5", architecture: "aarch64", steamRunning: false, gameRunning: false,
-                freeBytes: 128 * 1_048_576, facts: ["steam": "present", "game": "present", "ipv4": "available", "gvproxy": "available"], values: ["launch": "%command%", "tool": "other-tool"])
+                fxVersion: "1.9.4", osVersion: "0.4.5", architecture: "aarch64", steamRunning: false, gameRunning: false,
+                freeBytes: 1_024 * 1_048_576,
+                facts: ["steam": "present", "game": "present", "ipv4": "available", "gvproxy": "available", "proton_manifest": "verified"],
+                values: ["launch": "%command%", "tool": profile.protonVersion,
+                         "component.proton": "a699b73899f8a3ae464dd5ee237dd1f1f1587287a0941fbab5934698d633cbfe"])
             let backend = try FileDeploymentBackend(dir.appendingPathComponent("config.json"), state: snapshot)
             let service = EnvironmentDeploymentService(backend: backend, receipts: .init(directory: dir.appendingPathComponent("receipts")))
             return (backend, service, DeploymentPlanBuilder.build(try backend.snapshot(), profile: profile))
@@ -65,8 +73,28 @@ final class FileDeploymentBackend: DeploymentBackend {
         }
         let (b, s, p) = try fixture()
         try check(p.operations.first { $0.id == "fex" }?.blocked == "ARTIFACT_UNAPPROVED", "missing FEX is blocked")
-        try check(p.operations.first { $0.id == "proton" }?.blocked == "ARTIFACT_UNAPPROVED", "missing Proton is blocked")
+        try check(p.operations.first { $0.id == "proton" }?.blocked == nil, "verified Proton is unchanged")
         try check(p.executable.map(\.id) == ["launch"], "only approved available configuration is executable")
+        var missingProton = p.snapshot
+        missingProton.facts["proton_manifest"] = "UNKNOWN"
+        missingProton.values["component.proton"] = "missing"
+        missingProton.values["tool"] = "other-tool"
+        let protonPlan = DeploymentPlanBuilder.build(missingProton, profile: profile)
+        try check(protonPlan.operations.first { $0.id == "proton" }?.changes["component.proton"] == baseline.protonNTDLLSHA256.value,
+                  "missing Proton gets an exact pinned install operation")
+        try check(Set(protonPlan.executable.map(\.id)) == ["proton", "launch", "tool"], "one confirmation covers available Proton and configuration steps")
+        let remoteProton = SSHEnvironmentBackend.protonInstallScript(boot: p.snapshot.boot)
+        try remoteProton.write(to: URL(fileURLWithPath: "evidence/proton-install-script.sh"), atomically: true, encoding: .utf8)
+        for marker in ["--proto '=https'", "--proto-redir '=https'", "--tlsv1.2", "--max-filesize 348245820",
+                       "sha256sum \"$archive\"", "find \"$stage\" -type l", "realpath -m", "! -type d ! -type f ! -type l",
+                       "[ ! -e \"$p\" ]", "mv \"$stage\" \"$p\""] {
+            try check(remoteProton.contains(marker), "Proton installer safety marker: " + marker)
+        }
+        try check(!remoteProton.contains("sudo") && !remoteProton.contains("rm -rf /"), "Proton install is user-scoped and cleanup-bounded")
+        let remoteRollback = SSHEnvironmentBackend.protonRollbackScript(boot: p.snapshot.boot, suffix: UUID().uuidString)
+        try remoteRollback.write(to: URL(fileURLWithPath: "evidence/proton-rollback-script.sh"), atomically: true, encoding: .utf8)
+        try check(remoteRollback.contains("hd2-recovered-") && remoteRollback.contains("mv \"$p\" \"$retained\"") && !remoteRollback.contains("rm "),
+                  "Proton rollback retains the installed tree instead of deleting it")
         try fails("CONFIRMATION_REQUIRED", "exact operation consent required") { _ = try s.execute(p, approved: [], context: CoreContext(timeout: 10)) }
         let receipt = try execute(s, p)
         try check(receipt.state == .Completed && b.writes == 1, "real config written and verified")
@@ -131,10 +159,16 @@ final class FileDeploymentBackend: DeploymentBackend {
         for (fx, os) in [("1.9.9", "0.4.5"), ("2.0", "0.5.0"), ("future-build", "rolling")] {
             mismatch.fxVersion = fx; mismatch.osVersion = os
             let updated = DeploymentPlanBuilder.build(mismatch, profile: profile)
-            try check(updated.operations == p.operations, "version updates preserve capability and artifact decisions: " + fx + "/" + os)
+            try check(updated.executable.isEmpty, "unverified version cannot inherit an old automatic deployment baseline: " + fx + "/" + os)
+            try check(updated.operations.filter(\.detectionPassed).allSatisfy { $0.blocked == nil && !$0.warning }, "version updates preserve passed observations: " + fx + "/" + os)
         }
         mismatch = p.snapshot; mismatch.architecture = "x86_64"
-        try check(DeploymentPlanBuilder.build(mismatch, profile: profile).operations.filter { !$0.detectionPassed }.allSatisfy { $0.blocked == "UNSUPPORTED" }, "architecture mismatch blocks configuration without overriding passed detection")
+        try check(DeploymentPlanBuilder.build(mismatch, profile: profile).operations.filter { !$0.detectionPassed }.allSatisfy { $0.blocked == "BASELINE_UNAVAILABLE" }, "architecture mismatch blocks configuration without overriding passed detection")
+        var future = p.snapshot
+        future.fxVersion = "1.9.9"
+        let futurePlan = DeploymentPlanBuilder.build(future, profile: profile)
+        try check(futurePlan.executable.isEmpty, "unverified future FX version remains read-only")
+        try check(futurePlan.operations.filter(\.detectionPassed).allSatisfy { $0.blocked == nil && !$0.warning }, "future version never recolors passed detections")
         let architecturePlan = DeploymentPlanBuilder.build(mismatch, profile: profile)
         for id in ["steam", "game", "ipv4", "gvproxy"] {
             try check(architecturePlan.operations.first { $0.id == id }?.detectionPassed == true && architecturePlan.operations.first { $0.id == id }?.blocked == nil, "passed detection survives unrelated deployment block: " + id)
@@ -145,10 +179,12 @@ final class FileDeploymentBackend: DeploymentBackend {
         observed.facts["fex"] = "present"; observed.facts["proton"] = "present"
         observed.facts["ipv6"] = "UNKNOWN"
         let observedPlan = DeploymentPlanBuilder.build(observed, profile: profile)
-        for id in ["fex", "proton"] {
+        for id in ["fex"] {
             let op = observedPlan.operations.first { $0.id == id }!
             try check(op.observation == .found && !op.warning && op.blocked == "ARTIFACT_UNAPPROVED", "installed component is neutral while deployment stays protected: " + id)
         }
+        let observedProton = observedPlan.operations.first { $0.id == "proton" }!
+        try check(observedProton.observation == .found && !observedProton.warning && observedProton.blocked == nil, "verified Proton remains neutral and accepted")
         let ipv6 = observedPlan.operations.first { $0.id == "ipv6" }!
         try check(ipv6.warning && ipv6.advisory && ipv6.blocked == nil, "unknown IPv6 warns without blocking")
         try check(observedPlan.executable.map(\.id) == p.executable.map(\.id), "IPv6 does not change executable operations")

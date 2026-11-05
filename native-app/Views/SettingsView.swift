@@ -306,11 +306,9 @@ private struct CredentialManagementView: View {
     var body: some View {
         TacticalPanel(number: "K", title: state.t("ui.session.title"), symbol: "key") {
             Text(state.t("ui.session.policy")).font(TacticalTypography.caption).foregroundStyle(.secondary)
-            if credentials.storageIssue { TacticalWarningBanner(text: state.t("ui.credentials.storageIssue"), isError: true) }
             ForEach(CredentialKind.allCases, id: \.self) { kind in
                 VStack(alignment: .leading, spacing: 8) {
                     TacticalInfoRow(title: state.t(kind == .ssh ? "ui.session.ssh" : "ui.session.sudo"), value: status(kind))
-                    if credentials.saved.contains(kind) { Text(state.t("ui.credentials.saved")).font(TacticalTypography.caption).foregroundStyle(.secondary) }
                     HStack {
                         Button(state.t(kind == .ssh ? "ui.session.updateSSH" : "ui.session.updateSudo")) {
                             credentials.update(kind)

@@ -142,7 +142,7 @@ Existing clones need the intended branch and `git submodule update --init --recu
 No official release has been published yet; the current Native version `0.1.0` is a development preview. Recent unreleased changes:
 
 - Native seven-page interface, bounded FX discovery, validated configuration editing, redacted logs and read-only performance comparison.
-- GUI-driven FX/SSH actions and independent SSH/sudo credentials with encrypted local persistence.
+- GUI-driven FX/SSH actions and independent SSH/sudo credentials kept only in process memory.
 - Sparkle 2 update integration (feed/signing service not configured).
 
 See the full history in [CHANGELOG.md](CHANGELOG.md).
@@ -150,7 +150,7 @@ See the full history in [CHANGELOG.md](CHANGELOG.md).
 ## FAQ
 
 - **Why are stop/restart or some Apply actions disabled?** Graceful exit is unverified. Performance editing requires the pinned FX 1.9.4 build, valid preferences, stopped FX and explicit preview/consent. Invalid backups or external changes block restore. The App does not force-stop FX.
-- **Must I retype passwords?** After password authentication and Guest identity verification, SSH and sudo passwords are saved separately in encrypted local files for the selected FX and connection. Reopening the App fills them in automatically and authenticates again. No macOS Keychain is used. Delete saved passwords in Settings. Rejected values stop being reused. A random installation key and ciphertext are outside the App bundle in owner-only storage; this does not defend against software already running as your macOS user. The first run of this build needs one successful verification; it cannot import passwords from an older running App process.
+- **Must I retype passwords?** Yes, after the App exits or the selected environment changes. SSH and sudo passwords are independent and may be reused only after verification within the current process. They are never written to files, preferences, command arguments, environment variables or macOS Keychain. Settings can clear both immediately.
 - **Are automatic updates ready?** Manual GitHub Native-release checks work in Settings → Software Update. Stable is the default; Preview and automatic checks remain closed until verified service setup. A verified-download backend requires a trusted Ed25519 key and signed manifest; installation remains disabled without the signed Appcast, Developer ID and notarization/distribution conditions. Manual checks never install automatically. The automatic-check toggle stays disabled until the signed service is ready. Download verification includes signature, size and SHA-256; installation stays with official Sparkle. No production update package is published yet. Failures leave the current App intact; no installed/relaunched success is inferred. Release preparation verifies signed feed history before reusing it. [Setup and release gates](docs/NATIVE_UPDATES.md).
 
 <a id="en-legacy"></a>
@@ -177,10 +177,10 @@ Launch resources: the Native bundle includes SHA-256-verified gvproxy and wrappe
 
 Sudo investigation (2026-11-04): build 2026110402 has a remote empty-prompt quoting defect. The fix and distinct sudo/SSH failure classification are under validation; no replacement build is released. Full Guest identity passed a live read-only check; passworded sudo and subsequent launch stages remain unverified.
 
-**Current credential implementation:** Main retains Guest identity binding, independent SSH/sudo credentials with encrypted local persistence, per-call authorization and redaction; First-Run Setup uses the same service. Live privileged changes, fresh VM, gameplay and multiplayer remain NOT_TESTED. Current captures use integrated build 2026110411.
+**Current credential implementation:** This candidate retains Guest identity binding, independent memory-only SSH/sudo credentials, per-call authorization and redaction; First-Run Setup uses the same service. Live privileged changes, fresh VM, gameplay and multiplayer remain NOT_TESTED. Main and Latest are unchanged by this candidate.
 
 
-**SteamOS network candidate (unreleased):** Environment → SteamOS network settings provides explicit runtime IPv6 enable/disable, exact confirmation, backup and verified recovery. IPv6 is optional and game startup never changes it. VM, Steam TLS, PlayFab and UDP diagnostics are explicit read-only probes without sudo; passing does not verify multiplayer. Saved credentials use encrypted local storage; live authorization remains bound to the current connection. Real Guest writes and game launch remain NOT TESTED. [Network guide](docs/STEAMOS_NETWORK_SETTINGS.md) · [Python → Swift parity](docs/PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md).
+**SteamOS network candidate (unreleased):** Environment → SteamOS network settings provides explicit runtime IPv6 enable/disable, exact confirmation, backup and verified recovery. First-Run Setup treats IPv6 as diagnostic-only and nonblocking; game startup never changes it. VM, Steam TLS, PlayFab and UDP diagnostics are explicit read-only probes without sudo; passing does not verify multiplayer. Credentials remain process-memory-only and live authorization is bound to the current connection. Real Guest writes and game launch remain NOT TESTED. [Network guide](docs/STEAMOS_NETWORK_SETTINGS.md) · [Python → Swift parity](docs/PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md).
 
 [![SteamOS network settings and diagnostics](docs/images/en/environment-network.png)](docs/STEAMOS_NETWORK_SETTINGS.md)
 

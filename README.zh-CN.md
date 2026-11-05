@@ -143,7 +143,7 @@ open build/Debug/HD2FXNative.app
 尚未发布任何正式版本；当前原生版本 `0.1.0` 为开发预览。近期未发布改动：
 
 - 原生七页界面、限定范围 FX 发现、带校验的配置编辑、脱敏日志与只读性能比较。
-- GUI 化 FX／SSH 操作与独立的 SSH／sudo 凭据与本机加密保存。
+- GUI 化 FX／SSH 操作与仅保留在进程内存中的独立 SSH／sudo 凭据。
 - Sparkle 2 更新集成（Feed／签名服务尚未配置）。
 
 完整历史见 [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md)。
@@ -151,7 +151,7 @@ open build/Debug/HD2FXNative.app
 ## 常见问题
 
 - **为什么停止／重启或部分应用按钮禁用？** 正常退出后端尚未验证。性能编辑只支持固定 FX 1.9.4 构建，需读取合法配置、FX 停止并预览确认；无有效备份或外部修改会阻止恢复。App 不强制停止 FX。
-- **每次都要输入密码吗？** SSH 与 sudo 密码在实际认证及 Guest 身份验证成功后，按所选 FX 和连接独立加密保存在本机，重开 App 后自动填充并重新认证，不使用 macOS 钥匙串。可在设置中删除已保存密码；拒绝的值停止复用。随机安装密钥与密文在 App 包外，仅当前账户可读写，不能防御同一 macOS 用户权限的软件。新版首次仍需成功验证一次，不能从旧版运行进程导入密码。
+- **每次都要输入密码吗？** App 退出或所选环境变化后需要重新输入。SSH 与 sudo 密码相互独立，只能在当前进程内验证后复用；不写入文件、偏好设置、命令行参数、环境变量或 macOS 钥匙串。可在设置中立即清除两种凭据。
 - **自动更新能用了吗？** 在「设置 → 软件更新」可手动检查 GitHub Native 发布。默认稳定版；正式服务未就绪前，预览渠道及自动检查保持关闭。安全下载需要可信 Ed25519 公钥与签名清单；缺少签名 Appcast、Developer ID、公证及分发条件时禁止安装。手动检查不会自动安装；自动检查开关需签名服务就绪才可启用。下载校验包含签名、大小与 SHA-256，安装仅由官方 Sparkle 执行。目前尚无正式更新包，失败保留当前 App，不把下载成功视为安装或重启成功。发布准备复用历史更新源前会先验证其签名。[配置和发布条件](docs/NATIVE_UPDATES.md)。
 
 <a id="zh-legacy"></a>
@@ -178,10 +178,10 @@ FX 选择 V2 + 自动选择 V2.1：FX 管理、总览和启动窗口共享并持
 
 sudo 排查（2026-11-04）：构建 2026110402 存在远程空提示符参数引用缺陷。相关修复及 sudo/SSH 错误分类正在验证，尚未发布替代构建。真实只读检查已通过完整 Guest 身份确认；带密码 sudo 及后续启动阶段仍未验证。
 
-**当前凭据实现：** 保留 main 的 Guest 身份绑定、独立 SSH／sudo 凭据与本机加密保存、逐次认证和脱敏；首次配置也使用同一服务。真实特权修改、全新 VM、游戏及联机仍为 NOT_TESTED。当前截图为整合版构建 2026110411。
+**当前凭据实现：** 本候选版保留 Guest 身份绑定、仅内存的独立 SSH／sudo 凭据、逐次认证和脱敏；首次配置也使用同一服务。真实特权修改、全新 VM、游戏及联机仍为 NOT_TESTED。本候选不修改 main 或 Latest。
 
 
-**SteamOS 网络候选（未发布）：** 运行环境 → SteamOS 网络设置提供主动开启/关闭 IPv6、精确确认、备份与验证恢复。IPv6 不再是启动前提，游戏启动不会修改它。VM、Steam TLS、PlayFab、UDP 为手动只读探测，不申请 sudo，检测通过不代表多人联机已验证。已保存凭据使用本机加密存储，本次授权仍绑定当前连接。真实 Guest 写入及游戏启动仍为 NOT TESTED。[网络使用说明](docs/STEAMOS_NETWORK_SETTINGS.md) · [Python → Swift 功能矩阵](docs/PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md)。
+**SteamOS 网络候选（未发布）：** 运行环境 → SteamOS 网络设置提供主动开启/关闭 IPv6、精确确认、备份与验证恢复。首次配置仅将 IPv6 作为诊断提示，它不阻塞部署，游戏启动也不会修改它。VM、Steam TLS、PlayFab、UDP 为手动只读探测，不申请 sudo，检测通过不代表多人联机已验证。凭据仅保留在本次进程内存中，授权绑定当前连接。真实 Guest 写入及游戏启动仍为 NOT TESTED。[网络使用说明](docs/STEAMOS_NETWORK_SETTINGS.md) · [Python → Swift 功能矩阵](docs/PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md)。
 
 [![SteamOS 网络设置与诊断](docs/images/zh-CN/environment-network.png)](docs/STEAMOS_NETWORK_SETTINGS.md)
 

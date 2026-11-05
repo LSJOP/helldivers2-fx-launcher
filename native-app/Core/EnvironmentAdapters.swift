@@ -131,9 +131,11 @@ final class SSHEnvironmentBackend: DeploymentBackend {
             } else { facts[key] = "UNKNOWN" }
             facts.removeValue(forKey: key + "_data"); facts.removeValue(forKey: key + "_path")
         }
-        // Sample hashes are evidence only. Full-manifest readiness stays unknown until an
-        // approved artifact exists; never promote the historical FEX or five Wine hashes.
-        facts["fex_manifest"] = "UNKNOWN"; facts["proton_manifest"] = "UNKNOWN"
+        // FEX remains unapproved. Proton readiness is limited to the exact pinned release
+        // and critical-file hashes checked by the bounded Guest probe.
+        facts["fex_manifest"] = "UNKNOWN"
+        facts["proton_manifest"] = fields["proton_manifest"] ?? "UNKNOWN"
+        values["component.proton"] = fields["proton_component"] ?? "UNKNOWN"
         for (key, value) in fields where key.hasPrefix("net6_") { values["ipv6." + key.dropFirst(5)] = value }
         facts["network"] = "UNKNOWN" // A default route is not Steam/game reachability.
         let pref = try? CFPreferencesStore(domain: PerformanceDomain.name).read()
@@ -148,6 +150,9 @@ final class SSHEnvironmentBackend: DeploymentBackend {
     }
     func replace(_ changes: [String: String], expected: DeploymentSnapshot) throws {
         if !changes.isEmpty && changes.keys.allSatisfy({ $0.hasPrefix("ipv6.") }) { try replaceIPv6(changes, expected: expected); return }
+        if Set(changes.keys) == ["component.proton"] {
+            try replaceProton(changes["component.proton"]!, expected: expected); return
+        }
         guard let key = changes.keys.first(where: { ["launch", "tool"].contains($0) }), Set(changes.keys).isSubset(of: [key, key + "_present"]) else { throw CoreError("INVALID_ARGUMENT") }
         let current = try snapshot()
         guard EnvironmentDeploymentService.identity(current, expected), current.revision == expected.revision else { throw CoreError("CONFIG_CHANGED") }
@@ -226,6 +231,20 @@ for root in "$S/compatibilitytools.d" "$HOME/.steam/compatibilitytools.d"; do
  done
 done
 printf 'proton=%s\n' "$proton_found"
+proton_target="$S/compatibilitytools.d/proton-je-11.0-20261014-3"
+proton_component=missing
+proton_manifest=UNKNOWN
+if [ -d "$proton_target" ] && [ ! -L "$proton_target" ]; then
+ proton_component=unverified
+ if [ "$(sha256sum "$proton_target/proton" 2>/dev/null | cut -d' ' -f1)" = 4d8392f0ec4adebed83513589f4be30ad6a9c669230a94724a18dff0acdd203a ] &&
+    [ "$(sha256sum "$proton_target/compatibilitytool.vdf" 2>/dev/null | cut -d' ' -f1)" = 43a068c09d826c90c2a67147293a58b8289244cb34302cda89f19b8e6f0b0eaa ] &&
+    [ "$(sha256sum "$proton_target/toolmanifest.vdf" 2>/dev/null | cut -d' ' -f1)" = bb81d44a687cc6f4ea7ae05fa9f0502f35c48e462051809dce3b2a58492e3498 ] &&
+    [ "$(sha256sum "$proton_target/files/lib/wine/x86_64-windows/ntdll.dll" 2>/dev/null | cut -d' ' -f1)" = a699b73899f8a3ae464dd5ee237dd1f1f1587287a0941fbab5934698d633cbfe ]; then
+   proton_component=a699b73899f8a3ae464dd5ee237dd1f1f1587287a0941fbab5934698d633cbfe
+   proton_manifest=verified
+ fi
+fi
+printf 'proton_component=%s\nproton_manifest=%s\n' "$proton_component" "$proton_manifest"
 for pair in 'fex:FEX-Emu/usr/bin/FEX'; do
  f="$S/steamapps/common/${pair#*:}"; if [ -f "$f" ]; then printf 'fex_sha256=%s\n' "$(sha256sum "$f" | cut -d' ' -f1)"; fi
 done
@@ -338,6 +357,101 @@ extension NativeCoreService {
 
 
 extension SSHEnvironmentBackend {
+    private static let protonVersion = "proton-je-11.0-20261014-3"
+    private static let protonURL = "https://github.com/jegglest/proton-je/releases/download/proton-je-11.0-20261014-3/proton-je-11.0-20261014-3.tar.xz"
+    private static let protonArchiveHash = "aa5430696ca39451299e2f007ef652bc030e6419242776343d48947e21827485"
+    private static let protonNTDLLHash = "a699b73899f8a3ae464dd5ee237dd1f1f1587287a0941fbab5934698d633cbfe"
+
+    /// Install or roll back only the exact reviewed Proton release. The pinned archive hash
+    /// authenticates the complete tar.xz bytes; extraction is confined to a private stage,
+    /// rejects special files and escaping links, and the final move is atomic.
+    func replaceProton(_ desired: String, expected: DeploymentSnapshot) throws {
+        let live = try snapshot()
+        guard EnvironmentDeploymentService.identity(live, expected), live.revision == expected.revision else { throw CoreError("CONFIG_CHANGED") }
+        try EnvironmentDeploymentService.idle(live)
+        guard live.fxVersion == "1.9.4", live.osVersion == "0.4.5", live.architecture == "aarch64" else { throw CoreError("BASELINE_UNAVAILABLE") }
+        let profile = try EnvironmentProfile.bundled()
+        guard let artifact = profile.artifacts.first(where: { $0.component == "proton" && $0.version == Self.protonVersion }),
+              artifact.source == Self.protonURL, artifact.archiveSHA256 == Self.protonArchiveHash,
+              artifact.files["files/lib/wine/x86_64-windows/ntdll.dll"] == Self.protonNTDLLHash else { throw CoreError("ARTIFACT_UNAPPROVED") }
+        let script: String
+        if desired == Self.protonNTDLLHash {
+            guard live.values["component.proton"] == "missing" else { throw CoreError("COMPONENT_CONFLICT") }
+            script = Self.protonInstallScript(boot: live.boot)
+        } else if desired == "missing" {
+            guard live.values["component.proton"] == Self.protonNTDLLHash else { throw CoreError("EXTERNAL_DRIFT") }
+            script = Self.protonRollbackScript(boot: live.boot, suffix: UUID().uuidString)
+        } else { throw CoreError("ARTIFACT_UNAPPROVED") }
+        _ = try hostIdentity()
+        let result = try transport.run(script, timeout: desired == "missing" ? 90 : 1_200, context: context)
+        guard result.status == 0 else { throw CoreError(desired == "missing" ? "RECOVERY_REQUIRED" : "COMPONENT_INSTALL_FAILED") }
+    }
+
+    static func protonInstallScript(boot: String) -> String {
+        """
+        set -eu
+        umask 077
+        S="$HOME/.local/share/Steam"
+        p="$S/compatibilitytools.d/\(protonVersion)"
+        cache="$HOME/.cache/hd2-native"
+        lock="$HOME/.hd2-native-deployment-lock"
+        mkdir "$lock" || exit 80
+        work=''
+        cleanup(){ case "$work" in "$cache"/proton-stage.*) rm -rf -- "$work";; '') :;; *) exit 87;; esac; rmdir "$lock"; }
+        trap cleanup EXIT HUP INT TERM
+        [ "$(cat /proc/sys/kernel/random/boot_id)" = '\(boot)' ] || exit 81
+        for n in steam reaper helldivers2.exe; do if pgrep -x "$n" >/dev/null; then exit 81; else [ "$?" -eq 1 ] || exit 81; fi; done
+        walk="$p"; while [ "$walk" != / ]; do [ ! -L "$walk" ] || exit 81; walk=$(dirname "$walk"); done
+        [ ! -e "$p" ] || exit 82
+        mkdir -p "$cache"
+        [ -d "$cache" ] && [ ! -L "$cache" ] || exit 82
+        chmod 700 "$cache"
+        work=$(mktemp -d "$cache/proton-stage.XXXXXXXX")
+        archive="$work/archive.tar.xz"
+        curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
+          --connect-timeout 15 --max-time 900 --speed-time 30 --speed-limit 1024 \
+          --max-filesize 348245820 --output "$archive" '\(protonURL)'
+        [ "$(wc -c < "$archive" | tr -d ' ')" = 348245820 ] || exit 83
+        [ "$(sha256sum "$archive" | cut -d' ' -f1)" = '\(protonArchiveHash)' ] || exit 83
+        mkdir "$work/unpack"
+        tar --extract --xz --file "$archive" --directory "$work/unpack" --no-same-owner --no-same-permissions
+        stage="$work/unpack/\(protonVersion)"
+        [ -d "$stage" ] && [ ! -L "$stage" ] || exit 84
+        [ "$(find "$work/unpack" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')" = 1 ] || exit 84
+        [ "$(find "$stage" -type f | wc -l | tr -d ' ')" = 5609 ] || exit 84
+        [ "$(find "$stage" -type l | wc -l | tr -d ' ')" = 1896 ] || exit 84
+        [ -z "$(find "$stage" ! -type d ! -type f ! -type l -print -quit)" ] || exit 84
+        find "$stage" -type l -exec sh -c 'root=$1; shift; for link do resolved=$(realpath -m -- "$link") || exit 1; case "$resolved" in "$root"/*) :;; *) exit 1;; esac; done' sh "$stage" {} + || exit 84
+        [ "$(sha256sum "$stage/proton" | cut -d' ' -f1)" = 4d8392f0ec4adebed83513589f4be30ad6a9c669230a94724a18dff0acdd203a ] || exit 85
+        [ "$(sha256sum "$stage/compatibilitytool.vdf" | cut -d' ' -f1)" = 43a068c09d826c90c2a67147293a58b8289244cb34302cda89f19b8e6f0b0eaa ] || exit 85
+        [ "$(sha256sum "$stage/toolmanifest.vdf" | cut -d' ' -f1)" = bb81d44a687cc6f4ea7ae05fa9f0502f35c48e462051809dce3b2a58492e3498 ] || exit 85
+        [ "$(sha256sum "$stage/files/lib/wine/x86_64-windows/ntdll.dll" | cut -d' ' -f1)" = '\(protonNTDLLHash)' ] || exit 85
+        [ "$(cat /proc/sys/kernel/random/boot_id)" = '\(boot)' ] || exit 81
+        for n in steam reaper helldivers2.exe; do if pgrep -x "$n" >/dev/null; then exit 81; else [ "$?" -eq 1 ] || exit 81; fi; done
+        [ ! -e "$p" ] || exit 82
+        mkdir -p "$(dirname "$p")"
+        mv "$stage" "$p"
+        [ "$(sha256sum "$p/files/lib/wine/x86_64-windows/ntdll.dll" | cut -d' ' -f1)" = '\(protonNTDLLHash)' ] || exit 86
+        """
+    }
+
+    static func protonRollbackScript(boot: String, suffix: String) -> String {
+        """
+        set -eu
+        p="$HOME/.local/share/Steam/compatibilitytools.d/\(protonVersion)"
+        retained="$p.hd2-recovered-\(suffix)"
+        lock="$HOME/.hd2-native-deployment-lock"
+        mkdir "$lock" || exit 80
+        trap 'rmdir "$lock"' EXIT HUP INT TERM
+        [ "$(cat /proc/sys/kernel/random/boot_id)" = '\(boot)' ] || exit 81
+        for n in steam reaper helldivers2.exe; do if pgrep -x "$n" >/dev/null; then exit 81; else [ "$?" -eq 1 ] || exit 81; fi; done
+        [ -d "$p" ] && [ ! -L "$p" ] && [ ! -e "$retained" ] || exit 82
+        [ "$(sha256sum "$p/files/lib/wine/x86_64-windows/ntdll.dll" | cut -d' ' -f1)" = '\(protonNTDLLHash)' ] || exit 82
+        mv "$p" "$retained"
+        [ ! -e "$p" ] || exit 83
+        """
+    }
+
     /// Only the exact Guest interface set is writable. Linux conf/all cascades, so all
     /// interfaces (including originally unchanged ones) must be in both plan and receipt.
     func replaceIPv6(_ changes: [String: String], expected: DeploymentSnapshot) throws {

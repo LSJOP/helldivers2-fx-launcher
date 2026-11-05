@@ -8,13 +8,15 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+- Restore process-memory-only SSH/sudo credentials for the verified-environment candidate. Remove the encrypted credential files and restart restoration added by the superseded candidate; target/session changes clear both roles.
+
 - Separate detected components from deployment permissions; show unknown evidence neutrally, keep IPv6 advisory and non-blocking, and discover Proton-JE across bounded tool directories without executing candidates.
 
 - Passed component detections remain green independently of unrelated deployment restrictions.
 
 - Remove FX/SteamOS version allowlists from first-run setup and FX performance editing; retain actual capability, architecture, identity, artifact, backup and write-safety checks. Version changes during an approved transaction still invalidate that transaction.
 
-- Remember successfully verified SSH/sudo passwords across App restarts using installation-local AES-GCM encrypted files, without macOS Keychain. Keep environments and roles separate, stop reusing rejected values, and provide deletion and visible storage errors.
+- Superseded candidate history: an earlier build remembered verified SSH/sudo passwords in installation-local encrypted files. The current verified-environment candidate removes that behavior and does not migrate or read those files.
 
 - First-Run Setup now uses the same local FX copy eligibility as launch; intact local test copies no longer fail the entry check solely because they lack an official publisher signature. Guest authentication and deployment profile/artifact checks remain separate.
 

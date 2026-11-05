@@ -1,0 +1,31 @@
+{
+  "id": "hd2-fx194-steamos045-aarch64-success-20261026",
+  "schemaVersion": 1,
+  "fxVersion": {"value":"1.9.4","level":"reproduced","source":"绝地潜兵2成功启动经验_20261026.md"},
+  "steamOSVersion": {"value":"0.4.5","level":"reproduced","source":"success-session-20261028/snapshot.json"},
+  "architecture": {"value":"aarch64","level":"reproduced","source":"success-session-20261028/snapshot.json"},
+  "fexVersion": {"value":"StonkGuy eac-main-20261022 + PR6 + PR7 + local PR20 RF candidate","level":"reproduced","source":"绝地潜兵2成功启动经验_20261026.md"},
+  "fexExecutableSHA256": {"value":"ce93cadae7b7d3ef01376ba2acd58aedb602a7fc077e49592179766d13c294bf","level":"reproduced","source":"success-session-20261028/snapshot.json"},
+  "protonVersion": {"value":"proton-je-11.0-20261014-3","level":"reproduced","source":"success-session-20261028/snapshot.json"},
+  "protonArchiveSHA256": {"value":"aa5430696ca39451299e2f007ef652bc030e6419242776343d48947e21827485","level":"upstream","source":"github.com/jegglest/proton-je release asset and local archive"},
+  "protonArchiveBytes": 348245820,
+  "protonNTDLLSHA256": {"value":"a699b73899f8a3ae464dd5ee237dd1f1f1587287a0941fbab5934698d633cbfe","level":"reproduced","source":"success-session-20261028/snapshot.json"},
+  "graphicsPath": {"value":"vulkan","level":"reproduced","source":"success-session-20261028/settings-selected.json"},
+  "vulkanDriver": {"value":"kosmickrisp","level":"reproduced","source":"success-session-20261028/settings-selected.json"},
+  "managedLaunchOptions": {
+    "FEX_NEEDSSECCOMP": {"value":"1","level":"reproduced","source":"final-runtime-environment.txt"},
+    "FEX_DISKCACHE": {"value":"0","level":"reproduced","source":"final-runtime-environment.txt"}
+  },
+  "observedLaunchOptions": {
+    "WINEDEBUG": {"value":"-all","level":"observed","source":"绝地潜兵2成功启动经验_20261026.md"},
+    "PROTON_USE_XALIA": {"value":"0","level":"observed","source":"绝地潜兵2成功启动经验_20261026.md"},
+    "PROTON_LOG": {"value":"1","level":"observed","source":"绝地潜兵2成功启动经验_20261026.md"},
+    "PROTON_LOG_DIR": {"value":"/tmp","level":"observed","source":"绝地潜兵2成功启动经验_20261026.md"}
+  },
+  "ipv6Policy": "diagnostic_only_non_blocking",
+  "acceptance": {
+    "coldRestart": {"value":"passed","level":"reproduced","source":"绝地潜兵2成功启动经验_20261026.md"},
+    "singlePlayer": {"value":"landing_and_movement_passed","level":"reproduced","source":"goal-fx-multiplayer-20261026/RESULTS.md"},
+    "multiplayer": {"value":"four_player_mission_and_settlement_passed","level":"multiplayer","source":"goal-fx-multiplayer-20261026/RESULTS.md"}
+  }
+}
