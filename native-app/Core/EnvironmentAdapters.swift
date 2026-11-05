@@ -155,6 +155,7 @@ final class SSHEnvironmentBackend: DeploymentBackend {
                 let live = try SteamSetupClient.evaluate(SteamSetupClient.launchExpression(), port: transport.settings.cdpLocalPort, context: context)
                 guard let launch = live["launch"]?.text else { throw CoreError("STEAM_LAUNCH_READ_FAILED") }
                 values["launch"] = launch; values["launch_present"] = "true"; facts["steam_api"] = "available"
+                facts["launch"] = "available" // Do not retain UNKNOWN from an unreadable on-disk config after a successful live read.
             } catch {
                 values.removeValue(forKey: "launch"); values.removeValue(forKey: "launch_present")
                 facts["steam_api"] = "UNKNOWN"; facts["steam_api_error"] = Self.steamError(error)
@@ -163,7 +164,7 @@ final class SSHEnvironmentBackend: DeploymentBackend {
                 try verifySteamTunnel()
                 let live = try SteamSetupClient.evaluate(SteamSetupClient.toolExpression(), port: transport.settings.cdpLocalPort, context: context)
                 guard let tool = live["tool"]?.text else { throw CoreError("STEAM_TOOL_READ_FAILED") }
-                values["tool"] = tool; values["tool_present"] = "true"
+                values["tool"] = tool; values["tool_present"] = "true"; facts["tool"] = tool
                 facts["steam_tool_api"] = "available"
                 facts["proton_discovered"] = tool == ProtonJERelease.version && !(live["display"]?.text ?? "").isEmpty ? "true" : "UNKNOWN"
             } catch {
