@@ -54,11 +54,14 @@
   "sources": [
     "docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md",
     "https://github.com/fxgl/steamac/releases/tag/v1.9.4",
-    "https://github.com/jegglest/proton-je/releases/tag/proton-je-11.0-20261014-3"
+    "https://github.com/jegglest/proton-je/releases/tag/proton-je-11.0-20261014-3",
+    "docs/STEAMOS_ENVIRONMENT_TRACE_20261104.zh-CN.md",
+    "https://github.com/fxgl/steamac/releases/tag/v1.9.8"
   ],
   "licenses": [
     "FEX: provenance/license review required before distribution",
-    "Proton-JE: direct upstream download; upstream license and notices remain inside the archive"
+    "Proton-JE: direct upstream download; upstream license and notices remain inside the archive",
+    "Pinned Proton-JE archive: upstream LICENSE and LICENSE.OFL retained; direct upstream download only"
   ],
   "testedScope": [
     "historical personal environment reproduced after cold restart",
@@ -66,6 +69,8 @@
     "fresh VM NOT_TESTED",
     "FEX full release manifest BLOCKED",
     "Proton pinned archive install and retained rollback passed isolated local execution",
-    "real Guest Proton install NOT_TESTED"
+    "real Guest Proton install NOT_TESTED",
+    "historical personal environment only",
+    "Pinned Proton-JE archive and full file/link manifest reviewed; live SteamOS install NOT_TESTED"
   ]
 }

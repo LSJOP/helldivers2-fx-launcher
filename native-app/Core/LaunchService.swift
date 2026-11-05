@@ -157,7 +157,7 @@ enum LaunchService {
         let fxPID = try fxSupervisorPID(rows: rows, executable: executable)
         func belongs(_ pid: Int) -> Bool { descendant(pid, of: fxPID, rows: rows) }
         var networkExecutable = normalizedCommand(gvproxy.path)
-        if !requireCDP && allowPublisherNetwork,
+        if allowPublisherNetwork,
            !rows.values.contains(where: { normalizedCommand($0.command) == networkExecutable && belongs($0.pid) }) {
             networkExecutable = try diagnosticNetworkExecutable(fx: fx, context: context)
         }

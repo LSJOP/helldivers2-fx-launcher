@@ -468,29 +468,20 @@ private struct SSHConnectionSettingsView: View {
     @State private var original: [String: JSONValue] = [:]
     @State private var saved = false
     private var patch: [String: JSONValue]? {
-        guard let number = Int(port), port.allSatisfy({ $0.isASCII && $0.isNumber }), !port.isEmpty else { return nil }
-        var ssh = original
-        ssh["host"] = .string(host.trimmingCharacters(in: .whitespacesAndNewlines))
-        ssh["port"] = .number(Double(number))
-        ssh["username"] = .string(username.trimmingCharacters(in: .whitespacesAndNewlines))
-        guard (try? ConfigurationService.validatedSSH(ssh)) != nil else { return nil }
-        return ["host": ssh["host"]!, "port": ssh["port"]!, "username": ssh["username"]!]
+        try? ConfigurationService.connectionPatch(host: host, port: port, username: username, current: original)
     }
-    private var changed: Bool {
-        guard let patch else { return true }
-        return patch.contains { original[$0.key] != $0.value }
-    }
+    private var changed: Bool { patch.map { !$0.isEmpty } ?? true }
     var body: some View {
         TacticalPanel(number: "S", title: state.t("ui.ssh.settings"), symbol: "network") {
             Text(state.t("ui.ssh.settingsHelp")).font(TacticalTypography.caption).foregroundStyle(.secondary)
             LabeledContent(state.t("ui.ssh.host")) {
-                TextField(state.t("ui.ssh.host"), text: $host).accessibilityIdentifier("settings.ssh.host")
+                TextField(original["host"]?.text ?? "127.0.0.1", text: $host).accessibilityIdentifier("settings.ssh.host")
             }
             LabeledContent(state.t("ui.ssh.port")) {
-                TextField(state.t("ui.ssh.port"), text: $port).accessibilityIdentifier("settings.ssh.port")
+                TextField(original["port"]?.integer.map(String.init) ?? "2222", text: $port).accessibilityIdentifier("settings.ssh.port")
             }
             LabeledContent(state.t("ui.ssh.user")) {
-                TextField(state.t("ui.ssh.user"), text: $username).accessibilityIdentifier("settings.ssh.user")
+                TextField(original["username"]?.text ?? "steamos", text: $username).accessibilityIdentifier("settings.ssh.user")
             }
             if !revision.isEmpty && patch == nil {
                 TacticalWarningBanner(text: state.t("ui.ssh.settingsInvalid"), isError: true)
@@ -514,7 +505,7 @@ private struct SSHConnectionSettingsView: View {
         .onReceive(state.$sshConfiguration) { result in
             guard let config = result["configuration"]?.object["ssh"]?.object, let value = result["revision"]?.text else { return }
             original = config; revision = value
-            host = config["host"]?.text ?? ""; port = config["port"]?.integer.map(String.init) ?? ""; username = config["username"]?.text ?? ""
+            host = ""; port = ""; username = ""
         }
         .onReceive(state.$operationResult) { result in if result["saved"]?.boolean == true { saved = true } }
     }

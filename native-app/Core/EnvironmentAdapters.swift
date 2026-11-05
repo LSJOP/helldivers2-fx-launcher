@@ -106,7 +106,8 @@ final class SSHEnvironmentBackend: DeploymentBackend {
     }
     func snapshot() throws -> DeploymentSnapshot {
         let identity = try hostIdentity()
-        let result = try transport.run(Self.probe, timeout: 40, context: context)
+        let packageProbe = try ProtonJERelease.script(mode: "probe", manifest: ProtonJERelease.manifest())
+        let result = try transport.run(Self.probe + "\n" + packageProbe, timeout: 90, context: context)
         guard result.status == 0 else { throw CoreError("ENVIRONMENT_DETECTION_FAILED") }
         var fields: [String: String] = [:]
         for line in result.stdout.split(separator: "\n") {
@@ -131,11 +132,28 @@ final class SSHEnvironmentBackend: DeploymentBackend {
             } else { facts[key] = "UNKNOWN" }
             facts.removeValue(forKey: key + "_data"); facts.removeValue(forKey: key + "_path")
         }
-        // FEX remains unapproved. Proton readiness is limited to the exact pinned release
-        // and critical-file hashes checked by the bounded Guest probe.
+        // Sample hashes are evidence only. Full-manifest readiness stays unknown until an
+        // approved artifact exists; never promote the historical FEX or five Wine hashes.
         facts["fex_manifest"] = "UNKNOWN"
-        facts["proton_manifest"] = fields["proton_manifest"] ?? "UNKNOWN"
+        // Keep legacy receipt values readable; all new installs use the full reviewed inventory.
         values["component.proton"] = fields["proton_component"] ?? "UNKNOWN"
+        let package = fields["proton_package"] ?? "unknown"
+        values["proton_package"] = package
+        facts["proton_manifest"] = package == ProtonJERelease.digest ? "verified" : "UNKNOWN"
+        facts["proton"] = package == "missing" ? "missing" : package == ProtonJERelease.digest ? "present" : "UNKNOWN"
+        if sp > 0 {
+            do {
+                try verifySteamTunnel()
+                let live = try SteamSetupClient.evaluate(SteamSetupClient.launchExpression(), port: transport.settings.cdpLocalPort, context: context)
+                guard let launch = live["launch"]?.text else { throw CoreError("STEAM_API_UNAVAILABLE") }
+                values["launch"] = launch; values["launch_present"] = "true"; facts["steam_api"] = "available"
+                let tools = try SteamSetupClient.evaluate(SteamSetupClient.toolExpression(), port: transport.settings.cdpLocalPort, context: context)
+                facts["proton_discovered"] = tools["tools"]?.array.compactMap(\.text).contains(ProtonJERelease.version) == true ? "true" : "false"
+            } catch {
+                values.removeValue(forKey: "launch"); values.removeValue(forKey: "launch_present")
+                facts["steam_api"] = "UNKNOWN"; facts["proton_discovered"] = "UNKNOWN"
+            }
+        }
         for (key, value) in fields where key.hasPrefix("net6_") { values["ipv6." + key.dropFirst(5)] = value }
         facts["network"] = "UNKNOWN" // A default route is not Steam/game reachability.
         let pref = try? CFPreferencesStore(domain: PerformanceDomain.name).read()
@@ -148,7 +166,64 @@ final class SSHEnvironmentBackend: DeploymentBackend {
                      osVersion: fields["os_version"] ?? "UNKNOWN", architecture: fields["arch"] ?? "UNKNOWN",
                      steamRunning: sp > 0, gameRunning: gp > 0 || (fields["reaper_count"].flatMap(Int.init) ?? 1) > 0, freeBytes: free, facts: facts, values: values)
     }
+    func verifySteamTunnel() throws {
+        _ = try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport,
+            context: context, requireCDP: true, allowPublisherNetwork: true)
+    }
     func replace(_ changes: [String: String], expected: DeploymentSnapshot) throws {
+        if let target = changes["proton_package"] {
+            guard changes.count == 1, ["missing", ProtonJERelease.digest].contains(target) else { throw CoreError("INVALID_ARGUMENT") }
+            let current = try snapshot()
+            guard EnvironmentDeploymentService.identity(current, expected), current.revision == expected.revision,
+                  current.values == expected.values else { throw CoreError("CONFIG_CHANGED") }
+            try EnvironmentDeploymentService.idle(current, requiresStoppedSteam: false)
+            let script = try ProtonJERelease.script(mode: target == "missing" ? "recover" : "install", manifest: ProtonJERelease.manifest(), boot: current.boot)
+            _ = try hostIdentity()
+            let result = try transport.run(script, timeout: 750, context: context)
+            guard result.status == 0 else { throw CoreError("COMPONENT_INSTALL_FAILED") }
+            return
+        }
+        if expected.steamRunning, let key = changes.keys.first(where: { ["launch", "tool"].contains($0) }) {
+            guard Set(changes.keys).isSubset(of: [key, key + "_present"]), let desired = changes[key] else { throw CoreError("INVALID_ARGUMENT") }
+            let current = try snapshot()
+            guard EnvironmentDeploymentService.identity(current, expected), current.revision == expected.revision,
+                  current.values == expected.values else { throw CoreError("CONFIG_CHANGED") }
+            try EnvironmentDeploymentService.idle(current, requiresStoppedSteam: false)
+            try verifySteamTunnel()
+            let bootCheck = try transport.run("cat /proc/sys/kernel/random/boot_id", timeout: 5, context: context)
+            guard bootCheck.status == 0, bootCheck.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == current.boot else { throw CoreError("TARGET_CHANGED") }
+            let expression: String
+            if key == "launch" {
+                guard let previous = current.values[key] else { throw CoreError("STEAM_API_UNAVAILABLE") }
+                expression = SteamSetupClient.launchExpression(previous: previous, desired: desired)
+            } else {
+                guard current.facts["proton_manifest"] == "verified" else { throw CoreError("ARTIFACT_UNAPPROVED") }
+                expression = SteamSetupClient.toolExpression(desired: desired)
+            }
+            let reply = try SteamSetupClient.evaluate(expression, port: transport.settings.cdpLocalPort, context: context)
+            guard reply[key == "launch" ? "saved" : "requested"]?.boolean == true else { throw CoreError("VERIFY_FAILED") }
+            if key == "tool" {
+                // Selection setters do not return the selected value. Confirm Steam's own
+                // persisted mapping without rewriting its live config file.
+                guard let path = paths["tool"], path.range(of: "^[A-Za-z0-9_./ -]+$", options: .regularExpression) != nil else { throw CoreError("STEAM_TOOL_UNCONFIRMED") }
+                var confirmed = false
+                for _ in 0..<20 {
+                    try context.check()
+                    let readback = try transport.run("head -c 262145 " + Self.quote(path) + " | base64", timeout: 5, context: context)
+                    if readback.status == 0, let bytes = Data(base64Encoded: readback.stdout, options: .ignoreUnknownCharacters),
+                       bytes.count <= CoreLimits.maxSmallFile, let text = String(data: bytes, encoding: .utf8),
+                       let parsed = try? SteamVDF(text) {
+                        let selected = try parsed.value(SteamVDF.toolPath) ?? ""
+                        if selected == desired { confirmed = true; break }
+                        guard selected == current.values["tool"] else { throw CoreError("STEAM_TOOL_UNCONFIRMED") }
+                    }
+                    Thread.sleep(forTimeInterval: 0.25)
+                }
+                guard confirmed else { throw CoreError("STEAM_TOOL_UNCONFIRMED") }
+            }
+            return
+        }
+
         if !changes.isEmpty && changes.keys.allSatisfy({ $0.hasPrefix("ipv6.") }) { try replaceIPv6(changes, expected: expected); return }
         if Set(changes.keys) == ["component.proton"] {
             try replaceProton(changes["component.proton"]!, expected: expected); return
@@ -316,12 +391,14 @@ extension NativeCoreService {
         guard FXDiscoveryService.launchAllowed(integrity) else {
             throw CoreError("FX_ENTRY_MISMATCH", ["integrity_state": integrity["state"] ?? .string("unverified")])
         }
-        let transport = SSHTransport.isolatedSetup(request.configuration)
+        var setupSettings = SSHTransport.isolatedSetup(request.configuration).settings
+        setupSettings.cdpLocalPort = Int.random(in: 30000...59000)
+        let transport = SSHTransport(settings: setupSettings)
         defer { transport.closeMaster() }
         guard SSHTransport.localHost(transport.settings.host) else { throw CoreError("LOCAL_FX_REQUIRED") }
         _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
         transport.setSecret(password: request.password, passphrase: request.passphrase)
-        try transport.connectOnce(context: context, forwarding: false)
+        try transport.connectOnce(context: context, forwarding: true)
         let backend = try SSHEnvironmentBackend(fx: fx, transport: transport, context: context, revision: ConfigurationService.read().revision)
         backend.sudoPassword = request.sudoPassword
         backend.expectedGuestBoot = params["credential_guest_boot"]?.text
@@ -345,7 +422,11 @@ extension NativeCoreService {
             let receipt = try service.execute(plan, approved: Set(params["approved_steps"]?.array.compactMap(\.text) ?? []), context: context) { status in
                 emit("INFO", "Environment deployment", ["deployment_state": .string(status.rawValue)])
             }
-            return ["receipt": try json(receipt)]
+            var result: [String: JSONValue] = ["receipt": try json(receipt)]
+            if [.Completed, .NeedsConfiguration].contains(receipt.state), let refreshed = try? backend.snapshot() {
+                result["next_plan"] = try json(DeploymentPlanBuilder.build(refreshed, profile: policy))
+            }
+            return result
         }
         if method == "first_run_recover" {
             guard let id = params["receipt_id"]?.text.flatMap(UUID.init(uuidString:)) else { throw CoreError("INVALID_ARGUMENT") }
@@ -471,5 +552,108 @@ extension SSHEnvironmentBackend {
                 guard EnvironmentDeploymentService.identity(live, current) else { throw CoreError("TARGET_CHANGED") }
                 try EnvironmentDeploymentService.idle(live)
             }
+    }
+}
+
+/// Steam's own in-memory settings API, reached only through this setup-owned SSH tunnel.
+/// No external websocket endpoint, process start, or Steam shutdown is permitted here.
+enum SteamSetupClient {
+    final class ReplyBox<T>: @unchecked Sendable {
+        let lock = NSLock()
+        var value: Result<T, Error>?
+        func set(_ result: Result<T, Error>) { lock.lock(); value = result; lock.unlock() }
+        func get() -> Result<T, Error>? { lock.lock(); defer { lock.unlock() }; return value }
+    }
+    static func wait<T>(context: CoreContext, action: @escaping @Sendable () async throws -> T) throws -> T {
+        let box = ReplyBox<T>()
+        let task = Task.detached { do { box.set(.success(try await action())) } catch { box.set(.failure(error)) } }
+        defer { task.cancel() }
+        let end = CoreClock.monotonic + 20
+        while true {
+            try context.check()
+            if let result = box.get() { return try result.get() }
+            guard CoreClock.monotonic < end else { throw CoreError("STEAM_API_UNAVAILABLE") }
+            Thread.sleep(forTimeInterval: 0.025)
+        }
+    }
+    static func endpoint(_ text: String, port: Int) throws -> URL {
+        guard var parts = URLComponents(string: text), parts.scheme == "ws",
+              ["127.0.0.1", "localhost", "[::1]", "::1"].contains(parts.host ?? ""),
+              [8080, port].contains(parts.port ?? 0), parts.user == nil, parts.password == nil,
+              parts.path.hasPrefix("/devtools/page/"), parts.query == nil, parts.fragment == nil else { throw CoreError("STEAM_API_UNAVAILABLE") }
+        parts.host = "127.0.0.1"; parts.port = port
+        guard let url = parts.url else { throw CoreError("STEAM_API_UNAVAILABLE") }; return url
+    }
+    static func evaluate(_ expression: String, port: Int, context: CoreContext) throws -> [String: JSONValue] {
+        try wait(context: context) {
+            let config = URLSessionConfiguration.ephemeral
+            config.connectionProxyDictionary = [:]; config.timeoutIntervalForRequest = 15
+            let session = URLSession(configuration: config); defer { session.invalidateAndCancel() }
+            let (data, response) = try await session.data(from: URL(string: "http://127.0.0.1:\(port)/json/list")!)
+            guard (response as? HTTPURLResponse)?.statusCode == 200, data.count < CoreLimits.maxSmallFile,
+                  let pages = try JSONSerialization.jsonObject(with: data) as? [[String: Any]],
+                  let page = pages.first(where: { $0["title"] as? String == "SharedJSContext" }),
+                  let address = page["webSocketDebuggerUrl"] as? String else { throw CoreError("STEAM_API_UNAVAILABLE") }
+            let socket = session.webSocketTask(with: try endpoint(address, port: port))
+            socket.maximumMessageSize = CoreLimits.maxSmallFile
+            socket.resume(); defer { socket.cancel(with: .normalClosure, reason: nil) }
+            let payload: [String: Any] = ["id": 1, "method": "Runtime.evaluate", "params": ["expression": expression, "returnByValue": true, "awaitPromise": true]]
+            let encoded = try JSONSerialization.data(withJSONObject: payload)
+            try await socket.send(.string(String(decoding: encoded, as: UTF8.self)))
+            for _ in 0..<32 {
+                let message = try await socket.receive()
+                let bytes: Data
+                switch message { case .data(let d): bytes = d; case .string(let s): bytes = Data(s.utf8); @unknown default: throw CoreError("STEAM_API_UNAVAILABLE") }
+                guard bytes.count <= CoreLimits.maxSmallFile, let reply = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else { throw CoreError("STEAM_API_UNAVAILABLE") }
+                if reply["id"] as? Int != 1 { continue }
+                guard reply["error"] == nil, let result = reply["result"] as? [String: Any], result["exceptionDetails"] == nil,
+                      let value = (result["result"] as? [String: Any])?["value"] as? String,
+                      let decoded = value.data(using: .utf8) else { throw CoreError("STEAM_API_UNAVAILABLE") }
+                return try JSONDecoder().decode([String: JSONValue].self, from: decoded)
+            }
+            throw CoreError("STEAM_API_UNAVAILABLE")
+        }
+    }
+    static func launchExpression(previous: String? = nil, desired: String? = nil) -> String {
+        let input = CoreJSON.encode(.object(["previous": previous.map(JSONValue.string) ?? .null, "desired": desired.map(JSONValue.string) ?? .null]))
+        return #"""
+        (async()=>{
+          const {previous,desired}=PAYLOAD;
+          if(typeof SteamClient?.Apps?.SetAppLaunchOptions!=="function" || typeof appDetailsStore?.RegisterForAppData!=="function") throw Error('unavailable');
+          let observed=null;
+          const sub=appDetailsStore.RegisterForAppData(553850,d=>{if(d && typeof d.strLaunchOptions==="string") observed=d.strLaunchOptions;});
+          try {
+            for(let i=0;i<30 && observed===null;i++) await new Promise(r=>setTimeout(r,200));
+            if(observed===null) throw Error('unavailable');
+            if(desired===null) return JSON.stringify({launch:observed});
+            const running=await SteamClient.GameSessions.GetRunningApps();
+            if(!Array.isArray(running) || running.length) throw Error('game_running');
+            if(observed===desired) return JSON.stringify({saved:true});
+            if(observed!==previous) throw Error('changed');
+            SteamClient.Apps.SetAppLaunchOptions(553850,desired);
+            for(let i=0;i<30;i++) {
+              if(observed===desired) return JSON.stringify({saved:true});
+              await new Promise(r=>setTimeout(r,200));
+            }
+            throw Error('unconfirmed');
+          } finally {sub.unregister();}
+        })()
+        """#.replacingOccurrences(of: "PAYLOAD", with: input)
+    }
+    static func toolExpression(desired: String? = nil) -> String {
+        let target = desired.map { CoreJSON.encode(.string($0)) } ?? "null"
+        return #"""
+        (async()=>{
+          const desired=TARGET;
+          const tools=await SteamClient.Apps.GetAvailableCompatTools(553850);
+          if(!Array.isArray(tools)) throw Error('unavailable');
+          const available=tools.map(t=>t.strToolName).filter(t=>typeof t==='string');
+          if(desired===null) return JSON.stringify({tools:available});
+          const running=await SteamClient.GameSessions.GetRunningApps();
+          if(!Array.isArray(running) || running.length || (desired!=='' && !available.includes(desired))) throw Error('not_ready');
+          await SteamClient.Apps.SpecifyCompatTool(553850,desired);
+          return JSON.stringify({requested:true});
+        })()
+        """#.replacingOccurrences(of: "TARGET", with: target)
     }
 }

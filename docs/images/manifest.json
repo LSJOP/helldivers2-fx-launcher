@@ -7,7 +7,7 @@
   "timezone": "Asia/Shanghai",
   "fx_guest_actions": "none",
   "credential_autoload": "disabled by isolated capture arguments",
-  "reviewed_ui_source_sha256": "5fd9e889061ccc70e3384e50dd9b30b4c4269fcd66d741f959724641acd1adcd",
+  "reviewed_ui_source_sha256": "7c9408cc7a254cc3e12e1b2b38a1d79549408b6204af989182a48c22db7df31d",
   "screenshots": [
     {
       "path": "docs/images/zh-CN/dashboard.png",
@@ -108,36 +108,36 @@
     {
       "path": "docs/images/zh-CN/settings.png",
       "language": "zh-CN",
-      "sha256": "8c2e16e497d3c0742c5deda451018174346edeae950f2318ec65f9c514df2032",
+      "sha256": "19fbc8f85187f561c27d3a9340872fa6175f77f26539dde4ec72edf1f5c08538",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-05T09:53:56Z",
+      "captured_at": "2026-11-05T17:48:40Z",
       "app_version": "0.1.0",
-      "app_build": "2026110507",
+      "app_build": "2026110601",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.memoryonly20261105.zh-CN",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.proton0601.zh",
       "guest_actions": "none",
       "source_dirty": true,
-      "source_base_commit": "34be4f9fc8a4d4984045065714330137f6e6eef4",
+      "source_base_commit": "0d2496a570e5f630dcce289f81ab24b8086ac86f",
       "review_note": "Memory-only credential policy and controls visually reviewed; no interactive save or Guest action.",
-      "capture_scope": "Settings page and credential controls; no live SSH/sudo acceptance"
+      "capture_scope": "Integrated Debug runtime/SSH defaults and memory-only credentials; saved custom port 2223 preserved; read-only initial rendering, no interactive acceptance or Guest connection."
     },
     {
       "path": "docs/images/zh-CN/settings-updates.png",
       "language": "zh-CN",
-      "sha256": "d803f284aec0ad401aec485febd48f9afa0b596d0550a2920adc5428c451623c",
+      "sha256": "12708e8a2073c6e0c7ad217220a68203e010298b82decd66563a8acb50021e05",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-05T09:53:56Z",
+      "captured_at": "2026-11-05T17:48:40Z",
       "app_version": "0.1.0",
-      "app_build": "2026110507",
+      "app_build": "2026110601",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.memoryonly20261105.zh-CN",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.proton0601.zh",
       "guest_actions": "none",
       "source_dirty": true,
-      "source_base_commit": "34be4f9fc8a4d4984045065714330137f6e6eef4",
+      "source_base_commit": "0d2496a570e5f630dcce289f81ab24b8086ac86f",
       "review_note": "Memory-only credential policy and controls visually reviewed; no interactive save or Guest action.",
-      "capture_scope": "SSH settings and credential controls; no live SSH/sudo acceptance"
+      "capture_scope": "Integrated Debug runtime/SSH defaults and memory-only credentials; saved custom port 2223 preserved; read-only initial rendering, no interactive acceptance or Guest connection."
     },
     {
       "path": "docs/images/zh-CN/first-run-setup.png",
@@ -254,36 +254,36 @@
     {
       "path": "docs/images/en/settings.png",
       "language": "en",
-      "sha256": "cbcf6d44fe3900b0776a1a0ee3b94fe46ed0f7e2f342b70585882b5e29904b0e",
+      "sha256": "421f31dea76375beabfa538ba815beb8fc82779c64d94c829924e2682e45e2e9",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-05T09:53:41Z",
+      "captured_at": "2026-11-05T17:49:09Z",
       "app_version": "0.1.0",
-      "app_build": "2026110507",
+      "app_build": "2026110601",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.phase1",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.proton0601.en",
       "guest_actions": "none",
       "source_dirty": true,
-      "source_base_commit": "34be4f9fc8a4d4984045065714330137f6e6eef4",
+      "source_base_commit": "0d2496a570e5f630dcce289f81ab24b8086ac86f",
       "review_note": "Memory-only credential policy and controls visually reviewed; no interactive save or Guest action.",
-      "capture_scope": "Settings page and credential controls; no live SSH/sudo acceptance"
+      "capture_scope": "Integrated Debug runtime/SSH defaults and memory-only credentials; saved custom port 2223 preserved; read-only initial rendering, no interactive acceptance or Guest connection."
     },
     {
       "path": "docs/images/en/settings-updates.png",
       "language": "en",
-      "sha256": "c79ce0b7d70d4d8035b303c8cece7469e058fabb9a6fe20b07431938476ac4a2",
+      "sha256": "92f6eb33b7b8397a42ee33b5c776dbde268250f9f65e76711fb32784eb5b54b5",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-05T09:53:41Z",
+      "captured_at": "2026-11-05T17:49:09Z",
       "app_version": "0.1.0",
-      "app_build": "2026110507",
+      "app_build": "2026110601",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.phase1",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.proton0601.en",
       "guest_actions": "none",
       "source_dirty": true,
-      "source_base_commit": "34be4f9fc8a4d4984045065714330137f6e6eef4",
+      "source_base_commit": "0d2496a570e5f630dcce289f81ab24b8086ac86f",
       "review_note": "Memory-only credential policy and controls visually reviewed; no interactive save or Guest action.",
-      "capture_scope": "SSH settings and credential controls; no live SSH/sudo acceptance"
+      "capture_scope": "Integrated Debug runtime/SSH defaults and memory-only credentials; saved custom port 2223 preserved; read-only initial rendering, no interactive acceptance or Guest connection."
     },
     {
       "path": "docs/images/en/first-run-setup.png",
@@ -308,5 +308,8 @@
   "local_copy_review_note": "FX Manager zh-CN/en build2026110505 recaptured: both official and local test copy shown, metadata-only; other page layouts unchanged.",
   "version_policy_review_note": "2026-11-05: setup status presentation and performance capability error changed. Removed first-run screenshots from current README display; recapture pending. Other page layouts unchanged; retained captures keep their original provenance. No live Guest capture or acceptance.",
   "component_status_review_note": "2026-11-05: setup observations separated from deployment restrictions; unknowns neutral and IPv6 advisory. Setup screenshot recapture pending and absent from current README image embeds. Other layouts unchanged; historical screenshot provenance retained.",
-  "memory_only_review_note": "2026-11-05: English and Simplified Chinese Settings screenshots recaptured from real App windows after restoring memory-only credentials. First-Run Setup was also captured and visually reviewed but remains absent from README embeds. No Guest action or credential entry occurred."
+  "memory_only_review_note": "2026-11-05: English and Simplified Chinese Settings screenshots recaptured from real App windows after restoring memory-only credentials. First-Run Setup was also captured and visually reviewed but remains absent from README embeds. No Guest action or credential entry occurred.",
+  "setup_steam_review_20261106": "FirstRunSetupView guidance and setup-only translations changed. Existing README page screenshots do not show setup. Setup captures are pending, explicitly stated in both READMEs; existing image provenance remains historical. No live Guest validation.",
+  "proton_setup_review_20261106": "Setup-only install/discovery guidance changed. Existing README screenshot pages do not show setup. New setup screenshots and live SteamOS acceptance explicitly pending in both READMEs; historical screenshot provenance unchanged.",
+  "ssh_defaults_review_20261106": "English and Simplified Chinese Settings captures refreshed from integrated Debug 2026110601; visually reviewed text, SSH effective placeholders and memory-only credentials. Existing saved port 2223 is intentionally preserved. Deployment-state setup screenshot remains pending; no Guest interaction."
 }

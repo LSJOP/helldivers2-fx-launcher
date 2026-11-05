@@ -8,6 +8,7 @@ final class FileDeploymentBackend: DeploymentBackend {
     var state: DeploymentSnapshot
     var writes = 0
     var failAfterWrite = false, disconnect = false, recoveryFails = false
+    var changeLaunchAfterPackage = false
     init(_ url: URL, state: DeploymentSnapshot) throws {
         self.url = url; self.state = state
         try CoreFS.atomicWrite(try JSONEncoder().encode(state.values), to: url)
@@ -25,6 +26,7 @@ final class FileDeploymentBackend: DeploymentBackend {
         guard live.revision == expected.revision, EnvironmentDeploymentService.identity(live, expected) else { throw CoreError("CONFIG_CHANGED") }
         if recoveryFails && writes > 0 { throw CoreError("RECOVERY_FAILED") }
         var values = live.values; values.merge(changes) { _, new in new }
+        if changeLaunchAfterPackage && changes["proton_package"] == ProtonJERelease.digest { values["launch"] = "%command% --external-edit" }
         try CoreFS.atomicWrite(try JSONEncoder().encode(values), to: url)
         writes += 1
         if failAfterWrite { failAfterWrite = false; throw CoreError("SSH_CONNECTION_TIMEOUT") }
@@ -59,11 +61,8 @@ final class FileDeploymentBackend: DeploymentBackend {
         func fixture() throws -> (FileDeploymentBackend, EnvironmentDeploymentService, DeploymentPlan) {
             let dir = root.appendingPathComponent(UUID().uuidString); try CoreFS.ensurePrivateDirectory(dir)
             let snapshot = DeploymentSnapshot(target: "fixture-target", boot: UUID().uuidString, revision: "",
-                fxVersion: "1.9.4", osVersion: "0.4.5", architecture: "aarch64", steamRunning: false, gameRunning: false,
-                freeBytes: 1_024 * 1_048_576,
-                facts: ["steam": "present", "game": "present", "ipv4": "available", "gvproxy": "available", "proton_manifest": "verified"],
-                values: ["launch": "%command%", "tool": profile.protonVersion,
-                         "component.proton": "a699b73899f8a3ae464dd5ee237dd1f1f1587287a0941fbab5934698d633cbfe"])
+                fxVersion: "1.9.8", osVersion: "0.4.5", architecture: "aarch64", steamRunning: false, gameRunning: false,
+                freeBytes: 128 * 1_048_576, facts: ["steam": "present", "game": "present", "ipv4": "available", "gvproxy": "available"], values: ["launch": "%command%", "tool": "other-tool"])
             let backend = try FileDeploymentBackend(dir.appendingPathComponent("config.json"), state: snapshot)
             let service = EnvironmentDeploymentService(backend: backend, receipts: .init(directory: dir.appendingPathComponent("receipts")))
             return (backend, service, DeploymentPlanBuilder.build(try backend.snapshot(), profile: profile))
@@ -73,14 +72,15 @@ final class FileDeploymentBackend: DeploymentBackend {
         }
         let (b, s, p) = try fixture()
         try check(p.operations.first { $0.id == "fex" }?.blocked == "ARTIFACT_UNAPPROVED", "missing FEX is blocked")
-        try check(p.operations.first { $0.id == "proton" }?.blocked == nil, "verified Proton is unchanged")
+        try check(p.operations.first { $0.id == "proton" }?.blocked == "ARTIFACT_IMPORT_REQUIRED", "missing Proton without exact-target detection is blocked")
         try check(p.executable.map(\.id) == ["launch"], "only approved available configuration is executable")
         var missingProton = p.snapshot
         missingProton.facts["proton_manifest"] = "UNKNOWN"
         missingProton.values["component.proton"] = "missing"
+        missingProton.values["proton_package"] = "missing"
         missingProton.values["tool"] = "other-tool"
         let protonPlan = DeploymentPlanBuilder.build(missingProton, profile: profile)
-        try check(protonPlan.operations.first { $0.id == "proton" }?.changes["component.proton"] == baseline.protonNTDLLSHA256.value,
+        try check(protonPlan.operations.first { $0.id == "proton" }?.changes["proton_package"] == ProtonJERelease.digest,
                   "missing Proton gets an exact pinned install operation")
         try check(Set(protonPlan.executable.map(\.id)) == ["proton", "launch", "tool"], "one confirmation covers available Proton and configuration steps")
         let remoteProton = SSHEnvironmentBackend.protonInstallScript(boot: p.snapshot.boot)
@@ -96,6 +96,78 @@ final class FileDeploymentBackend: DeploymentBackend {
         try check(remoteRollback.contains("hd2-recovered-") && remoteRollback.contains("mv \"$p\" \"$retained\"") && !remoteRollback.contains("rm "),
                   "Proton rollback retains the installed tree instead of deleting it")
         try fails("CONFIRMATION_REQUIRED", "exact operation consent required") { _ = try s.execute(p, approved: [], context: CoreContext(timeout: 10)) }
+        var runningSteam = p.snapshot
+        runningSteam.steamRunning = true
+        let runningPlan = DeploymentPlanBuilder.build(runningSteam, profile: profile)
+        try check(runningPlan.executable.isEmpty, "running Steam defers managed file writes per operation")
+        try check(runningPlan.operations.first { $0.id == "launch" }?.changes == p.operations.first { $0.id == "launch" }?.changes, "deferred launch target remains available for manual Steam properties")
+        try check(runningPlan.operations.first { $0.id == "tool" }?.blocked == "ARTIFACT_UNAPPROVED", "manual guidance never approves an unverified compatibility tool")
+        try EnvironmentDeploymentService.idle(runningSteam, requiresStoppedSteam: false)
+        try check(true, "SteamOS Steam is not a global idle prerequisite")
+        try fails("STEAM_RUNNING", "Steam-owned writes retain process guard") { try EnvironmentDeploymentService.idle(runningSteam) }
+        runningSteam.gameRunning = true
+        try fails("GAME_RUNNING", "game guard remains even without Steam stop requirement") { try EnvironmentDeploymentService.idle(runningSteam, requiresStoppedSteam: false) }
+        do {
+            let (onlineBackend, onlineService, basePlan) = try fixture()
+            onlineBackend.state.freeBytes = 8 * 1_073_741_824
+            onlineBackend.state.steamRunning = true
+            onlineBackend.state.facts["steam_api"] = "available"
+            onlineBackend.state.facts["proton_manifest"] = "verified"
+            onlineBackend.state.facts["proton_discovered"] = "true"
+            onlineBackend.state.values["proton_package"] = "missing"
+            try CoreFS.atomicWrite(try JSONEncoder().encode(onlineBackend.state.values), to: onlineBackend.url)
+            let online = DeploymentPlanBuilder.build(try onlineBackend.snapshot(), profile: profile)
+            try check(online.executable.map(\.id) == ["proton", "launch", "tool"], "missing pinned Proton and live launch settings are executable with Steam running")
+            let result = try execute(onlineService, online)
+            try check(result.state == .Completed && onlineBackend.writes == 3, "package and live launch settings share durable ordered receipts")
+            let restored = try onlineService.recover(result.id, selected: ["proton", "launch", "tool"])
+            try check(restored.state == .Ready && (try onlineBackend.snapshot()).values["proton_package"] == "missing", "package receipt recovery restores absent state")
+            var discovered = basePlan.snapshot
+            discovered.steamRunning = true; discovered.facts["steam_api"] = "available"
+            discovered.facts["proton_manifest"] = "verified"
+            let pendingTool = DeploymentPlanBuilder.build(discovered, profile: profile)
+            try check(pendingTool.operations.first { $0.id == "tool" }?.blocked == "STEAM_TOOL_DISCOVERY_REQUIRED", "installed tool cannot be selected before Steam discovery")
+            discovered.facts["proton_discovered"] = "true"
+            try check(DeploymentPlanBuilder.build(discovered, profile: profile).executable.map(\.id).contains("tool"), "verified discovered tool can be selected online")
+            discovered.values["proton_package"] = "unknown"; discovered.facts["proton_manifest"] = "UNKNOWN"
+            try check(!DeploymentPlanBuilder.build(discovered, profile: profile).executable.map(\.id).contains("proton"), "unknown existing Proton is never overwritten")
+        }
+        do {
+            let (deferredBackend, deferredService, _) = try fixture()
+            deferredBackend.state.freeBytes = 8 * 1_073_741_824
+            deferredBackend.state.steamRunning = true
+            deferredBackend.state.facts["steam_api"] = "available"
+            deferredBackend.state.facts["proton_manifest"] = "verified"
+            deferredBackend.state.facts["proton_discovered"] = "false"
+            deferredBackend.state.values["proton_package"] = "missing"
+            try CoreFS.atomicWrite(try JSONEncoder().encode(deferredBackend.state.values), to: deferredBackend.url)
+            let staged = DeploymentPlanBuilder.build(try deferredBackend.snapshot(), profile: profile)
+            let result = try execute(deferredService, staged)
+            try check(result.state == .NeedsConfiguration && result.applied == ["proton", "launch"] && deferredBackend.writes == 2,
+                      "undiscovered tool stays pending without undoing verified installation and launch settings")
+        }
+        do {
+            let (driftBackend, driftService, _) = try fixture()
+            driftBackend.state.freeBytes = 8 * 1_073_741_824; driftBackend.state.steamRunning = true
+            driftBackend.state.facts["steam_api"] = "available"
+            driftBackend.state.values["proton_package"] = "missing"
+            driftBackend.changeLaunchAfterPackage = true
+            try CoreFS.atomicWrite(try JSONEncoder().encode(driftBackend.state.values), to: driftBackend.url)
+            let staged = DeploymentPlanBuilder.build(try driftBackend.snapshot(), profile: profile)
+            let result = try execute(driftService, staged)
+            try check(result.state == .Failed && result.failure == "CONFIG_CHANGED" && (try driftBackend.snapshot()).values["launch"] == "%command% --external-edit",
+                      "Steam settings changed during package download are preserved without overwrite")
+        }
+        let stdinStart = CoreClock.monotonic
+        let blockedInput = try CoreProcess.run("/bin/sleep", ["2"], input: String(repeating: "x", count: 2 * 1_048_576), timeout: 0.1)
+        try check(blockedInput.timedOut && CoreClock.monotonic - stdinStart < 1.5, "large stdin obeys deadline when peer never reads")
+        try check(try SteamSetupClient.endpoint("ws://127.0.0.1:8080/devtools/page/fixture", port: 41234).port == 41234, "CDP websocket remains on setup-owned loopback tunnel")
+        for address in ["ws://example.com:8080/devtools/page/x", "wss://127.0.0.1:8080/devtools/page/x", "ws://127.0.0.1:9999/devtools/page/x", "ws://user@127.0.0.1:8080/devtools/page/x"] {
+            try fails("STEAM_API_UNAVAILABLE", "untrusted CDP endpoint rejected") { _ = try SteamSetupClient.endpoint(address, port: 41234) }
+        }
+        for (name, expression) in [("read", SteamSetupClient.launchExpression()), ("write", SteamSetupClient.launchExpression(previous: "%command%", desired: "FEX_DISKCACHE=0 %command%")), ("drift", SteamSetupClient.launchExpression(previous: "stale", desired: "FEX_DISKCACHE=0 %command%")), ("tool", SteamSetupClient.toolExpression(desired: ProtonJERelease.version))] {
+            try expression.write(to: root.appendingPathComponent(name + ".js"), atomically: true, encoding: .utf8)
+        }
         let receipt = try execute(s, p)
         try check(receipt.state == .Completed && b.writes == 1, "real config written and verified")
         try check(try s.receipts.read(receipt.id).applied == ["launch"], "durable receipt readback")
@@ -159,16 +231,10 @@ final class FileDeploymentBackend: DeploymentBackend {
         for (fx, os) in [("1.9.9", "0.4.5"), ("2.0", "0.5.0"), ("future-build", "rolling")] {
             mismatch.fxVersion = fx; mismatch.osVersion = os
             let updated = DeploymentPlanBuilder.build(mismatch, profile: profile)
-            try check(updated.executable.isEmpty, "unverified version cannot inherit an old automatic deployment baseline: " + fx + "/" + os)
-            try check(updated.operations.filter(\.detectionPassed).allSatisfy { $0.blocked == nil && !$0.warning }, "version updates preserve passed observations: " + fx + "/" + os)
+            try check(updated.operations == p.operations, "version updates preserve capability and artifact decisions: " + fx + "/" + os)
         }
         mismatch = p.snapshot; mismatch.architecture = "x86_64"
-        try check(DeploymentPlanBuilder.build(mismatch, profile: profile).operations.filter { !$0.detectionPassed }.allSatisfy { $0.blocked == "BASELINE_UNAVAILABLE" }, "architecture mismatch blocks configuration without overriding passed detection")
-        var future = p.snapshot
-        future.fxVersion = "1.9.9"
-        let futurePlan = DeploymentPlanBuilder.build(future, profile: profile)
-        try check(futurePlan.executable.isEmpty, "unverified future FX version remains read-only")
-        try check(futurePlan.operations.filter(\.detectionPassed).allSatisfy { $0.blocked == nil && !$0.warning }, "future version never recolors passed detections")
+        try check(DeploymentPlanBuilder.build(mismatch, profile: profile).operations.filter { !$0.detectionPassed }.allSatisfy { $0.blocked == "UNSUPPORTED" }, "architecture mismatch blocks configuration without overriding passed detection")
         let architecturePlan = DeploymentPlanBuilder.build(mismatch, profile: profile)
         for id in ["steam", "game", "ipv4", "gvproxy"] {
             try check(architecturePlan.operations.first { $0.id == id }?.detectionPassed == true && architecturePlan.operations.first { $0.id == id }?.blocked == nil, "passed detection survives unrelated deployment block: " + id)
@@ -179,12 +245,10 @@ final class FileDeploymentBackend: DeploymentBackend {
         observed.facts["fex"] = "present"; observed.facts["proton"] = "present"
         observed.facts["ipv6"] = "UNKNOWN"
         let observedPlan = DeploymentPlanBuilder.build(observed, profile: profile)
-        for id in ["fex"] {
+        for id in ["fex", "proton"] {
             let op = observedPlan.operations.first { $0.id == id }!
-            try check(op.observation == .found && !op.warning && op.blocked == "ARTIFACT_UNAPPROVED", "installed component is neutral while deployment stays protected: " + id)
+            try check(op.observation == .found && !op.warning && op.blocked == (id == "proton" ? "ARTIFACT_IMPORT_REQUIRED" : "ARTIFACT_UNAPPROVED"), "installed component is neutral while deployment stays protected: " + id)
         }
-        let observedProton = observedPlan.operations.first { $0.id == "proton" }!
-        try check(observedProton.observation == .found && !observedProton.warning && observedProton.blocked == nil, "verified Proton remains neutral and accepted")
         let ipv6 = observedPlan.operations.first { $0.id == "ipv6" }!
         try check(ipv6.warning && ipv6.advisory && ipv6.blocked == nil, "unknown IPv6 warns without blocking")
         try check(observedPlan.executable.map(\.id) == p.executable.map(\.id), "IPv6 does not change executable operations")
@@ -205,6 +269,31 @@ final class FileDeploymentBackend: DeploymentBackend {
         let discoveryScript = "set -eu\nS=" + SSHEnvironmentBackend.quote(steam.path) + "\n# Bounded file discovery only:" + discovery
         let discovered = try CoreProcess.run("/bin/sh", ["-s"], input: discoveryScript.replacingOccurrences(of: "$HOME", with: discoveryHome.path), timeout: 5)
         try check(discovered.status == 0 && discovered.stdout.contains("proton=present"), "discover newer Proton-JE directory without executing it")
+        let nodeCandidates = ["/opt/homebrew/bin/node", "/usr/local/bin/node", NSHomeDirectory() + "/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node"]
+        if let node = nodeCandidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) {
+            let fixtureJS = #"""
+            const fs=require('fs');
+            (async()=>{
+              let observed='%command%', callback=null, writes=0;
+              global.appDetailsStore={RegisterForAppData(_id, cb){callback=cb;cb({strLaunchOptions:observed});return {unregister(){callback=null;}};}};
+              global.SteamClient={Apps:{SetAppLaunchOptions(id,v){if(id!==553850)throw Error('appid');writes++;observed=v;callback({strLaunchOptions:v});},GetAvailableCompatTools:async()=>[{strToolName:'proton-je-11.0-20261014-3'}],SpecifyCompatTool:async(id,v)=>{if(id!==553850)throw Error('appid');writes++;}},GameSessions:{GetRunningApps:async()=>[]}};
+              const read=JSON.parse(await eval(fs.readFileSync(process.argv[1]+'/read.js','utf8')));
+              if(read.launch!=='%command%')throw Error('read');
+              try {await eval(fs.readFileSync(process.argv[1]+'/drift.js','utf8'));throw Error('drift accepted');}catch(e){if(e.message!=='changed')throw e;}
+              const saved=JSON.parse(await eval(fs.readFileSync(process.argv[1]+'/write.js','utf8')));
+              if(!saved.saved||writes!==1||callback!==null)throw Error('write');
+              await eval(fs.readFileSync(process.argv[1]+'/tool.js','utf8'));
+              SteamClient.GameSessions.GetRunningApps=async()=>[553850];
+              try {await eval(fs.readFileSync(process.argv[1]+'/write.js','utf8'));throw Error('game accepted');}catch(e){if(e.message!=='game_running')throw e;}
+              SteamClient.GameSessions.GetRunningApps=async()=>[];
+              SteamClient.Apps.GetAvailableCompatTools=async()=>[];
+              try {await eval(fs.readFileSync(process.argv[1]+'/tool.js','utf8'));throw Error('tool accepted');}catch(e){if(e.message!=='not_ready')throw e;}
+              if(writes!==2)throw Error('unexpected writes');
+            })().catch(e=>{console.error(e);process.exitCode=1;});
+            """#
+            let jsResult = try CoreProcess.run(node, ["-e", fixtureJS, root.path], timeout: 10)
+            try check(jsResult.status == 0, "production Steam expressions read, CAS-write, confirm, unsubscribe and guard game/tool discovery")
+        } else { throw CoreError("PROCESS_UNAVAILABLE", ["binary": .string("fixture-node")]) }
         let original = "CUSTOM=foo %command% --user-flag"
         let merged = try LaunchOptionsAdapter.merge(original, managed: profile.launchOptions)
         try check(merged.contains("CUSTOM=foo") && merged.hasSuffix("--user-flag"), "custom arguments preserved")

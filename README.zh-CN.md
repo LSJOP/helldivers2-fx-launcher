@@ -20,21 +20,27 @@
 
 ### 首次运行环境配置（独立开发版）
 
+设置页截图已使用真实整合 Debug 构建 `2026110601` 更新，保留已保存的自定义 SSH 配置。
+
+SSH 默认连接为 `127.0.0.1:2222`，用户名 `steamos`，无需手动填写即可使用。设置中的空白项保留当前有效配置（包括已保存的自定义值），仅保存已填写且有变化的项。
+
+精确目标 `proton-je-11.0-20261014-3` 缺失时，“配置运行环境”从固定上游下载归档（332 MiB），校验 SHA-256、全部 5,609 个文件和 1,896 个符号链接，再安装，无需关闭 Steam。SteamOS 内需有 curl／Python 3，至少需 4 GiB 可用空间；未知已有目录保持不动。启动选项通过 Steam 在线接口读取，保留自定义参数后合并、写入并读回确认。兼容工具只在完整包校验通过且 Steam 已识别后通过 Steam 接口选择；若尚未识别，请在方便时重启 SteamOS 并重新检测。检测仍只读，安装在配置确认后执行。包恢复将校验通过的安装目录保留到唯一的恢复名称下。Mac App 本身无需 Python 运行时。真实上游归档已通过生产安装器在本地隔离 HOME 下的安装、完整校验与恢复。真实 SteamOS 验收与新配置截图待补。
+
 组件检测与部署权限分别显示：已发现的 FEX／Proton 在完整性确认前保持待验证，未知检测为中性状态；IPv6 为可选橙色提示，不阻塞其他配置。Proton-JE 只在限定工具目录内发现文件，不执行或自动选择未验证的工具。首次配置新截图待补。
 
 FX 与 SteamOS 版本号仅用于诊断记录和历史证据，不作为版本白名单。首次配置保留架构、Guest 身份、组件／资源及安全写入检查；性能编辑保留包完整性、可用驱动、参数格式与硬件边界检查。新版本仍需通过实际能力检查，不代表游戏兼容性已验证。首次配置截图早于本次策略变更，新截图待补。
 
-打开**首次运行环境配置**，选择 FX，分别输入仅供本进程使用的 SSH／sudo 密码，然后连接并检测。审阅目标身份、配置档和具体修改后点击**配置运行环境**。离线写入配置前请自行退出 Steam 和游戏；再次检测会跳过已正确配置的应用管理项。恢复功能仅使用本应用收据，核对当前值，遇到目标变化或外部修改就停止。
+打开**首次运行环境配置**，选择 FX，分别输入仅供本进程使用的 SSH／sudo 密码，然后连接并检测。审阅目标身份、配置档和具体修改后点击**配置运行环境**。保持 SteamOS 与 Steam 运行，修改前仅需退出游戏。Steam 运行时通过在线接口配置其管理的设置；接口无法核实时阻止自动写入，可通过 Steam 属性手动设置后再检测。只选择已安装且已验证的工具，缺少审核资源仍受阻；无可自动执行项时显示原因。新截图及真实 SteamOS 验证待补。再次检测会跳过已正确配置的应用管理项。恢复功能仅使用本应用收据，核对当前值，遇到目标变化或外部修改就停止。
 
-候选矩阵为 FX **1.9.8**／SteamOS **0.4.5**／**aarch64**／AppID **553850**。这是历史目标，不代表所有同版本安装都含有相同组件。FEX／Proton-JE 的公开部署在取得审核发行包、完整清单、哈希、构建来源及许可证前为 **BLOCKED**。不分发私人 VM 文件。初始配置档不强制代理、gvproxy 替换、IPv4-only、CPU 亲和性或历史 CPU／内存／GPU 预算。硬件／FX 建议沿用现有受保护的性能页面。
+候选矩阵为 FX **1.9.8**／SteamOS **0.4.5**／**aarch64**／AppID **553850**。这是历史目标，不代表所有同版本安装都含有相同组件。FEX 再分发及其他 Proton-JE 版本仍需审核发行包及完整清单，保持 **BLOCKED**；固定的 Proton-JE 目标直接从上游下载并保留许可证。不分发私人 VM 文件。初始配置档不强制代理、gvproxy 替换、IPv4-only、CPU 亲和性或历史 CPU／内存／GPU 预算。硬件／FX 建议沿用现有受保护的性能页面。
 
-组件来源、恢复规则、常见错误与测试边界见[实现报告](NATIVE_FIRST_RUN_DEPLOYMENT_IMPLEMENTATION.md)、[配置档矩阵](NATIVE_ENVIRONMENT_PROFILE_MATRIX.md)、[安全审查](NATIVE_DEPLOYMENT_SECURITY_REVIEW.md)、[测试结果](NATIVE_DEPLOYMENT_TEST_RESULTS.md)和[验收报告](NATIVE_FIRST_RUN_ACCEPTANCE.md)。缺失或不支持的版本需要新的审核配置档；`ARTIFACT_UNAPPROVED` 表示未尝试安装，`STEAM_RUNNING` 需要退出 Steam 后重新检测，`RECOVERY_REQUIRED` 会阻止后续部署，直到解决收据所记录的修改。配置写入成功不等于游戏、EAC 或多人验证通过。全新 VM 验收为 **NOT_TESTED**，Latest 未修改。
+组件来源、恢复规则、常见错误与测试边界见[实现报告](NATIVE_FIRST_RUN_DEPLOYMENT_IMPLEMENTATION.md)、[配置档矩阵](NATIVE_ENVIRONMENT_PROFILE_MATRIX.md)、[安全审查](NATIVE_DEPLOYMENT_SECURITY_REVIEW.md)、[测试结果](NATIVE_DEPLOYMENT_TEST_RESULTS.md)和[验收报告](NATIVE_FIRST_RUN_ACCEPTANCE.md)。缺失或不支持的版本需要新的审核配置档；`ARTIFACT_UNAPPROVED` 表示未尝试安装，`STEAM_RUNNING` 保护离线 Steam 文件写入；SteamOS 会话中应通过 Steam 属性设置后重新检测，`RECOVERY_REQUIRED` 会阻止后续部署，直到解决收据所记录的修改。配置写入成功不等于游戏、EAC 或多人验证通过。全新 VM 验收为 **NOT_TESTED**，Latest 未修改。
 
 
 
 <a id="zh-overview"></a>
 
-以 **SwiftUI + AppKit** 构建、**Swift 原生核心**驱动：启动游戏、检查所选 FX 环境、管理性能配置。七个页面职责清晰，默认深色，操作进度和结果在页面内显示，技术细节按需展开。正式运行不使用 Python 解释器、Python Bridge 或外部脚本目录。
+以 **SwiftUI + AppKit** 构建、**Swift 原生核心**驱动：启动游戏、检查所选 FX 环境、管理性能配置。七个页面职责清晰，默认深色，操作进度和结果在页面内显示，技术细节按需展开。Mac App 无需 Python 解释器、Python Bridge 或外部脚本目录；可选的 Proton 安装在 SteamOS 内使用 Python 3。
 
 > [!IMPORTANT]
 > **开发预览。** 正式安装包尚未发布。已完成的 Native 成果已整合到 [main](https://github.com/LSJOP/helldivers2-fx-launcher/tree/main)；[feature/macos-native-app](https://github.com/LSJOP/helldivers2-fx-launcher/tree/feature/macos-native-app) 保留开发历史。仓库不包含运行时二进制、游戏文件或 Guest 镜像。
@@ -170,7 +176,7 @@ open build/Debug/HD2FXNative.app
 
 本项目非官方，不宣称获得官方认可，不保证兼容性。HELLDIVERS 2 及相关标识归各权利人所有。项目统一源码许可证**尚未选定**，不应推定均可自由再分发。见[权利与来源说明](THIRD_PARTY_NOTICES.md)，其中保留 Sparkle 的独立许可证和用户提供素材的来源。
 
-开发检查：`native-app/script/run_checks.sh` 编译并运行原生核心契约检查、十语言门槛与文档检查。Python 仅用于可选开发脚本；App Bundle 与正式运行流程不含 Python。界面变更必须审查中英文 README 及真实截图。中英文截图均针对整合后的界面更新；译文自然度仍需人工审校。发布检查 Actions 模板保持未启用，尚未配置 CI 工作流。
+开发检查：`native-app/script/run_checks.sh` 编译并运行原生核心契约检查、十语言门槛与文档检查。Python 用于开发脚本及 SteamOS 内的可选安装器；Mac App Bundle 无需 Python 运行时。界面变更必须审查中英文 README 及真实截图。历史截图保留各自构建记录，本次设置页截图已更新，配置部署状态新截图待补；译文自然度仍需人工审校。发布检查 Actions 模板保持未启用，尚未配置 CI 工作流。
 
 FX 选择 V2 + 自动选择 V2.1：FX 管理、总览和启动窗口共享并持久化同一个默认 FX。扫描结果中只有一个通过身份和路径验证的 FX 时自动选择；多个 FX 时保留有效默认，否则请用户选择。默认 FX 删除、移动或更新后重新验证。选择后仍显示**启动能力待验证**，不会自动启动游戏。每次启动先重扫默认 FX，并为检查、预检和执行固定同一份所选路径。完整性校验接受通过 Apple 信任锚、Bundle ID 与 Team ID 校验的 FX 发布者完整签名，或可识别且内容签名完整的本地副本；再次核对可执行文件摘要，并保留全部原有配置、进程和 Guest 检查。这不代表游戏兼容性已经验证。启动资源已内置于原生 App，无需原始脚本目录或 Node 辅助程序。停止／重启仍不可用。限定参数性能编辑支持已验证且停止运行的 FX 1.9.4／1.9.8，并需明确预览与确认；FX 写入不再按版本号拦截，仍需通过实际能力与安全检查。
 
@@ -178,7 +184,7 @@ FX 选择 V2 + 自动选择 V2.1：FX 管理、总览和启动窗口共享并持
 
 sudo 排查（2026-11-04）：构建 2026110402 存在远程空提示符参数引用缺陷。相关修复及 sudo/SSH 错误分类正在验证，尚未发布替代构建。真实只读检查已通过完整 Guest 身份确认；带密码 sudo 及后续启动阶段仍未验证。
 
-**当前凭据实现：** 本候选版保留 Guest 身份绑定、仅内存的独立 SSH／sudo 凭据、逐次认证和脱敏；首次配置也使用同一服务。真实特权修改、全新 VM、游戏及联机仍为 NOT_TESTED。本候选不修改 main 或 Latest。
+**当前凭据实现：** 本候选版保留 Guest 身份绑定、仅内存的独立 SSH／sudo 凭据、逐次认证和脱敏；首次配置也使用同一服务。真实特权修改、全新 VM、游戏及联机仍为 NOT_TESTED。本次整合合并至 main，新的本地 App 从干净的整合快照构建。
 
 
 **SteamOS 网络候选（未发布）：** 运行环境 → SteamOS 网络设置提供主动开启/关闭 IPv6、精确确认、备份与验证恢复。首次配置仅将 IPv6 作为诊断提示，它不阻塞部署，游戏启动也不会修改它。VM、Steam TLS、PlayFab、UDP 为手动只读探测，不申请 sudo，检测通过不代表多人联机已验证。凭据仅保留在本次进程内存中，授权绑定当前连接。真实 Guest 写入及游戏启动仍为 NOT TESTED。[网络使用说明](docs/STEAMOS_NETWORK_SETTINGS.md) · [Python → Swift 功能矩阵](docs/PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md)。

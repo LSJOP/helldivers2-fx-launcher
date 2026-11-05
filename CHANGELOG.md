@@ -4,11 +4,17 @@
 
 All notable changes to the HELLDIVERS 2 FX Launcher Native App are recorded here, newest first. Unreleased entries have no release date. This file is the single source of truth for user-facing release notes; the README summary, GitHub Release notes and the future Sparkle appcast reuse this reviewed text. Do not paste raw, unreviewed Git commit messages into it.
 
-No official release has been published yet. The current Native App version `0.1.0` (build `2026110411`) is a development preview, not a downloadable package.
+No official release has been published yet. The current Native App version `0.1.0` (build `2026110601`) is a development preview, not a downloadable package.
 
 ## Unreleased
 
 - Restore process-memory-only SSH/sudo credentials for the verified-environment candidate. Remove the encrypted credential files and restart restoration added by the superseded candidate; target/session changes clear both roles.
+
+- Use 127.0.0.1:2222 and user steamos without manual entry; blank SSH fields preserve current values and only populated changed fields are saved.
+
+- Install the exact missing Proton-JE target from a pinned upstream archive with full inventory verification while Steam remains running; configure HELLDIVERS 2 launch options through Steam’s live API and select the verified compatibility tool after Steam discovers it. Detection stays read-only; configuration confirmation, game guards and receipt recovery remain required. Live SteamOS acceptance is pending.
+
+- Replace the global first-run Steam shutdown requirement with per-operation deferral of Steam-managed file writes, manual SteamOS Properties guidance, and an explicit no-automatic-changes explanation. Game, artifact and offline write guards remain. Live SteamOS validation and refreshed screenshots are pending.
 
 - Separate detected components from deployment permissions; show unknown evidence neutrally, keep IPv6 advisory and non-blocking, and discover Proton-JE across bounded tool directories without executing candidates.
 
