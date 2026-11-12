@@ -8,6 +8,8 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+- Ensure bundled network launch resources are executable and reject non-executable resources before starting FX.
+
 - Fix the actual Steam API mismatch without clearing independent launch-option reads; show technical failures and distinguish a verified Proton package from an unverified or conflicting installation.
 - Verify the upstream SHA-512 checksum in addition to SHA-256 and the full inventory. After configuration confirmation, gracefully reboot the FX VM once, reconnect and authenticate SSH, verify the expected machine/boot transition, then apply Steam settings. Live reboot/write acceptance remains pending.
 

@@ -27,6 +27,9 @@ done
 [ "$missing_langs" -eq 0 ] && ok "TEN LANGUAGE LPROJ" || { bad "TEN LANGUAGE LPROJ"; }
 
 has "$APP/Contents/Resources/launch/gvproxy-eim" "LAUNCH RESOURCE gvproxy"
+for resource in gvproxy-eim gvproxy-eim-wrapper; do
+  [ -x "$APP/Contents/Resources/launch/$resource" ] && ok "$resource executable" || bad "$resource executable"
+done
 if [ -f "$APP/Contents/Resources/launch/gvproxy-eim" ]; then
   actual=$(/usr/bin/shasum -a 256 "$APP/Contents/Resources/launch/gvproxy-eim" | awk '{print $1}')
   [ "$actual" = "$GVPROXY_SHA256" ] && ok "gvproxy SHA-256" || { bad "gvproxy SHA-256"; echo "  actual: $actual"; }

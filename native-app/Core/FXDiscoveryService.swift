@@ -30,6 +30,7 @@ enum LaunchResources {
         guard let binary = gvproxyBinary else { return State(state: "missing", actual: nil, expected: gvproxySHA256, path: nil) }
         let (digest, fileState) = CoreHash.digestFile(binary.deletingLastPathComponent(), relative: "gvproxy-eim", limit: 64 * 1024 * 1024)
         guard let digest else { return State(state: fileState, actual: nil, expected: gvproxySHA256, path: binary.path) }
+        guard digest != gvproxySHA256 || FileManager.default.isExecutableFile(atPath: binary.path) else { return State(state: "not_executable", actual: digest, expected: gvproxySHA256, path: binary.path) }
         return State(state: digest == gvproxySHA256 ? "ready" : "hash_mismatch", actual: digest, expected: gvproxySHA256, path: binary.path)
     }
 
@@ -37,6 +38,7 @@ enum LaunchResources {
         guard let wrapper else { return State(state: "missing", actual: nil, expected: wrapperSHA256, path: nil) }
         let (digest, fileState) = CoreHash.digestFile(wrapper.deletingLastPathComponent(), relative: "gvproxy-eim-wrapper", limit: 64 * 1024)
         guard let digest else { return State(state: fileState, actual: nil, expected: wrapperSHA256, path: wrapper.path) }
+        guard digest != wrapperSHA256 || FileManager.default.isExecutableFile(atPath: wrapper.path) else { return State(state: "not_executable", actual: digest, expected: wrapperSHA256, path: wrapper.path) }
         return State(state: digest == wrapperSHA256 ? "ready" : "hash_mismatch", actual: digest, expected: wrapperSHA256, path: wrapper.path)
     }
 

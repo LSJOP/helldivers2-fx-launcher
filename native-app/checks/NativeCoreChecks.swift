@@ -40,6 +40,17 @@ func runChecks() {
     check(resourceState.state == "ready", "bundled gvproxy hash")
     check(LaunchResources.wrapperState().state == "ready", "bundled wrapper hash")
     check(LaunchResources.report()["archive_files_match"]?.boolean == true, "resource report matches")
+    let nonExecutable = root.appendingPathComponent("non-executable", isDirectory: true)
+    try! FileManager.default.createDirectory(at: nonExecutable, withIntermediateDirectories: true)
+    for name in ["gvproxy-eim", "gvproxy-eim-wrapper"] {
+        let destination = nonExecutable.appendingPathComponent(name)
+        try! FileManager.default.copyItem(at: resources.appendingPathComponent(name), to: destination)
+        try! FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destination.path)
+    }
+    setenv("HD2FX_LAUNCH_RESOURCES", nonExecutable.path, 1)
+    check(LaunchResources.gvproxyState().state == "not_executable", "non-executable gvproxy detected")
+    check(LaunchResources.wrapperState().state == "not_executable", "non-executable wrapper detected")
+    checkThrows("GVPROXY_UNAVAILABLE", "launch refuses non-executable resource") { _ = try LaunchResources.verifiedForLaunch() }
     let tamper = root.appendingPathComponent("launch", isDirectory: true)
     try! FileManager.default.createDirectory(at: tamper, withIntermediateDirectories: true)
     try! Data("tampered".utf8).write(to: tamper.appendingPathComponent("gvproxy-eim"))
