@@ -180,9 +180,13 @@ final class SSHEnvironmentBackend: DeploymentBackend {
         }
         let revisionFields = fields.filter { !$0.key.hasSuffix("_count") && !["free"].contains($0.key) }
         let revision = CoreHash.sha256(Data((CoreJSON.encode(.object(revisionFields.mapValues { .string($0) })) + configurationRevision).utf8))
-        return .init(target: try Self.deploymentBinding(identity, fxPath: fx.path), boot: boot, revision: revision, fxVersion: fxVersion,
+        var snapshot = DeploymentSnapshot(target: try Self.deploymentBinding(identity, fxPath: fx.path), boot: boot, revision: revision, fxVersion: fxVersion,
                      osVersion: fields["os_version"] ?? "UNKNOWN", architecture: fields["arch"] ?? "UNKNOWN",
                      steamRunning: sp > 0, gameRunning: gp > 0 || (fields["reaper_count"].flatMap(Int.init) ?? 1) > 0, freeBytes: free, facts: facts, values: values)
+        if !restartCompleted, SetupVMReboot.hasCompletedReceipt(for: snapshot) {
+            snapshot.facts["restart_completed"] = "true"
+        }
+        return snapshot
     }
     static func steamError(_ error: Error) -> String {
         if let error = error as? CoreError { return error.code }
@@ -739,6 +743,26 @@ enum SteamSetupClient {
 /// One explicitly approved graceful reboot, never a forced FX stop or reboot retry.
 /// Durable phase records contain identity and receipt IDs only, never credentials.
 enum SetupVMReboot {
+    static func hasCompletedReceipt(for snapshot: DeploymentSnapshot) -> Bool {
+        guard UUID(uuidString: snapshot.boot) != nil,
+              let machine = snapshot.facts["machine_id"], machine.range(of: "^[a-f0-9]{32}$", options: .regularExpression) != nil,
+              let executable = snapshot.facts["fx_executable_sha256"], ApprovedArtifact.hash(executable),
+              let connection = snapshot.facts["ssh_connection"], ApprovedArtifact.hash(connection) else { return false }
+        let directory = CoreFS.nativeData().appendingPathComponent("environment-reboots", isDirectory: true)
+        guard let receipts = try? NativeCoreService.deploymentReceipts.list(), receipts.count <= 1024 else { return false }
+        return receipts.contains { receipt in
+            let previous = receipt.plan.snapshot
+            guard previous.target == snapshot.target, previous.boot == snapshot.boot,
+                  previous.facts["machine_id"] == snapshot.facts["machine_id"],
+                  previous.facts["fx_executable_sha256"] == snapshot.facts["fx_executable_sha256"],
+                  previous.facts["ssh_connection"] == snapshot.facts["ssh_connection"] else { return false }
+            let file = directory.appendingPathComponent(receipt.id.uuidString + ".json")
+            guard !FileManager.default.isSymbolicLink(atPath: file.path),
+                  let data = try? Data(contentsOf: file), data.count < 16_384,
+                  let record = try? JSONDecoder().decode([String: JSONValue].self, from: data) else { return false }
+            return record["state"]?.text == "completed" && record["new_boot"]?.text == snapshot.boot && record["machine_id"]?.text == snapshot.facts["machine_id"]
+        }
+    }
     static func validateTransition(old: DeploymentSnapshot, new: DeploymentSnapshot) throws {
         guard old.fxVersion == new.fxVersion, old.osVersion == new.osVersion,
               let digest = old.facts["fx_executable_sha256"], ApprovedArtifact.hash(digest), new.facts["fx_executable_sha256"] == digest,

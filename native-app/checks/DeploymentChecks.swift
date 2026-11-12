@@ -457,6 +457,23 @@ final class FileDeploymentBackend: DeploymentBackend {
         try CoreFS.atomicWrite(Data("damaged".utf8), to: tar)
         try fails("ARTIFACT_HASH", "corrupt package rejected") { _ = try ApprovedPayload(archive: tar, approved: artifact) }
         try check(!ApprovedArtifact.safe("../escape") && !ApprovedArtifact.safe("/root/file"), "archive traversal rejected")
+        setenv("HD2FX_NATIVE_TEST_ROOT", root.appendingPathComponent("reboot-proof").path, 1)
+        defer { unsetenv("HD2FX_NATIVE_TEST_ROOT") }
+        var rebound = p.snapshot
+        rebound.facts["machine_id"] = String(repeating: "a", count: 32)
+        rebound.facts["fx_executable_sha256"] = String(repeating: "b", count: 64)
+        rebound.facts["ssh_connection"] = String(repeating: "c", count: 64)
+        let proofPlan = DeploymentPlan(id: UUID(), profileID: p.profileID, profileVersion: p.profileVersion, snapshot: rebound, operations: [])
+        let proof = DeploymentReceipt(id: proofPlan.id, plan: proofPlan, state: .NeedsConfiguration, applied: ["proton"], pending: nil, failure: nil)
+        try NativeCoreService.deploymentReceipts.save(proof)
+        let rebootFile = CoreFS.nativeData().appendingPathComponent("environment-reboots/" + proof.id.uuidString + ".json")
+        try CoreFS.ensurePrivateDirectory(rebootFile.deletingLastPathComponent())
+        try CoreFS.atomicWrite(try JSONEncoder().encode(["state": "completed", "new_boot": rebound.boot, "machine_id": rebound.facts["machine_id"]!]), to: rebootFile)
+        try check(SetupVMReboot.hasCompletedReceipt(for: rebound), "verified reboot persists across backend requests")
+        rebound.boot = UUID().uuidString
+        try check(!SetupVMReboot.hasCompletedReceipt(for: rebound), "a later boot cannot inherit completed reboot proof")
+        rebound = proofPlan.snapshot; rebound.facts["ssh_connection"] = String(repeating: "d", count: 64)
+        try check(!SetupVMReboot.hasCompletedReceipt(for: rebound), "another SSH connection cannot inherit reboot proof")
         print("\(count) deployment checks passed; SSH/VM/game NOT_TESTED")
     }
 }

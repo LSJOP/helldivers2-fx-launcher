@@ -8,6 +8,8 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+- Restore identity-verified reboot completion across setup requests to prevent continuation plan mismatches; live regression remains pending.
+
 - Ensure bundled network launch resources are executable and reject non-executable resources before starting FX.
 
 - Fix the actual Steam API mismatch without clearing independent launch-option reads; show technical failures and distinguish a verified Proton package from an unverified or conflicting installation.
