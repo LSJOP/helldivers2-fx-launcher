@@ -15,7 +15,8 @@ struct SidebarView: View {
                     Text(state.t("ui.286")).font(TacticalTypography.log).tracking(1.4).foregroundStyle(c.muted)
                 }
                 Text("HELLDIVERS 2").font(.system(size: 23, weight: .black).width(.condensed)).foregroundStyle(c.text)
-                Text("FX LAUNCHER").font(TacticalTypography.module).tracking(2).foregroundStyle(c.accent)
+                Text(state.t("ui.brand.name")).font(TacticalTypography.module).foregroundStyle(c.accent)
+                    .lineLimit(2).minimumScaleFactor(0.75)
                 Text(state.t("ui.291")).font(TacticalTypography.caption).foregroundStyle(c.muted)
             }.padding(16)
             TacticalDivider()

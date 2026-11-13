@@ -100,4 +100,6 @@ assert build not in old, 'Do not overwrite an existing build'
 assert all(x and x.isdigit() and int(build)>int(x) for x in old), 'Build number must increase across feed history'
 PY
 echo "Prepared signed/notarized Launcher archive and appcast in: $ARCHIVES"
+echo "Suggested draft Release title: HD2 FX Launcher v${RELEASE_VERSION}"
+echo 'Prepare reviewed English and Simplified Chinese release notes; keep the native-v tag and signed asset names unchanged.'
 echo 'Nothing published. Review release notes, version/build order, signature and feed before manual publication.'

@@ -49,7 +49,8 @@ struct DashboardView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("HELLDIVERS 2").font(TacticalTypography.brand).foregroundStyle(c.accent).lineLimit(1).minimumScaleFactor(0.75)
                         .accessibilityIdentifier("page.title").accessibilityAddTraits(.isHeader)
-                    Text("FX LAUNCHER").font(.system(size: 19, weight: .bold, design: .monospaced)).tracking(4).foregroundStyle(c.text)
+                    Text(state.t("ui.brand.name")).font(.system(size: 19, weight: .bold)).foregroundStyle(c.text)
+                        .lineLimit(2).minimumScaleFactor(0.75)
                 }.frame(maxWidth: 380, alignment: .leading)
                 HStack(spacing: 10) {
                     TacticalStatusBadge(text: state.t("ui.089"))

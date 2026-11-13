@@ -67,7 +67,7 @@ Publication order after explicit owner approval:
 
 1. Validate the signing keys, Developer ID/notarization, HTTPS Pages service and existing feed history.
 2. Prepare and review the final signed/notarized ZIP, signed JSON manifest and signed Appcast. Preserve artifact bytes and never overwrite an existing build.
-3. Create a `native-v<version>` **draft Release**, attach ZIP + manifest + detached signature and notes, mark preview as prerelease. Obtain explicit publication approval. This task creates no Release/tag.
+3. Create a `native-v<version>` **draft Release** titled `HD2 FX Launcher v<version>`, attach ZIP + manifest + detached signature and reviewed English and Simplified Chinese notes, and mark preview as prerelease. The display title does not change the tag, signed archive name, App bundle filename or identity. Obtain explicit publication approval. This task creates no Release/tag and does not alter historical releases.
 4. Publish approved assets, verify public URLs/size/signatures, then publish the signed Appcast to its channel. Never reference drafts/missing assets in the stable feed. Repository Pages/settings remain unchanged here.
 5. In an isolated App/data environment, verify check/consent/download/signature rejection/installation/restart/current Bundle version and retained settings/logs; test failure recovery before calling auto-update production-ready.
 
