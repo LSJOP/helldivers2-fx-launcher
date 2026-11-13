@@ -8,6 +8,8 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+- Allow a bounded ten-minute game-process wait for Steam first-launch preparation, and recheck FEX before dispatch without rehashing all Proton files. Real environment setup passed in the Release GUI; the installed FEX/Proton protected game chain still exits before the game executable appears.
+
 - FEX compatibility uses ARM64 ELF, execution-permission and Steam integration checks, followed by a 12-second x86-64 execution probe. A full installed-tree fingerprint binds per-environment consent and is recomputed before game dispatch. Unverified builds require confirmation before execution and can enter compatibility mode after the probe passes. Provenance remains independently unverified. File changes invalidate consent. Candidate deployment retains pinned-source provenance, complete inventory, backups and recovery, with no historical executable-hash gate. Home and First-Run Setup share this service. Real compatibility, main-menu, anti-cheat and multiplayer acceptance remain pending. The bilingual Home/setup captures show the current read-only UI.
 
 - Add a shared Home/setup preparation state machine, completed-step progress, folded maintenance controls and guarded continuation into game launch. Scope deployment revisions to managed values, reconcile exact externally restored receipts and separate approved installed FEX readiness from candidate review. Live acceptance remains incomplete.

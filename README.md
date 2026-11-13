@@ -221,3 +221,5 @@ Historical result before the dynamic FEX change. This candidate fixes deployment
 ### Dynamic FEX compatibility (development)
 
 FEX compatibility uses ARM64 ELF, execution-permission and Steam integration checks, followed by a 12-second x86-64 execution probe. A full installed-tree fingerprint binds per-environment consent and is recomputed before game dispatch. Unverified builds require confirmation before execution and can enter compatibility mode after the probe passes. Provenance remains independently unverified. File changes invalidate consent. Candidate deployment retains pinned-source provenance, complete inventory, backups and recovery, with no historical executable-hash gate. Home and First-Run Setup share this service. Real compatibility, main-menu, anti-cheat and multiplayer acceptance remain pending. The bilingual Home/setup captures show the current read-only UI.
+
+Acceptance details and remaining gameplay blockers are recorded in [the 2026-11-14 report](docs/testing/FEX_DYNAMIC_ACCEPTANCE_20261114.md).
