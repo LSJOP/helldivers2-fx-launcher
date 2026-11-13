@@ -140,12 +140,13 @@ struct LegacyOperationSheet: View {
     private var needsConsent: Bool {
         state.rows("get_legacy_catalog", "operations").first { $0["method"]?.text == operation }?["confirmation"]?.boolean ?? true
     }
+    private var needsConsentCheckbox: Bool { needsConsent && operation != "launch_game" }
     private var disabledReason: String? {
         if tasks.busy { return state.t("ui.014") }
         if operation == "launch_game" && state.fxSelection.selected == nil { return state.t("ui.fx.choose") }
         if needsRoot && state.fxSelection.selected == nil { return state.t("ui.fx.choose") }
         if operation == "launch_game" && state.targetInspection["archive_files_match"]?.boolean == false { return state.t("ui.178") }
-        if needsConsent && !confirmed { return state.t("ui.276") }
+        if needsConsentCheckbox && !confirmed { return state.t("ui.276") }
         return nil
     }
     private var effect: String {
@@ -201,7 +202,7 @@ struct LegacyOperationSheet: View {
                         Text(state.t("ui.232")).tag("preview"); Text(state.t("ui.314")).tag("stable")
                     }
                 }
-                if needsConsent {
+                if needsConsentCheckbox {
                     Toggle(state.t("ui.153"), isOn: $confirmed)
                 }
                 if operation == "test_ssh" {
@@ -213,7 +214,7 @@ struct LegacyOperationSheet: View {
                         Text(pretty(change)).font(TacticalTypography.log).textSelection(.enabled)
                         TacticalButton(title: state.t("ui.025"), symbol: "checkmark.shield") {
                             approved.append(change); run()
-                        }.disabled(!confirmed || tasks.busy)
+                        }.disabled((needsConsentCheckbox && !confirmed) || tasks.busy)
                     }
                 }
                 if inputError { TacticalWarningBanner(text: state.t("ui.072"), isError: true) }
@@ -262,7 +263,7 @@ struct LegacyOperationSheet: View {
     private func run() {
         inputError = false
         var params: [String: JSONValue] = [:]
-        if needsConsent { params["confirmed"] = .bool(confirmed) }
+        if needsConsent { params["confirmed"] = .bool(!needsConsentCheckbox || confirmed) }
         params["approved_changes"] = .array(approved)
         if operation == "restore_guest_ipv6" { params["backup_path"] = .string(state.guestRestorePath) }
         if operation == "save_configuration" {
