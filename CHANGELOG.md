@@ -4,7 +4,7 @@
 
 All notable changes to the HELLDIVERS 2 FX Launcher Native App are recorded here, newest first. Unreleased entries have no release date. This file is the single source of truth for user-facing release notes; the README summary, GitHub Release notes and the future Sparkle appcast reuse this reviewed text. Do not paste raw, unreviewed Git commit messages into it.
 
-No official release has been published yet. The current Native App version `0.1.0` (build `2026110602`) is a development preview, not a downloadable package.
+v1.0.0 is the release target. The inspected local arm64 App is `0.1.0` and ad hoc signed. Public DMG, SHA-256, final package acceptance and release notes are pending.
 
 ## Unreleased
 
