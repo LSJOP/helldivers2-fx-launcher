@@ -54,6 +54,14 @@ import Foundation
         try check(weakOwned == nil, "no persistent manager owner after exit")
         let nextProcessModel = SessionCredentialManager()
         try check(nextProcessModel.isEmpty && !nextProcessModel.reusable(.ssh), "new process model cannot restore credentials")
+        let shared = SessionCredentialManager()
+        shared.password = fake
+        shared.useSSHPasswordForSudo()
+        try check(shared.sudoPassword == fake && !shared.reusable(.sudo), "explicit SSH password copy still requires sudo authentication")
+        shared.password = ""
+        shared.sudoPassword = "retained"
+        shared.useSSHPasswordForSudo()
+        try check(shared.sudoPassword == "retained", "empty SSH input cannot overwrite sudo input")
         let rebootManager = SessionCredentialManager()
         await rebootManager.prepare(for: "fixture-reboot-target")
         rebootManager.password = fake; rebootManager.sudoPassword = fake

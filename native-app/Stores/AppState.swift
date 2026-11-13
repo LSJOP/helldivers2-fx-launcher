@@ -28,7 +28,7 @@ final class AppState: ObservableObject {
     @Published var networkShowConfirmation = false
     @Published var guestRestorePath = ""
     @Published var pendingAction: GUIAction?
-    let credentials = SessionCredentialManager()
+    let credentials = SessionCredentialManager(store: NativeLocalization.isolatedUXSmoke ? nil : LocalCredentialStore.production())
     @Published var firstRunPlan: DeploymentPlan?
     @Published var firstRunState: DeploymentState = .NotChecked
     @Published var firstRunFEX: [String: JSONValue] = [:]
@@ -58,7 +58,7 @@ final class AppState: ObservableObject {
                     guard let identity = binding.result["identity"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
                     let target = root + "|" + revision + "|" + identity
                     if let scope = self.credentials.scope, scope != target { self.clearSessionCredentials() }
-                    await self.credentials.prepare(for: target)
+                    await self.credentials.prepare(for: target, savedTarget: binding.result["persistence_identity"]?.text)
                     // Setup owns an isolated SSH master; host-only metadata can omit a
                     // boot ID. Keep the prior expected boot for the newly authenticated
                     // backend to verify, rather than treating omission as identity loss.
@@ -300,8 +300,8 @@ final class AppState: ObservableObject {
                     guard let identity = binding.result["identity"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
                     let target = selectedRoot + "|" + revision + "|" + identity
                     if let scope = self.credentials.scope, scope != target { self.clearSessionCredentials() }
-                    await self.credentials.prepare(for: target)
-                    try self.credentials.bindGuest(binding.result["guest_boot"]?.text)
+                    await self.credentials.prepare(for: target, savedTarget: binding.result["persistence_identity"]?.text)
+                    if let boot = binding.result["guest_boot"]?.text { try self.credentials.bindGuest(boot) }
                     input.merge(try self.credentials.parameters(for: target)) { _, new in new }
                     input["credential_host_identity"] = .string(identity)
                     redactor = self.credentials.redactor
@@ -416,7 +416,7 @@ final class AppState: ObservableObject {
         else if kind == "passphrase" { credentials.passphrase = value }
         else {
             credentials.password = value
-            if credentials.sudoPassword.isEmpty { credentials.sudoPassword = value }
+            if credentials.sudoPassword.isEmpty { credentials.useSSHPasswordForSudo() }
         }
         launchCredentialKind = nil
         Task { @MainActor [weak self] in
@@ -482,6 +482,61 @@ final class AppState: ObservableObject {
             if runtimeLogs.count > 500 { runtimeLogs.removeFirst(runtimeLogs.count - 500) }
         }
     }
+    @Published var credentialConnectionStatus = "idle"
+    @Published var credentialConnectionError: ErrorState?
+    func clearCurrentCredentials() {
+        guard !tasks.busy else { return }
+        tasks.start { [weak self] in
+            guard let self else { return }
+            await self.prepareCredentials()
+            guard self.credentials.scope != nil, self.credentials.hasPersistenceTarget else {
+                self.credentialConnectionError = ErrorState("FX_IDENTITY_UNVERIFIED")
+                self.credentialConnectionStatus = "failed"
+                return
+            }
+            self.forgetSavedCredentials()
+        }
+    }
+    func connectCredential(_ candidate: String) {
+        guard !tasks.busy else { return }
+        credentialConnectionStatus = "connecting"
+        credentialConnectionError = nil
+        let root = runtimeRoot
+        let launch = fxSelection.launchParameters(runtimeRoot: root)
+        tasks.start { [weak self] in
+            guard let self else { return }
+            var secret = candidate
+            do {
+                let fx = try await self.core.request("check_fx_state", timeout: 45, params: launch)
+                guard fx.result["fx_host_running"]?.boolean == true else { throw ErrorState("FX_NOT_RUNNING") }
+                let metadata = try await self.core.request("read_configuration")
+                guard let revision = metadata.result["revision"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
+                let binding = try await self.core.request("credential_target", timeout: 45, params: launch)
+                guard let identity = binding.result["identity"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
+                let target = root + "|" + revision + "|" + identity
+                if let scope = self.credentials.scope, scope != target { self.clearSessionCredentials() }
+                await self.credentials.prepare(for: target, savedTarget: binding.result["persistence_identity"]?.text)
+                if secret.isEmpty { secret = self.credentials.password }
+                guard !secret.isEmpty else { throw ErrorState("AUTH_REQUIRED") }
+                var input = launch
+                input["runtime_root"] = .string(root)
+                input["confirmed"] = .bool(true)
+                input["password"] = .string(secret)
+                input["credential_revision"] = .string(revision)
+                input["credential_host_identity"] = .string(identity)
+                let reply = try await self.core.request("test_ssh", timeout: 90, params: input)
+                guard reply.result["ssh_password_verified"]?.boolean == true,
+                      let boot = reply.result["guest_boot"]?.text else { throw ErrorState("AUTH_REQUIRED") }
+                try self.credentials.bindGuest(boot)
+                await self.credentials.acceptSharedPassword(secret, target: target)
+                self.credentialConnectionStatus = "connected"
+            } catch {
+                let failure = error as? ErrorState ?? ErrorState("PROTOCOL_ERROR")
+                self.credentialConnectionError = ErrorState(failure.code)
+                self.credentialConnectionStatus = "failed"
+            }
+        }
+    }
     func prepareCredentials() async {
         guard !NativeLocalization.isolatedUXSmoke, let selected = fxSelection.selectedPath else { return }
         do {
@@ -489,8 +544,8 @@ final class AppState: ObservableObject {
             guard let revision = binding.result["revision"]?.text, let identity = binding.result["identity"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
             let target = runtimeRoot + "|" + revision + "|" + identity
             if let scope = credentials.scope, scope != target { clearSessionCredentials() }
-            await credentials.prepare(for: target)
-            try credentials.bindGuest(binding.result["guest_boot"]?.text)
+            await credentials.prepare(for: target, savedTarget: binding.result["persistence_identity"]?.text)
+            if let boot = binding.result["guest_boot"]?.text { try credentials.bindGuest(boot) }
         } catch { clearSessionCredentials(); appendLog("credential target unavailable") }
     }
     private func recordLaunch() {
@@ -506,7 +561,7 @@ final class AppState: ObservableObject {
     }
     func confirmMainMenu() { launchSession.confirmMainMenu(); recordLaunch() }
     func confirmSinglePlayer() { launchSession.confirmSinglePlayer(); recordLaunch() }
-    func forgetSavedCredentials() { clearSessionCredentials() }
+    func forgetSavedCredentials() { credentials.forgetSaved(); SSHTransport.closeOwnedMasters() }
     func clearSessionCredentials() { credentials.clear(); SSHTransport.closeOwnedMasters(); firstRunFEX = [:]; firstRunFEXTicket = nil; firstRunFEXRestore = nil }
     func endSession() { networkLaunchPending = false; tasks.cancel(); clearSessionCredentials() }
     func value(_ method: String, _ key: String) -> String { results[method]?[key]?.text ?? t("ui.366") }

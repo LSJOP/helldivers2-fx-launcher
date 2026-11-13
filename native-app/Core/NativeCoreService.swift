@@ -421,6 +421,7 @@ actor NativeCoreService {
         do {
             let host = try LaunchService.fxState(request: request, fx: fx)
             result["fx_host_running"] = host["fx_host_running"] ?? .bool(false)
+            guard host["fx_host_running"]?.boolean == true else { throw CoreError("FX_NOT_RUNNING") }
             progress("CheckingSSHPort")
             _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
             // OpenSSH supplies bounded port/protocol errors; avoid a second divergent socket implementation.

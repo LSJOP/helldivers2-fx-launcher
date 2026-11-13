@@ -282,7 +282,11 @@ private struct CredentialInputFields: View {
             VStack(alignment: .leading, spacing: 10) {
                 SecureField(state.t("ui.305"), text: $credentials.password)
                 SecureField(state.t("ui.168"), text: $credentials.passphrase)
-                if operation == "test_guest_sudo" { SecureField(state.t("ui.304"), text: $credentials.sudoPassword) }
+                if operation == "test_guest_sudo" {
+                    SecureField(state.t("ui.304"), text: $credentials.sudoPassword)
+                    Button(state.t("ui.credentials.useSSHForSudo")) { credentials.useSSHPasswordForSudo() }
+                        .disabled(credentials.password.isEmpty)
+                }
                 Text(state.t("ui.session.policy"))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
                 Button(state.t("ui.067")) { state.forgetSavedCredentials() }
@@ -298,37 +302,36 @@ private struct CredentialManagementView: View {
     @ObservedObject var state: AppState
     @ObservedObject var credentials: SessionCredentialManager
     @ObservedObject var tasks: TaskManager
+    @State private var password = ""
+
     var body: some View {
         TacticalPanel(number: "K", title: state.t("ui.session.title"), symbol: "key") {
-            Text(state.t("ui.session.policy")).font(TacticalTypography.caption).foregroundStyle(.secondary)
-            ForEach(CredentialKind.allCases, id: \.self) { kind in
-                VStack(alignment: .leading, spacing: 8) {
-                    TacticalInfoRow(title: state.t(kind == .ssh ? "ui.session.ssh" : "ui.session.sudo"), value: status(kind))
-                    HStack {
-                        Button(state.t(kind == .ssh ? "ui.session.updateSSH" : "ui.session.updateSudo")) {
-                            credentials.update(kind)
-                            state.operationSelection = NativeOperation(method: kind == .ssh ? "test_ssh" : "test_guest_sudo")
-                        }
-                        Button(state.t(kind == .ssh ? "ui.session.testSSH" : "ui.session.testSudo")) {
-                            state.operationSelection = NativeOperation(method: kind == .ssh ? "test_ssh" : "test_guest_sudo")
-                        }
-                    }
+            SecureField(state.t(credentials.saved.contains(.ssh) ? "ui.credentials.savedPlaceholder" : "ui.credentials.passwordPlaceholder"), text: $password)
+            HStack {
+                Button(state.t("ui.credentials.connect")) {
+                    state.connectCredential(password)
+                }
+                Button(state.t("ui.credentials.clear")) {
+                    state.clearCurrentCredentials()
+                    password = ""
+                    state.credentialConnectionStatus = "idle"
+                    state.credentialConnectionError = nil
                 }
             }
-            HStack {
-                Button(state.t("ui.session.clear")) { state.forgetSavedCredentials() }
-                Button(state.t("ui.session.revalidate")) { state.operationSelection = NativeOperation(method: "test_ssh") }
+            if credentials.storageIssue {
+                TacticalWarningBanner(text: state.t("ui.credentials.storageIssue"), isError: true)
+            } else if state.credentialConnectionStatus == "failed", let error = state.credentialConnectionError {
+                Text(error.code == "FX_NOT_RUNNING" ? state.t("ui.credentials.startFX") : error.message(state.languageCode))
+                    .foregroundStyle(.red)
+            } else {
+                Text(state.t(state.credentialConnectionStatus == "connected" ? "ui.credentials.status.connected" : state.credentialConnectionStatus == "connecting" ? "ui.credentials.status.connecting" : "ui.credentials.status.idle"))
+                    .foregroundStyle(.secondary)
             }
         }.disabled(tasks.busy)
+            .onChange(of: state.credentialConnectionStatus) { status in
+                if status == "connected" { password = "" }
+            }
             .task { if !tasks.busy { await state.prepareCredentials() } }
-    }
-    private func status(_ kind: CredentialKind) -> String {
-        switch credentials.status(kind) {
-        case .notProvided: return state.t("ui.session.empty")
-        case .provided: return state.t("ui.session.provided")
-        case .verified: return state.t("ui.session.verified")
-        case .failed: return state.t("ui.session.failed")
-        }
     }
 }
 
