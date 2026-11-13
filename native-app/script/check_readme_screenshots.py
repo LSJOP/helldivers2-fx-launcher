@@ -23,10 +23,30 @@ def check(root):
     except (KeyError,TypeError,AttributeError):return ['Invalid screenshot provenance records'],0
     reviewed=manifest.get('reviewed_ui_source_sha256',manifest.get('ui_source_sha256'))
     if reviewed and reviewed!=ui_fingerprint(root):errors.append('UI source changed since screenshot review; recapture visible changes or explicitly document/review unchanged UI')
-    for name,language in [('README.md','en'),('README.zh-CN.md','zh-CN')]:
-        path=root/name
-        if not path.is_file():errors.append(name+': missing README');continue
-        source=path.read_text()
+    primary=root/'README.md'
+    if not primary.is_file():return errors+['README.md: missing README'],count
+    readme=primary.read_text()
+    zh_anchor='<a id="zh-cn"></a>'
+    en_anchor='<a id="english"></a>'
+    if zh_anchor in readme or en_anchor in readme:
+        if readme.count(zh_anchor)!=1 or readme.count(en_anchor)!=1 or readme.index(zh_anchor)>readme.index(en_anchor):
+            return errors+['README.md: missing, duplicate or incorrectly ordered language anchors'],count
+        for link in ('](#zh-cn)','](#english)'):
+            if link not in readme[:readme.index(zh_anchor)]:errors.append('README.md: language navigation missing '+link)
+        sections=[('README.md (zh-CN)','zh-CN',readme.split(zh_anchor,1)[1].split(en_anchor,1)[0]),
+                  ('README.md (en)','en',readme.split(en_anchor,1)[1])]
+        if not (root/'README.zh-CN.md').is_file():errors.append('README.zh-CN.md: missing compatibility link')
+        elif 'README.md#zh-cn' not in (root/'README.zh-CN.md').read_text():errors.append('README.zh-CN.md: Chinese anchor link missing')
+    else:
+        sections=[]
+        for name,language in [('README.md','en'),('README.zh-CN.md','zh-CN')]:
+            path=root/name
+            if not path.is_file():errors.append(name+': missing README');continue
+            source=path.read_text()
+            for other in ('README.md','README.zh-CN.md'):
+                if ']('+other+')' not in source:errors.append(name+': relative language link missing '+other)
+            sections.append((name,language,source))
+    for name,language,source in sections:
         images=re.findall(r'!\[[^\]]*\]\(<?([^\s)>]+)>?(?:\s+"[^"]*")?\)',source)
         images+=re.findall(r'<img\b[^>]*\bsrc=[\"\']([^\"\']+)',source,re.I)
         for image in images:
@@ -44,8 +64,6 @@ def check(root):
                 if not record:errors.append(name+': screenshot has no provenance '+local);continue
                 if record.get('language')!=language or record.get('visual_review')!='PASS':errors.append(name+': language/visual review missing '+local)
                 if record.get('sha256')!=hashlib.sha256(target.read_bytes()).hexdigest():errors.append(name+': screenshot bytes changed since review '+local)
-        for other in ('README.md','README.zh-CN.md'):
-            if ']('+other+')' not in source:errors.append(name+': relative language link missing '+other)
     if count==0:errors.append('No localized README screenshots referenced; document missing captures explicitly')
     return errors,count
 

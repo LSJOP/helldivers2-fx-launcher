@@ -4,9 +4,13 @@
 
 All notable changes to the HELLDIVERS 2 FX Launcher Native App are recorded here, newest first. Unreleased entries have no release date. This file is the single source of truth for user-facing release notes; the README summary, GitHub Release notes and the future Sparkle appcast reuse this reviewed text. Do not paste raw, unreviewed Git commit messages into it.
 
-No official release has been published yet. The current Native App version `0.1.0` (build `2026110602`) is a development preview, not a downloadable package.
+No official release has been published yet. The last documented development preview was version `0.1.0` (build `2026110602`); source now targets `1.0.0`, subject to final integration and validation.
 
 ## Unreleased
+
+Target: v1.0.0 pre-release, pending final source integration, installer validation and publication. The entries below are not yet release notes.
+
+Candidate summary (subject to final source and acceptance): native seven-page UI and FX discovery; guarded first-run setup, FEX candidate review and Proton management; launch resource integrity and executable-permission fixes; SSH/sudo authorization and diagnostics. Live FEX deployment/recovery, fresh-environment setup, gameplay, EAC, multiplayer and distribution acceptance remain incomplete.
 
 - Start the existing guarded launch flow directly from the dashboard; ask for a credential only on an authentication error, then continue. Live FX launch remains blocked by the proxy mismatch.
 

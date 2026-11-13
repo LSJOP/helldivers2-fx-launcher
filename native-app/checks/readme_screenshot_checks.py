@@ -35,6 +35,15 @@ class ScreenshotChecks(unittest.TestCase):
         p=self.root/'docs/images/manifest.json';data=json.loads(p.read_text());data['ui_source_sha256']=module.ui_fingerprint(self.root);p.write_text(json.dumps(data))
         self.assertEqual(module.check(self.root)[0],[])
         view.write_text('new visible text');self.assertTrue(module.check(self.root)[0])
+    def use_single_page(self):
+        (self.root/'README.md').write_text('[中文](#zh-cn) | [English](#english)\n<a id="zh-cn"></a>\n![总览](docs/images/zh-CN/dashboard.png)\n<a id="english"></a>\n![Dashboard](docs/images/en/dashboard.png)\n')
+        (self.root/'README.zh-CN.md').write_text('[中文](README.md#zh-cn)')
+    def test_single_page_sections(self):
+        self.use_single_page();self.assertEqual(module.check(self.root),([],2))
+    def test_single_page_rejects_wrong_language(self):
+        self.use_single_page();self.replace('README.md','docs/images/zh-CN/','docs/images/en/');self.assertTrue(module.check(self.root)[0])
+    def test_single_page_requires_ordered_anchors(self):
+        self.use_single_page();self.replace('README.md','<a id="english"></a>','');self.assertTrue(module.check(self.root)[0])
     def test_unreviewed_image_rejected(self):
         p=self.root/'docs/images/manifest.json';data=json.loads(p.read_text());data['screenshots'][0]['visual_review']='PENDING';p.write_text(json.dumps(data));self.assertTrue(module.check(self.root)[0])
 if __name__=='__main__':unittest.main(verbosity=2)
