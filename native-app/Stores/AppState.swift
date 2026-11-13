@@ -409,9 +409,6 @@ final class AppState: ObservableObject {
             }
         }
     }
-    func discardPerformancePreview() { performanceConfigurationState.preview = [:] }
-    func previewPerformance(restore: Bool = false) {
-        guard let revision = performanceConfiguration["revision"]?.text else { return }
     @Published var launchCredentialKind: String?
     func resumeLaunchWithCredential(_ value: String, kind: String) {
         guard !value.isEmpty else { return }
@@ -428,6 +425,9 @@ final class AppState: ObservableObject {
             self.runOperation("launch_game", params: ["confirmed": .bool(true)])
         }
     }
+    func discardPerformancePreview() { performanceConfigurationState.preview = [:] }
+    func previewPerformance(restore: Bool = false) {
+        guard let revision = performanceConfiguration["revision"]?.text else { return }
         runOperation(restore ? "performance_restore_preview" : "performance_preview", params: [
             "expected_revision": .string(revision), "values": .object(editedPerformance)])
     }
