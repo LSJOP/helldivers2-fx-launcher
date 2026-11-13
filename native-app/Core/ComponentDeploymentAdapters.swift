@@ -278,7 +278,12 @@ try:
  stage=pathlib.Path(tempfile.mkdtemp(prefix='.hd2-proton-stage-',dir=root))
  try:
   archive=stage/'payload.tar.xz'
-  subprocess.run(curl+['--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','600','--max-filesize',str(m['archiveBytes']),'--output',str(archive),m['url']],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=610)
+  cache=pathlib.Path.home()/'.cache/hd2fx-native/artifacts'/(m['archiveSHA256']+'.tar.xz')
+  safe_parents(cache)
+  if cache.is_file() and cache.stat().st_nlink==1 and cache.stat().st_size==m['archiveBytes'] and digest(cache)==m['archiveSHA256']:
+   shutil.copyfile(cache,archive)
+  else:
+   subprocess.run(curl+['--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','600','--max-filesize',str(m['archiveBytes']),'--output',str(archive),m['url']],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=610)
   if archive.stat().st_size!=m['archiveBytes'] or digest(archive)!=m['archiveSHA256']:raise RuntimeError('ARTIFACT_HASH')
   checksum=stage/'payload.sha512sum'
   subprocess.run(curl+['--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','30','--max-filesize','4096','--output',str(checksum),m['url'].replace('.tar.xz','.sha512sum')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=40)

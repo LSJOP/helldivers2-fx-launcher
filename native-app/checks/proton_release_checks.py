@@ -19,8 +19,9 @@ class ProtonReleaseChecks(unittest.TestCase):
  def refresh_checksum(self):
   sha=hashlib.sha512(self.archive.read_bytes()).hexdigest();self.manifest['archiveSHA512']=sha;self.checksum.write_text(sha+'  '+self.manifest['version']+'.tar.xz\n')
  def tearDown(self):self.temp.cleanup()
- def run_script(self,mode):
+ def run_script(self,mode,use_proxy=False):
   prefix='MANIFEST='+repr(base64.b64encode(json.dumps(self.manifest).encode()).decode())+'\nMODE='+repr(mode)+'\nBOOT='+repr(self.boot.read_text())+'\nSUFFIX='+repr(str(uuid.uuid4()))+'\n'
+  prefix+='USE_HOST_PROXY='+repr(use_proxy)+'\n'
   source=SOURCE.replace('/proc/sys/kernel/random/boot_id',str(self.boot))
   env=dict(os.environ,HOME=str(self.home),PATH=str(self.bin)+':/usr/bin:/bin',FIXTURE_ARCHIVE=str(self.archive),FIXTURE_CHECKSUM=str(self.checksum))
   return subprocess.run([sys.executable,'-'],input=prefix+source,env=env,capture_output=True,text=True,timeout=15)
@@ -59,6 +60,20 @@ class ProtonReleaseChecks(unittest.TestCase):
  def test_published_checksum_mismatch_never_installs(self):
   self.checksum.write_text('0'*128+'  '+self.version+'.tar.xz\n')
   self.assertNotEqual(self.run_script('install').returncode,0);self.assertFalse(self.p.exists())
+ def cache_path(self):
+  return self.home/'.cache/hd2fx-native/artifacts'/(self.manifest['archiveSHA256']+'.tar.xz')
+ def test_verified_cache_avoids_archive_download(self):
+  cache=self.cache_path();cache.parent.mkdir(parents=True);cache.write_bytes(self.archive.read_bytes());self.archive.unlink()
+  r=self.run_script('install');self.assertEqual(r.returncode,0,r.stderr);self.assertTrue(self.p.is_dir())
+ def test_corrupt_cache_falls_back_to_verified_download(self):
+  cache=self.cache_path();cache.parent.mkdir(parents=True);cache.write_bytes(b'corrupt')
+  r=self.run_script('install');self.assertEqual(r.returncode,0,r.stderr);self.assertTrue(self.p.is_dir());self.assertEqual(cache.read_bytes(),b'corrupt')
+ def test_symlink_cache_is_rejected(self):
+  cache=self.cache_path();cache.parent.mkdir(parents=True);cache.symlink_to(self.archive)
+  self.assertNotEqual(self.run_script('install').returncode,0);self.assertFalse(self.p.exists())
+ def test_proxy_download_preserves_integrity_checks(self):
+  r=self.run_script('install',use_proxy=True);self.assertEqual(r.returncode,0,r.stderr)
+  self.assertIn(self.manifest['archiveSHA256'],self.run_script('probe').stdout)
  def test_approved_metadata(self):
   m=json.loads((ROOT/'Resources/proton-je-approved.json').read_text())
   self.assertEqual(m['version'],'proton-je-11.0-20261014-3');self.assertEqual(m['archiveSHA256'],'aa5430696ca39451299e2f007ef652bc030e6419242776343d48947e21827485')
