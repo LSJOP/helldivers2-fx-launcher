@@ -80,6 +80,7 @@ struct SteamVDF {
 final class SSHEnvironmentBackend: DeploymentBackend {
     let transport: SSHTransport, fx: URL, context: CoreContext, configurationRevision: String
     var expectedGuestBoot: String?
+    var fexApprovals: [String] = []
     let fxVersion: String
     var restartCompleted = false
     var sudoPassword: String? // Memory only; never included in a snapshot or receipt.
@@ -185,16 +186,7 @@ final class SSHEnvironmentBackend: DeploymentBackend {
         if !restartCompleted, SetupVMReboot.hasCompletedReceipt(for: snapshot) {
             snapshot.facts["restart_completed"] = "true"
         }
-        if fields["fex_sha256"] == LaunchService.verifiedFEX {
-            let runtime = try transport.run(#"""
-            "$HOME/.local/share/Steam/steamapps/common/FEX-Emu/usr/bin/FEX" --version >/dev/null 2>&1
-            """#, timeout: 15, context: context)
-            snapshot.facts["fex_runtime"] = runtime.status == 0 ? "ready" : "failed"
-        }
-        if try FEXWorkflow.verifyInstalled(self, snapshot: snapshot) {
-            snapshot.facts["fex_manifest"] = "verified"
-            snapshot.facts["fex"] = "verified"
-        }
+        try FEXWorkflow.observe(self, snapshot: &snapshot, approvals: fexApprovals)
         return snapshot
     }
     /// Steam updates unrelated VDF metadata while running. Compare managed values
@@ -428,6 +420,7 @@ extension NativeCoreService {
         try transport.connectOnce(context: context, forwarding: true)
         let backend = try SSHEnvironmentBackend(fx: fx, transport: transport, context: context, revision: ConfigurationService.read().revision)
         backend.sudoPassword = request.sudoPassword
+        backend.fexApprovals = request.fexApprovals
         backend.expectedGuestBoot = params["credential_guest_boot"]?.text
         if method.hasPrefix("first_run_fex_") {
             emit("INFO", "FEX workflow", ["deployment_state": .string(method == "first_run_fex_audit" ? "Checking" : "Deploying")])

@@ -8,9 +8,9 @@ class PipelineChecks(unittest.TestCase):
   self.work=self.home/'.local/share/HD2FXLauncher/fex-rf-v1';self.stage=self.work/'runtime'
   self.installed=self.home/'.local/share/Steam/steamapps/common/FEX-Emu'
   (self.stage/'usr/bin').mkdir(parents=True);(self.installed/'usr/bin').mkdir(parents=True)
-  (self.stage/'usr/bin/FEX').write_bytes(b'fixture-runtime');(self.stage/'usr/bin/FEX').chmod(0o700)
+  (self.stage/'usr/bin/FEX').write_bytes((b'\x7fELF\x02\x01'+bytes(12)+b'\xb7\x00'+bytes(44)));(self.stage/'usr/bin/FEX').chmod(0o700)
   (self.installed/'usr/bin/FEX').write_bytes(b'original');(self.installed/'compatibilitytool.vdf').write_text('original metadata')
-  self.expected=hashlib.sha256(b'fixture-runtime').hexdigest();self.ticket=str(uuid.uuid4())
+  self.expected=hashlib.sha256((b'\x7fELF\x02\x01'+bytes(12)+b'\xb7\x00'+bytes(44))).hexdigest();self.ticket=str(uuid.uuid4())
   tree=ast.parse(source)
   functions=[n for n in tree.body if isinstance(n,(ast.Import,ast.ImportFrom,ast.FunctionDef))]
   ns={};exec(compile(ast.Module(body=functions,type_ignores=[]),'helpers','exec'),ns);self.helpers=ns
@@ -25,7 +25,6 @@ class PipelineChecks(unittest.TestCase):
   tree=ast.parse(source)
   for n in tree.body:
    if isinstance(n,ast.FunctionDef) and n.name in ['identity','idle']:n.body=[ast.Return(value=None)]
-   if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='EXPECTED' for t in n.targets):n.value=ast.Constant(self.expected)
   ast.fix_missing_locations(tree)
   request={'mode':mode,'boot':'fixture-boot','ticket':self.ticket,'audit':audit}
   out=io.StringIO()

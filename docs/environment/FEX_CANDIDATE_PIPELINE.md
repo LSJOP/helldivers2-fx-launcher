@@ -22,3 +22,10 @@ Therefore **real deployment and real recovery are NOT TESTED**. The existing FEX
 Historical recipe comparison found an additional source difference: the retained 2026-10-26 candidate record explicitly changed disk-cache FormatVersion from 35 to 36 and used synthetic source identity `e42baddf6fbf43a8286a21dd9a3abcd68b617f77`. Its clang version was also 19.1.7. The current fixed-base plus RF-only candidate does not reproduce those extra identity changes. Thus compiler variation alone is not an established explanation. Reconstruct and review the exact historical source/cache-identity/build recipe before approving a replacement; never copy a historical success result onto this candidate or alter the expected hash to make it pass.
 
 Sources: [fixed source commit](https://github.com/StonkGuy/FEX/commit/87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8), [RF PR20](https://github.com/StonkGuy/FEX/pull/20), [upstream build recipe](https://github.com/StonkGuy/steamac/blob/fex-eac/fex-eac/build-fex.sh). Source compilation and license provenance do not establish current game compatibility.
+
+
+## Dynamic runtime detection, 2026-11-14
+
+FEX compatibility uses ARM64 ELF, execution-permission and Steam integration checks, followed by a 12-second x86-64 execution probe. A full installed-tree fingerprint binds per-environment consent and is recomputed before game dispatch. Unverified builds require confirmation before execution and can enter compatibility mode after the probe passes. Provenance remains independently unverified. File changes invalidate consent. Candidate deployment retains pinned-source provenance, complete inventory, backups and recovery, with no historical executable-hash gate. Home and First-Run Setup share this service. Real compatibility, main-menu, anti-cheat and multiplayer acceptance remain pending. The bilingual Home/setup captures show the current read-only UI.
+
+Earlier hash-blocked results below and above are historical evidence. Current readiness no longer requires reproducing that executable hash. A local build receipt establishes scoped provenance only when its full installed inventory still matches.

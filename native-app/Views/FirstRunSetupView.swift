@@ -202,6 +202,7 @@ struct EnvironmentWorkflowProgressView: View {
     @ObservedObject var tasks: TaskManager
     var showIdle = false
     private var workflow: EnvironmentWorkflow { state.environmentWorkflow }
+    @State private var showFEXDetails = false
     var body: some View {
         if showIdle || workflow.phase != .idle {
             TacticalPanel(number: "", title: state.t("ui.workflow.result"), symbol: "gearshape.2") {
@@ -209,6 +210,9 @@ struct EnvironmentWorkflowProgressView: View {
                 if workflow.phase == .launching { Text(state.launchSession.current.title(state.languageCode)) }
                 if workflow.phase == .deploying, let stage = workflow.deploymentStage {
                     Text(state.t("ui.setup.state." + stage)).font(TacticalTypography.caption)
+                }
+                if let status = state.firstRunPlan?.snapshot.facts["fex_status"] {
+                    Text(state.t(status == "normal" ? "ui.fex.normal" : status == "compatible" ? "ui.fex.compatible" : status == "confirmation" ? "ui.fex.unverified" : "ui.fex.repair"))
                 }
                 if workflow.active {
                     HStack {
@@ -238,6 +242,21 @@ struct EnvironmentWorkflowProgressView: View {
                     DisclosureGroup(state.t("ui.094")) { LaunchProgressView(state: state, tasks: tasks) }
                 }
                 if workflow.active { Button(state.t("ui.038")) { tasks.cancel() } }
+            }
+            .sheet(isPresented: Binding(get: { state.pendingFEXApproval != nil && !tasks.busy }, set: { if !$0 { state.cancelFEXApproval() } })) {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text(state.t("ui.fex.confirmTitle")).font(.headline)
+                    Text(state.t("ui.fex.confirmMessage"))
+                    if showFEXDetails {
+                        Text(state.firstRunPlan?.snapshot.facts["fex_tree"] ?? "").font(.caption.monospaced()).textSelection(.enabled)
+                        Text(state.t("ui.fex.unverified"))
+                    }
+                    HStack {
+                        Button(state.t("ui.fex.continue")) { state.approveFEXBuild() }.buttonStyle(.borderedProminent).tint(.yellow)
+                        Button(state.t("ui.setup.details")) { showFEXDetails.toggle() }
+                        Button(state.t("ui.037"), role: .cancel) { state.cancelFEXApproval() }
+                    }
+                }.padding(24).frame(width: 540)
             }
             .confirmationDialog(state.t("ui.setup.autoReboot"), isPresented: Binding(
                 get: { state.environmentWorkflow.needsRestartApproval && !tasks.busy },

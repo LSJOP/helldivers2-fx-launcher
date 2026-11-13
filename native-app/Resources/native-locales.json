@@ -619,7 +619,14 @@
   "ui.fex.build": "Build candidate",
   "ui.fex.install": "Deploy reviewed candidate",
   "ui.fex.recover": "Restore original component",
-  "ui.fex.pendingReview": "A candidate was found, but integrity review has not passed. Deployment is blocked."
+  "ui.fex.pendingReview": "A candidate was found, but integrity review has not passed. Deployment is blocked.",
+  "ui.fex.confirmTitle": "Custom FEX build",
+  "ui.fex.confirmMessage": "This FEX build passed file and architecture checks. Its origin is unverified. Continue to execute a bounded compatibility test and use this build?",
+  "ui.fex.continue": "Continue",
+  "ui.fex.normal": "FEX normal",
+  "ui.fex.compatible": "FEX compatibility mode",
+  "ui.fex.repair": "FEX needs repair",
+  "ui.fex.unverified": "FEX origin unverified"
  },
  "zh-CN": {
   "ui.workflow.environment": "环境状态",
@@ -1241,7 +1248,14 @@
   "ui.fex.build": "构建候选",
   "ui.fex.install": "部署已审核候选",
   "ui.fex.recover": "恢复原组件",
-  "ui.fex.pendingReview": "已发现候选，完整性审核尚未通过，不能部署。"
+  "ui.fex.pendingReview": "已发现候选，完整性审核尚未通过，不能部署。",
+  "ui.fex.confirmTitle": "自定义 FEX 版本",
+  "ui.fex.confirmMessage": "此构建已通过文件与架构检查，来源尚未经过应用验证。是否继续执行有超时限制的兼容性测试并使用此构建？",
+  "ui.fex.continue": "继续使用",
+  "ui.fex.normal": "FEX 正常",
+  "ui.fex.compatible": "FEX 兼容模式",
+  "ui.fex.repair": "FEX 需要修复",
+  "ui.fex.unverified": "FEX 来源未验证"
  },
  "ja": {
   "ui.workflow.environment": "環境の状態",
@@ -1863,7 +1877,14 @@
   "ui.fex.build": "候補をビルド",
   "ui.fex.install": "審査済み候補を配置",
   "ui.fex.recover": "元のコンポーネントを復元",
-  "ui.fex.pendingReview": "候補は見つかりましたが、整合性審査に合格していないため配置できません。"
+  "ui.fex.pendingReview": "候補は見つかりましたが、整合性審査に合格していないため配置できません。",
+  "ui.fex.confirmTitle": "カスタム FEX ビルド",
+  "ui.fex.confirmMessage": "ファイルとアーキテクチャの検査に合格しました。出所は未検証です。時間制限付き互換性テストを実行し、このビルドを使用しますか？",
+  "ui.fex.continue": "続行",
+  "ui.fex.normal": "FEX 正常",
+  "ui.fex.compatible": "FEX 互換モード",
+  "ui.fex.repair": "FEX の修復が必要",
+  "ui.fex.unverified": "FEX の出所は未検証"
  },
  "ko": {
   "ui.workflow.environment": "환경 상태",
@@ -2485,7 +2506,14 @@
   "ui.fex.build": "후보 빌드",
   "ui.fex.install": "검토된 후보 배포",
   "ui.fex.recover": "원래 구성 요소 복원",
-  "ui.fex.pendingReview": "후보가 발견되었지만 무결성 검토를 통과하지 못해 배포할 수 없습니다."
+  "ui.fex.pendingReview": "후보가 발견되었지만 무결성 검토를 통과하지 못해 배포할 수 없습니다.",
+  "ui.fex.confirmTitle": "사용자 지정 FEX 빌드",
+  "ui.fex.confirmMessage": "파일 및 아키텍처 검사를 통과했습니다. 출처는 확인되지 않았습니다. 제한 시간이 있는 호환성 테스트를 실행하고 이 빌드를 사용하시겠습니까?",
+  "ui.fex.continue": "계속 사용",
+  "ui.fex.normal": "FEX 정상",
+  "ui.fex.compatible": "FEX 호환 모드",
+  "ui.fex.repair": "FEX 복구 필요",
+  "ui.fex.unverified": "FEX 출처 미확인"
  },
  "ru": {
   "ui.workflow.environment": "Состояние среды",
@@ -3107,7 +3135,14 @@
   "ui.fex.build": "Собрать кандидата",
   "ui.fex.install": "Установить проверенную сборку",
   "ui.fex.recover": "Восстановить исходный компонент",
-  "ui.fex.pendingReview": "Сборка найдена, но проверка целостности не пройдена. Установка заблокирована."
+  "ui.fex.pendingReview": "Сборка найдена, но проверка целостности не пройдена. Установка заблокирована.",
+  "ui.fex.confirmTitle": "Пользовательская сборка FEX",
+  "ui.fex.confirmMessage": "Файлы и архитектура проверены. Происхождение не подтверждено. Выполнить проверку совместимости с ограничением времени и использовать эту сборку?",
+  "ui.fex.continue": "Продолжить",
+  "ui.fex.normal": "FEX готов",
+  "ui.fex.compatible": "Режим совместимости FEX",
+  "ui.fex.repair": "Требуется исправление FEX",
+  "ui.fex.unverified": "Источник FEX не проверен"
  },
  "es": {
   "ui.workflow.environment": "Estado del entorno",
@@ -3729,7 +3764,14 @@
   "ui.fex.build": "Compilar candidato",
   "ui.fex.install": "Instalar candidato revisado",
   "ui.fex.recover": "Restaurar componente original",
-  "ui.fex.pendingReview": "Se encontró un candidato, pero no ha superado la revisión de integridad. Instalación bloqueada."
+  "ui.fex.pendingReview": "Se encontró un candidato, pero no ha superado la revisión de integridad. Instalación bloqueada.",
+  "ui.fex.confirmTitle": "Compilación FEX personalizada",
+  "ui.fex.confirmMessage": "Los archivos y la arquitectura superaron las comprobaciones. El origen no está verificado. ¿Ejecutar una prueba de compatibilidad con tiempo límite y usar esta compilación?",
+  "ui.fex.continue": "Continuar",
+  "ui.fex.normal": "FEX listo",
+  "ui.fex.compatible": "Modo de compatibilidad FEX",
+  "ui.fex.repair": "FEX requiere reparación",
+  "ui.fex.unverified": "Origen de FEX sin verificar"
  },
  "de": {
   "ui.workflow.environment": "Umgebungsstatus",
@@ -4351,7 +4393,14 @@
   "ui.fex.build": "Kandidat bauen",
   "ui.fex.install": "Geprüften Kandidaten installieren",
   "ui.fex.recover": "Originalkomponente wiederherstellen",
-  "ui.fex.pendingReview": "Ein Kandidat wurde gefunden, hat die Integritätsprüfung aber nicht bestanden. Installation gesperrt."
+  "ui.fex.pendingReview": "Ein Kandidat wurde gefunden, hat die Integritätsprüfung aber nicht bestanden. Installation gesperrt.",
+  "ui.fex.confirmTitle": "Eigener FEX-Build",
+  "ui.fex.confirmMessage": "Datei- und Architekturprüfung bestanden. Die Herkunft ist ungeprüft. Zeitbegrenzten Kompatibilitätstest ausführen und diesen Build verwenden?",
+  "ui.fex.continue": "Fortfahren",
+  "ui.fex.normal": "FEX bereit",
+  "ui.fex.compatible": "FEX-Kompatibilitätsmodus",
+  "ui.fex.repair": "FEX reparieren",
+  "ui.fex.unverified": "FEX-Herkunft ungeprüft"
  },
  "fr": {
   "ui.workflow.environment": "État de l’environnement",
@@ -4973,7 +5022,14 @@
   "ui.fex.build": "Compiler le candidat",
   "ui.fex.install": "Installer le candidat vérifié",
   "ui.fex.recover": "Restaurer le composant initial",
-  "ui.fex.pendingReview": "Un candidat a été trouvé, mais la vérification d’intégrité n’a pas abouti. Installation bloquée."
+  "ui.fex.pendingReview": "Un candidat a été trouvé, mais la vérification d’intégrité n’a pas abouti. Installation bloquée.",
+  "ui.fex.confirmTitle": "Version FEX personnalisée",
+  "ui.fex.confirmMessage": "Les fichiers et l’architecture sont conformes. La provenance reste non vérifiée. Exécuter un test de compatibilité limité dans le temps et utiliser cette version ?",
+  "ui.fex.continue": "Continuer",
+  "ui.fex.normal": "FEX opérationnel",
+  "ui.fex.compatible": "Mode de compatibilité FEX",
+  "ui.fex.repair": "FEX à réparer",
+  "ui.fex.unverified": "Provenance FEX non vérifiée"
  },
  "pt-BR": {
   "ui.workflow.environment": "Estado do ambiente",
@@ -5595,7 +5651,14 @@
   "ui.fex.build": "Compilar candidato",
   "ui.fex.install": "Instalar candidato revisado",
   "ui.fex.recover": "Restaurar componente original",
-  "ui.fex.pendingReview": "Um candidato foi encontrado, mas não passou na revisão de integridade. Instalação bloqueada."
+  "ui.fex.pendingReview": "Um candidato foi encontrado, mas não passou na revisão de integridade. Instalação bloqueada.",
+  "ui.fex.confirmTitle": "Compilação FEX personalizada",
+  "ui.fex.confirmMessage": "Os arquivos e a arquitetura passaram nas verificações. A origem não foi verificada. Executar um teste de compatibilidade com tempo limite e usar esta compilação?",
+  "ui.fex.continue": "Continuar",
+  "ui.fex.normal": "FEX pronto",
+  "ui.fex.compatible": "Modo de compatibilidade FEX",
+  "ui.fex.repair": "FEX precisa de reparo",
+  "ui.fex.unverified": "Origem do FEX não verificada"
  },
  "zh-TW": {
   "ui.workflow.environment": "環境狀態",
@@ -6217,6 +6280,13 @@
   "ui.fex.build": "建置候選",
   "ui.fex.install": "部署已審核候選",
   "ui.fex.recover": "復原原元件",
-  "ui.fex.pendingReview": "已發現候選，完整性審核尚未通過，無法部署。"
+  "ui.fex.pendingReview": "已發現候選，完整性審核尚未通過，無法部署。",
+  "ui.fex.confirmTitle": "自訂 FEX 版本",
+  "ui.fex.confirmMessage": "此組建已通過檔案與架構檢查，來源尚未經應用程式驗證。是否繼續執行有逾時限制的相容性測試並使用此組建？",
+  "ui.fex.continue": "繼續使用",
+  "ui.fex.normal": "FEX 正常",
+  "ui.fex.compatible": "FEX 相容模式",
+  "ui.fex.repair": "FEX 需要修復",
+  "ui.fex.unverified": "FEX 來源未驗證"
  }
 }

@@ -7,23 +7,23 @@
   "timezone": "Asia/Shanghai",
   "fx_guest_actions": "none",
   "credential_autoload": "disabled by isolated capture arguments",
-  "reviewed_ui_source_sha256": "3add97ec3255b9d2dce375a4d369c4f80749085e05e507d5d06c8fc23f0493eb",
+  "reviewed_ui_source_sha256": "be066e5a733ab39aa787d7748689c89cf0a13b9a0ddcedc4d5677de1d8aca0ba",
   "screenshots": [
     {
       "path": "docs/images/zh-CN/dashboard.png",
       "language": "zh-CN",
-      "sha256": "3daf83a3852fe0fffbfe42099621e863967f5a2411bfed61fc7fa314fe576102",
+      "sha256": "908f509be96921bccdf4db175a1acd870c10977a5ca5663fb29c6410ef4ff1f7",
       "width": 2120,
       "height": 1440,
-      "captured_at": "2026-11-04T19:03:22.455438+00:00",
+      "captured_at": "2026-11-14T02:04:00+08:00",
       "app_version": "0.1.0",
       "app_build": "2026110503",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.dashboarddedup20261105.zh-CN",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.fex20261114.zh-CN",
       "guest_actions": "none",
-      "source_base_commit": "f3ac5c90e56cce7e35a662514e4aec0130510870",
+      "source_base_commit": "071c2c8",
       "source_dirty": true,
-      "capture_scope": "Dashboard duplicate-entry layout only; initial read-only snapshot still loading; not runtime acceptance"
+      "capture_scope": "Actual read-only Home/setup window. FEX confirmation and gameplay acceptance pending."
     },
     {
       "path": "docs/images/zh-CN/environment.png",
@@ -142,34 +142,34 @@
     {
       "path": "docs/images/zh-CN/first-run-setup.png",
       "language": "zh-CN",
-      "sha256": "179f04d69635320cd3cce8900420580f804e3e1233167ff09b47c4fc2212a91e",
+      "sha256": "6c3bef70e95aad109a17cc90bf79bcd4aa58b49ce61d155b6463482322a61f5e",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-04T20:06:48Z",
+      "captured_at": "2026-11-14T02:04:00+08:00",
       "app_version": "0.1.0",
       "app_build": "2026110507",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.persistencezh",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.fex20261114.zh-CN",
       "guest_actions": "none",
-      "source_base_commit": "9ce68da3cacb98a818f2d5673f9bab6c055e3b1a",
+      "source_base_commit": "071c2c8",
       "source_dirty": true,
-      "capture_scope": "Credential policy text and controls; isolated credential store disabled; no live SSH/sudo acceptance"
+      "capture_scope": "Actual read-only Home/setup window. FEX confirmation and gameplay acceptance pending."
     },
     {
       "path": "docs/images/en/dashboard.png",
       "language": "en",
-      "sha256": "7d6ec75f184dc050065255ec136ab8bc7a0a18026817ec1934f7df3fcde282c1",
+      "sha256": "0107b6e11039389d5636287d320f14744ae69600bd4fd99df4107225fb3b6b89",
       "width": 2120,
       "height": 1440,
-      "captured_at": "2026-11-04T19:03:29.594911+00:00",
+      "captured_at": "2026-11-14T02:04:00+08:00",
       "app_version": "0.1.0",
       "app_build": "2026110503",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.dashboarddedup20261105.en",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.fex20261114.en",
       "guest_actions": "none",
-      "source_base_commit": "f3ac5c90e56cce7e35a662514e4aec0130510870",
+      "source_base_commit": "071c2c8",
       "source_dirty": true,
-      "capture_scope": "Dashboard duplicate-entry layout only; initial read-only snapshot still loading; not runtime acceptance"
+      "capture_scope": "Actual read-only Home/setup window. FEX confirmation and gameplay acceptance pending."
     },
     {
       "path": "docs/images/en/environment.png",
@@ -288,18 +288,18 @@
     {
       "path": "docs/images/en/first-run-setup.png",
       "language": "en",
-      "sha256": "ae95930bad04fbe20aeed7602f6751c1fbb2aee6b36085d694e62bcfd7ff7810",
+      "sha256": "1078d7c1219af8e4abc0eec6e44f77475d0e7fcb22d1a62f323637ec587d81ba",
       "width": 2360,
       "height": 1700,
-      "captured_at": "2026-11-04T20:07:01Z",
+      "captured_at": "2026-11-14T02:04:00+08:00",
       "app_version": "0.1.0",
       "app_build": "2026110507",
       "visual_review": "PASS",
-      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.persistenceen",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.fex20261114.en",
       "guest_actions": "none",
-      "source_base_commit": "9ce68da3cacb98a818f2d5673f9bab6c055e3b1a",
+      "source_base_commit": "071c2c8",
       "source_dirty": true,
-      "capture_scope": "Credential policy text and controls; isolated credential store disabled; no live SSH/sudo acceptance"
+      "capture_scope": "Actual read-only Home/setup window. FEX confirmation and gameplay acceptance pending."
     }
   ],
   "review_scope": "Seven-page real UI with retained main network/credential controls; all secure inputs empty; no live Guest/installation/game acceptance.",

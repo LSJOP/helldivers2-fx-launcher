@@ -497,6 +497,20 @@ final class AppState: ObservableObject {
     }
     private var pendingEnvironmentDestination: EnvironmentWorkflowDestination?
     @Published var environmentWorkflow = EnvironmentWorkflow()
+    @Published var pendingFEXApproval: String?
+    func approveFEXBuild() {
+        guard let fingerprint = pendingFEXApproval else { return }
+        var approvals = UserDefaults.standard.stringArray(forKey: "FEXBuildApprovals") ?? []
+        if !approvals.contains(fingerprint) { approvals.append(fingerprint) }
+        UserDefaults.standard.set(Array(approvals.suffix(64)), forKey: "FEXBuildApprovals")
+        pendingFEXApproval = nil
+        startEnvironmentWorkflow(launchGame: environmentWorkflow.launchesGame)
+    }
+    func cancelFEXApproval() {
+        pendingFEXApproval = nil
+        environmentWorkflow.phase = .cancelled
+        environmentWorkflow.failure = nil
+    }
     func startEnvironmentWorkflow(launchGame: Bool, restartApproved: Bool = false) {
         guard !tasks.busy else { return }
         guard fxSelection.selected != nil else {
@@ -512,6 +526,7 @@ final class AppState: ObservableObject {
                 var input = launch
                 input["runtime_root"] = .string(root)
                 input["confirmed"] = .bool(true)
+                input["fex_approvals"] = .array((UserDefaults.standard.stringArray(forKey: "FEXBuildApprovals") ?? []).map(JSONValue.string))
                 let fx = try await self.core.request("start_fx", timeout: 180, params: input)
                 self.environmentWorkflow.evidence = fx.result
                 try Task.checkCancellation()
@@ -541,6 +556,13 @@ final class AppState: ObservableObject {
                 guard let raw = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
                 let plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
                 self.firstRunPlan = plan
+                if plan.snapshot.facts["fex_status"] == "confirmation" {
+                    self.pendingFEXApproval = plan.snapshot.facts["fex_fingerprint"]
+                    throw ErrorState("FEX_CONFIRMATION_REQUIRED")
+                }
+                if let blocked = plan.operations.first(where: { $0.component == "fex" && $0.blocked != nil }) {
+                    throw ErrorState(blocked.blocked ?? "FEX_RUNTIME_FAILED")
+                }
                 self.environmentWorkflow.evidence["steam_running"] = .bool(plan.snapshot.steamRunning)
                 self.environmentWorkflow.completedSteps = 3
                 self.environmentWorkflow.phase = .deploying
