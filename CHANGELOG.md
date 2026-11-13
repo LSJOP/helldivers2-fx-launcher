@@ -8,6 +8,8 @@ v1.0.0 is the release target. The inspected local arm64 App is `0.1.0` and ad ho
 
 ## Unreleased
 
+- Require screenshot App/build identity, source commit and capture timestamp in addition to language paths and reviewed hashes.
+
 - Start the existing guarded launch flow directly from the dashboard; ask for a credential only on an authentication error, then continue. Live FX launch remains blocked by the proxy mismatch.
 
 - Add an experimental App-only FEX candidate build, review, guarded deployment and recovery route. A real Guest build succeeded, but executable hash review blocked deployment; real installation, recovery and gameplay acceptance remain pending.
