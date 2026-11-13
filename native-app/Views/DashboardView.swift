@@ -19,6 +19,7 @@ struct DashboardView: View {
                 TacticalMetric(title: "EAC", value: unverified, symbol: "shield.lefthalf.filled")
                 TacticalMetric(title: state.t("ui.191"), value: unverified, symbol: "person.2")
             }
+            EnvironmentWorkflowProgressView(state: state, tasks: tasks)
             GUIActionFeedback(state: state, methods: [GUIAction.game.rawValue])
             if state.launchSession.current != .idle { LaunchProgressView(state: state, tasks: tasks) }
             if let error = state.error {

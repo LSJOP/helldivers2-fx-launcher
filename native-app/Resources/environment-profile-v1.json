@@ -14,7 +14,9 @@
   "vulkan": "Vulkan / KosmicKrisp",
   "launchOptions": {
     "FEX_NEEDSSECCOMP": "1",
-    "FEX_DISKCACHE": "0"
+    "FEX_DISKCACHE": "0",
+    "PROTON_USE_XALIA": "0",
+    "VKD3D_CONFIG": "single_queue"
   },
   "requirements": {
     "fex": "CONDITIONAL",

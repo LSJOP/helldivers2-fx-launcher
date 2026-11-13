@@ -7,13 +7,14 @@ def git(*args):
 commit = git('rev-parse', 'HEAD')
 # Include tracked source edits; ignore local build/evidence caches.
 dirty = bool(git('status', '--porcelain'))
-if os.environ['CONFIGURATION'] == 'Release' and dirty:
+internal = os.environ.get('HD2FX_INTERNAL_BUILD') == 'YES'
+if os.environ['CONFIGURATION'] == 'Release' and dirty and not internal:
     raise SystemExit('Release metadata requires a clean committed source snapshot')
 now = datetime.datetime.now(datetime.timezone.utc)
 metadata = {
     'version': os.environ['MARKETING_VERSION'],
     'build': os.environ['CURRENT_PROJECT_VERSION'],
-    'commit': commit, 'source_dirty': dirty,
+    'commit': commit, 'source_dirty': dirty, 'internal_test_build': internal,
     'built_at': now.isoformat(timespec='seconds'),
     'core_version': (root/'native-app/Core/VERSION').read_text().strip(),
     'configuration': os.environ['CONFIGURATION'],

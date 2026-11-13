@@ -45,6 +45,24 @@ func runChecks() {
     wrongFEXRecord = fexRecord; wrongFEXRecord["installation"] = .object(["verified": .bool(true)])
     check(FEXWorkflow.installedDigest(wrongFEXRecord, snapshot: fexSnapshot) == nil, "FEX executable alone is not a complete installed manifest")
 
+    var installedFEX = fexSnapshot
+    installedFEX.facts["fex_runtime"] = "ready"
+    let existingPlan = DeploymentPlanBuilder.build(installedFEX, profile: try! EnvironmentProfile.load(resources.deletingLastPathComponent().appendingPathComponent("environment-profile-v1.json")))
+    check(existingPlan.operations.first(where: { $0.component == "fex" })?.detectionPassed == true,
+          "ready installed FEX does not require a candidate archive")
+    installedFEX.facts["fex_runtime"] = "failed"
+    let brokenPlan = DeploymentPlanBuilder.build(installedFEX, profile: try! EnvironmentProfile.load(resources.deletingLastPathComponent().appendingPathComponent("environment-profile-v1.json")))
+    check(brokenPlan.operations.first(where: { $0.component == "fex" })?.detectionPassed == false,
+          "failed installed FEX never becomes ready from candidate metadata")
+    let managed = ["launch": "%command%", "tool": "proton", "ipv6.all": "0"]
+    let fingerprint = SSHEnvironmentBackend.configurationFingerprint(values: managed, configurationRevision: "revision")
+    check(fingerprint == SSHEnvironmentBackend.configurationFingerprint(values: managed, configurationRevision: "revision"),
+          "deployment revision uses managed values independently of Steam VDF metadata")
+    var drift = managed; drift["tool"] = "external"
+    check(fingerprint != SSHEnvironmentBackend.configurationFingerprint(values: drift, configurationRevision: "revision"),
+          "external managed-value drift changes deployment revision")
+    check(fingerprint != SSHEnvironmentBackend.configurationFingerprint(values: managed, configurationRevision: "other"),
+          "launcher configuration drift changes deployment revision")
     // MARK: SHA-256 / bounded file reads
     check(CoreHash.sha256(Data("abc".utf8)) == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", "sha256 abc")
     check(CoreHash.sha256(Data()) == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "sha256 empty")

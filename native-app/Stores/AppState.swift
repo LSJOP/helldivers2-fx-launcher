@@ -121,6 +121,9 @@ final class AppState: ObservableObject {
                     let next = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(value))
                     try self.credentials.bindGuest(next.snapshot.boot)
                     self.firstRunPlan = next
+                    if [.Completed, .NeedsConfiguration].contains(self.firstRunState) {
+                        self.firstRunState = next.detectionState == .Ready ? .Completed : next.detectionState
+                    }
                 }
                 if let value = reply.result["receipts"] { self.firstRunReceipts = try JSONDecoder().decode([DeploymentReceipt].self, from: JSONEncoder().encode(value)) }
             } catch {
@@ -160,8 +163,13 @@ final class AppState: ObservableObject {
         fxSelection.select(path)
         runtimeRoot = fxSelection.selectedPath ?? ""
         inspectedTarget = nil
+        if let destination = pendingEnvironmentDestination, fxSelection.selected != nil {
+            pendingEnvironmentDestination = nil
+            selection = destination == .game ? .dashboard : .setup
+            startEnvironmentWorkflow(launchGame: destination == .game)
+        }
     }
-    func scanFX(manualPath: String? = nil, openingLaunch: Bool = false) {
+    func scanFX(manualPath: String? = nil, openingLaunch: Bool = false, workflow: EnvironmentWorkflowDestination? = nil) {
         guard !tasks.busy else { return }
         fxSelectionIssue = false
         tasks.start { [weak self] in
@@ -178,13 +186,17 @@ final class AppState: ObservableObject {
                     self.fxSelection.select(manualPath)
                     self.runtimeRoot = self.fxSelection.selectedPath ?? ""
                 }
-                if openingLaunch {
-                    if self.fxSelection.selected == nil { self.selection = .fx }
+                if let destination = workflow ?? (openingLaunch ? .game : nil) {
+                    if self.fxSelection.selected == nil {
+                        self.pendingEnvironmentDestination = destination
+                        self.selection = .fx
+                    }
                     else {
                         Task { @MainActor [weak self] in
                             guard let self else { return }
                             while self.tasks.busy { try? await Task.sleep(nanoseconds: 50_000_000) }
-                            self.runOperation("launch_game", params: ["confirmed": .bool(true)])
+                            guard !Task.isCancelled else { return }
+                            self.startEnvironmentWorkflow(launchGame: destination == .game)
                         }
                     }
                 }
@@ -422,7 +434,7 @@ final class AppState: ObservableObject {
         Task { @MainActor [weak self] in
             guard let self else { return }
             while self.tasks.busy { try? await Task.sleep(nanoseconds: 50_000_000) }
-            self.runOperation("launch_game", params: ["confirmed": .bool(true)])
+            self.startEnvironmentWorkflow(launchGame: self.environmentWorkflow.phase == .failed ? self.environmentWorkflow.launchesGame : true)
         }
     }
     func discardPerformancePreview() { performanceConfigurationState.preview = [:] }
@@ -456,7 +468,7 @@ final class AppState: ObservableObject {
         guard !tasks.busy else { return }
         operationError = nil; operationResult = [:]; operationEvents = []
         if action == .game {
-            if fxSelection.selected != nil { runOperation("launch_game", params: ["confirmed": .bool(true)]) }
+            if fxSelection.selected != nil { startEnvironmentWorkflow(launchGame: true) }
             else { scanFX(openingLaunch: true) }
             return
         }
@@ -480,6 +492,113 @@ final class AppState: ObservableObject {
         if let data = try? JSONEncoder().encode(JSONValue.object(details)), let text = String(data: data, encoding: .utf8) {
             runtimeLogs.append(["at": .string(ISO8601DateFormatter().string(from: Date())), "source": .string("Native action"), "level": .string(record.error == nil ? "INFO" : "ERROR"), "message": .string(credentials.redactor.text(text))])
             if runtimeLogs.count > 500 { runtimeLogs.removeFirst(runtimeLogs.count - 500) }
+        }
+    }
+    private var pendingEnvironmentDestination: EnvironmentWorkflowDestination?
+    @Published var environmentWorkflow = EnvironmentWorkflow()
+    func startEnvironmentWorkflow(launchGame: Bool, restartApproved: Bool = false) {
+        guard !tasks.busy else { return }
+        guard fxSelection.selected != nil else {
+            scanFX(workflow: launchGame ? .game : .setup)
+            return
+        }
+        environmentWorkflow = EnvironmentWorkflow(phase: .startingFX, launchesGame: launchGame)
+        let root = runtimeRoot
+        let launch = fxSelection.launchParameters(runtimeRoot: root)
+        tasks.start { [weak self] in
+            guard let self else { return }
+            do {
+                var input = launch
+                input["runtime_root"] = .string(root)
+                input["confirmed"] = .bool(true)
+                _ = try await self.core.request("start_fx", timeout: 180, params: input)
+                try Task.checkCancellation()
+                self.environmentWorkflow.completedSteps = 1
+                self.environmentWorkflow.phase = .connecting
+                let binding = try await self.core.request("credential_target", timeout: 45, params: launch)
+                guard let revision = binding.result["revision"]?.text,
+                      let identity = binding.result["identity"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
+                let target = root + "|" + revision + "|" + identity
+                if let scope = self.credentials.scope, scope != target { self.clearSessionCredentials() }
+                await self.credentials.prepare(for: target, savedTarget: binding.result["persistence_identity"]?.text)
+                if self.credentials.sudoPassword.isEmpty { self.credentials.useSSHPasswordForSudo() }
+                input.merge(try self.credentials.parameters(for: target)) { _, value in value }
+                input["credential_revision"] = .string(revision)
+                input["credential_host_identity"] = .string(identity)
+                let connected = try await self.core.request("test_ssh", timeout: 90, params: input)
+                guard let boot = connected.result["guest_boot"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
+                try self.credentials.bindGuest(boot)
+                if connected.result["ssh_password_verified"]?.boolean == true, let password = input["password"]?.text {
+                    await self.credentials.acceptSharedPassword(password, target: target)
+                }
+                self.environmentWorkflow.completedSteps = 2
+                self.environmentWorkflow.phase = .detecting
+                let detected = try await self.core.request("first_run_detect", timeout: 240, params: input)
+                guard let raw = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
+                let plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
+                self.firstRunPlan = plan
+                self.environmentWorkflow.completedSteps = 3
+                self.environmentWorkflow.phase = .deploying
+                if !plan.executable.isEmpty {
+                    if plan.executable.contains(where: { $0.needsRestart }) && !restartApproved {
+                        self.environmentWorkflow.needsRestartApproval = true
+                        throw ErrorState("CONFIRMATION_REQUIRED")
+                    }
+                    input["deployment_plan"] = raw
+                    input["approved_steps"] = .array(plan.executable.map { .string($0.id) })
+                    input["restart_vm_approved"] = .bool(restartApproved)
+                    let deployed = try await self.core.request("first_run_deploy", timeout: 1500, params: input)
+                    if let receipt = deployed.result["receipt"] {
+                        let record = try JSONDecoder().decode(DeploymentReceipt.self, from: JSONEncoder().encode(receipt))
+                        self.firstRunReceipt = record
+                        guard [.Completed, .NeedsConfiguration].contains(record.state) else {
+                            throw ErrorState(record.failure ?? "DEPLOYMENT_FAILED")
+                        }
+                    } else { throw ErrorState("PROTOCOL_ERROR") }
+                    if let transition = deployed.result["reboot_transition"]?.object,
+                       let old = transition["from"]?.text, let new = transition["to"]?.text,
+                       let identity = transition["host_identity"]?.text {
+                        let rebound = root + "|" + revision + "|" + identity
+                        try self.credentials.acceptExpectedReboot(from: old, to: new, target: target, reboundTarget: rebound)
+                        input["credential_host_identity"] = .string(identity)
+                        input["credential_guest_boot"] = .string(new)
+                    }
+                }
+                self.environmentWorkflow.completedSteps = 4
+                self.environmentWorkflow.phase = .verifying
+                try Task.checkCancellation()
+                let verified = try await self.core.request("first_run_detect", timeout: 240, params: input)
+                guard let raw = verified.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
+                let fresh = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
+                self.firstRunPlan = fresh
+                guard fresh.executable.isEmpty else { throw ErrorState("VERIFY_FAILED") }
+                if let blocked = fresh.operations.first(where: {
+                    ["fex", "proton", "tool", "launch", "steam", "game"].contains($0.component) && $0.blocked != nil
+                }) { throw ErrorState(blocked.blocked ?? "VERIFY_FAILED", details: ["component": .string(blocked.component)]) }
+                self.firstRunState = .Completed
+                self.environmentWorkflow.completedSteps = 5
+                if launchGame {
+                    self.environmentWorkflow.phase = .launching
+                    self.launchSession.begin(root: root)
+                    let reply = try await self.core.request("launch_game", timeout: 900, params: input) { [weak self] event in
+                        Task { @MainActor in self?.launchSession.consume(event) }
+                    }
+                    self.launchSession.complete(reply.result, at: reply.observedAt)
+                    self.recordLaunch()
+                    guard reply.result["game_process_detected"]?.boolean == true else { throw ErrorState("GAME_LAUNCH_FAILED") }
+                    self.environmentWorkflow.completedSteps = 6
+                }
+                self.environmentWorkflow.phase = .completed
+            } catch {
+                let failure = error as? ErrorState ?? ErrorState(error is CancellationError ? "CANCELLED" : "PROTOCOL_ERROR")
+                self.environmentWorkflow.failure = ErrorState(failure.code, details: self.credentials.redactor.diagnostic(failure.details))
+                self.environmentWorkflow.phase = failure.code == "CANCELLED" ? .cancelled : .failed
+                self.firstRunState = .Failed
+                if self.launchSession.running { self.launchSession.fail(failure); self.recordLaunch() }
+                if ["AUTH_REQUIRED", "SSH_AUTH_FAILED", "SUDO_AUTH_FAILED"].contains(failure.code) {
+                    self.launchCredentialKind = failure.code == "SUDO_AUTH_FAILED" ? "sudo_password" : "password"
+                }
+            }
         }
     }
     @Published var credentialConnectionStatus = "idle"

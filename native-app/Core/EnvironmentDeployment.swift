@@ -114,7 +114,7 @@ struct DeploymentOperation: Codable, Identifiable, Equatable {
     // A successful bounded observation is independent of permission to deploy changes.
     var detectionPassed: Bool {
         if ["fex", "proton"].contains(component) && currentVersion == "verified" { return true }
-        return ["steam", "game", "vulkan", "kosmickrisp", "network", "gvproxy", "ipv4", "ipv6"].contains(component)
+        return ["steam", "game", "vulkan", "kosmickrisp", "network", "gvproxy", "ipv4", "ipv6", "launch"].contains(component)
             && ["present", "configured", "available"].contains(currentVersion)
     }
 }
@@ -131,8 +131,8 @@ struct DeploymentPlan: Codable {
 enum DeploymentPlanBuilder {
     static func build(_ snapshot: DeploymentSnapshot, profile: EnvironmentProfile) -> DeploymentPlan {
         var ops: [DeploymentOperation] = []
-        func add(_ component: String, target: String, changes: [String: String] = [:], block: String? = nil, restart: Bool = false, bytes: Int64 = 0) {
-            ops.append(.init(id: component, component: component, currentVersion: snapshot.facts[component] ?? "UNKNOWN",
+        func add(_ component: String, target: String, changes: [String: String] = [:], block: String? = nil, restart: Bool = false, bytes: Int64 = 0, observed: String? = nil) {
+            ops.append(.init(id: component, component: component, currentVersion: observed ?? snapshot.facts[component] ?? "UNKNOWN",
                              targetVersion: target, changes: changes, permission: component == "network" ? "Guest sudo" : "user",
                              estimatedBytes: bytes, needsRestart: restart, backupLocation: "receipt/" + component,
                              rollback: "compare_current_then_restore_receipt", verification: "read_back_and_compare",
@@ -142,12 +142,12 @@ enum DeploymentPlanBuilder {
         // transactions validate architecture, exact package contents and live Steam APIs.
         let baselineApplicable = profile.architecture == snapshot.architecture
         for (component, version) in [("fex", profile.fexVersion), ("proton", profile.protonVersion)] {
-            let verified = snapshot.facts[component + "_manifest"] == "verified"
+            let verified = snapshot.facts[component + "_manifest"] == "verified" || (component == "fex" && snapshot.facts["fex_runtime"] == "ready")
             let artifact = profile.artifacts.first { $0.component == component && $0.version == version }
             if component == "proton", snapshot.values["proton_package"] == "missing", version == ProtonJERelease.version {
                 add(component, target: version, changes: ["proton_package": ProtonJERelease.digest], restart: true, bytes: 4 * 1_073_741_824)
             } else {
-                add(component, target: version, block: verified ? nil : component == "proton" && snapshot.values["proton_package"] == "unknown" ? "COMPONENT_CONFLICT" : artifact == nil ? "ARTIFACT_UNAPPROVED" : "ARTIFACT_IMPORT_REQUIRED")
+                add(component, target: version, block: verified ? nil : component == "proton" && snapshot.values["proton_package"] == "unknown" ? "COMPONENT_CONFLICT" : artifact == nil ? "ARTIFACT_UNAPPROVED" : "ARTIFACT_IMPORT_REQUIRED", observed: verified ? "verified" : nil)
             }
         }
         for component in ["steam", "game", "vulkan", "kosmickrisp", "network", "gvproxy", "ipv4", "ipv6"] {
@@ -159,7 +159,7 @@ enum DeploymentPlanBuilder {
             let after = try LaunchOptionsAdapter.merge(before, managed: profile.launchOptions)
             var changes = before == after ? [:] : ["launch": after]
             if !changes.isEmpty, snapshot.values["launch_present"] != nil { changes["launch_present"] = "true" }
-            add("launch", target: "profile-v1", changes: changes, block: snapshot.values["launch"] == nil ? "USER_ACTION_REQUIRED" : snapshot.steamRunning && snapshot.facts["steam_api"] != "available" ? "STEAM_API_UNAVAILABLE" : nil)
+            add("launch", target: "profile-v1", changes: changes, block: snapshot.values["launch"] == nil ? "USER_ACTION_REQUIRED" : snapshot.steamRunning && snapshot.facts["steam_api"] != "available" ? "STEAM_API_UNAVAILABLE" : nil, observed: snapshot.values["launch"] != nil && changes.isEmpty ? "configured" : nil)
         } catch { add("launch", target: "profile-v1", block: "LAUNCH_OPTIONS_CONFLICT") }
         if snapshot.values["tool"] != profile.protonVersion {
             var changes = ["tool": profile.protonVersion]
@@ -276,6 +276,23 @@ final class EnvironmentDeploymentService {
         guard Self.identity(live, plan.snapshot), live.revision == plan.snapshot.revision, live.values == plan.snapshot.values else { throw CoreError("CONFIG_CHANGED") }
         try Self.idle(live, requiresStoppedSteam: plan.executable.contains { $0.requiresStoppedSteam || (["launch", "tool"].contains($0.component) && plan.snapshot.facts["steam_api"] != "available") })
         guard live.freeBytes >= plan.executable.reduce(0, { $0 + $1.estimatedBytes }) + 1_048_576 else { throw CoreError("INSUFFICIENT_SPACE") }
+        for var old in try receipts.list() where old.state == .RecoveryRequired {
+            let keys = ["machine_id", "fx_path", "fx_executable_sha256", "ssh_connection"]
+            let sameEnvironment = keys.allSatisfy {
+                guard let value = old.plan.snapshot.facts[$0], !value.isEmpty else { return false }
+                return live.facts[$0] == value
+            }
+            let affected = old.plan.operations.filter { old.applied.contains($0.id) || old.pending == $0.id }
+            // An external manual restore can resolve a receipt without another write.
+            // Only exact original values on the same persistent environment qualify.
+            if sameEnvironment && !affected.isEmpty && affected.allSatisfy({ operation in
+                operation.changes.keys.allSatisfy { live.values[$0] == old.plan.snapshot.values[$0] }
+            }) {
+                old.applied = []; old.pending = nil; old.state = .Failed
+                old.failure = "EXTERNALLY_RESTORED"
+                try receipts.save(old)
+            }
+        }
         guard !(try receipts.list()).contains(where: { [.Deploying, .Verifying, .RecoveryRequired].contains($0.state) }) else { throw CoreError("RECOVERY_REQUIRED") }
         var receipt = DeploymentReceipt(id: plan.id, plan: plan, state: .Deploying, applied: [], pending: nil, failure: nil)
         progress(.Deploying)

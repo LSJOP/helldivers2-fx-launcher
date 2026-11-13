@@ -6,6 +6,7 @@ struct LaunchProgressView: View {
     var body: some View {
         TacticalPanel(number: "L", title: state.t("ui.088"), symbol: "play.rectangle") {
             Text(state.launchSession.current.title(state.languageCode)).font(TacticalTypography.module)
+            DisclosureGroup(state.t("ui.094")) {
             ForEach([LaunchStage.checkingEnvironment, .checkingFXEntry, .startingFX, .waitingForFXReady, .verifyingFXIdentity, .waitingForGuest, .checkingCompatibility, .startingSteam, .launchingGame, .waitingForGame, .gameProcessDetected, .checkingEAC]) { stage in
                 let value = state.launchSession.evidence[stage] ?? "unverified"
                 HStack {
@@ -14,6 +15,10 @@ struct LaunchProgressView: View {
                     Spacer()
                     Text(value == "done" || value == "passed" ? state.t("ui.220") : value == "running" ? state.t("ui.157") : value == "failed" ? state.t("ui.125") : state.t("ui.368"))
                 }.font(TacticalTypography.caption)
+            }
+            if let reason = state.launchSession.failure?.details["reason"]?.text {
+                Text(verbatim: reason).font(TacticalTypography.log).textSelection(.enabled)
+            }
             }
             if let failure = state.launchSession.failure {
                 let stage = failure.details["stage"]?.text.flatMap(LaunchStage.init(rawValue:))

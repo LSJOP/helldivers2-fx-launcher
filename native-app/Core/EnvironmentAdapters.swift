@@ -178,19 +178,29 @@ final class SSHEnvironmentBackend: DeploymentBackend {
         for key in ["cpus", "memMiB", "gpuMemMiB", "graphicsPath", "vulkanDriver", "metalHUD", "superResolution"] {
             facts["fx_" + key] = pref?[key].map { CoreJSON.encode($0) } ?? "UNKNOWN"
         }
-        let revisionFields = fields.filter { !$0.key.hasSuffix("_count") && !["free"].contains($0.key) }
-        let revision = CoreHash.sha256(Data((CoreJSON.encode(.object(revisionFields.mapValues { .string($0) })) + configurationRevision).utf8))
+        let revision = Self.configurationFingerprint(values: values, configurationRevision: configurationRevision)
         var snapshot = DeploymentSnapshot(target: try Self.deploymentBinding(identity, fxPath: fx.path), boot: boot, revision: revision, fxVersion: fxVersion,
                      osVersion: fields["os_version"] ?? "UNKNOWN", architecture: fields["arch"] ?? "UNKNOWN",
                      steamRunning: sp > 0, gameRunning: gp > 0 || (fields["reaper_count"].flatMap(Int.init) ?? 1) > 0, freeBytes: free, facts: facts, values: values)
         if !restartCompleted, SetupVMReboot.hasCompletedReceipt(for: snapshot) {
             snapshot.facts["restart_completed"] = "true"
         }
+        if fields["fex_sha256"] == LaunchService.verifiedFEX {
+            let runtime = try transport.run(#"""
+            "$HOME/.local/share/Steam/steamapps/common/FEX-Emu/usr/bin/FEX" --version >/dev/null 2>&1
+            """#, timeout: 15, context: context)
+            snapshot.facts["fex_runtime"] = runtime.status == 0 ? "ready" : "failed"
+        }
         if try FEXWorkflow.verifyInstalled(self, snapshot: snapshot) {
             snapshot.facts["fex_manifest"] = "verified"
             snapshot.facts["fex"] = "verified"
         }
         return snapshot
+    }
+    /// Steam updates unrelated VDF metadata while running. Compare managed values
+    /// read through its live API. Offline writes retain a full destination-file CAS.
+    static func configurationFingerprint(values: [String: String], configurationRevision: String) -> String {
+        CoreHash.sha256(Data((CoreJSON.encode(.object(values.mapValues { .string($0) })) + configurationRevision).utf8))
     }
     static func steamError(_ error: Error) -> String {
         if let error = error as? CoreError { return error.code }

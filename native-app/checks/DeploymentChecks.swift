@@ -71,6 +71,16 @@ final class FileDeploymentBackend: DeploymentBackend {
             try service.execute(plan, approved: Set(plan.executable.map(\.id)), context: CoreContext(timeout: 10))
         }
         let (b, s, p) = try fixture()
+        var complete = p.snapshot
+        for component in ["steam", "game", "vulkan", "kosmickrisp", "network", "gvproxy", "ipv4"] { complete.facts[component] = "available" }
+        complete.facts["fex_manifest"] = "verified"; complete.facts["proton_manifest"] = "verified"
+        complete.values["launch"] = try LaunchOptionsAdapter.merge("%command%", managed: profile.launchOptions)
+        complete.values["tool"] = profile.protonVersion
+        try check(DeploymentPlanBuilder.build(complete, profile: profile).detectionState == .Ready, "full plan is ready only with verified components and matching launch options")
+        complete.facts["fex_manifest"] = "UNKNOWN"
+        try check(DeploymentPlanBuilder.build(complete, profile: profile).detectionState != .Ready, "unverified FEX never claims readiness")
+        complete.facts["fex_manifest"] = "verified"; complete.values.removeValue(forKey: "launch")
+        try check(DeploymentPlanBuilder.build(complete, profile: profile).detectionState != .Ready, "unread launch options never claim readiness")
         try check(p.operations.first { $0.id == "fex" }?.blocked == "ARTIFACT_UNAPPROVED", "missing FEX is blocked")
         try check(p.operations.first { $0.id == "proton" }?.blocked == "ARTIFACT_IMPORT_REQUIRED", "missing Proton without exact-target detection is blocked")
         try check(p.executable.map(\.id) == ["launch"], "only approved available configuration is executable")
@@ -196,11 +206,14 @@ final class FileDeploymentBackend: DeploymentBackend {
             try CoreFS.atomicWrite(Data(("#!/bin/sh\n[ -f " + SSHEnvironmentBackend.quote(gameFile.path) + " ] && exit 0\nexit 1\n").utf8), to: bin.appendingPathComponent("pgrep"), mode: 0o755)
             let fakeSystemctl = bin.appendingPathComponent("systemctl"); try CoreFS.atomicWrite(Data("#!/bin/sh\nexit 99\n".utf8), to: fakeSystemctl, mode: 0o755)
             let script = try GuestPrivilegedExecutor.script(.reboot(boot: boot, machine: machine, ticket: UUID()))
-                .replacingOccurrences(of: "/proc/sys/kernel/random/boot_id", with: bootFile.path)
-                .replacingOccurrences(of: "/etc/machine-id", with: machineFile.path)
-                .replacingOccurrences(of: "/usr/bin/systemctl", with: fakeSystemctl.path)
+                .replacingOccurrences(of: "/proc/sys/kernel/random/boot_id", with: SSHEnvironmentBackend.quote(bootFile.path))
+                .replacingOccurrences(of: "/etc/machine-id", with: SSHEnvironmentBackend.quote(machineFile.path))
+                .replacingOccurrences(of: "/usr/bin/systemctl", with: SSHEnvironmentBackend.quote(fakeSystemctl.path))
             let env = ["PATH": bin.path + ":/usr/bin:/bin", "HOME": dir.path]
             let scheduled = try CoreProcess.run("/bin/sh", ["-c", script], timeout: 5, environment: env)
+            if scheduled.status != 0 || scheduled.stdout.trimmingCharacters(in: .whitespacesAndNewlines) != "HD2FX_REBOOT_SCHEDULED" || !FileManager.default.fileExists(atPath: commandFile.path) {
+                print("Fixture reboot result: status=\(scheduled.status), stdout=\(scheduled.stdout), stderr=\(scheduled.stderr)")
+            }
             try check(scheduled.status == 0 && scheduled.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == "HD2FX_REBOOT_SCHEDULED" && FileManager.default.fileExists(atPath: commandFile.path), "production reboot script schedules only the fixture systemd command")
             try FileManager.default.removeItem(at: commandFile); try Data().write(to: gameFile)
             let blocked = try CoreProcess.run("/bin/sh", ["-c", script], timeout: 5, environment: env)
@@ -235,6 +248,18 @@ final class FileDeploymentBackend: DeploymentBackend {
         }
         for (name, expression) in [("read", SteamSetupClient.launchExpression()), ("write", SteamSetupClient.launchExpression(previous: "%command%", desired: "FEX_DISKCACHE=0 %command%")), ("drift", SteamSetupClient.launchExpression(previous: "stale", desired: "FEX_DISKCACHE=0 %command%")), ("tool", SteamSetupClient.toolExpression(desired: ProtonJERelease.version, previous: "proton_11-arm64"))] {
             try expression.write(to: root.appendingPathComponent(name + ".js"), atomically: true, encoding: .utf8)
+        }
+        do {
+            let (backend, service, initial) = try fixture()
+            for key in ["machine_id", "fx_path", "fx_executable_sha256", "ssh_connection"] { backend.state.facts[key] = "bound-" + key }
+            let live = try backend.snapshot()
+            let fresh = DeploymentPlanBuilder.build(live, profile: profile)
+            var original = initial.snapshot; original.facts = live.facts
+            let previous = DeploymentPlan(id: UUID(), profileID: fresh.profileID, profileVersion: fresh.profileVersion, snapshot: original, operations: fresh.operations)
+            let pending = DeploymentReceipt(id: previous.id, plan: previous, state: .RecoveryRequired, applied: ["launch"], pending: nil, failure: nil)
+            try service.receipts.save(pending)
+            _ = try execute(service, fresh)
+            try check(try service.receipts.read(previous.id).failure == "EXTERNALLY_RESTORED", "exact external restore on same machine reconciles stale receipt")
         }
         let receipt = try execute(s, p)
         try check(receipt.state == .Completed && b.writes == 1, "real config written and verified")
@@ -414,7 +439,7 @@ final class FileDeploymentBackend: DeploymentBackend {
         try CoreFS.atomicWrite(Data("#!/bin/sh\nexec /usr/bin/shasum -a 256 \"$@\"\n".utf8), to: bin.appendingPathComponent("sha256sum"), mode: 0o755)
         try CoreFS.atomicWrite(Data("#!/bin/sh\ncase \"$1\" in *.hd2-stage-*) if [ -f \"$HOME/fail-move\" ]; then exit 1; fi;; esac\nexec /bin/mv \"$@\"\n".utf8), to: bin.appendingPathComponent("mv"), mode: 0o755)
         func run(_ script: String) throws -> CoreProcessResult {
-            try CoreProcess.run("/bin/sh", ["-x", "-s"], input: script.replacingOccurrences(of: "/proc/sys/kernel/random/boot_id", with: bootFile.path), timeout: 10,
+            try CoreProcess.run("/bin/sh", ["-x", "-s"], input: script.replacingOccurrences(of: "/proc/sys/kernel/random/boot_id", with: SSHEnvironmentBackend.quote(bootFile.path)), timeout: 10,
                 environment: ["HOME": home.path, "PATH": bin.path + ":/usr/bin:/bin:/usr/sbin:/sbin", "LC_ALL": "C"])
         }
         let relative = "compatibilitytools.d/" + profile.protonVersion
