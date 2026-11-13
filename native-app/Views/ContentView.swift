@@ -70,6 +70,30 @@ struct ContentView: View {
         .sheet(item: $state.operationSelection) { item in
             LegacyOperationSheet(state: state, operation: item.method)
         }
+        .sheet(isPresented: Binding(get: { state.launchCredentialKind != nil }, set: { if !$0 { state.launchCredentialKind = nil } })) {
+            LaunchCredentialPrompt(state: state)
+        }
+    }
+}
+
+private struct LaunchCredentialPrompt: View {
+    @ObservedObject var state: AppState
+    @State private var secret = ""
+    var body: some View {
+        let kind = state.launchCredentialKind ?? "password"
+        VStack(alignment: .leading, spacing: 16) {
+            Text(state.t("ui.176")).font(TacticalTypography.module)
+            if let error = state.operationError { Text(error.message(state.languageCode)).foregroundStyle(.secondary) }
+            SecureField(state.t(kind == "sudo_password" ? "ui.304" : kind == "passphrase" ? "ui.168" : "ui.305"), text: $secret)
+                .onSubmit { state.resumeLaunchWithCredential(secret, kind: kind) }
+            HStack {
+                Button(state.t("ui.037")) { state.launchCredentialKind = nil }
+                Spacer()
+                Button(state.t("ui.280")) { state.resumeLaunchWithCredential(secret, kind: kind) }
+                    .disabled(secret.isEmpty)
+                    .keyboardShortcut(.defaultAction)
+            }
+        }.padding(24).frame(width: 420)
     }
 }
 

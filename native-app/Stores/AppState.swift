@@ -180,7 +180,13 @@ final class AppState: ObservableObject {
                 }
                 if openingLaunch {
                     if self.fxSelection.selected == nil { self.selection = .fx }
-                    else { self.operationSelection = NativeOperation(method: "launch_game") }
+                    else {
+                        Task { @MainActor [weak self] in
+                            guard let self else { return }
+                            while self.tasks.busy { try? await Task.sleep(nanoseconds: 50_000_000) }
+                            self.runOperation("launch_game", params: ["confirmed": .bool(true)])
+                        }
+                    }
                 }
             } catch {
                 self.operationError = error as? ErrorState ?? ErrorState("CORE_UNAVAILABLE")
@@ -394,7 +400,9 @@ final class AppState: ObservableObject {
                 }
                 self.guiRecords[method]?.finish(self.operationError)
                 self.recordGUIOperation(method)
-                if GUIAction(rawValue: method) != nil, ["AUTH_REQUIRED","SSH_AUTH_FAILED","SUDO_AUTH_FAILED","CREDENTIAL_SCOPE_CHANGED","CHANGE_CONFIRMATION_REQUIRED","RUNTIME_ROOT_REQUIRED"].contains(failure.code), self.operationSelection == nil {
+                if method == "launch_game", ["AUTH_REQUIRED", "SSH_AUTH_FAILED", "SUDO_AUTH_FAILED"].contains(failure.code) {
+                    self.launchCredentialKind = failure.code == "SUDO_AUTH_FAILED" ? "sudo_password" : failure.details["credential_kind"]?.text ?? "password"
+                } else if GUIAction(rawValue: method) != nil, ["AUTH_REQUIRED","SSH_AUTH_FAILED","SUDO_AUTH_FAILED","CREDENTIAL_SCOPE_CHANGED","CHANGE_CONFIRMATION_REQUIRED","RUNTIME_ROOT_REQUIRED"].contains(failure.code), self.operationSelection == nil {
                     self.operationSelection = NativeOperation(method: method)
                 }
                 self.appendLog(method + ": " + (self.operationError?.code ?? "UNKNOWN"))
@@ -404,6 +412,22 @@ final class AppState: ObservableObject {
     func discardPerformancePreview() { performanceConfigurationState.preview = [:] }
     func previewPerformance(restore: Bool = false) {
         guard let revision = performanceConfiguration["revision"]?.text else { return }
+    @Published var launchCredentialKind: String?
+    func resumeLaunchWithCredential(_ value: String, kind: String) {
+        guard !value.isEmpty else { return }
+        if kind == "sudo_password" { credentials.sudoPassword = value }
+        else if kind == "passphrase" { credentials.passphrase = value }
+        else {
+            credentials.password = value
+            if credentials.sudoPassword.isEmpty { credentials.sudoPassword = value }
+        }
+        launchCredentialKind = nil
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            while self.tasks.busy { try? await Task.sleep(nanoseconds: 50_000_000) }
+            self.runOperation("launch_game", params: ["confirmed": .bool(true)])
+        }
+    }
         runOperation(restore ? "performance_restore_preview" : "performance_preview", params: [
             "expected_revision": .string(revision), "values": .object(editedPerformance)])
     }
@@ -431,7 +455,11 @@ final class AppState: ObservableObject {
         }
         guard !tasks.busy else { return }
         operationError = nil; operationResult = [:]; operationEvents = []
-        if action == .game { scanFX(openingLaunch: true); return }
+        if action == .game {
+            if fxSelection.selected != nil { runOperation("launch_game", params: ["confirmed": .bool(true)]) }
+            else { scanFX(openingLaunch: true) }
+            return
+        }
         if runtimeRoot.isEmpty { operationSelection = NativeOperation(method: action.rawValue) }
         else if action.needsReview { pendingAction = action }
         else { runOperation(action.rawValue, params: ["confirmed": .bool(true)]) }
