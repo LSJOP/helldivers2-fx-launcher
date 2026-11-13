@@ -7,7 +7,7 @@
   "timezone": "Asia/Shanghai",
   "fx_guest_actions": "none",
   "credential_autoload": "disabled by isolated capture arguments",
-  "reviewed_ui_source_sha256": "9c7c7b1d8e19a643e82685c3cd4907ddaa7045ce82e60507f10fbba74ec7165b",
+  "reviewed_ui_source_sha256": "5c5f33dfb718392e25691d898e81baebed0ce47a9afe3d68c6f2e682960f8b9a",
   "screenshots": [
     {
       "path": "docs/images/zh-CN/dashboard.png",
