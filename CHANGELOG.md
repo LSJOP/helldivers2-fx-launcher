@@ -8,6 +8,8 @@ v1.0.0 is the release target. The inspected local arm64 App is `0.1.0` and ad ho
 
 ## Unreleased
 
+- Keep acceptance DMG packaging exclusively ad hoc and remove certificate discovery and notarization calls. Reset prior FEX and game evidence when retrying the unified workflow.
+
 - Accept structurally valid ad hoc launcher signing for the configured authenticated updater and allow the official stable GitHub Release appcast. Full installation and recovery acceptance remain pending.
 
 - Allocate a process-local loopback Steam API tunnel for the default forwarding port, avoiding conflicts with another running App copy. Explicit custom ports and endpoint ownership checks remain active.

@@ -22,19 +22,11 @@ finish() {
 trap finish EXIT
 log() { printf '%s\n' "$*" | tee -a "$report"; }
 
-identity_list="$(security find-identity -v -p codesigning)"
-identity="$(printf '%s\n' "$identity_list" | awk '/"Developer ID Application:/ && !seen++ {print $2}')"
-log "Internal test only | Version $version ($build) | arm64"
+log "Internal acceptance candidate | Version $version ($build) | arm64"
 log "Source: $(git -C "$root" rev-parse HEAD)"
-log 'Guest acceptance pending: first-run configuration, FX, SteamOS, SSH and sudo.'
-log 'Stable release acceptance pending: game launch, EAC and multiplayer.'
+log 'Signing: ad hoc. Apple notarization is not performed.'
+log 'Live game, installation and update acceptance must be recorded separately.'
 sign_settings=(CODE_SIGNING_ALLOWED=NO)
-if [[ -n "$identity" ]]; then
-    log 'Signing: Developer ID Application'
-    sign_settings=(CODE_SIGNING_ALLOWED=YES CODE_SIGN_STYLE=Manual "CODE_SIGN_IDENTITY=$identity")
-else
-    log 'Signing: ad hoc (internal testing only)'
-fi
 
 package_settings=()
 if [[ -n "${HD2_PACKAGE_CACHE:-}" ]]; then
@@ -47,11 +39,9 @@ xcodebuild -project "$root/HD2FXNative.xcodeproj" -scheme HD2FXNative \
     HD2_UPDATE_DISTRIBUTION_READY=NO HD2_UPDATE_ENABLED=NO \
     "${package_settings[@]}" "${sign_settings[@]}" build > "$output/build.log" 2>&1
 app="$output/Products/HD2FXNative.app"
-if [[ -z "$identity" ]]; then codesign --force --deep --sign - "$app"; fi
+codesign --force --deep --sign - "$app"
 codesign -dv --verbose=4 "$app" > "$output/signature.log" 2>&1
-if [[ -n "$identity" ]]; then
-    grep -q '^Authority=Developer ID Application:' "$output/signature.log"
-fi
+grep -q '^Signature=adhoc' "$output/signature.log"
 
 check_app() {
     local bundle="$1" executable="$1/Contents/MacOS/HD2FXNative" plist="$1/Contents/Info.plist"
@@ -73,22 +63,11 @@ log 'Release bundle verified. Native Swift Core is bundled. Python Core files ar
 mkdir "$output/image-content" "$output/Installed"
 ditto "$app" "$output/image-content/HD2FXNative.app"
 ln -s /Applications "$output/image-content/Applications"
-dmg="$output/HD2FXNative-v$version-arm64.dmg"
+dmg="$output/HD2FXNative-v$version-macOS-arm64.dmg"
 hdiutil create -srcfolder "$output/image-content" -volname 'HD2FXNative Internal Test' \
     -format UDZO -ov "$dmg" > "$output/image.log" 2>&1
-if [[ -n "$identity" ]]; then
-    codesign --sign "$identity" --timestamp "$dmg"
-    if [[ -n "${HD2_NOTARY_PROFILE:-}" ]]; then
-        xcrun notarytool submit "$dmg" --keychain-profile "$HD2_NOTARY_PROFILE" --wait > "$output/notary.log"
-        xcrun stapler staple "$dmg"
-        xcrun stapler validate "$dmg"
-        log 'Apple notarization and stapling verified.'
-    else
-        log 'Apple notarization skipped (no HD2_NOTARY_PROFILE).'
-    fi
-else
-    log 'Apple notarization unavailable for ad hoc signing.'
-fi
+log 'Ad hoc DMG. Gatekeeper and actual installation require separate acceptance.'
+
 (cd "$output" && shasum -a 256 "$(basename "$dmg")" > "$(basename "$dmg").sha256")
 (cd "$output" && shasum -a 256 -c "$(basename "$dmg").sha256") >> "$output/install-test.log"
 hdiutil verify "$dmg" >> "$output/install-test.log" 2>&1

@@ -518,6 +518,8 @@ final class AppState: ObservableObject {
             return
         }
         environmentWorkflow = EnvironmentWorkflow(phase: .startingFX, launchesGame: launchGame)
+        firstRunPlan = nil
+        if launchGame { launchSession = LaunchSession() }
         let root = runtimeRoot
         let launch = fxSelection.launchParameters(runtimeRoot: root)
         tasks.start { [weak self] in
