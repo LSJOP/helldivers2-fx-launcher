@@ -1,0 +1,120 @@
+From aa4f3f9a3039078d78b0b21d167fff4a4524aed8 Mon Sep 17 00:00:00 2001
+From: StonkGuy <68372320+StonkGuy@users.noreply.github.com>
+Date: Fri, 16 Oct 2026 18:59:32 +0300
+Subject: [PATCH 1/2] Signals: report RF in the EFLAGS of a fault's signal
+ frame
+
+What x86-64 Linux does: for a fault-class exception (#UD, #GP, #PF, ...) the CPU pushes an EFLAGS image with RF
+(resume flag, bit 16) set, and the kernel copies that image into uc_mcontext.gregs[REG_EFL] unchanged. A SIGSEGV
+from a page fault, a SIGILL from ud2, a SIGSEGV from a privileged instruction all show RF = 1. Trap-class exceptions
+(#BP from int3, #DB, #OF) and asynchronous signals show RF = 0. rt_sigreturn accepts RF back (FIX_EFLAGS); the CPU
+clears it after the next instruction, PUSHF never stores it and POPF clears it.
+
+What FEX did: the running RF is always 0 and the frame EFLAGS is the reconstructed running EFLAGS, so a fault frame
+had RF = 0. Who observes it: Wine copies the frame EFLAGS into CONTEXT.EFlags, so every PE exception handler sees
+it. A title's own execute-fault handler (THE FINALS, during thread detach) gets EFlags 0x10202 on x86-64 Proton and
+0x00000202 under FEX; it is the only flag difference in those exception records.
+
+Fix:
+* SignalDelegator: when the guest frame is built for a fault (a generated exception whose trap number is not
+  #DB/#BP/#OF, or a host SIGSEGV/SIGBUS on a guest access), set RF in the frame EFLAGS. One branch per guest signal
+  delivery; nothing on any other path.
+* RF never stays in the running state: SetFlagsFromCompactedEFLAGS (rt_sigreturn, Wine context loads) and
+  SetPackedRFLAG (POPF, IRET) store 0. An IRET that loads RF only masks an instruction breakpoint on the next
+  instruction, and FEX has no instruction breakpoints, so this is exact for everything a guest can see; without
+  it Wine's `pushq %r11; popfq` return path would carry RF = 1 into PUSHF and later frames.
+
+Test: eac-tests/fault-eflags (frame EFLAGS = flags before the instruction | RF for #PF read/exec, #UD, #GP;
+RF clear for int3; all 16 GPRs and RIP in the frame, also for an execute fault right after a syscall; PUSHF after
+the handler returns shows RF clear).
+
+Upstream: FEX main as triaged at 14c9268 builds the frame from the running EFLAGS (RF 0) and stores RF from POPF/IRET.
+#DE is not covered: FEX does not raise it for a division by zero (upstream limit, no consumer seen).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ FEXCore/Source/Interface/Core/Core.cpp        |  6 +++++
+ .../Interface/Core/OpcodeDispatcher/Flags.cpp |  4 ++++
+ .../LinuxSyscalls/SignalDelegator.cpp         | 22 +++++++++++++++++++
+ 3 files changed, 32 insertions(+)
+
+diff --git a/FEXCore/Source/Interface/Core/Core.cpp b/FEXCore/Source/Interface/Core/Core.cpp
+index 2a075019df..b5d17defb4 100644
+--- a/FEXCore/Source/Interface/Core/Core.cpp
++++ b/FEXCore/Source/Interface/Core/Core.cpp
+@@ -334,6 +334,12 @@ void ContextImpl::SetFlagsFromCompactedEFLAGS(FEXCore::Core::InternalThreadState
+       // DF is encoded as 1/-1
+       Frame->State.flags[i] = (EFLAGS & (1U << i)) ? 0xff : 1;
+       break;
++    case X86State::RFLAG_RF_LOC:
++      // RF only suppresses an instruction breakpoint on the next instruction, and the CPU clears it once that
++      // instruction completes. FEX has no instruction breakpoints, so a context that loads RF (a signal frame of a
++      // fault, which carries RF = 1) consumes it at once: PUSHF and later signal frames must not see it.
++      Frame->State.flags[i] = 0;
++      break;
+     default: Frame->State.flags[i] = (EFLAGS & (1U << i)) ? 1 : 0; break;
+     }
+   }
+diff --git a/FEXCore/Source/Interface/Core/OpcodeDispatcher/Flags.cpp b/FEXCore/Source/Interface/Core/OpcodeDispatcher/Flags.cpp
+index 858e7a4aea..187be5fe09 100644
+--- a/FEXCore/Source/Interface/Core/OpcodeDispatcher/Flags.cpp
++++ b/FEXCore/Source/Interface/Core/OpcodeDispatcher/Flags.cpp
+@@ -60,6 +60,10 @@ void OpDispatchBuilder::SetPackedRFLAG(bool Lower8, Ref Src) {
+     } else if (FlagOffset == FEXCore::X86State::RFLAG_PF_RAW_LOC || FlagOffset == FEXCore::X86State::RFLAG_CF_RAW_LOC) {
+       // PF and CF are both stored parity flipped.
+       SetRFLAG(SrcInverted, FlagOffset, FlagOffset, true);
++    } else if (FlagOffset == FEXCore::X86State::RFLAG_RF_LOC) {
++      // POPF clears RF. IRET loads it, but it only suppresses an instruction breakpoint on the next instruction and
++      // the CPU clears it after that one; FEX has no instruction breakpoints, so it is never visible afterwards.
++      SetRFLAG(Constant(0), FlagOffset);
+     } else {
+       SetRFLAG(Src, FlagOffset, FlagOffset, true);
+     }
+diff --git a/Source/Tools/LinuxEmulation/LinuxSyscalls/SignalDelegator.cpp b/Source/Tools/LinuxEmulation/LinuxSyscalls/SignalDelegator.cpp
+index 07af884e5a..595521f1ef 100644
+--- a/Source/Tools/LinuxEmulation/LinuxSyscalls/SignalDelegator.cpp
++++ b/Source/Tools/LinuxEmulation/LinuxSyscalls/SignalDelegator.cpp
+@@ -186,6 +186,7 @@ ArchHelpers::Context::ContextBackup* SignalDelegator::StoreThreadState(FEXCore::
+ }
+ 
+ static void CheckForPendingSignals(const FEX::HLE::ThreadStateObject* Thread);
++static bool IsFaultClassException(const FEXCore::Core::CpuStateFrame* Frame, bool GeneratedException, int Signal, const siginfo_t* HostSigInfo);
+ 
+ void SignalDelegator::RestoreThreadState(FEXCore::Core::InternalThreadState* Thread, void* ucontext, RestoreType Type) {
+   uint64_t OldSP {};
+@@ -423,6 +424,9 @@ bool SignalDelegator::HandleDispatcherGuestSignal(FEXCore::Core::InternalThreadS
+ 
+   ContextBackup->OriginalRIP = Thread->CurrentFrame->State.rip;
+   uint32_t eflags = CTX->ReconstructCompactedEFLAGS(Thread, false, nullptr, 0);
++  if (IsFaultClassException(Frame, ContextBackup->FaultToTopAndGeneratedException, Signal, HostSigInfo)) {
++    eflags |= 1U << FEXCore::X86State::RFLAG_RF_LOC;
++  }
+ 
+   if (Is64BitMode) {
+     NewGuestSP = SetupFrame_x64(Thread, ContextBackup, Frame, Signal, HostSigInfo, ucontext, GuestAction, GuestStack, NewGuestSP, eflags);
+@@ -590,6 +594,24 @@ void SignalDelegator::SignalThread(FEXCore::Core::InternalThreadState* Thread, S
+ 
+ /**  @} */
+ 
++// For a fault-class exception the CPU pushes an EFLAGS image with RF (resume flag) set, so that returning to the faulting
++// instruction does not raise an instruction breakpoint on it again; Linux puts that image into the signal frame unchanged
++// (a SIGSEGV from a page fault shows RF = 1 in uc_mcontext). Traps (#DB, #BP, #OF) and asynchronous signals push RF = 0.
++// FEX's running RF is always 0, so the frame gets it here. Only computed while a guest frame is being built.
++static bool IsFaultClassException(const FEXCore::Core::CpuStateFrame* Frame, bool GeneratedException, int Signal, const siginfo_t* HostSigInfo) {
++  if (GeneratedException) {
++    switch (Frame->SynchronousFaultData.TrapNo) {
++    case FEXCore::X86State::X86_TRAPNO_DB:
++    case FEXCore::X86State::X86_TRAPNO_BP:
++    case FEXCore::X86State::X86_TRAPNO_OF: return false;
++    default: return true;
++    }
++  }
++
++  // A guest memory access that faulted on the host: a #PF for the guest.
++  return (Signal == SIGSEGV || Signal == SIGBUS) && HostSigInfo->si_code > SI_USER && HostSigInfo->si_code < SI_KERNEL;
++}
++
+ static bool IsAsyncSignal(const siginfo_t* Info, int Signal) {
+   if (Info->si_code <= SI_USER) {
+     // If the signal is not from the kernel then it is always async.
+

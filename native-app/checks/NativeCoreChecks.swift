@@ -25,6 +25,26 @@ func runChecks() {
     setenv("HD2FX_LAUNCH_RESOURCES", resources.path, 1)
     defer { try? FileManager.default.removeItem(at: root) }
 
+    for method in ["first_run_fex_build", "first_run_fex_install", "first_run_fex_recover"] {
+        checkThrows("CONFIRMATION_REQUIRED", "FEX action requires explicit initiation: " + method) {
+            _ = try NativeCoreService.perform(method, params: [:], context: CoreContext(timeout: 1), onEvent: nil)
+        }
+    }
+
+    let fexSnapshot = DeploymentSnapshot(target: "fixture", boot: UUID().uuidString, revision: "fixture", fxVersion: "fixture", osVersion: "fixture", architecture: "aarch64", steamRunning: false, gameRunning: false, freeBytes: 0,
+        facts: ["fx_path": "/fixture/FX.app", "machine_id": String(repeating: "a", count: 32), "fx_executable_sha256": String(repeating: "b", count: 64), "ssh_connection": String(repeating: "c", count: 64)], values: [:])
+    var fexRecord = fexSnapshot.facts.mapValues(JSONValue.string)
+    fexRecord["built"] = .bool(true)
+    fexRecord["audit"] = .object(["ready": .bool(true), "source": .string("87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8"), "patch": .string("85999c4f3a82063c66095d5315a661f0eed8369ed7b4b03191ed5dc8521d7926"), "executable_sha256": .string(LaunchService.verifiedFEX)])
+    fexRecord["installation"] = .object(["verified": .bool(true), "installed_manifest": .string(String(repeating: "d", count: 64))])
+    check(FEXWorkflow.installedDigest(fexRecord, snapshot: fexSnapshot) != nil, "FEX full installed manifest has bound build approval")
+    var wrongFEXRecord = fexRecord; wrongFEXRecord["machine_id"] = .string(String(repeating: "e", count: 32))
+    check(FEXWorkflow.installedDigest(wrongFEXRecord, snapshot: fexSnapshot) == nil, "FEX approval never crosses Guest identity")
+    wrongFEXRecord = fexRecord; wrongFEXRecord["built"] = .bool(false)
+    check(FEXWorkflow.installedDigest(wrongFEXRecord, snapshot: fexSnapshot) == nil, "Guest provenance alone cannot establish FEX approval")
+    wrongFEXRecord = fexRecord; wrongFEXRecord["installation"] = .object(["verified": .bool(true)])
+    check(FEXWorkflow.installedDigest(wrongFEXRecord, snapshot: fexSnapshot) == nil, "FEX executable alone is not a complete installed manifest")
+
     // MARK: SHA-256 / bounded file reads
     check(CoreHash.sha256(Data("abc".utf8)) == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", "sha256 abc")
     check(CoreHash.sha256(Data()) == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "sha256 empty")

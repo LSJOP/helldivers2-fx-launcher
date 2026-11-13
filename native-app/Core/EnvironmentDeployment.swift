@@ -113,7 +113,7 @@ struct DeploymentOperation: Codable, Identifiable, Equatable {
     var advisory: Bool { component == "ipv6" }
     // A successful bounded observation is independent of permission to deploy changes.
     var detectionPassed: Bool {
-        if component == "proton" && currentVersion == "verified" { return true }
+        if ["fex", "proton"].contains(component) && currentVersion == "verified" { return true }
         return ["steam", "game", "vulkan", "kosmickrisp", "network", "gvproxy", "ipv4", "ipv6"].contains(component)
             && ["present", "configured", "available"].contains(currentVersion)
     }

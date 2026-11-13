@@ -5,6 +5,7 @@ cd "$ROOT_DIR"
 mkdir -p build evidence
 SDK="$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
 
+/usr/bin/python3 -I -B checks/fex_pipeline_checks.py >evidence/fex-pipeline-checks.txt 2>&1
 /usr/bin/python3 -I -B script/check_localization.py >evidence/localization-checks.json
 /usr/bin/python3 -I -B checks/localization_checks.py >evidence/localization-negative-checks.txt 2>&1
 /usr/bin/python3 -I -B script/check_readme_screenshots.py >evidence/readme-screenshot-paths.txt 2>&1

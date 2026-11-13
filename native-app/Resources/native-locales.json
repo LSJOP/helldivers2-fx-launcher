@@ -599,7 +599,14 @@
   "ui.setup.apiFailure": "Steam settings could not be read; technical reason",
   "ui.setup.state.Rebooting": "Rebooting the selected FX virtual machine",
   "ui.setup.state.Reconnecting": "Reconnecting SSH after reboot",
-  "ui.setup.state.CheckingSteam": "Waiting for Steam settings after reboot"
+  "ui.setup.state.CheckingSteam": "Waiting for Steam settings after reboot",
+  "ui.fex.title": "FEX review and deployment",
+  "ui.fex.scope": "Build the pinned source in a separate directory. Only a candidate matching the verified executable and complete build inventory can be deployed. Quit Steam and games before deployment or recovery; keep a backup. A build alone does not verify gameplay.",
+  "ui.fex.audit": "Review candidate",
+  "ui.fex.build": "Build candidate",
+  "ui.fex.install": "Deploy reviewed candidate",
+  "ui.fex.recover": "Restore original component",
+  "ui.fex.pendingReview": "A candidate was found, but integrity review has not passed. Deployment is blocked."
  },
  "zh-CN": {
   "ui.193": "导航",
@@ -1201,7 +1208,14 @@
   "ui.setup.apiFailure": "无法读取 Steam 设置；具体原因",
   "ui.setup.state.Rebooting": "正在重启所选 FX 虚拟机",
   "ui.setup.state.Reconnecting": "重启后正在重新连接 SSH",
-  "ui.setup.state.CheckingSteam": "重启后正在等待 Steam 设置就绪"
+  "ui.setup.state.CheckingSteam": "重启后正在等待 Steam 设置就绪",
+  "ui.fex.title": "FEX 审核与部署",
+  "ui.fex.scope": "在独立目录构建固定源码。仅与已验证可执行文件及完整构建清单匹配的候选可部署。部署或恢复前退出 Steam 和游戏，并保留备份。构建成功不代表游戏验收通过。",
+  "ui.fex.audit": "审核候选",
+  "ui.fex.build": "构建候选",
+  "ui.fex.install": "部署已审核候选",
+  "ui.fex.recover": "恢复原组件",
+  "ui.fex.pendingReview": "已发现候选，完整性审核尚未通过，不能部署。"
  },
  "ja": {
   "ui.193": "移動",
@@ -1803,7 +1817,14 @@
   "ui.setup.apiFailure": "Steam 設定を読み取れません。詳細な原因",
   "ui.setup.state.Rebooting": "選択した FX 仮想マシンを再起動中",
   "ui.setup.state.Reconnecting": "再起動後に SSH へ再接続中",
-  "ui.setup.state.CheckingSteam": "再起動後に Steam 設定の準備を待機中"
+  "ui.setup.state.CheckingSteam": "再起動後に Steam 設定の準備を待機中",
+  "ui.fex.title": "FEX の審査と配置",
+  "ui.fex.scope": "固定したソースを別のディレクトリでビルドします。検証済み実行ファイルと完全なファイル一覧に一致する候補のみ配置できます。配置や復元の前に Steam とゲームを終了し、バックアップを保持します。ビルド成功はゲーム動作の確認ではありません。",
+  "ui.fex.audit": "候補を審査",
+  "ui.fex.build": "候補をビルド",
+  "ui.fex.install": "審査済み候補を配置",
+  "ui.fex.recover": "元のコンポーネントを復元",
+  "ui.fex.pendingReview": "候補は見つかりましたが、整合性審査に合格していないため配置できません。"
  },
  "ko": {
   "ui.193": "탐색",
@@ -2405,7 +2426,14 @@
   "ui.setup.apiFailure": "Steam 설정을 읽을 수 없습니다. 구체적인 원인",
   "ui.setup.state.Rebooting": "선택한 FX 가상 머신을 다시 시작하는 중",
   "ui.setup.state.Reconnecting": "다시 시작한 후 SSH에 다시 연결하는 중",
-  "ui.setup.state.CheckingSteam": "다시 시작한 후 Steam 설정을 기다리는 중"
+  "ui.setup.state.CheckingSteam": "다시 시작한 후 Steam 설정을 기다리는 중",
+  "ui.fex.title": "FEX 검토 및 배포",
+  "ui.fex.scope": "고정된 소스를 별도 디렉터리에서 빌드합니다. 검증된 실행 파일과 전체 빌드 목록이 일치하는 후보만 배포할 수 있습니다. 배포나 복원 전에 Steam과 게임을 종료하고 백업을 보관하세요. 빌드 성공은 게임 실행 검증을 의미하지 않습니다.",
+  "ui.fex.audit": "후보 검토",
+  "ui.fex.build": "후보 빌드",
+  "ui.fex.install": "검토된 후보 배포",
+  "ui.fex.recover": "원래 구성 요소 복원",
+  "ui.fex.pendingReview": "후보가 발견되었지만 무결성 검토를 통과하지 못해 배포할 수 없습니다."
  },
  "ru": {
   "ui.193": "Навигация",
@@ -3007,7 +3035,14 @@
   "ui.setup.apiFailure": "Не удалось прочитать настройки Steam; техническая причина",
   "ui.setup.state.Rebooting": "Перезапуск выбранной виртуальной машины FX",
   "ui.setup.state.Reconnecting": "Повторное подключение SSH после перезапуска",
-  "ui.setup.state.CheckingSteam": "Ожидание настроек Steam после перезапуска"
+  "ui.setup.state.CheckingSteam": "Ожидание настроек Steam после перезапуска",
+  "ui.fex.title": "Проверка и установка FEX",
+  "ui.fex.scope": "Закреплённый исходный код собирается в отдельном каталоге. Установка разрешена только при совпадении проверенного исполняемого файла и полного состава сборки. Перед установкой или восстановлением закройте Steam и игры; сохраните резервную копию. Успешная сборка не подтверждает работу игры.",
+  "ui.fex.audit": "Проверить сборку",
+  "ui.fex.build": "Собрать кандидата",
+  "ui.fex.install": "Установить проверенную сборку",
+  "ui.fex.recover": "Восстановить исходный компонент",
+  "ui.fex.pendingReview": "Сборка найдена, но проверка целостности не пройдена. Установка заблокирована."
  },
  "es": {
   "ui.193": "Navegación",
@@ -3609,7 +3644,14 @@
   "ui.setup.apiFailure": "No se pudieron leer los ajustes de Steam; motivo técnico",
   "ui.setup.state.Rebooting": "Reiniciando la máquina virtual FX seleccionada",
   "ui.setup.state.Reconnecting": "Reconectando SSH después del reinicio",
-  "ui.setup.state.CheckingSteam": "Esperando los ajustes de Steam después del reinicio"
+  "ui.setup.state.CheckingSteam": "Esperando los ajustes de Steam después del reinicio",
+  "ui.fex.title": "Revisión e instalación de FEX",
+  "ui.fex.scope": "El código fijado se compila en un directorio separado. Solo se instala un candidato que coincida con el ejecutable verificado y el inventario completo. Cierra Steam y los juegos antes de instalar o restaurar y conserva la copia de seguridad. Compilar no confirma que el juego funcione.",
+  "ui.fex.audit": "Revisar candidato",
+  "ui.fex.build": "Compilar candidato",
+  "ui.fex.install": "Instalar candidato revisado",
+  "ui.fex.recover": "Restaurar componente original",
+  "ui.fex.pendingReview": "Se encontró un candidato, pero no ha superado la revisión de integridad. Instalación bloqueada."
  },
  "de": {
   "ui.193": "Navigation",
@@ -4211,7 +4253,14 @@
   "ui.setup.apiFailure": "Steam-Einstellungen konnten nicht gelesen werden; technischer Grund",
   "ui.setup.state.Rebooting": "Gewählte FX-VM wird neu gestartet",
   "ui.setup.state.Reconnecting": "SSH wird nach dem Neustart neu verbunden",
-  "ui.setup.state.CheckingSteam": "Steam-Einstellungen nach dem Neustart werden erwartet"
+  "ui.setup.state.CheckingSteam": "Steam-Einstellungen nach dem Neustart werden erwartet",
+  "ui.fex.title": "FEX prüfen und installieren",
+  "ui.fex.scope": "Der festgelegte Quellcode wird separat gebaut. Nur Kandidaten mit passender geprüfter Programmdatei und vollständiger Dateiliste können installiert werden. Steam und Spiele vor Installation oder Wiederherstellung beenden; Sicherung behalten. Ein erfolgreicher Build bestätigt keine Spielbarkeit.",
+  "ui.fex.audit": "Kandidat prüfen",
+  "ui.fex.build": "Kandidat bauen",
+  "ui.fex.install": "Geprüften Kandidaten installieren",
+  "ui.fex.recover": "Originalkomponente wiederherstellen",
+  "ui.fex.pendingReview": "Ein Kandidat wurde gefunden, hat die Integritätsprüfung aber nicht bestanden. Installation gesperrt."
  },
  "fr": {
   "ui.193": "Navigation",
@@ -4813,7 +4862,14 @@
   "ui.setup.apiFailure": "Impossible de lire les réglages Steam ; cause technique",
   "ui.setup.state.Rebooting": "Redémarrage de la VM FX sélectionnée",
   "ui.setup.state.Reconnecting": "Reconnexion SSH après le redémarrage",
-  "ui.setup.state.CheckingSteam": "Attente des réglages Steam après le redémarrage"
+  "ui.setup.state.CheckingSteam": "Attente des réglages Steam après le redémarrage",
+  "ui.fex.title": "Vérification et installation de FEX",
+  "ui.fex.scope": "Les sources figées sont compilées séparément. Seul un candidat correspondant à l’exécutable vérifié et à l’inventaire complet peut être installé. Quittez Steam et les jeux avant installation ou restauration ; conservez la sauvegarde. Une compilation réussie ne valide pas le jeu.",
+  "ui.fex.audit": "Vérifier le candidat",
+  "ui.fex.build": "Compiler le candidat",
+  "ui.fex.install": "Installer le candidat vérifié",
+  "ui.fex.recover": "Restaurer le composant initial",
+  "ui.fex.pendingReview": "Un candidat a été trouvé, mais la vérification d’intégrité n’a pas abouti. Installation bloquée."
  },
  "pt-BR": {
   "ui.193": "Navegação",
@@ -5415,7 +5471,14 @@
   "ui.setup.apiFailure": "Não foi possível ler as configurações do Steam; motivo técnico",
   "ui.setup.state.Rebooting": "Reiniciando a VM FX selecionada",
   "ui.setup.state.Reconnecting": "Reconectando o SSH após a reinicialização",
-  "ui.setup.state.CheckingSteam": "Aguardando as configurações do Steam após a reinicialização"
+  "ui.setup.state.CheckingSteam": "Aguardando as configurações do Steam após a reinicialização",
+  "ui.fex.title": "Revisão e instalação do FEX",
+  "ui.fex.scope": "O código fixado é compilado em um diretório separado. Apenas candidatos que correspondam ao executável verificado e ao inventário completo podem ser instalados. Feche o Steam e os jogos antes de instalar ou restaurar e mantenha o backup. Compilar não comprova o funcionamento do jogo.",
+  "ui.fex.audit": "Revisar candidato",
+  "ui.fex.build": "Compilar candidato",
+  "ui.fex.install": "Instalar candidato revisado",
+  "ui.fex.recover": "Restaurar componente original",
+  "ui.fex.pendingReview": "Um candidato foi encontrado, mas não passou na revisão de integridade. Instalação bloqueada."
  },
  "zh-TW": {
   "ui.270": "無需外部執行環境；檢測後按 ⌘R 重新讀取全部唯讀快照。",
@@ -6017,6 +6080,13 @@
   "ui.setup.apiFailure": "無法讀取 Steam 設定；具體原因",
   "ui.setup.state.Rebooting": "正在重新啟動所選 FX 虛擬機",
   "ui.setup.state.Reconnecting": "重新啟動後正在重新連線 SSH",
-  "ui.setup.state.CheckingSteam": "重新啟動後正在等待 Steam 設定就緒"
+  "ui.setup.state.CheckingSteam": "重新啟動後正在等待 Steam 設定就緒",
+  "ui.fex.title": "FEX 審核與部署",
+  "ui.fex.scope": "在獨立目錄建置固定原始碼。僅與已驗證執行檔及完整建置清單相符的候選可部署。部署或復原前退出 Steam 和遊戲，並保留備份。建置成功不代表遊戲驗收通過。",
+  "ui.fex.audit": "審核候選",
+  "ui.fex.build": "建置候選",
+  "ui.fex.install": "部署已審核候選",
+  "ui.fex.recover": "復原原元件",
+  "ui.fex.pendingReview": "已發現候選，完整性審核尚未通過，無法部署。"
  }
 }

@@ -206,3 +206,7 @@ The Dashboard image was refreshed from an isolated real Debug window on 2026-11-
 FX Manager also lists the local test identity `es.fxgam.steamtc`. Intact locally signed copies can use the normal launch confirmation, without an official publisher signature. They are labelled as local test copies; path, content-seal, process ancestry and SSH endpoint checks remain active. This does not enable performance preference writes for custom copies or establish Guest/game compatibility.
 
 First-Run Setup uses the same official/local-copy entry validation as launch. A fresh test Guest still needs its own SSH/sudo authentication and a reviewed deployment profile; recognizing the copy does not establish that those prerequisites are complete.
+
+### FEX candidate review (development)
+
+First-Run Setup now includes **Review candidate**, **Build candidate**, **Deploy reviewed candidate**, and **Restore original component**. The build uses a pinned FEX source commit and reviewed RF patch in a separate Guest directory. It preserves the current installation, checks a complete runtime inventory and the historical executable hash, and keeps a backup for guarded recovery. An unfamiliar build remains blocked. The real Guest candidate build succeeded, but its executable hash differs from the historical policy, so deployment is blocked. Real deployment, recovery and gameplay acceptance remain pending. See [the workflow and evidence](docs/environment/FEX_CANDIDATE_PIPELINE.md). No manual terminal installation is required by this UI flow.

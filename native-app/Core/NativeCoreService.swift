@@ -11,6 +11,10 @@ actor NativeCoreService {
     struct Operation { let method: String; let scope: String; let confirmation: Bool; let external: Bool }
 
     static let operations: [Operation] = [
+        Operation(method: "first_run_fex_audit", scope: "setup", confirmation: true, external: true),
+        Operation(method: "first_run_fex_build", scope: "setup", confirmation: true, external: true),
+        Operation(method: "first_run_fex_install", scope: "setup", confirmation: true, external: true),
+        Operation(method: "first_run_fex_recover", scope: "setup", confirmation: true, external: true),
         Operation(method: "first_run_detect", scope: "setup", confirmation: true, external: true),
         Operation(method: "first_run_deploy", scope: "setup", confirmation: true, external: true),
         Operation(method: "first_run_recover", scope: "setup", confirmation: true, external: true),
@@ -134,7 +138,7 @@ actor NativeCoreService {
     nonisolated static func dispatch(_ method: String, params: [String: JSONValue], context: CoreContext,
                                      emit: @escaping (String, String, [String: JSONValue]) -> Void) throws -> [String: JSONValue] {
         switch method {
-        case "first_run_detect", "first_run_deploy", "first_run_recover", "first_run_receipts":
+        case "first_run_detect", "first_run_deploy", "first_run_recover", "first_run_receipts", "first_run_fex_audit", "first_run_fex_build", "first_run_fex_install", "first_run_fex_recover":
             guard method == "first_run_receipts" || params["confirmed"]?.boolean == true else { throw CoreError("CONFIRMATION_REQUIRED") }
             return try deployment(method, params: params, context: context, emit: emit)
         case "credential_target": return try credentialTarget(params, context: context)

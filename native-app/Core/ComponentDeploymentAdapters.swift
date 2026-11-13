@@ -317,3 +317,344 @@ finally:
  lock.rmdir()
 """#
 }
+
+/// Fixed-source candidate build and identity-bound review. An unmatched historical
+/// executable is reported for review and can never enable installation.
+enum FEXWorkflow {
+    static func installedDigest(_ record: [String: JSONValue], snapshot: DeploymentSnapshot) -> String? {
+        guard record["built"]?.boolean == true, record["audit"]?.object["ready"]?.boolean == true,
+              record["audit"]?.object["source"]?.text == "87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8",
+              record["audit"]?.object["patch"]?.text == "85999c4f3a82063c66095d5315a661f0eed8369ed7b4b03191ed5dc8521d7926",
+              record["audit"]?.object["executable_sha256"]?.text == LaunchService.verifiedFEX,
+              record["installation"]?.object["verified"]?.boolean == true,
+              let digest = record["installation"]?.object["installed_manifest"]?.text, ApprovedArtifact.hash(digest) else { return nil }
+        for key in ["fx_path", "machine_id", "fx_executable_sha256", "ssh_connection"] {
+            guard let value = snapshot.facts[key], !value.isEmpty, record[key]?.text == value else { return nil }
+        }
+        return digest
+    }
+    static func verifyInstalled(_ backend: SSHEnvironmentBackend, snapshot: DeploymentSnapshot) throws -> Bool {
+        let store = CoreFS.nativeData().appendingPathComponent("fex-reviews", isDirectory: true)
+        guard let files = try? FileManager.default.contentsOfDirectory(at: store, includingPropertiesForKeys: nil), files.count <= 1024 else { return false }
+        var approved = Set<String>()
+        for file in files where file.pathExtension == "json" && !FileManager.default.isSymbolicLink(atPath: file.path) {
+            guard let bytes = try? Data(contentsOf: file), bytes.count < 1_048_576,
+                  let record = try? JSONDecoder().decode([String: JSONValue].self, from: bytes),
+                  let digest = installedDigest(record, snapshot: snapshot) else { continue }
+            approved.insert(digest)
+        }
+        guard !approved.isEmpty else { return false }
+        // Reuse only the bounded read-only inventory helpers, never the write dispatcher.
+        let helpers = pipeline.components(separatedBy: "work=pathlib.Path.home()")[0]
+        let script = "python3 - <<'HD2_FEX_VERIFY'\n" + helpers + "\nprint(fingerprint(inventory(pathlib.Path.home()/'.local/share/Steam/steamapps/common/FEX-Emu')))\nHD2_FEX_VERIFY\n"
+        let reply = try backend.transport.run(script, timeout: 120, context: backend.context)
+        guard reply.status == 0 else { return false }
+        return approved.contains(reply.stdout.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+    static func run(_ method: String, backend: SSHEnvironmentBackend, params: [String: JSONValue]) throws -> [String: JSONValue] {
+        let mode = String(method.dropFirst("first_run_fex_".count))
+        guard ["audit", "build", "install", "recover"].contains(mode) else { throw CoreError("INVALID_ARGUMENT") }
+        let snapshot = try backend.snapshot()
+        let store = CoreFS.nativeData().appendingPathComponent("fex-reviews", isDirectory: true)
+        try CoreFS.ensurePrivateDirectory(store)
+        var request: [String: JSONValue] = ["mode": .string(mode), "boot": .string(snapshot.boot)]
+        if mode == "build", LaunchService.checkProxyPort(), SSHTransport.localHost(backend.transport.settings.host) {
+            request["source_proxy"] = .string("http://192.168.127.254:7890")
+        }
+        let id: UUID
+        if ["install", "recover"].contains(mode) {
+            guard let selected = params["receipt_id"]?.text.flatMap(UUID.init(uuidString:)) else { throw CoreError("CONFIRMATION_REQUIRED") }
+            id = selected
+            let file = store.appendingPathComponent(id.uuidString + ".json")
+            guard !FileManager.default.isSymbolicLink(atPath: file.path) else { throw CoreError("UNSAFE_PATH") }
+            let data = try Data(contentsOf: file)
+            guard data.count < 1_048_576 else { throw CoreError("OUTPUT_LIMIT") }
+            let saved = try JSONDecoder().decode([String: JSONValue].self, from: data)
+            guard saved["target"]?.text == snapshot.target, saved["boot"]?.text == snapshot.boot,
+                  (mode == "recover" || saved["revision"]?.text == snapshot.revision) else { throw CoreError("TARGET_CHANGED") }
+            if mode == "install" {
+                guard saved["audit"]?.object["ready"]?.boolean == true else { throw CoreError("ARTIFACT_UNAPPROVED") }
+                request["audit"] = saved["audit"]
+            }
+            request["ticket"] = .string(id.uuidString)
+        } else { id = UUID() }
+        guard let patchURL = Bundle.main.url(forResource: "fex-rf-reviewed", withExtension: "patch") else { throw CoreError("ARTIFACT_UNAPPROVED") }
+        let patch = try Data(contentsOf: patchURL)
+        guard CoreHash.sha256(patch) == "85999c4f3a82063c66095d5315a661f0eed8369ed7b4b03191ed5dc8521d7926" else { throw CoreError("SOURCE_MISMATCH") }
+        request["patch"] = .string(patch.base64EncodedString())
+        let payload = try JSONEncoder().encode(request).base64EncodedString()
+        let source = FEXWorkflow.pipeline
+        let script = "python3 - <<'HD2_FEX_PIPELINE'\nimport base64,json\nREQUEST=json.loads(base64.b64decode('" + payload + "'))\n" + source + "\nHD2_FEX_PIPELINE\n"
+        _ = try backend.hostIdentity()
+        if mode == "install" {
+            let file = store.appendingPathComponent(id.uuidString + ".json")
+            var saved = try JSONDecoder().decode([String: JSONValue].self, from: Data(contentsOf: file))
+            saved["attempted"] = .bool(true)
+            try CoreFS.atomicWrite(try JSONEncoder().encode(saved), to: file)
+        }
+        let result = try backend.transport.run(script, timeout: mode == "build" ? 6000 : 300, context: backend.context)
+        guard result.status == 0 else {
+            let known = ["STEAM_RUNNING", "TARGET_CHANGED", "UNSAFE_PATH", "INSUFFICIENT_SPACE", "SOURCE_MISMATCH", "ARTIFACT_UNAPPROVED", "EXTERNAL_DRIFT", "VERIFY_FAILED", "BUILD_DEPENDENCY_MISSING", "BUILD_CANDIDATE_EXISTS", "COMPONENT_CONFLICT"]
+            throw CoreError(known.first { result.stderr.contains($0) } ?? "COMPONENT_INSTALL_FAILED", ["summary": .string(CoreRedaction.scrub(String(result.stderr.suffix(4096)), secrets: ["password", "sudo_password", "passphrase"].compactMap { params[$0]?.text }))])
+        }
+        guard let data = result.stdout.data(using: .utf8), data.count < 1_048_576,
+              var value = try? JSONDecoder().decode([String: JSONValue].self, from: data) else { throw CoreError("PROTOCOL_ERROR") }
+        if let log = value["build_log"]?.text { value["build_log"] = .string(CoreRedaction.scrub(log, secrets: ["password", "sudo_password", "passphrase"].compactMap { params[$0]?.text })) }
+        _ = try backend.hostIdentity()
+        let records = try FileManager.default.contentsOfDirectory(at: store, includingPropertiesForKeys: nil)
+        guard records.count <= 1024 else { throw CoreError("OUTPUT_LIMIT") }
+        var restore: String?
+        var trusted = mode == "build"
+        for file in records where file.pathExtension == "json" && !FileManager.default.isSymbolicLink(atPath: file.path) {
+            guard let bytes = try? Data(contentsOf: file), bytes.count < 1_048_576,
+                  let old = try? JSONDecoder().decode([String: JSONValue].self, from: bytes),
+                  old["target"]?.text == snapshot.target, old["boot"]?.text == snapshot.boot else { continue }
+            if old["built"]?.boolean == true, old["audit"]?.object["candidate"] == value["candidate"],
+               old["audit"]?.object["executable_sha256"] == value["executable_sha256"] { trusted = true }
+            if old["attempted"]?.boolean == true, (value["recoverable"]?.array ?? []).contains(.string(file.deletingPathExtension().lastPathComponent)) { restore = file.deletingPathExtension().lastPathComponent }
+        }
+        if !trusted { value["ready"] = .bool(false) }
+        if ["audit", "build"].contains(mode) {
+            let record: [String: JSONValue] = ["target": .string(snapshot.target), "boot": .string(snapshot.boot), "revision": .string(snapshot.revision), "audit": .object(value), "built": .bool(trusted), "fx_path": .string(snapshot.facts["fx_path"] ?? ""), "machine_id": .string(snapshot.facts["machine_id"] ?? ""), "fx_executable_sha256": .string(snapshot.facts["fx_executable_sha256"] ?? ""), "ssh_connection": .string(snapshot.facts["ssh_connection"] ?? "")]
+            try CoreFS.atomicWrite(try JSONEncoder().encode(record), to: store.appendingPathComponent(id.uuidString + ".json"))
+        }
+        if ["install", "recover"].contains(mode) {
+            let file = store.appendingPathComponent(id.uuidString + ".json")
+            var saved = try JSONDecoder().decode([String: JSONValue].self, from: Data(contentsOf: file))
+            saved["installation"] = mode == "install" ? .object(value) : .null
+            try CoreFS.atomicWrite(try JSONEncoder().encode(saved), to: file)
+            restore = mode == "install" ? id.uuidString : nil
+        }
+        return ["fex_audit": .object(value), "fex_ticket": .string(id.uuidString), "fex_restore_ticket": restore.map(JSONValue.string) ?? .null, "ssh_password_verified": .bool(backend.transport.passwordWasSent), "guest_boot": .string(snapshot.boot)]
+    }
+}
+
+extension FEXWorkflow {
+    static let pipeline = #"""
+# Executed only by the bundled Native Core over an identity-verified Guest SSH session.
+import os,sys,json,hashlib,pathlib,subprocess,shutil,uuid,stat,time,fcntl,signal,shlex,urllib.parse
+os.umask(0o077)
+BASE='87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8'
+PATCH='85999c4f3a82063c66095d5315a661f0eed8369ed7b4b03191ed5dc8521d7926'
+EXPECTED='ce93cadae7b7d3ef01376ba2acd58aedb602a7fc077e49592179766d13c294bf'
+def fail(code): raise RuntimeError(code)
+def digest(p):
+ h=hashlib.sha256()
+ with open(p,'rb') as f:
+  for b in iter(lambda:f.read(1048576),b''):h.update(b)
+ return h.hexdigest()
+def safe(p):
+ for x in [p,*p.parents]:
+  if x.is_symlink():fail('UNSAFE_PATH')
+def identity():
+ if pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip()!=REQUEST['boot']:fail('TARGET_CHANGED')
+def save_record(path,value):
+ safe(path)
+ temp=path.with_name(path.name+'.tmp-'+str(uuid.uuid4()))
+ with temp.open('x') as f:
+  json.dump(value,f,sort_keys=True);f.flush();os.fsync(f.fileno())
+ temp.rename(path)
+ fd=os.open(path.parent,os.O_DIRECTORY);os.fsync(fd);os.close(fd)
+def guest_proxy():
+ values=[]
+ if REQUEST.get('source_proxy'):values.append(REQUEST['source_proxy'])
+ p=pathlib.Path('/run/user')/str(os.getuid())/'systemd/user/steam.service.d/90-hd2-proxy.conf'
+ safe(p)
+ if p.is_file() and p.stat().st_size<=16384:
+  for line in p.read_text().splitlines():
+   if not line.strip().startswith('Environment='):continue
+   for item in shlex.split(line.strip()[len('Environment='):]):
+    name,sep,value=item.partition('=')
+    if name.lower() in ['http_proxy','https_proxy'] and sep:values.append(value)
+ for value in values:
+  u=urllib.parse.urlsplit(value)
+  if u.scheme in ['http','https'] and u.hostname=='192.168.127.254' and not u.username and not u.password and u.port and not u.path.strip('/') and not u.query and not u.fragment:return value
+ return None
+def idle():
+ identity()
+ for n in ['steam','reaper','helldivers2.exe']:
+  if subprocess.run(['pgrep','-x',n],stdout=subprocess.DEVNULL).returncode!=1:fail('STEAM_RUNNING')
+def inventory(root):
+ safe(root)
+ if not root.is_dir():return None
+ result={};total=0
+ for d,dirs,files in os.walk(root,followlinks=False):
+  for n in dirs+files:
+   p=pathlib.Path(d)/n;r=str(p.relative_to(root));s=p.lstat()
+   if len(result)>=20000 or s.st_mode&0o7000:fail('ARTIFACT_FORMAT')
+   if stat.S_ISLNK(s.st_mode):
+    link=os.readlink(p)
+    if pathlib.Path(link).is_absolute() or not p.resolve().is_relative_to(root.resolve()):fail('UNSAFE_PATH')
+    result[r]=['link',link]
+   elif stat.S_ISREG(s.st_mode):
+    total+=s.st_size
+    if total>2*1024**3:fail('ARTIFACT_FORMAT')
+    if s.st_size>256*1024*1024 or s.st_nlink!=1:fail('ARTIFACT_FORMAT')
+    result[r]=['file',digest(p),s.st_mode&0o777]
+   elif stat.S_ISDIR(s.st_mode):result[r]=['dir']
+   else:fail('ARTIFACT_FORMAT')
+ return result
+def fingerprint(x):return hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+work=pathlib.Path.home()/'.local/share/HD2FXLauncher/fex-rf-v1';safe(work)
+work.mkdir(parents=True,exist_ok=True,mode=0o700)
+if work.stat().st_uid!=os.getuid() or work.stat().st_mode&0o022:fail('UNSAFE_PATH')
+lock=work/'lock';safe(lock)
+lockfd=os.open(lock,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
+fcntl.flock(lockfd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+try:
+ identity();src=work/'source';stage=work/'runtime';installed=pathlib.Path.home()/'.local/share/Steam/steamapps/common/FEX-Emu'
+ mode=REQUEST['mode']
+ if mode=='build':
+  for c in ['git','cmake','ninja','clang','clang++','ld.lld','patch']:
+   if not shutil.which(c):fail('BUILD_DEPENDENCY_MISSING')
+  if shutil.disk_usage(work).free<12*1024**3:fail('INSUFFICIENT_SPACE')
+  statefile=work/'source-state.json';safe(statefile)
+  state=json.loads(statefile.read_text()) if statefile.exists() else None
+  if src.exists() and (not state or state.get('source')!=BASE or state.get('patch')!=PATCH):fail('BUILD_CANDIDATE_EXISTS')
+  if not state:save_record(statefile,{'source':BASE,'patch':PATCH,'phase':'fetching'})
+  log=work/'build.log'
+  env=dict(os.environ,GIT_TERMINAL_PROMPT='0')
+  active=None
+  def stop(signum,frame):
+   if active is not None:
+    try:os.killpg(active.pid,signal.SIGTERM)
+    except ProcessLookupError:pass
+   fail('CANCELLED')
+  for sig in [signal.SIGTERM,signal.SIGHUP,signal.SIGINT]:signal.signal(sig,stop)
+  def run(args,seconds=180,cwd=None):
+   global active
+   identity()
+   if args[0]=='git':
+    proxy=guest_proxy()
+    if proxy:args=args[:1]+['-c','http.proxy='+proxy]+args[1:]
+   if args[0]=='git':args=args[:1]+['-c','core.hooksPath=/dev/null','-c','http.version=HTTP/1.1','-c','http.lowSpeedLimit=1024','-c','http.lowSpeedTime=30']+args[1:]
+   with log.open('ab') as f:
+    active=subprocess.Popen(args,cwd=cwd,env=env,stdin=subprocess.DEVNULL,stdout=f,stderr=f,start_new_session=True)
+    try:
+     code=active.wait(timeout=seconds)
+     if code:raise subprocess.CalledProcessError(code,args)
+    except BaseException:
+     if active.poll() is None:
+      os.killpg(active.pid,signal.SIGTERM)
+      try:active.wait(timeout=5)
+      except subprocess.TimeoutExpired:os.killpg(active.pid,signal.SIGKILL);active.wait()
+     raise
+    finally:active=None
+  if not src.exists():
+   run(['git','init',str(src)])
+   run(['git','-C',str(src),'remote','add','origin','https://github.com/StonkGuy/FEX.git'])
+  safe(src)
+  if subprocess.check_output(['git','-C',str(src),'remote','get-url','origin'],text=True).strip()!='https://github.com/StonkGuy/FEX.git':fail('SOURCE_MISMATCH')
+  if not state or state.get('phase')=='fetching':run(['git','-C',str(src),'-c','protocol.file.allow=never','fetch','--depth','1','origin',BASE],600)
+  if not state or state.get('phase')=='fetching':run(['git','-C',str(src),'checkout','--detach','FETCH_HEAD'])
+  actual=subprocess.check_output(['git','-C',str(src),'rev-parse','HEAD'],text=True).strip()
+  if actual!=BASE:fail('SOURCE_MISMATCH')
+  # All submodule object IDs are anchored in the pinned source tree. No local/ext protocol.
+  modules=subprocess.check_output(['git','-C',str(src),'config','--file','.gitmodules','--get-regexp',r'submodule\..*\.url'],text=True)
+  for line in modules.splitlines():
+   url=line.split(None,1)[1]
+   if not url.startswith('https://github.com/') or '..' in url or any(c in url for c in ['\n','?','#']):fail('SOURCE_MISMATCH')
+  run(['git','-C',str(src),'-c','protocol.file.allow=never','-c','protocol.ext.allow=never','submodule','update','--init','--depth','1'],1200)
+  patch=work/'reviewed.patch';import base64
+  patch.write_bytes(base64.b64decode(REQUEST['patch']))
+  if digest(patch)!=PATCH:fail('SOURCE_MISMATCH')
+  if not state or state.get('phase')=='fetching':
+   run(['git','-C',str(src),'apply','--check',str(patch)])
+   run(['git','-C',str(src),'apply',str(patch)])
+  diff=subprocess.check_output(['git','-C',str(src),'diff','--no-ext-diff','--binary'])
+  diffhash=hashlib.sha256(diff).hexdigest()
+  if state and state.get('phase')=='patched' and state.get('diff')!=diffhash:fail('SOURCE_MISMATCH')
+  save_record(statefile,{'source':BASE,'patch':PATCH,'phase':'patched','diff':diffhash})
+  if stage.exists():
+   safe(stage);stage.rename(work/('retained-runtime-'+str(uuid.uuid4())))
+  run(['cmake','-S',str(src),'-B',str(work/'build'),'-G','Ninja','-DCMAKE_BUILD_TYPE=Release','-DCMAKE_C_COMPILER=clang','-DCMAKE_CXX_COMPILER=clang++','-DBUILD_STEAM_SUPPORT=ON','-DBUILD_TESTING=OFF','-DBUILD_THUNKS=OFF','-DBUILD_FEXCONFIG=OFF','-DENABLE_LTO=OFF','-DENABLE_ASSERTIONS=OFF','-DCMAKE_CXX_SCAN_FOR_MODULES=OFF','-DCMAKE_INSTALL_PREFIX=/usr'],300)
+  run(['cmake','--build',str(work/'build'),'-j',str(min(4,os.cpu_count() or 1))],3600)
+  env['DESTDIR']=str(stage)
+  run(['cmake','--install',str(work/'build'),'--component','Runtime'],180)
+  if hashlib.sha256(subprocess.check_output(['git','-C',str(src),'diff','--no-ext-diff','--binary'])).hexdigest()!=diffhash:fail('SOURCE_MISMATCH')
+  notices=stage/'usr/share/licenses/hd2-fex';notices.mkdir(parents=True,exist_ok=True)
+  license=src/'LICENSE';safe(license)
+  if not license.is_file():fail('SOURCE_MISMATCH')
+  shutil.copy2(license,notices/'LICENSE')
+  (notices/'SOURCE.txt').write_text('https://github.com/StonkGuy/FEX/tree/'+BASE+'\nPatch SHA-256: '+PATCH+'\n')
+  tools={}
+  for command in ['clang','clang++','cmake','ninja']:
+   tools[command]=subprocess.check_output([command,'--version'],text=True,timeout=5).splitlines()[0][:512]
+  metadata={'tools':tools,'source_diff_sha256':diffhash,'jobs':min(4,os.cpu_count() or 1)}
+  (work/'provenance.json').write_text(json.dumps({'source':BASE,'patch':PATCH,'runtime':inventory(stage),'build':metadata},sort_keys=True))
+ def audit():
+  tree=inventory(stage);before=inventory(installed)
+  provenance=work/'provenance.json'
+  verified=False;build={}
+  if provenance.is_file() and not provenance.is_symlink():
+   p=json.loads(provenance.read_text());verified=p.get('source')==BASE and p.get('patch')==PATCH and p.get('runtime')==tree
+   if verified:build=p.get('build',{})
+  exe=stage/'usr/bin/FEX'
+  actual=digest(exe) if exe.is_file() and not exe.is_symlink() else ''
+  # An unfamiliar build is an audit failure, never an automatically approved replacement.
+  ready=verified and actual==EXPECTED and bool(tree) and bool(exe.stat().st_mode&0o111)
+  tail=''
+  log=work/'build.log';safe(log)
+  if log.is_file():
+   with log.open('rb') as f:f.seek(max(0,log.stat().st_size-4096));tail=f.read(4096).decode(errors='replace')
+  recoverable=[]
+  for file in list(work.glob('*.json'))[:1024]:
+   try:uuid.UUID(file.stem)
+   except ValueError:continue
+   safe(file)
+   if file.stat().st_size>16384:fail('ARTIFACT_FORMAT')
+   record=json.loads(file.read_text())
+   if record.get('ticket')==file.stem and record.get('boot')==REQUEST['boot'] and record.get('state') in ['prepared','completed']:recoverable.append(file.stem)
+  return {'build_metadata':build,'inventory':tree,'recoverable':sorted(recoverable),'build_log':tail,'source':BASE,'patch':PATCH,'executable_sha256':actual,'expected_sha256':EXPECTED,'ready':ready,'candidate':fingerprint(tree),'original':fingerprint(before),'files':len(tree or {}),'installed':before is not None}
+ if mode in ['audit','build']:print(json.dumps(audit()))
+ elif mode=='install':
+  idle();current=audit()
+  if not current['ready'] or any(current[k]!=REQUEST['audit'].get(k) for k in ['source','patch','executable_sha256','expected_sha256','candidate','original','files','installed']):fail('ARTIFACT_UNAPPROVED')
+  token=REQUEST['ticket'];uuid.UUID(token)
+  backup=installed.with_name(installed.name+'.hd2-backup-'+token)
+  prepared=installed.with_name(installed.name+'.hd2-stage-'+token)
+  if os.path.lexists(backup) or os.path.lexists(prepared):fail('EXTERNAL_DRIFT')
+  safe(installed.parent);installed.parent.mkdir(parents=True,exist_ok=True)
+  # Preserve Steam integration metadata and all original files; overlay only reviewed runtime.
+  if installed.exists():shutil.copytree(installed,prepared,symlinks=True)
+  else:prepared.mkdir(mode=0o700)
+  for d,dirs,files in os.walk(stage,followlinks=False):
+   for n in dirs+files:
+    p=pathlib.Path(d)/n;dest=prepared/p.relative_to(stage)
+    safe(dest.parent)
+    if dest.is_symlink():fail('UNSAFE_PATH')
+    if p.is_symlink():
+     if os.path.lexists(dest):fail('COMPONENT_CONFLICT')
+     dest.symlink_to(os.readlink(p))
+    elif p.is_dir():dest.mkdir(parents=True,exist_ok=True)
+    else:shutil.copy2(p,dest)
+  expected=inventory(prepared);idle()
+  if audit()!=current:fail('EXTERNAL_DRIFT')
+  receipt={'ticket':token,'original':current['original'],'installed':fingerprint(expected),'had_original':current['installed'],'boot':REQUEST['boot'],'state':'prepared'}
+  record=work/(token+'.json');save_record(record,receipt)
+  if installed.exists():installed.rename(backup)
+  prepared.rename(installed)
+  if inventory(installed)!=expected:fail('VERIFY_FAILED')
+  receipt['state']='completed';save_record(record,receipt);print(json.dumps({'ticket':token,'verified':True,'backup':backup.name,'installed_manifest':fingerprint(expected)}))
+ elif mode=='recover':
+  idle();token=REQUEST['ticket'];uuid.UUID(token);record=work/(token+'.json');safe(record)
+  r=json.loads(record.read_text());backup=installed.with_name(installed.name+'.hd2-backup-'+token)
+  if r['boot']!=REQUEST['boot'] or r['ticket']!=token:fail('TARGET_CHANGED')
+  current=fingerprint(inventory(installed))
+  if current==r['original']:
+   r['state']='recovered';save_record(record,r);print(json.dumps({'ticket':token,'recovered':True}));sys.exit(0)
+  if current!=r['installed'] and installed.exists():fail('EXTERNAL_DRIFT')
+  if r['had_original'] and fingerprint(inventory(backup))!=r['original']:fail('EXTERNAL_DRIFT')
+  retained=installed.with_name(installed.name+'.hd2-recovered-'+token)
+  if os.path.lexists(retained):
+   if installed.exists() or fingerprint(inventory(retained))!=r['installed']:fail('EXTERNAL_DRIFT')
+  elif installed.exists():installed.rename(retained)
+  if r['had_original']:backup.rename(installed)
+  if fingerprint(inventory(installed))!=r['original']:fail('VERIFY_FAILED')
+  r['state']='recovered';save_record(record,r);print(json.dumps({'ticket':token,'recovered':True}))
+ else:fail('INVALID_ARGUMENT')
+finally:
+ os.close(lockfd)
+
+"""#
+}

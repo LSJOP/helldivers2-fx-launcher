@@ -186,6 +186,10 @@ final class SSHEnvironmentBackend: DeploymentBackend {
         if !restartCompleted, SetupVMReboot.hasCompletedReceipt(for: snapshot) {
             snapshot.facts["restart_completed"] = "true"
         }
+        if try FEXWorkflow.verifyInstalled(self, snapshot: snapshot) {
+            snapshot.facts["fex_manifest"] = "verified"
+            snapshot.facts["fex"] = "verified"
+        }
         return snapshot
     }
     static func steamError(_ error: Error) -> String {
@@ -414,6 +418,10 @@ extension NativeCoreService {
         let backend = try SSHEnvironmentBackend(fx: fx, transport: transport, context: context, revision: ConfigurationService.read().revision)
         backend.sudoPassword = request.sudoPassword
         backend.expectedGuestBoot = params["credential_guest_boot"]?.text
+        if method.hasPrefix("first_run_fex_") {
+            emit("INFO", "FEX workflow", ["deployment_state": .string(method == "first_run_fex_audit" ? "Checking" : "Deploying")])
+            return try FEXWorkflow.run(method, backend: backend, params: params)
+        }
         let service = EnvironmentDeploymentService(backend: backend, receipts: deploymentReceipts)
         if method == "first_run_detect" {
             let snapshot = try backend.snapshot()

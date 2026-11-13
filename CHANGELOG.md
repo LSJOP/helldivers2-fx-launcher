@@ -8,6 +8,8 @@ No official release has been published yet. The current Native App version `0.1.
 
 ## Unreleased
 
+- Add an experimental App-only FEX candidate build, review, guarded deployment and recovery route. A real Guest build succeeded, but executable hash review blocked deployment; real installation, recovery and gameplay acceptance remain pending.
+
 - Restore identity-verified reboot completion across setup requests to prevent continuation plan mismatches; live regression remains pending.
 
 - Ensure bundled network launch resources are executable and reject non-executable resources before starting FX.

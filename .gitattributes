@@ -1,0 +1,2 @@
+# Preserve the reviewed upstream patch bytes, including required diff context spaces.
+native-app/Resources/fex-rf-reviewed.patch -whitespace

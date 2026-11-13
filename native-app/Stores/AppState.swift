@@ -31,17 +31,21 @@ final class AppState: ObservableObject {
     let credentials = SessionCredentialManager()
     @Published var firstRunPlan: DeploymentPlan?
     @Published var firstRunState: DeploymentState = .NotChecked
+    @Published var firstRunFEX: [String: JSONValue] = [:]
+    @Published var firstRunFEXTicket: UUID?
+    @Published var firstRunFEXRestore: UUID?
     @Published var firstRunReceipt: DeploymentReceipt?
     @Published var firstRunReceipts: [DeploymentReceipt] = []
     @Published var firstRunFailure: String?
     private var firstRunEventGeneration: UUID?
     func firstRunAction(_ method: String, receipt: UUID? = nil, selected: Set<String> = []) {
         guard !tasks.busy else { return }
+        if method == "first_run_fex_install" { firstRunFEXRestore = receipt }
         let generation = UUID(); firstRunEventGeneration = generation
         let root = runtimeRoot, launch = fxSelection.launchParameters(runtimeRoot: runtimeRoot)
         let plan = firstRunPlan
         firstRunFailure = nil
-        firstRunState = method == "first_run_detect" ? .Checking : method == "first_run_receipts" ? firstRunState : .AwaitingAuthorization
+        firstRunState = method == "first_run_detect" || ["first_run_fex_audit", "first_run_fex_build"].contains(method) ? .Checking : method == "first_run_receipts" ? firstRunState : .AwaitingAuthorization
         tasks.start { [weak self] in
             guard let self else { return }
             do {
@@ -73,7 +77,7 @@ final class AppState: ObservableObject {
                 var credentialTarget = root + "|" + (input["credential_revision"]?.text ?? "") + "|" + (input["credential_host_identity"]?.text ?? "")
                 let authInput = input
                 let requestCredentialTarget = credentialTarget
-                let reply = try await self.core.request(method, timeout: method == "first_run_deploy" ? 1500 : 180, params: input) { [weak self] event in
+                let reply = try await self.core.request(method, timeout: method == "first_run_fex_build" ? 6500 : method == "first_run_deploy" ? 1500 : method.hasPrefix("first_run_fex_") ? 400 : 180, params: input) { [weak self] event in
                     Task { @MainActor in
                         guard let self, self.firstRunEventGeneration == generation else { return }
                         if event["kind"]?.text == "credential_status", event["status"]?.text == "authenticated",
@@ -95,6 +99,13 @@ final class AppState: ObservableObject {
                     await self.credentials.authenticated(.ssh, value: value, target: credentialTarget)
                 }
                 self.firstRunEventGeneration = nil
+                if let review = reply.result["fex_audit"]?.object {
+                    if let boot = reply.result["guest_boot"]?.text { try self.credentials.bindGuest(boot) }
+                    self.firstRunFEX = review
+                    self.firstRunFEXTicket = reply.result["fex_ticket"]?.text.flatMap(UUID.init(uuidString:))
+                    self.firstRunFEXRestore = reply.result["fex_restore_ticket"]?.text.flatMap(UUID.init(uuidString:))
+                    self.firstRunState = .NeedsConfiguration
+                }
                 if let value = reply.result["plan"] {
                     let plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(value))
                     try self.credentials.bindGuest(plan.snapshot.boot)
@@ -116,6 +127,10 @@ final class AppState: ObservableObject {
                 self.firstRunEventGeneration = nil
                 let code = (error as? ErrorState)?.code ?? (error as? CoreError)?.code ?? "DEPLOYMENT_FAILED"
                 self.firstRunFailure = code
+                if method.hasPrefix("first_run_fex_"), let failure = error as? ErrorState {
+                    self.firstRunFEX["error"] = .string(code)
+                    self.firstRunFEX["summary"] = failure.details["summary"]
+                }
                 self.firstRunState = code == "RECOVERY_REQUIRED" ? .RecoveryRequired : .Failed
                 if ["CREDENTIAL_SCOPE_CHANGED", "TARGET_CHANGED", "FX_IDENTITY_UNVERIFIED", "FX_ENTRY_MISMATCH"].contains(code) { self.clearSessionCredentials(); self.firstRunPlan = nil }
                 if code == "SSH_AUTH_FAILED" { self.credentials.reject(.ssh) }
@@ -464,7 +479,7 @@ final class AppState: ObservableObject {
     func confirmMainMenu() { launchSession.confirmMainMenu(); recordLaunch() }
     func confirmSinglePlayer() { launchSession.confirmSinglePlayer(); recordLaunch() }
     func forgetSavedCredentials() { clearSessionCredentials() }
-    func clearSessionCredentials() { credentials.clear(); SSHTransport.closeOwnedMasters() }
+    func clearSessionCredentials() { credentials.clear(); SSHTransport.closeOwnedMasters(); firstRunFEX = [:]; firstRunFEXTicket = nil; firstRunFEXRestore = nil }
     func endSession() { networkLaunchPending = false; tasks.cancel(); clearSessionCredentials() }
     func value(_ method: String, _ key: String) -> String { results[method]?[key]?.text ?? t("ui.366") }
     func rows(_ method: String, _ key: String) -> [[String: JSONValue]] { results[method]?[key]?.array.map(\.object) ?? [] }

@@ -1,0 +1,22 @@
+# FEX candidate workflow (experimental)
+
+Use First-Run Setup → FEX review and deployment. All Guest writes use the shared Native Core, SSH target/boot checks and existing credentials. No terminal installation is part of the user workflow.
+
+1. Build candidate: fetch pinned StonkGuy/FEX commit `87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8`, validate HTTPS submodule origins and pinned object IDs, verify the bundled RF patch hash, compile with clang/CMake/Ninja into a separate App-owned directory, and stage only the Runtime component. The current installation is preserved. An existing matching source/build directory can continue; altered source is rejected.
+2. Review candidate: inspect the complete runtime tree, modes, safe internal links, provenance and executable hash. A host-side record from the controlled build is required; a Guest-authored provenance file alone cannot approve a package. The historical verified executable hash remains the policy gate. A differing compiler output is a review failure, not permission to relax the gate.
+3. Deploy reviewed candidate: requires Steam/game shutdown, explicit action, matching target/boot/configuration, unchanged current/candidate trees, and a durable receipt. Preserve the entire original tree as a unique backup; stage and verify the replacement before switching directories. Unknown links or external edits stop the operation.
+4. Restore original component: read the receipt, verify exact installed and backup manifests, retain the replacement tree and restore the original. Interrupted switches can be retried without deleting either tree. Review locates recoverable tickets after App restart for the same live target.
+
+Git transport uses certificate verification, HTTP/1.1 and bounded timeouts. When the App observes an existing host proxy on port 7890 and verifies the local FX connection, the source request can temporarily use that proxy through the FX gateway. No system, Guest or Steam proxy setting is written, and proxy URLs containing credentials are rejected. Otherwise Git uses its normal transport. Build cancellation/timeout targets only the process group created for that build; unrelated FX, Steam and game processes are not killed.
+
+## Actual acceptance on 2026-11-13
+
+The App's fixed-source build completed in the real SteamOS Guest after direct Git TLS/stall failures were addressed using the existing host proxy. The resulting runtime inventory had 21 entries. Local review record `720941FA-4BA4-4556-9EF1-A80FDEFBE84D` reports:
+
+- built executable: `0f6eb3fbdf1bd3cb082964b684ef7d0b3b0f53d308b5e1c88247f8632d19aa34`;
+- historical policy: `ce93cadae7b7d3ef01376ba2acd58aedb602a7fc077e49592179766d13c294bf`;
+- ready: false.
+
+Therefore **real deployment and real recovery are NOT TESTED**. The existing FEX tree was not replaced. Filesystem transaction, drift, symlink, timeout and interruption cases pass isolated fixtures; those results are not gameplay evidence. The final Debug App was restarted after its build, and a fresh review through the App restored the saved credentials, detected the candidate and kept installation disabled. Its real UI screenshot shows the integrity-review warning. A second build through the final App produced the same executable hash and recorded clang/clang++ 19.1.7, CMake 3.29.2, Ninja 1.12.0, four build jobs and source-diff SHA-256 `4f10732f6427fba3f814a5cd6dbbce42851eed34737edb359b41af916fbecfbe` in review record `A49174AE-BC02-421A-9DA8-E01AD2AAE824`. Comparison against the historical build toolchain/artifact is still pending. Compiler/build metadata and full output differences must be reviewed before approval. Game process/menu/mission/EAC/multiplayer remain unverified. Automated verification: 13 FEX transaction tests, 95 Native Core checks, eight localization negative fixtures, ten-language coverage and 15 documentation checks pass; final Debug build passes. No stable release is authorized by this workflow.
+
+Sources: [fixed source commit](https://github.com/StonkGuy/FEX/commit/87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8), [RF PR20](https://github.com/StonkGuy/FEX/pull/20), [upstream build recipe](https://github.com/StonkGuy/steamac/blob/fex-eac/fex-eac/build-fex.sh). Source compilation and license provenance do not establish current game compatibility.

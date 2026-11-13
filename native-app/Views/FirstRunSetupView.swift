@@ -5,9 +5,18 @@ struct FirstRunSetupView: View {
     @ObservedObject var tasks: TaskManager
     @ObservedObject var credentials: SessionCredentialManager
     @State private var authorize = false
+    @State private var fexAction: String?
     @State private var recoverID: UUID?
     @State private var recoverySelection = Set<String>()
     private var plan: DeploymentPlan? { state.firstRunPlan }
+    @ViewBuilder private var fexButtons: some View {
+        Button(state.t("ui.fex.audit")) { state.firstRunAction("first_run_fex_audit") }
+        Button(state.t("ui.fex.build")) { fexAction = "build" }
+        Button(state.t("ui.fex.install")) { fexAction = "install" }
+            .disabled(state.firstRunFEX["ready"]?.boolean != true || state.firstRunFEXTicket == nil)
+        Button(state.t("ui.fex.recover")) { fexAction = "recover" }
+            .disabled(state.firstRunFEXRestore == nil)
+    }
     private func statusKey(_ operation: DeploymentOperation) -> String {
         switch operation.observation {
         case .advisory: return "ui.setup.status.advisory"
@@ -41,6 +50,22 @@ struct FirstRunSetupView: View {
                 }
                 if let snapshot = plan?.snapshot {
                     Text(state.t("ui.setup.identity") + " · " + String(snapshot.boot.prefix(8)) + " · " + snapshot.architecture)
+                }
+            }
+            TacticalPanel(number: "FEX", title: state.t("ui.fex.title"), symbol: "shippingbox") {
+                Text(state.t("ui.fex.scope")).font(.caption)
+                ViewThatFits(in: .horizontal) {
+                    HStack { fexButtons }
+                    VStack(alignment: .leading) { fexButtons }
+                }
+                if !state.firstRunFEX.isEmpty {
+                    TacticalStatusBadge(text: state.t(state.firstRunFEX["recovered"]?.boolean == true ? "ui.integrated.015" : state.firstRunFEX["ready"]?.boolean == true || state.firstRunFEX["verified"]?.boolean == true ? "ui.220" : "ui.368"))
+                    if let hash = state.firstRunFEX["executable_sha256"]?.text, !hash.isEmpty, state.firstRunFEX["ready"]?.boolean != true {
+                        Text(state.t("ui.fex.pendingReview")).font(.caption).foregroundStyle(.orange)
+                    }
+                    DisclosureGroup(state.t("ui.setup.details")) {
+                        Text(verbatim: CoreJSON.encode(.object(state.firstRunFEX))).font(TacticalTypography.log).textSelection(.enabled)
+                    }
                 }
             }
             if let plan {
@@ -134,6 +159,15 @@ struct FirstRunSetupView: View {
                 }
             }
         }
+        .confirmationDialog(state.t("ui.fex.title"), isPresented: Binding(get: { fexAction != nil }, set: { if !$0 { fexAction = nil } }), titleVisibility: .visible) {
+            if let action = fexAction {
+                Button(state.t(action == "build" ? "ui.fex.build" : action == "install" ? "ui.fex.install" : "ui.fex.recover")) {
+                    state.firstRunAction("first_run_fex_" + action, receipt: action == "recover" ? state.firstRunFEXRestore : state.firstRunFEXTicket)
+                    fexAction = nil
+                }
+            }
+            Button(state.t("ui.037"), role: .cancel) { fexAction = nil }
+        } message: { Text(state.t("ui.fex.scope")) }
         .disabled(tasks.busy)
         .confirmationDialog(state.t("ui.setup.authorization"), isPresented: $authorize, titleVisibility: .visible) {
             Button(state.t("ui.setup.deploy")) { state.firstRunAction("first_run_deploy") }
