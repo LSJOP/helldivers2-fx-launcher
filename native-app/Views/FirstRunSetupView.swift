@@ -171,7 +171,7 @@ struct FirstRunSetupView: View {
                     }
                 }
             }
-            }
+            }.disabled(tasks.busy)
         }
         .confirmationDialog(state.t("ui.fex.title"), isPresented: Binding(get: { fexAction != nil }, set: { if !$0 { fexAction = nil } }), titleVisibility: .visible) {
             if let action = fexAction {
@@ -182,7 +182,6 @@ struct FirstRunSetupView: View {
             }
             Button(state.t("ui.037"), role: .cancel) { fexAction = nil }
         } message: { Text(state.t("ui.fex.scope")) }
-        .disabled(tasks.busy)
         .confirmationDialog(state.t("ui.setup.authorization"), isPresented: $authorize, titleVisibility: .visible) {
             Button(state.t("ui.setup.deploy")) { state.firstRunAction("first_run_deploy") }
         } message: {
