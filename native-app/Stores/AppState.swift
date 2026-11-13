@@ -477,7 +477,8 @@ final class AppState: ObservableObject {
         else { runOperation(action.rawValue, params: ["confirmed": .bool(true)]) }
     }
     var latestGUIEvidence: [String: JSONValue] {
-        guiRecords.values.filter { $0.target == runtimeRoot && $0.status == .succeeded && guiSnapshots[$0.method] != nil }
+        if environmentWorkflow.phase != .idle { return environmentWorkflow.evidence }
+        return guiRecords.values.filter { $0.target == runtimeRoot && $0.status == .succeeded && guiSnapshots[$0.method] != nil }
             .max { $0.startedAt < $1.startedAt }.flatMap { guiSnapshots[$0.method] } ?? [:]
     }
     func confirmPendingAction(_ action: GUIAction) {
@@ -511,7 +512,8 @@ final class AppState: ObservableObject {
                 var input = launch
                 input["runtime_root"] = .string(root)
                 input["confirmed"] = .bool(true)
-                _ = try await self.core.request("start_fx", timeout: 180, params: input)
+                let fx = try await self.core.request("start_fx", timeout: 180, params: input)
+                self.environmentWorkflow.evidence = fx.result
                 try Task.checkCancellation()
                 self.environmentWorkflow.completedSteps = 1
                 self.environmentWorkflow.phase = .connecting
@@ -528,6 +530,8 @@ final class AppState: ObservableObject {
                 let connected = try await self.core.request("test_ssh", timeout: 90, params: input)
                 guard let boot = connected.result["guest_boot"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
                 try self.credentials.bindGuest(boot)
+                self.environmentWorkflow.evidence["ssh_connected"] = .bool(true)
+                self.environmentWorkflow.evidence["guest_ready"] = .bool(true)
                 if connected.result["ssh_password_verified"]?.boolean == true, let password = input["password"]?.text {
                     await self.credentials.authenticated(.ssh, value: password, target: target)
                 }
@@ -537,6 +541,7 @@ final class AppState: ObservableObject {
                 guard let raw = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
                 let plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
                 self.firstRunPlan = plan
+                self.environmentWorkflow.evidence["steam_running"] = .bool(plan.snapshot.steamRunning)
                 self.environmentWorkflow.completedSteps = 3
                 self.environmentWorkflow.phase = .deploying
                 if !plan.executable.isEmpty {
@@ -596,6 +601,7 @@ final class AppState: ObservableObject {
                         Task { @MainActor in self?.launchSession.consume(event) }
                     }
                     self.launchSession.complete(reply.result, at: reply.observedAt)
+                    self.environmentWorkflow.evidence.merge(reply.result) { _, value in value }
                     self.recordLaunch()
                     guard reply.result["game_process_detected"]?.boolean == true else { throw ErrorState("GAME_LAUNCH_FAILED") }
                     self.environmentWorkflow.completedSteps = 6

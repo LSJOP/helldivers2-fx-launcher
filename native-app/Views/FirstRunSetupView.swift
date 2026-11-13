@@ -205,7 +205,8 @@ struct EnvironmentWorkflowProgressView: View {
     var body: some View {
         if showIdle || workflow.phase != .idle {
             TacticalPanel(number: "", title: state.t("ui.workflow.result"), symbol: "gearshape.2") {
-                Text(state.t(workflow.phase.titleKey))
+                Text(state.t(workflow.launchesGame && workflow.phase == .completed ? "ui.140" : workflow.phase.titleKey))
+                if workflow.phase == .launching { Text(state.launchSession.current.title(state.languageCode)) }
                 if workflow.phase == .deploying, let stage = workflow.deploymentStage {
                     Text(state.t("ui.setup.state." + stage)).font(TacticalTypography.caption)
                 }
@@ -229,6 +230,9 @@ struct EnvironmentWorkflowProgressView: View {
                         Button(state.t("ui.workflow.retry")) { state.startEnvironmentWorkflow(launchGame: workflow.launchesGame) }.disabled(tasks.busy)
                         Button(state.t("ui.setup.launch")) { state.selection = .dashboard }
                     }
+                }
+                if workflow.launchesGame && state.launchSession.current != .idle {
+                    DisclosureGroup(state.t("ui.094")) { LaunchProgressView(state: state, tasks: tasks) }
                 }
                 if workflow.active { Button(state.t("ui.038")) { tasks.cancel() } }
             }

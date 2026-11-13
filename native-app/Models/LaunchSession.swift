@@ -123,6 +123,7 @@ struct EnvironmentWorkflow {
     var failure: ErrorState?
     var needsRestartApproval = false
     var deploymentStage: String?
+    var evidence: [String: JSONValue] = [:]
     var totalSteps: Int { launchesGame ? 6 : 5 }
     var active: Bool { ![.idle, .completed, .failed, .cancelled].contains(phase) }
     var fraction: Double { phase == .completed ? 1 : min(Double(completedSteps) / Double(totalSteps), 0.99) }
