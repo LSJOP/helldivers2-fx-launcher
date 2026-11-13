@@ -196,9 +196,9 @@ final class FileDeploymentBackend: DeploymentBackend {
             try CoreFS.atomicWrite(Data(("#!/bin/sh\n[ -f " + SSHEnvironmentBackend.quote(gameFile.path) + " ] && exit 0\nexit 1\n").utf8), to: bin.appendingPathComponent("pgrep"), mode: 0o755)
             let fakeSystemctl = bin.appendingPathComponent("systemctl"); try CoreFS.atomicWrite(Data("#!/bin/sh\nexit 99\n".utf8), to: fakeSystemctl, mode: 0o755)
             let script = try GuestPrivilegedExecutor.script(.reboot(boot: boot, machine: machine, ticket: UUID()))
-                .replacingOccurrences(of: "/proc/sys/kernel/random/boot_id", with: bootFile.path)
-                .replacingOccurrences(of: "/etc/machine-id", with: machineFile.path)
-                .replacingOccurrences(of: "/usr/bin/systemctl", with: fakeSystemctl.path)
+                .replacingOccurrences(of: "/proc/sys/kernel/random/boot_id", with: SSHEnvironmentBackend.quote(bootFile.path))
+                .replacingOccurrences(of: "/etc/machine-id", with: SSHEnvironmentBackend.quote(machineFile.path))
+                .replacingOccurrences(of: "/usr/bin/systemctl", with: SSHEnvironmentBackend.quote(fakeSystemctl.path))
             let env = ["PATH": bin.path + ":/usr/bin:/bin", "HOME": dir.path]
             let scheduled = try CoreProcess.run("/bin/sh", ["-c", script], timeout: 5, environment: env)
             try check(scheduled.status == 0 && scheduled.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == "HD2FX_REBOOT_SCHEDULED" && FileManager.default.fileExists(atPath: commandFile.path), "production reboot script schedules only the fixture systemd command")
@@ -414,7 +414,7 @@ final class FileDeploymentBackend: DeploymentBackend {
         try CoreFS.atomicWrite(Data("#!/bin/sh\nexec /usr/bin/shasum -a 256 \"$@\"\n".utf8), to: bin.appendingPathComponent("sha256sum"), mode: 0o755)
         try CoreFS.atomicWrite(Data("#!/bin/sh\ncase \"$1\" in *.hd2-stage-*) if [ -f \"$HOME/fail-move\" ]; then exit 1; fi;; esac\nexec /bin/mv \"$@\"\n".utf8), to: bin.appendingPathComponent("mv"), mode: 0o755)
         func run(_ script: String) throws -> CoreProcessResult {
-            try CoreProcess.run("/bin/sh", ["-x", "-s"], input: script.replacingOccurrences(of: "/proc/sys/kernel/random/boot_id", with: bootFile.path), timeout: 10,
+            try CoreProcess.run("/bin/sh", ["-x", "-s"], input: script.replacingOccurrences(of: "/proc/sys/kernel/random/boot_id", with: SSHEnvironmentBackend.quote(bootFile.path)), timeout: 10,
                 environment: ["HOME": home.path, "PATH": bin.path + ":/usr/bin:/bin:/usr/sbin:/sbin", "LC_ALL": "C"])
         }
         let relative = "compatibilitytools.d/" + profile.protonVersion
