@@ -499,6 +499,25 @@ final class FileDeploymentBackend: DeploymentBackend {
         try check(!SetupVMReboot.hasCompletedReceipt(for: rebound), "a later boot cannot inherit completed reboot proof")
         rebound = proofPlan.snapshot; rebound.facts["ssh_connection"] = String(repeating: "d", count: 64)
         try check(!SetupVMReboot.hasCompletedReceipt(for: rebound), "another SSH connection cannot inherit reboot proof")
+        do {
+            var source = proofPlan.snapshot
+            source.facts["fx_path"] = "/fixture/FX.app"
+            let operation = p.operations.first { $0.component == "launch" }!
+            let pendingPlan = DeploymentPlan(id: UUID(), profileID: p.profileID, profileVersion: p.profileVersion, snapshot: source, operations: [operation])
+            let pending = DeploymentReceipt(id: pendingPlan.id, plan: pendingPlan, state: .NeedsConfiguration, applied: ["launch"], pending: nil, failure: nil)
+            try NativeCoreService.deploymentReceipts.save(pending)
+            let pendingFile = CoreFS.nativeData().appendingPathComponent("environment-reboots/" + pending.id.uuidString + ".json")
+            try CoreFS.atomicWrite(try JSONEncoder().encode(["state": "attention_required", "error": "FX_IDENTITY_UNVERIFIED", "old_boot": source.boot, "machine_id": source.facts["machine_id"]!]), to: pendingFile)
+            var actual = source; actual.boot = UUID().uuidString; actual.target = "restarted-target"
+            actual.values.merge(operation.changes) { _, value in value }
+            actual.facts["steam_api"] = "available"; actual.facts["steam_tool_api"] = "available"
+            try check(SetupVMReboot.hasCompletedReceipt(for: actual), "fresh authenticated state resumes a completed reboot without sending another reboot")
+            try check(try NativeCoreService.deploymentReceipts.read(pending.id).plan.snapshot.boot == actual.boot, "resumed reboot rebinds recovery originals")
+        }
+        try check(SetupVMReboot.reconnectMayWait(CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("ssh_listener_not_ready")])), "reconnect waits for a missing SSH listener")
+        try check(!SetupVMReboot.reconnectMayWait(CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("diagnostic_network_signature_untrusted")])), "reconnect never retries an untrusted signature")
+        try check(!SetupVMReboot.reconnectMayWait(CoreError("FX_INSTANCE_MISMATCH")), "reconnect rejects a foreign FX")
+        try check(!SetupVMReboot.reconnectMayWait(CoreError("SSH_AUTH_FAILED")), "reconnect never retries rejected credentials")
         print("\(count) deployment checks passed; SSH/VM/game NOT_TESTED")
     }
 }

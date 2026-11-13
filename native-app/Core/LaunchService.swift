@@ -139,14 +139,15 @@ enum LaunchService {
         let executable = normalizedExecutable(fx)
         guard foreignProcesses(rows: rows, executable: executable).isEmpty else { throw CoreError("FX_INSTANCE_MISMATCH") }
         let supervisor = try fxSupervisorPID(rows: rows, executable: executable)
+        let listeners = try fileDescriptors(arguments: ["-nP", "-iTCP:\(transport.settings.port)", "-sTCP:LISTEN", "-Fpn"], context: context)
+        guard !listeners.isEmpty else { throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("ssh_listener_not_ready")]) }
         var networkPath = normalizedCommand(gvproxy.path)
         if !rows.values.contains(where: { normalizedCommand($0.command) == networkPath && descendant($0.pid, of: supervisor, rows: rows) }) {
             networkPath = try diagnosticNetworkExecutable(fx: fx, context: context)
         }
         let network = rows.values.filter { normalizedCommand($0.command) == networkPath && descendant($0.pid, of: supervisor, rows: rows) }
-        guard !network.isEmpty else { throw CoreError("FX_IDENTITY_UNVERIFIED") }
-        let listeners = try fileDescriptors(arguments: ["-nP", "-iTCP:\(transport.settings.port)", "-sTCP:LISTEN", "-Fpn"], context: context)
-        guard !listeners.isEmpty, Set(listeners.keys).isSubset(of: Set(network.map(\.pid))) else { throw CoreError("FX_IDENTITY_UNVERIFIED") }
+        guard !network.isEmpty else { throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("network_not_ready")]) }
+        guard Set(listeners.keys).isSubset(of: Set(network.map(\.pid))) else { throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("ssh_listener_not_owned_by_fx")]) }
         return "\(supervisor)|\(rows[supervisor]?.start ?? "")|\(network.map(\.pid).sorted())"
     }
 

@@ -762,6 +762,10 @@ enum SteamSetupClient {
 /// One explicitly approved graceful reboot, never a forced FX stop or reboot retry.
 /// Durable phase records contain identity and receipt IDs only, never credentials.
 enum SetupVMReboot {
+    static func reconnectMayWait(_ error: CoreError) -> Bool {
+        error.code == "FX_IDENTITY_UNVERIFIED" &&
+            ["ssh_listener_not_ready", "network_not_ready"].contains(error.details["reason"]?.text ?? "")
+    }
     static func hasCompletedReceipt(for snapshot: DeploymentSnapshot) -> Bool {
         guard UUID(uuidString: snapshot.boot) != nil,
               let machine = snapshot.facts["machine_id"], machine.range(of: "^[a-f0-9]{32}$", options: .regularExpression) != nil,
@@ -771,7 +775,7 @@ enum SetupVMReboot {
         guard let receipts = try? NativeCoreService.deploymentReceipts.list(), receipts.count <= 1024 else { return false }
         return receipts.contains { receipt in
             let previous = receipt.plan.snapshot
-            guard previous.target == snapshot.target, previous.boot == snapshot.boot,
+            guard previous.facts["fx_path"] == snapshot.facts["fx_path"],
                   previous.facts["machine_id"] == snapshot.facts["machine_id"],
                   previous.facts["fx_executable_sha256"] == snapshot.facts["fx_executable_sha256"],
                   previous.facts["ssh_connection"] == snapshot.facts["ssh_connection"] else { return false }
@@ -779,7 +783,36 @@ enum SetupVMReboot {
             guard !FileManager.default.isSymbolicLink(atPath: file.path),
                   let data = try? Data(contentsOf: file), data.count < 16_384,
                   let record = try? JSONDecoder().decode([String: JSONValue].self, from: data) else { return false }
-            return record["state"]?.text == "completed" && record["new_boot"]?.text == snapshot.boot && record["machine_id"]?.text == snapshot.facts["machine_id"]
+            if record["state"]?.text == "completed" {
+                return previous.target == snapshot.target && previous.boot == snapshot.boot &&
+                    record["new_boot"]?.text == snapshot.boot && record["machine_id"]?.text == snapshot.facts["machine_id"]
+            }
+            var transitionSource = previous
+            if previous.boot == snapshot.boot, previous.target == snapshot.target, let originalBoot = record["old_boot"]?.text {
+                transitionSource.boot = originalBoot
+            }
+            guard record["state"]?.text == "attention_required", record["error"]?.text == "FX_IDENTITY_UNVERIFIED",
+                  record["old_boot"]?.text == transitionSource.boot, record["machine_id"]?.text == machine,
+                  snapshot.facts["steam_api"] == "available", snapshot.facts["steam_tool_api"] == "available",
+                  !receipt.applied.isEmpty, receipt.pending == nil,
+                  Set(receipt.applied).isSubset(of: Set(receipt.plan.operations.filter { !$0.changes.isEmpty }.map(\.id))),
+                  receipt.plan.operations.filter({ receipt.applied.contains($0.id) }).allSatisfy({ operation in
+                      operation.changes.allSatisfy { snapshot.values[$0.key] == $0.value }
+                  }), (try? validateTransition(old: transitionSource, new: snapshot)) != nil else { return false }
+            // Recognition is based on a fresh authenticated snapshot, never a local
+            // completion flag. Rebind originals for recovery without repeating reboot.
+            do {
+                let lock = try CoreFileLock.acquire(directory.appendingPathComponent(".reboot.lock")); defer { lock.release() }
+                var rebound = previous; rebound.boot = snapshot.boot; rebound.target = snapshot.target
+                var updated = receipt
+                updated.plan = DeploymentPlan(id: receipt.plan.id, profileID: receipt.plan.profileID, profileVersion: receipt.plan.profileVersion,
+                                              snapshot: rebound, operations: receipt.plan.operations)
+                try NativeCoreService.deploymentReceipts.save(updated)
+                var completed = record
+                completed["state"] = .string("completed"); completed["new_boot"] = .string(snapshot.boot)
+                try CoreFS.atomicWrite(try JSONEncoder().encode(completed), to: file)
+                return true
+            } catch { return false }
         }
     }
     static func validateTransition(old: DeploymentSnapshot, new: DeploymentSnapshot) throws {
@@ -852,7 +885,12 @@ enum SetupVMReboot {
             progress(.Reconnecting); try save("waiting_for_ssh")
             var connected: SSHEnvironmentBackend?
             try wait(context: request.context, seconds: 240) {
-                _ = try LaunchService.endpointIdentity(fx: backend.fx, gvproxy: LaunchResources.gvproxyBinary!, transport: backend.transport, context: request.context)
+                do {
+                    _ = try LaunchService.endpointIdentity(fx: backend.fx, gvproxy: LaunchResources.gvproxyBinary!, transport: backend.transport, context: request.context)
+                } catch let error as CoreError {
+                    if reconnectMayWait(error) { return false }
+                    throw error
+                }
                 let banner = try CoreProcess.run("/usr/bin/nc", ["-G", "2", "-w", "2", backend.transport.settings.host, String(backend.transport.settings.port)], timeout: 3, context: request.context)
                 guard banner.stdout.hasPrefix("SSH-2.0-") else { return false }
                 var settings = backend.transport.settings
