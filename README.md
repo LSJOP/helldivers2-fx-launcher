@@ -82,7 +82,7 @@ All seven pages and the performance/update detail viewports were recaptured on 2
 </details>
 
 
-Ten current English screenshots come from the actual integrated Debug App (0.1.0, build 2026110411), covering seven pages, network settings and scrolled settings. Original pixels are unmodified; capture copies isolate preferences and do not connect to or change Guest state. Screenshots do not establish gameplay or installation acceptance. [Capture provenance](docs/images/README.md).
+The Dashboard and First-Run Setup screenshots were refreshed on 2026-11-13 from Debug build 2026110602. The other screenshots retain their original capture dates in the provenance manifest. Original pixels are unmodified; capture copies isolate preferences and do not connect to or change Guest state. Screenshots do not establish gameplay or installation acceptance. [Capture provenance](docs/images/README.md).
 
 <a id="en-features"></a>
 
