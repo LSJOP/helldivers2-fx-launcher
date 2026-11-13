@@ -45,6 +45,23 @@ func runChecks() {
     wrongFEXRecord = fexRecord; wrongFEXRecord["installation"] = .object(["verified": .bool(true)])
     check(FEXWorkflow.installedDigest(wrongFEXRecord, snapshot: fexSnapshot) == nil, "FEX executable alone is not a complete installed manifest")
 
+    var customRecord = fexRecord
+    var customAudit = customRecord["audit"]!.object
+    customAudit["executable_sha256"] = .string(String(repeating: "e", count: 64))
+    customRecord["audit"] = .object(customAudit)
+    check(FEXWorkflow.installedDigest(customRecord, snapshot: fexSnapshot) != nil, "scoped build provenance accepts a different executable hash")
+    for status in ["normal", "compatible"] {
+        var observed = fexSnapshot
+        observed.facts["fex_status"] = status
+        check((try? FEXWorkflow.requireCompatible(observed)) != nil, "runtime state accepted: " + status)
+    }
+    for reason in ["FEX_CONFIRMATION_REQUIRED", "FEX_CHANGED", "FEX_RUNTIME_FAILED", "FEX_INTEGRITY_FAILED"] {
+        var observed = fexSnapshot
+        observed.facts["fex_status"] = "repair"
+        observed.facts["fex_reason"] = reason
+        observed.facts["fex_runtime"] = "ready"
+        checkThrows(reason, "fresh failure cannot inherit stale readiness: " + reason) { try FEXWorkflow.requireCompatible(observed) }
+    }
     var installedFEX = fexSnapshot
     installedFEX.facts["fex_runtime"] = "ready"
     let existingPlan = DeploymentPlanBuilder.build(installedFEX, profile: try! EnvironmentProfile.load(resources.deletingLastPathComponent().appendingPathComponent("environment-profile-v1.json")))
