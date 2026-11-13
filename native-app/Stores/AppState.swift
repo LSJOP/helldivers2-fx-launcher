@@ -529,7 +529,7 @@ final class AppState: ObservableObject {
                 guard let boot = connected.result["guest_boot"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
                 try self.credentials.bindGuest(boot)
                 if connected.result["ssh_password_verified"]?.boolean == true, let password = input["password"]?.text {
-                    await self.credentials.acceptSharedPassword(password, target: target)
+                    await self.credentials.authenticated(.ssh, value: password, target: target)
                 }
                 self.environmentWorkflow.completedSteps = 2
                 self.environmentWorkflow.phase = .detecting
@@ -547,7 +547,13 @@ final class AppState: ObservableObject {
                     input["deployment_plan"] = raw
                     input["approved_steps"] = .array(plan.executable.map { .string($0.id) })
                     input["restart_vm_approved"] = .bool(restartApproved)
+                    let deploymentCredentials = input
                     let deployed = try await self.core.request("first_run_deploy", timeout: 1500, params: input) { [weak self] event in
+                        if event["kind"]?.text == "credential_status", event["status"]?.text == "authenticated",
+                           let role = event["credential_kind"]?.text.flatMap(CredentialKind.init(rawValue:)),
+                           let value = deploymentCredentials[role.bridgeField]?.text {
+                            Task { @MainActor in await self?.credentials.authenticated(role, value: value, target: target) }
+                        }
                         guard let stage = event["deployment_state"]?.text, DeploymentState(rawValue: stage) != nil else { return }
                         Task { @MainActor in
                             guard let self, self.environmentWorkflow.phase == .deploying else { return }
@@ -602,7 +608,7 @@ final class AppState: ObservableObject {
                 self.firstRunState = .Failed
                 if self.launchSession.running { self.launchSession.fail(failure); self.recordLaunch() }
                 if ["AUTH_REQUIRED", "SSH_AUTH_FAILED", "SUDO_AUTH_FAILED"].contains(failure.code) {
-                    self.launchCredentialKind = failure.code == "SUDO_AUTH_FAILED" ? CredentialKind.sudo.bridgeField : CredentialKind.ssh.bridgeField
+                    self.launchCredentialKind = failure.code == "SUDO_AUTH_FAILED" || failure.details["credential_kind"]?.text == "sudo" ? CredentialKind.sudo.bridgeField : CredentialKind.ssh.bridgeField
                 }
             }
         }
