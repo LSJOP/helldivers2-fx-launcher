@@ -8,6 +8,8 @@ v1.0.0 is the release target. The inspected local arm64 App is `0.1.0` and ad ho
 
 ## Unreleased
 
+- Add a shared Home/setup preparation state machine, completed-step progress, folded maintenance controls and guarded continuation into game launch. Scope deployment revisions to managed values, reconcile exact externally restored receipts and separate approved installed FEX readiness from candidate review. Live acceptance remains incomplete.
+
 - Require screenshot App/build identity, source commit and capture timestamp in addition to language paths and reviewed hashes.
 
 - Start the existing guarded launch flow directly from the dashboard; ask for a credential only on an authentication error, then continue. Live FX launch remains blocked by the proxy mismatch.

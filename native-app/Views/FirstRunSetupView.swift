@@ -31,7 +31,18 @@ struct FirstRunSetupView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             TacticalPageHeader(title: state.t("ui.setup.title"))
-            Text(state.t("ui.setup.scope"))
+            TacticalPanel(number: "", title: state.t("ui.workflow.environment"), symbol: "checkmark.shield") {
+                TacticalInfoRow(title: "FX", value: state.t(state.fxSelection.selected != nil ? "ui.219" : "ui.210"))
+                TacticalInfoRow(title: "SteamOS", value: state.t(state.credentials.guestBoot != nil ? "ui.credentials.status.connected" : "ui.credentials.status.idle"))
+                TacticalInfoRow(title: state.t("ui.135"), value: state.t(state.firstRunState == .Completed ? "ui.workflow.completed" : "ui.workflow.idle"))
+            }
+            TacticalPanel(number: "", title: state.t("ui.workflow.configure"), symbol: "wrench.and.screwdriver") {
+                TacticalButton(title: state.t("ui.workflow.begin"), symbol: "play.fill", primary: true, disabledReason: tasks.busy ? state.t("ui.014") : nil) {
+                    state.startEnvironmentWorkflow(launchGame: false)
+                }
+            }
+            EnvironmentWorkflowProgressView(state: state, tasks: tasks, showIdle: true)
+            DisclosureGroup(state.t("ui.workflow.advanced")) {
             TacticalPanel(number: "1", title: state.t("ui.setup.fx"), symbol: "shippingbox") {
                 HStack {
                     Button(state.t("ui.fx.rescan")) { state.scanFX() }
@@ -43,6 +54,8 @@ struct FirstRunSetupView: View {
             TacticalPanel(number: "2", title: state.t("ui.setup.connect"), symbol: "key") {
                 SecureField(state.t("ui.305"), text: $credentials.password)
                 SecureField(state.t("ui.304"), text: $credentials.sudoPassword)
+                Button(state.t("ui.credentials.useSSHForSudo")) { credentials.useSSHPasswordForSudo() }
+                    .disabled(credentials.password.isEmpty || tasks.busy)
                 Text(state.t("ui.setup.credentials")).font(.caption)
                 HStack {
                     Button(state.t("ui.setup.detect")) { state.firstRunAction("first_run_detect") }
@@ -97,7 +110,7 @@ struct FirstRunSetupView: View {
                                 if !operation.changes.isEmpty { Text(state.t("ui.setup.rollback")) }
                                 if plan.snapshot.steamRunning && ["launch", "tool"].contains(operation.component) && operation.blocked != nil {
                                     Text(state.t("ui.setup.steamManual"))
-                                    if operation.component == "launch", operation.blocked == nil, let value = operation.changes["launch"] {
+                                    if operation.component == "launch", let value = operation.changes["launch"] {
                                         Text(value).font(.caption.monospaced()).textSelection(.enabled)
                                     }
                                 }
@@ -158,6 +171,7 @@ struct FirstRunSetupView: View {
                     }
                 }
             }
+            }.disabled(tasks.busy)
         }
         .confirmationDialog(state.t("ui.fex.title"), isPresented: Binding(get: { fexAction != nil }, set: { if !$0 { fexAction = nil } }), titleVisibility: .visible) {
             if let action = fexAction {
@@ -168,7 +182,6 @@ struct FirstRunSetupView: View {
             }
             Button(state.t("ui.037"), role: .cancel) { fexAction = nil }
         } message: { Text(state.t("ui.fex.scope")) }
-        .disabled(tasks.busy)
         .confirmationDialog(state.t("ui.setup.authorization"), isPresented: $authorize, titleVisibility: .visible) {
             Button(state.t("ui.setup.deploy")) { state.firstRunAction("first_run_deploy") }
         } message: {
@@ -180,5 +193,61 @@ struct FirstRunSetupView: View {
                 recoverID = nil; recoverySelection = []
             }
         } message: { Text(state.t("ui.setup.rollback")) }
+    }
+}
+
+
+struct EnvironmentWorkflowProgressView: View {
+    @ObservedObject var state: AppState
+    @ObservedObject var tasks: TaskManager
+    var showIdle = false
+    private var workflow: EnvironmentWorkflow { state.environmentWorkflow }
+    var body: some View {
+        if showIdle || workflow.phase != .idle {
+            TacticalPanel(number: "", title: state.t("ui.workflow.result"), symbol: "gearshape.2") {
+                Text(state.t(workflow.launchesGame && workflow.phase == .completed ? "ui.140" : workflow.phase.titleKey))
+                if workflow.phase == .launching { Text(state.launchSession.current.title(state.languageCode)) }
+                if workflow.phase == .deploying, let stage = workflow.deploymentStage {
+                    Text(state.t("ui.setup.state." + stage)).font(TacticalTypography.caption)
+                }
+                if workflow.active {
+                    HStack {
+                        ProgressView().controlSize(.small)
+                        Text(state.t("ui.workflow.stepProgress"))
+                        Text("\(workflow.completedSteps)/\(workflow.totalSteps)")
+                    }
+                }
+                ProgressView(value: workflow.fraction).tint(.yellow)
+                    .animation(.easeInOut(duration: 0.2), value: workflow.completedSteps)
+                Text(state.t("ui.workflow.stepProgress") + " · " + String(Int(workflow.fraction * 100)) + "%")
+                if let failure = workflow.failure {
+                    Text(failure.code == "ARTIFACT_UNAPPROVED" && failure.details["component"]?.text == "fex"
+                         ? "FEX · " + state.t("ui.setup.artifactUnavailable")
+                         : failure.message(state.languageCode))
+                        .foregroundStyle(.orange)
+                    DisclosureGroup(state.t("ui.setup.details")) {
+                        Text(failure.code).font(.caption.monospaced())
+                        Text(CoreJSON.encode(.object(failure.details))).font(.caption.monospaced()).textSelection(.enabled)
+                    }
+                    HStack {
+                        Button(state.t("ui.workflow.retry")) { state.startEnvironmentWorkflow(launchGame: workflow.launchesGame) }.disabled(tasks.busy)
+                        Button(state.t("ui.setup.launch")) { state.selection = .dashboard }
+                    }
+                }
+                if workflow.launchesGame && state.launchSession.current != .idle {
+                    DisclosureGroup(state.t("ui.094")) { LaunchProgressView(state: state, tasks: tasks) }
+                }
+                if workflow.active { Button(state.t("ui.038")) { tasks.cancel() } }
+            }
+            .confirmationDialog(state.t("ui.setup.autoReboot"), isPresented: Binding(
+                get: { state.environmentWorkflow.needsRestartApproval && !tasks.busy },
+                set: { if !$0 { state.environmentWorkflow.needsRestartApproval = false } })) {
+                    Button(state.t("ui.setup.deploy")) {
+                        state.environmentWorkflow.needsRestartApproval = false
+                        state.startEnvironmentWorkflow(launchGame: workflow.launchesGame, restartApproved: true)
+                    }
+                    Button(state.t("ui.037"), role: .cancel) { state.environmentWorkflow.needsRestartApproval = false }
+                }
+        }
     }
 }

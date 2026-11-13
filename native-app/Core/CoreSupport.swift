@@ -224,7 +224,7 @@ enum CoreFS {
 
 /// Advisory inter-process lock; never unlinks the file or kills a stale owner.
 final class CoreFileLock {
-    private let descriptor: Int32
+    private var descriptor: Int32
     private init(descriptor: Int32) { self.descriptor = descriptor }
     static func acquire(_ url: URL, createDirectory: Bool = true) throws -> CoreFileLock {
         let directory = url.deletingLastPathComponent()
@@ -238,7 +238,13 @@ final class CoreFileLock {
         if flock(fd, LOCK_EX | LOCK_NB) != 0 { close(fd); throw CoreError("BUSY") }
         return CoreFileLock(descriptor: fd)
     }
-    func release() { flock(descriptor, LOCK_UN); close(descriptor) }
+    func release() {
+        guard descriptor >= 0 else { return }
+        let fd = descriptor
+        descriptor = -1
+        flock(fd, LOCK_UN)
+        close(fd)
+    }
     deinit { release() }
 }
 

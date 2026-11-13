@@ -128,7 +128,6 @@ struct LegacyOperationSheet: View {
         self._tasks = ObservedObject(wrappedValue: state.tasks)
     }
     @Environment(\.dismiss) private var dismiss
-    @State private var confirmed = false
     @State private var configuration = "{}"
     @State private var revision = ""
     @State private var approved: [JSONValue] = []
@@ -145,7 +144,6 @@ struct LegacyOperationSheet: View {
         if operation == "launch_game" && state.fxSelection.selected == nil { return state.t("ui.fx.choose") }
         if needsRoot && state.fxSelection.selected == nil { return state.t("ui.fx.choose") }
         if operation == "launch_game" && state.targetInspection["archive_files_match"]?.boolean == false { return state.t("ui.178") }
-        if needsConsent && !confirmed { return state.t("ui.276") }
         return nil
     }
     private var effect: String {
@@ -201,9 +199,6 @@ struct LegacyOperationSheet: View {
                         Text(state.t("ui.232")).tag("preview"); Text(state.t("ui.314")).tag("stable")
                     }
                 }
-                if needsConsent {
-                    Toggle(state.t("ui.153"), isOn: $confirmed)
-                }
                 if operation == "test_ssh" {
                     SSHDiagnosisView(state: state)
                 }
@@ -213,7 +208,7 @@ struct LegacyOperationSheet: View {
                         Text(pretty(change)).font(TacticalTypography.log).textSelection(.enabled)
                         TacticalButton(title: state.t("ui.025"), symbol: "checkmark.shield") {
                             approved.append(change); run()
-                        }.disabled(!confirmed || tasks.busy)
+                        }.disabled(tasks.busy)
                     }
                 }
                 if inputError { TacticalWarningBanner(text: state.t("ui.072"), isError: true) }
@@ -262,7 +257,7 @@ struct LegacyOperationSheet: View {
     private func run() {
         inputError = false
         var params: [String: JSONValue] = [:]
-        if needsConsent { params["confirmed"] = .bool(confirmed) }
+        if needsConsent { params["confirmed"] = .bool(true) }
         params["approved_changes"] = .array(approved)
         if operation == "restore_guest_ipv6" { params["backup_path"] = .string(state.guestRestorePath) }
         if operation == "save_configuration" {
@@ -287,7 +282,11 @@ private struct CredentialInputFields: View {
             VStack(alignment: .leading, spacing: 10) {
                 SecureField(state.t("ui.305"), text: $credentials.password)
                 SecureField(state.t("ui.168"), text: $credentials.passphrase)
-                if operation == "test_guest_sudo" { SecureField(state.t("ui.304"), text: $credentials.sudoPassword) }
+                if operation == "test_guest_sudo" {
+                    SecureField(state.t("ui.304"), text: $credentials.sudoPassword)
+                    Button(state.t("ui.credentials.useSSHForSudo")) { credentials.useSSHPasswordForSudo() }
+                        .disabled(credentials.password.isEmpty)
+                }
                 Text(state.t("ui.session.policy"))
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
                 Button(state.t("ui.067")) { state.forgetSavedCredentials() }
@@ -303,37 +302,36 @@ private struct CredentialManagementView: View {
     @ObservedObject var state: AppState
     @ObservedObject var credentials: SessionCredentialManager
     @ObservedObject var tasks: TaskManager
+    @State private var password = ""
+
     var body: some View {
         TacticalPanel(number: "K", title: state.t("ui.session.title"), symbol: "key") {
-            Text(state.t("ui.session.policy")).font(TacticalTypography.caption).foregroundStyle(.secondary)
-            ForEach(CredentialKind.allCases, id: \.self) { kind in
-                VStack(alignment: .leading, spacing: 8) {
-                    TacticalInfoRow(title: state.t(kind == .ssh ? "ui.session.ssh" : "ui.session.sudo"), value: status(kind))
-                    HStack {
-                        Button(state.t(kind == .ssh ? "ui.session.updateSSH" : "ui.session.updateSudo")) {
-                            credentials.update(kind)
-                            state.operationSelection = NativeOperation(method: kind == .ssh ? "test_ssh" : "test_guest_sudo")
-                        }
-                        Button(state.t(kind == .ssh ? "ui.session.testSSH" : "ui.session.testSudo")) {
-                            state.operationSelection = NativeOperation(method: kind == .ssh ? "test_ssh" : "test_guest_sudo")
-                        }
-                    }
+            SecureField(state.t(credentials.saved.contains(.ssh) ? "ui.credentials.savedPlaceholder" : "ui.credentials.passwordPlaceholder"), text: $password)
+            HStack {
+                Button(state.t("ui.credentials.connect")) {
+                    state.connectCredential(password)
+                }
+                Button(state.t("ui.credentials.clear")) {
+                    state.clearCurrentCredentials()
+                    password = ""
+                    state.credentialConnectionStatus = "idle"
+                    state.credentialConnectionError = nil
                 }
             }
-            HStack {
-                Button(state.t("ui.session.clear")) { state.forgetSavedCredentials() }
-                Button(state.t("ui.session.revalidate")) { state.operationSelection = NativeOperation(method: "test_ssh") }
+            if credentials.storageIssue {
+                TacticalWarningBanner(text: state.t("ui.credentials.storageIssue"), isError: true)
+            } else if state.credentialConnectionStatus == "failed", let error = state.credentialConnectionError {
+                Text(error.code == "FX_NOT_RUNNING" ? state.t("ui.credentials.startFX") : error.message(state.languageCode))
+                    .foregroundStyle(.red)
+            } else {
+                Text(state.t(state.credentialConnectionStatus == "connected" ? "ui.credentials.status.connected" : state.credentialConnectionStatus == "connecting" ? "ui.credentials.status.connecting" : "ui.credentials.status.idle"))
+                    .foregroundStyle(.secondary)
             }
         }.disabled(tasks.busy)
+            .onChange(of: state.credentialConnectionStatus) { status in
+                if status == "connected" { password = "" }
+            }
             .task { if !tasks.busy { await state.prepareCredentials() } }
-    }
-    private func status(_ kind: CredentialKind) -> String {
-        switch credentials.status(kind) {
-        case .notProvided: return state.t("ui.session.empty")
-        case .provided: return state.t("ui.session.provided")
-        case .verified: return state.t("ui.session.verified")
-        case .failed: return state.t("ui.session.failed")
-        }
     }
 }
 

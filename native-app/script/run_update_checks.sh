@@ -10,7 +10,7 @@ xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -module-cache-path b
 ./build/UpdateChecks >evidence/update-service-checks.txt 2>&1
 xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -module-cache-path build/ModuleCache \
     -F "$FRAMEWORK_ROOT" -framework Sparkle -Xlinker -rpath -Xlinker "$FRAMEWORK_ROOT" \
-    Models/BridgeModels.swift Models/Navigation.swift Services/SessionCredentialManager.swift Services/BridgeService.swift \
+    Models/BridgeModels.swift Core/*.swift \
     Services/UpdateReleaseService.swift Services/AppUpdateManager.swift checks/UpdateManagerChecks.swift \
     -o build/UpdateManagerChecks >evidence/update-manager-compile.txt 2>&1
 ./build/UpdateManagerChecks >evidence/update-manager-checks.txt 2>&1

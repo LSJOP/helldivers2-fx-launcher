@@ -178,19 +178,29 @@ final class SSHEnvironmentBackend: DeploymentBackend {
         for key in ["cpus", "memMiB", "gpuMemMiB", "graphicsPath", "vulkanDriver", "metalHUD", "superResolution"] {
             facts["fx_" + key] = pref?[key].map { CoreJSON.encode($0) } ?? "UNKNOWN"
         }
-        let revisionFields = fields.filter { !$0.key.hasSuffix("_count") && !["free"].contains($0.key) }
-        let revision = CoreHash.sha256(Data((CoreJSON.encode(.object(revisionFields.mapValues { .string($0) })) + configurationRevision).utf8))
+        let revision = Self.configurationFingerprint(values: values, configurationRevision: configurationRevision)
         var snapshot = DeploymentSnapshot(target: try Self.deploymentBinding(identity, fxPath: fx.path), boot: boot, revision: revision, fxVersion: fxVersion,
                      osVersion: fields["os_version"] ?? "UNKNOWN", architecture: fields["arch"] ?? "UNKNOWN",
                      steamRunning: sp > 0, gameRunning: gp > 0 || (fields["reaper_count"].flatMap(Int.init) ?? 1) > 0, freeBytes: free, facts: facts, values: values)
         if !restartCompleted, SetupVMReboot.hasCompletedReceipt(for: snapshot) {
             snapshot.facts["restart_completed"] = "true"
         }
+        if fields["fex_sha256"] == LaunchService.verifiedFEX {
+            let runtime = try transport.run(#"""
+            "$HOME/.local/share/Steam/steamapps/common/FEX-Emu/usr/bin/FEX" --version >/dev/null 2>&1
+            """#, timeout: 15, context: context)
+            snapshot.facts["fex_runtime"] = runtime.status == 0 ? "ready" : "failed"
+        }
         if try FEXWorkflow.verifyInstalled(self, snapshot: snapshot) {
             snapshot.facts["fex_manifest"] = "verified"
             snapshot.facts["fex"] = "verified"
         }
         return snapshot
+    }
+    /// Steam updates unrelated VDF metadata while running. Compare managed values
+    /// read through its live API. Offline writes retain a full destination-file CAS.
+    static func configurationFingerprint(values: [String: String], configurationRevision: String) -> String {
+        CoreHash.sha256(Data((CoreJSON.encode(.object(values.mapValues { .string($0) })) + configurationRevision).utf8))
     }
     static func steamError(_ error: Error) -> String {
         if let error = error as? CoreError { return error.code }
@@ -208,7 +218,8 @@ final class SSHEnvironmentBackend: DeploymentBackend {
             guard EnvironmentDeploymentService.identity(current, expected), current.revision == expected.revision,
                   current.values == expected.values else { throw CoreError("CONFIG_CHANGED") }
             try EnvironmentDeploymentService.idle(current, requiresStoppedSteam: false)
-            let script = try ProtonJERelease.script(mode: target == "missing" ? "recover" : "install", manifest: ProtonJERelease.manifest(), boot: current.boot)
+            let script = try ProtonJERelease.script(mode: target == "missing" ? "recover" : "install", manifest: ProtonJERelease.manifest(), boot: current.boot,
+                useHostProxy: SSHTransport.localHost(transport.settings.host) && LaunchService.checkProxyPort())
             _ = try hostIdentity()
             let result = try transport.run(script, timeout: 750, context: context)
             if result.status != 0 {
@@ -751,6 +762,10 @@ enum SteamSetupClient {
 /// One explicitly approved graceful reboot, never a forced FX stop or reboot retry.
 /// Durable phase records contain identity and receipt IDs only, never credentials.
 enum SetupVMReboot {
+    static func reconnectMayWait(_ error: CoreError) -> Bool {
+        error.code == "FX_IDENTITY_UNVERIFIED" &&
+            ["ssh_listener_not_ready", "network_not_ready"].contains(error.details["reason"]?.text ?? "")
+    }
     static func hasCompletedReceipt(for snapshot: DeploymentSnapshot) -> Bool {
         guard UUID(uuidString: snapshot.boot) != nil,
               let machine = snapshot.facts["machine_id"], machine.range(of: "^[a-f0-9]{32}$", options: .regularExpression) != nil,
@@ -760,7 +775,7 @@ enum SetupVMReboot {
         guard let receipts = try? NativeCoreService.deploymentReceipts.list(), receipts.count <= 1024 else { return false }
         return receipts.contains { receipt in
             let previous = receipt.plan.snapshot
-            guard previous.target == snapshot.target, previous.boot == snapshot.boot,
+            guard previous.facts["fx_path"] == snapshot.facts["fx_path"],
                   previous.facts["machine_id"] == snapshot.facts["machine_id"],
                   previous.facts["fx_executable_sha256"] == snapshot.facts["fx_executable_sha256"],
                   previous.facts["ssh_connection"] == snapshot.facts["ssh_connection"] else { return false }
@@ -768,7 +783,36 @@ enum SetupVMReboot {
             guard !FileManager.default.isSymbolicLink(atPath: file.path),
                   let data = try? Data(contentsOf: file), data.count < 16_384,
                   let record = try? JSONDecoder().decode([String: JSONValue].self, from: data) else { return false }
-            return record["state"]?.text == "completed" && record["new_boot"]?.text == snapshot.boot && record["machine_id"]?.text == snapshot.facts["machine_id"]
+            if record["state"]?.text == "completed" {
+                return previous.target == snapshot.target && previous.boot == snapshot.boot &&
+                    record["new_boot"]?.text == snapshot.boot && record["machine_id"]?.text == snapshot.facts["machine_id"]
+            }
+            var transitionSource = previous
+            if previous.boot == snapshot.boot, previous.target == snapshot.target, let originalBoot = record["old_boot"]?.text {
+                transitionSource.boot = originalBoot
+            }
+            guard record["state"]?.text == "attention_required", record["error"]?.text == "FX_IDENTITY_UNVERIFIED",
+                  record["old_boot"]?.text == transitionSource.boot, record["machine_id"]?.text == machine,
+                  snapshot.facts["steam_api"] == "available", snapshot.facts["steam_tool_api"] == "available",
+                  !receipt.applied.isEmpty, receipt.pending == nil,
+                  Set(receipt.applied).isSubset(of: Set(receipt.plan.operations.filter { !$0.changes.isEmpty }.map(\.id))),
+                  receipt.plan.operations.filter({ receipt.applied.contains($0.id) }).allSatisfy({ operation in
+                      operation.changes.allSatisfy { snapshot.values[$0.key] == $0.value }
+                  }), (try? validateTransition(old: transitionSource, new: snapshot)) != nil else { return false }
+            // Recognition is based on a fresh authenticated snapshot, never a local
+            // completion flag. Rebind originals for recovery without repeating reboot.
+            do {
+                let lock = try CoreFileLock.acquire(directory.appendingPathComponent(".reboot.lock")); defer { lock.release() }
+                var rebound = previous; rebound.boot = snapshot.boot; rebound.target = snapshot.target
+                var updated = receipt
+                updated.plan = DeploymentPlan(id: receipt.plan.id, profileID: receipt.plan.profileID, profileVersion: receipt.plan.profileVersion,
+                                              snapshot: rebound, operations: receipt.plan.operations)
+                try NativeCoreService.deploymentReceipts.save(updated)
+                var completed = record
+                completed["state"] = .string("completed"); completed["new_boot"] = .string(snapshot.boot)
+                try CoreFS.atomicWrite(try JSONEncoder().encode(completed), to: file)
+                return true
+            } catch { return false }
         }
     }
     static func validateTransition(old: DeploymentSnapshot, new: DeploymentSnapshot) throws {
@@ -841,7 +885,12 @@ enum SetupVMReboot {
             progress(.Reconnecting); try save("waiting_for_ssh")
             var connected: SSHEnvironmentBackend?
             try wait(context: request.context, seconds: 240) {
-                _ = try LaunchService.endpointIdentity(fx: backend.fx, gvproxy: LaunchResources.gvproxyBinary!, transport: backend.transport, context: request.context)
+                do {
+                    _ = try LaunchService.endpointIdentity(fx: backend.fx, gvproxy: LaunchResources.gvproxyBinary!, transport: backend.transport, context: request.context)
+                } catch let error as CoreError {
+                    if reconnectMayWait(error) { return false }
+                    throw error
+                }
                 let banner = try CoreProcess.run("/usr/bin/nc", ["-G", "2", "-w", "2", backend.transport.settings.host, String(backend.transport.settings.port)], timeout: 3, context: request.context)
                 guard banner.stdout.hasPrefix("SSH-2.0-") else { return false }
                 var settings = backend.transport.settings

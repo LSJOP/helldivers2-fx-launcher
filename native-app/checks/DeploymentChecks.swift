@@ -71,6 +71,16 @@ final class FileDeploymentBackend: DeploymentBackend {
             try service.execute(plan, approved: Set(plan.executable.map(\.id)), context: CoreContext(timeout: 10))
         }
         let (b, s, p) = try fixture()
+        var complete = p.snapshot
+        for component in ["steam", "game", "vulkan", "kosmickrisp", "network", "gvproxy", "ipv4"] { complete.facts[component] = "available" }
+        complete.facts["fex_manifest"] = "verified"; complete.facts["proton_manifest"] = "verified"
+        complete.values["launch"] = try LaunchOptionsAdapter.merge("%command%", managed: profile.launchOptions)
+        complete.values["tool"] = profile.protonVersion
+        try check(DeploymentPlanBuilder.build(complete, profile: profile).detectionState == .Ready, "full plan is ready only with verified components and matching launch options")
+        complete.facts["fex_manifest"] = "UNKNOWN"
+        try check(DeploymentPlanBuilder.build(complete, profile: profile).detectionState != .Ready, "unverified FEX never claims readiness")
+        complete.facts["fex_manifest"] = "verified"; complete.values.removeValue(forKey: "launch")
+        try check(DeploymentPlanBuilder.build(complete, profile: profile).detectionState != .Ready, "unread launch options never claim readiness")
         try check(p.operations.first { $0.id == "fex" }?.blocked == "ARTIFACT_UNAPPROVED", "missing FEX is blocked")
         try check(p.operations.first { $0.id == "proton" }?.blocked == "ARTIFACT_IMPORT_REQUIRED", "missing Proton without exact-target detection is blocked")
         try check(p.executable.map(\.id) == ["launch"], "only approved available configuration is executable")
@@ -201,6 +211,9 @@ final class FileDeploymentBackend: DeploymentBackend {
                 .replacingOccurrences(of: "/usr/bin/systemctl", with: SSHEnvironmentBackend.quote(fakeSystemctl.path))
             let env = ["PATH": bin.path + ":/usr/bin:/bin", "HOME": dir.path]
             let scheduled = try CoreProcess.run("/bin/sh", ["-c", script], timeout: 5, environment: env)
+            if scheduled.status != 0 || scheduled.stdout.trimmingCharacters(in: .whitespacesAndNewlines) != "HD2FX_REBOOT_SCHEDULED" || !FileManager.default.fileExists(atPath: commandFile.path) {
+                print("Fixture reboot result: status=\(scheduled.status), stdout=\(scheduled.stdout), stderr=\(scheduled.stderr)")
+            }
             try check(scheduled.status == 0 && scheduled.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == "HD2FX_REBOOT_SCHEDULED" && FileManager.default.fileExists(atPath: commandFile.path), "production reboot script schedules only the fixture systemd command")
             try FileManager.default.removeItem(at: commandFile); try Data().write(to: gameFile)
             let blocked = try CoreProcess.run("/bin/sh", ["-c", script], timeout: 5, environment: env)
@@ -235,6 +248,18 @@ final class FileDeploymentBackend: DeploymentBackend {
         }
         for (name, expression) in [("read", SteamSetupClient.launchExpression()), ("write", SteamSetupClient.launchExpression(previous: "%command%", desired: "FEX_DISKCACHE=0 %command%")), ("drift", SteamSetupClient.launchExpression(previous: "stale", desired: "FEX_DISKCACHE=0 %command%")), ("tool", SteamSetupClient.toolExpression(desired: ProtonJERelease.version, previous: "proton_11-arm64"))] {
             try expression.write(to: root.appendingPathComponent(name + ".js"), atomically: true, encoding: .utf8)
+        }
+        do {
+            let (backend, service, initial) = try fixture()
+            for key in ["machine_id", "fx_path", "fx_executable_sha256", "ssh_connection"] { backend.state.facts[key] = "bound-" + key }
+            let live = try backend.snapshot()
+            let fresh = DeploymentPlanBuilder.build(live, profile: profile)
+            var original = initial.snapshot; original.facts = live.facts
+            let previous = DeploymentPlan(id: UUID(), profileID: fresh.profileID, profileVersion: fresh.profileVersion, snapshot: original, operations: fresh.operations)
+            let pending = DeploymentReceipt(id: previous.id, plan: previous, state: .RecoveryRequired, applied: ["launch"], pending: nil, failure: nil)
+            try service.receipts.save(pending)
+            _ = try execute(service, fresh)
+            try check(try service.receipts.read(previous.id).failure == "EXTERNALLY_RESTORED", "exact external restore on same machine reconciles stale receipt")
         }
         let receipt = try execute(s, p)
         try check(receipt.state == .Completed && b.writes == 1, "real config written and verified")
@@ -474,6 +499,25 @@ final class FileDeploymentBackend: DeploymentBackend {
         try check(!SetupVMReboot.hasCompletedReceipt(for: rebound), "a later boot cannot inherit completed reboot proof")
         rebound = proofPlan.snapshot; rebound.facts["ssh_connection"] = String(repeating: "d", count: 64)
         try check(!SetupVMReboot.hasCompletedReceipt(for: rebound), "another SSH connection cannot inherit reboot proof")
+        do {
+            var source = proofPlan.snapshot
+            source.facts["fx_path"] = "/fixture/FX.app"
+            let operation = p.operations.first { $0.component == "launch" }!
+            let pendingPlan = DeploymentPlan(id: UUID(), profileID: p.profileID, profileVersion: p.profileVersion, snapshot: source, operations: [operation])
+            let pending = DeploymentReceipt(id: pendingPlan.id, plan: pendingPlan, state: .NeedsConfiguration, applied: ["launch"], pending: nil, failure: nil)
+            try NativeCoreService.deploymentReceipts.save(pending)
+            let pendingFile = CoreFS.nativeData().appendingPathComponent("environment-reboots/" + pending.id.uuidString + ".json")
+            try CoreFS.atomicWrite(try JSONEncoder().encode(["state": "attention_required", "error": "FX_IDENTITY_UNVERIFIED", "old_boot": source.boot, "machine_id": source.facts["machine_id"]!]), to: pendingFile)
+            var actual = source; actual.boot = UUID().uuidString; actual.target = "restarted-target"
+            actual.values.merge(operation.changes) { _, value in value }
+            actual.facts["steam_api"] = "available"; actual.facts["steam_tool_api"] = "available"
+            try check(SetupVMReboot.hasCompletedReceipt(for: actual), "fresh authenticated state resumes a completed reboot without sending another reboot")
+            try check(try NativeCoreService.deploymentReceipts.read(pending.id).plan.snapshot.boot == actual.boot, "resumed reboot rebinds recovery originals")
+        }
+        try check(SetupVMReboot.reconnectMayWait(CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("ssh_listener_not_ready")])), "reconnect waits for a missing SSH listener")
+        try check(!SetupVMReboot.reconnectMayWait(CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("diagnostic_network_signature_untrusted")])), "reconnect never retries an untrusted signature")
+        try check(!SetupVMReboot.reconnectMayWait(CoreError("FX_INSTANCE_MISMATCH")), "reconnect rejects a foreign FX")
+        try check(!SetupVMReboot.reconnectMayWait(CoreError("SSH_AUTH_FAILED")), "reconnect never retries rejected credentials")
         print("\(count) deployment checks passed; SSH/VM/game NOT_TESTED")
     }
 }

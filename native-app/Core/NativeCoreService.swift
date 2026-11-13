@@ -421,6 +421,7 @@ actor NativeCoreService {
         do {
             let host = try LaunchService.fxState(request: request, fx: fx)
             result["fx_host_running"] = host["fx_host_running"] ?? .bool(false)
+            guard host["fx_host_running"]?.boolean == true else { throw CoreError("FX_NOT_RUNNING") }
             progress("CheckingSSHPort")
             _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
             // OpenSSH supplies bounded port/protocol errors; avoid a second divergent socket implementation.
@@ -471,9 +472,12 @@ actor NativeCoreService {
         let request = try launchRequest(params, context: context, emit: emit, confirmed: true)
         let fx = try LaunchService.selectedFX(request)
         let transport = SSHTransport.make(request.configuration)
-        guard LaunchService.networkReady(context: context) else { throw CoreError("FX_NOT_RUNNING") }
-        _ = try LaunchService.checkFXEntry(request: request, fx: fx, requireRunning: true)
-        _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
+        // Read-only sudo verification can use the same publisher-verified FX network
+        // as SSH diagnostics. endpointIdentity checks the selected process tree and
+        // SSH listener before credentials leave the host; the game launch guard remains stricter.
+        _ = try LaunchService.checkFXEntry(request: request, fx: fx, requireRunning: false)
+        guard let gvproxy = LaunchResources.gvproxyBinary else { throw CoreError("GVPROXY_UNAVAILABLE") }
+        _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: gvproxy, transport: transport, context: context)
         let session = try GuestService.connect(transport, password: request.password, passphrase: request.passphrase,
                                                context: context) {
             try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!,
