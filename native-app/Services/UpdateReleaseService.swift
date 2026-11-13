@@ -24,6 +24,7 @@ struct NativeUpdateManifest: Codable {
     let archive: String
     let length: Int64
     let sha256: String
+    let archiveEdSignature: String?
     let sourceCommit: String?
 }
 
@@ -198,7 +199,7 @@ struct NativeReleaseService {
         }
         let manifest: NativeUpdateManifest
         do { manifest = try JSONDecoder().decode(NativeUpdateManifest.self, from: manifestBytes) } catch { throw NativeUpdateFailure.malformed }
-        guard manifest.schema == 1, manifest.bundleID == Self.bundleID, manifest.version == String(release.tag_name.dropFirst(legacy ? 8 : 1)), manifest.build > 0,
+        guard [1, 2].contains(manifest.schema), manifest.bundleID == Self.bundleID, manifest.version == String(release.tag_name.dropFirst(legacy ? 8 : 1)), manifest.build > 0,
               manifest.channel == (release.prerelease ? "preview" : "stable"), manifest.sha256.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil,
               manifest.length > 0, manifest.length <= 536_870_912, manifest.archive == (legacy ? "HD2FXLauncher-\(manifest.version).zip" : "HD2FXNative-v\(manifest.version)-arm64.zip"),
               legacy || manifest.sourceCommit?.range(of: "^[a-f0-9]{40}$", options: .regularExpression) != nil else { throw NativeUpdateFailure.malformed }
@@ -268,6 +269,15 @@ struct NativeReleaseService {
         guard fstat(targetFD, &outputStat) == 0, fstatat(directoryFD, name, &pathStat, AT_SYMLINK_NOFOLLOW) == 0,
               (pathStat.st_mode & S_IFMT) == S_IFREG, outputStat.st_dev == pathStat.st_dev,
               outputStat.st_ino == pathStat.st_ino, outputStat.st_size == length else { throw NativeUpdateFailure.integrity }
+        if candidate.manifest.schema == 2 {
+            guard let encoded = candidate.manifest.archiveEdSignature,
+                  let signature = Data(base64Encoded: encoded), signature.count == 64,
+                  let publicKey, let key = try? Curve25519.Signing.PublicKey(rawRepresentation: publicKey),
+                  key.isValidSignature(signature, for: try Data(contentsOf: target, options: .mappedIfSafe)) else {
+                throw NativeUpdateFailure.signature
+            }
+            try UpdateZIPPreflight.validate(target)
+        }
         completed = true
         return target
     }

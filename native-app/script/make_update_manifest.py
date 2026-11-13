@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Generate public metadata for an already built/notarized Native archive.
+"""Generate public metadata for an already built and signed Native archive.
 
 No signing keys and no publication. Sign the exact resulting bytes with Sparkle.
 """
 import argparse
+import base64
 import hashlib
 import json
 from pathlib import Path
@@ -35,7 +36,12 @@ def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('info',type=Path);parser.add_argument('archive',type=Path);parser.add_argument('channel',choices=['stable','preview'])
     parser.add_argument('output',type=Path);parser.add_argument('--architecture',default='arm64',choices=['arm64','universal'])
+    parser.add_argument('--archive-signature',type=Path)
     args=parser.parse_args()
     value=manifest(plistlib.loads(args.info.read_bytes()),args.archive,args.channel,args.architecture)
+    if args.archive_signature:
+        signature=args.archive_signature.read_text().strip()
+        assert len(base64.b64decode(signature,validate=True))==64, 'Invalid archive Ed25519 signature'
+        value.update(schema=2,archiveEdSignature=signature)
     with args.output.open('x',encoding='utf-8') as stream:stream.write(json.dumps(value,sort_keys=True,separators=(',',':'))+'\n')
 if __name__=='__main__':main()

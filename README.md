@@ -45,13 +45,13 @@ These are real windows from the integration Debug build, **not final v1.0.0 scre
 - First-Run Setup checks Guest identity, runtime capabilities and component integrity. Approved configuration can install the pinned Proton-JE package, select a verified Steam compatibility tool and merge launch options while retaining custom arguments. Detection is read-only. Deployment and recovery require their own checks.
 - Environment reports FEX and Proton-JE evidence. SSH and sudo credentials are independently reused for a verified target/session, with installation-local encrypted storage for restart reuse.
 - The Swift App provides seven native pages, logs, scoped performance controls and ten interface languages. Optional SteamOS installation steps require Python 3.
-- Settings includes Sparkle update integration. Published update service and end-to-end installation have yet to be verified.
+- Settings provides signed update checks and verified downloads. The integration candidate binds archive SHA-256, Ed25519 and ZIP path checks to the installation target. Public service configuration and real upgrade/recovery acceptance remain pending.
 
 The v1.0.0 integration candidate checks installed FEX files, execute permission, arm64 architecture and a bounded x86-64 execution probe. Unknown provenance requires confirmation tied to the current installation and file-tree fingerprint. A different fixed hash alone does not reject the candidate. This workflow has passed isolated checks; live acceptance remains pending.
 
 ### Known Issues
 
-- Current integration live acceptance passed setup checks but game startup failed. FEX reported an empty RootFS in the Steam container chain. A separate dynamic probe with the installed RootFS passed. Full container/Proton integration remains unresolved.
+- Current integration live acceptance passed setup checks but game startup failed. Steam starts a wrapper that exits before the game process appears. RootFS warnings were observed, but changing that setting did not fix launch and was rolled back. Isolated Wine execution passed. The Proton/EAC launch failure is still under diagnosis.
 
 - FX and SteamOS compatibility depends on the selected build and runtime evidence. The current launch path has a recorded proxy mismatch. Safe FX stop/restart remains unavailable.
 - A real Guest built an experimental FEX candidate. Its executable hash failed deployment review. The historical fixed-hash deployment rejection is being replaced in the integration candidate. Candidate installation, recovery and game compatibility remain unverified. Alternate Proton-JE builds and fresh SteamOS deployment require validation.

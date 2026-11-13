@@ -7,7 +7,7 @@
   "timezone": "Asia/Shanghai",
   "fx_guest_actions": "none",
   "credential_autoload": "disabled by isolated capture arguments",
-  "reviewed_ui_source_sha256": "138e168e81a4abbb75b90fdb55e0af49adf54975159bc67f5dbc81f02ab5c146",
+  "reviewed_ui_source_sha256": "9c7c7b1d8e19a643e82685c3cd4907ddaa7045ce82e60507f10fbba74ec7165b",
   "screenshots": [
     {
       "path": "docs/images/zh-CN/dashboard.png",
@@ -347,5 +347,6 @@
   "proton_setup_review_20261106": "Setup-only install/discovery guidance changed. Existing README screenshot pages do not show setup. New setup screenshots and live SteamOS acceptance explicitly pending in both READMEs; historical screenshot provenance unchanged.",
   "ssh_defaults_review_20261106": "English and Simplified Chinese Settings captures refreshed from integrated Debug 2026110601; visually reviewed text, SSH effective placeholders and memory-only credentials. Existing saved port 2223 is intentionally preserved. Deployment-state setup screenshot remains pending; no Guest interaction.",
   "steam_reboot_review_20261106": "First-run-only state/error/verified-package indicators and reboot confirmation changed in build 2026110602. Real deployment/reboot-state screenshot acceptance pending and stated in both READMEs. Existing Settings captures remain historical build 2026110601; no new Guest screenshot or live writes claimed.",
-  "v1_integration_review": "2026-11-14 client date. Seven pages per language recaptured and visually reviewed from real Debug App. Supplemental detail images retain historical provenance."
+  "v1_integration_review": "2026-11-14 client date. Seven pages per language recaptured and visually reviewed from real Debug App. Supplemental detail images retain historical provenance.",
+  "update_gate_review_20261114": "Update prerequisite wording and download-progress controls changed only in the offscreen update section. Seven referenced idle page screenshots retain their matching visible layout. Historical update-detail captures are not referenced by the current READMEs. Final Release update screenshots remain pending."
 }

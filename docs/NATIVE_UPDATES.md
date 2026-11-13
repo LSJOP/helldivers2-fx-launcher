@@ -97,3 +97,8 @@ References: [official Sparkle setup](https://sparkle-project.org/documentation/)
 The v1.0.0 integration accepts strict code structure and bundle identity checks for ad hoc signing. Publisher authority continues to depend on the embedded Ed25519 key and verified signatures. The allowlisted official GitHub stable Release appcast can be used alongside the historical Pages feed. The service remains unconfigured until real public metadata and keys are ready. Archive path preflight is still a standalone policy; complete archive/install/relaunch/recovery and a real upgrade remain required before release.
 
 正式版整合候选允许通过严格代码结构及 Bundle 身份校验的 ad hoc 签名，发布者授权仍依赖内置 Ed25519 公钥和签名。增加官方 GitHub 正式 Release appcast 入口，并保留历史 Pages 入口。真实公开元数据和公钥准备好之前，服务仍保持未配置。归档路径预检目前仍是独立策略，发布前必须完成归档、安装、重启、恢复链路及真实升级验收。
+
+
+Schema 2 integration requires archiveEdSignature in the signed manifest. The verified archive must pass its independent Ed25519 signature and ZIP directory/local-name/path/link checks before caching completes. Sparkle installation is bound to that signature, URL and version. Schema 1 downloads remain supported and cannot authorize installation. Native automatic checks run only after opt-in, immediately and every six hours; Sparkle handles the approved install/relaunch. Real full upgrade and rollback tests remain pending.
+
+第二版清单要求 archiveEdSignature。缓存完成前检查独立归档签名及 ZIP 目录、局部文件名、路径和链接；Sparkle 安装必须匹配该归档签名、URL 和版本。保留第一版清单下载兼容，第一版不能授权安装。用户启用自动检查后，原生检测立即执行并每六小时重复，Sparkle 负责批准后的安装和重启。真实完整升级及回滚测试仍待完成。

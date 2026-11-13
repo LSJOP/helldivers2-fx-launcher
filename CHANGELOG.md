@@ -8,6 +8,8 @@ v1.0.0 is the release target. The inspected local arm64 App is `0.1.0` and ad ho
 
 ## Unreleased
 
+- Require SHA-256, an independent archive Ed25519 signature and ZIP metadata/path preflight before installation. Bind Sparkle installation to the verified archive signature, URL and version. Real upgrade/recovery acceptance remains pending.
+
 - Keep acceptance DMG packaging exclusively ad hoc and remove certificate discovery and notarization calls. Reset prior FEX and game evidence when retrying the unified workflow.
 
 - Accept structurally valid ad hoc launcher signing for the configured authenticated updater and allow the official stable GitHub Release appcast. Full installation and recovery acceptance remain pending.

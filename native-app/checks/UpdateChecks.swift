@@ -159,6 +159,49 @@ final class ProgressRecorder: @unchecked Sendable {
         try await failure(.malformed,"manifest archive traversal rejected") { _ = try await service.check(version:"0.1.0",build:1,channel:"preview",osVersion:"26.1",architecture:"arm64") }
         vManifest["archive"]="HD2FXNative-v1.0.0-arm64.zip";vAssets.append(vAssets[2]);try vFixture()
         try await failure(.missingAsset,"ambiguous duplicate archive rejected") { _ = try await service.check(version:"0.1.0",build:1,channel:"preview",osVersion:"26.1",architecture:"arm64") }
+
+        // Schema 2 binds the archive signature to the same bytes that pass SHA-256 and path validation.
+        func installCandidate(_ archiveBytes: Data, signature: String? = nil) async throws -> NativeUpdateCandidate {
+            transport.archive = archiveBytes
+            let document: [String: Any] = [
+                "schema": 2, "bundleID": NativeReleaseService.bundleID, "version": "0.2.0", "build": 2,
+                "channel": "stable", "platform": "macOS", "architecture": "arm64", "minimumSystemVersion": "14.0",
+                "archive": "HD2FXLauncher-0.2.0.zip", "length": archiveBytes.count,
+                "sha256": SHA256.hash(data: archiveBytes).map { String(format: "%02x", $0) }.joined(),
+                "archiveEdSignature": try signature ?? key.signature(for: archiveBytes).base64EncodedString()
+            ]
+            let bytes = try JSONSerialization.data(withJSONObject: document, options: [.sortedKeys])
+            transport.responses[manifestURL] = bytes
+            transport.responses[signatureURL] = try key.signature(for: bytes).base64EncodedData()
+            let cleanAssets: [[String: Any]] = [
+                ["name": "native-update.json", "browser_download_url": manifestURL.absoluteString, "size": bytes.count],
+                ["name": "native-update.json.sig", "browser_download_url": signatureURL.absoluteString, "size": 88],
+                ["name": "HD2FXLauncher-0.2.0.zip", "browser_download_url": archiveURL.absoluteString, "size": archiveBytes.count]
+            ]
+            transport.responses[NativeReleaseService.api] = try JSONSerialization.data(withJSONObject: [[
+                "tag_name": tag, "draft": false, "prerelease": false,
+                "html_url": "https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/" + tag, "assets": cleanAssets
+            ]])
+            guard case .available(let result) = try await run() else { throw NativeUpdateFailure.malformed }
+            return result
+        }
+        let safeZIP = Data(base64Encoded: "UEsDBBQAAAAIANYWbl3uQOUFCQAAAAcAAAAjAAAASEQyRlhOYXRpdmUuYXBwL0NvbnRlbnRzL0luZm8ucGxpc3RLy6woKS1KBQBQSwECFAMUAAAACADWFm5d7kDlBQkAAAAHAAAAIwAAAAAAAAAAAAAAgAEAAAAASEQyRlhOYXRpdmUuYXBwL0NvbnRlbnRzL0luZm8ucGxpc3RQSwUGAAAAAAEAAQBRAAAASgAAAAAA")!
+        let install = try await installCandidate(safeZIP)
+        _ = try await service.download(install, to: directory)
+        try check(true, "signed schema 2 archive passes digest, archive signature and path preflight")
+        let unsafeZIP = Data(base64Encoded: "UEsDBBQAAAAIANYWbl3uQOUFCQAAAAcAAAAcAAAASEQyRlhOYXRpdmUuYXBwLy4uLy4uL2VzY2FwZUvLrCgpLUoFAFBLAQIUAxQAAAAIANYWbl3uQOUFCQAAAAcAAAAcAAAAAAAAAAAAAACAAQAAAABIRDJGWE5hdGl2ZS5hcHAvLi4vLi4vZXNjYXBlUEsFBgAAAAABAAEASgAAAEMAAAAAAA==")!
+        let unsafeInstall = try await installCandidate(unsafeZIP)
+        do {
+            _ = try await service.download(unsafeInstall, to: directory)
+            throw NSError(domain: "signed malicious ZIP passed", code: 1)
+        } catch is UpdateArchivePathError {
+            try check(true, "valid publisher signature never bypasses archive path policy")
+        }
+        let wrongSignature = try key.signature(for: Data("different archive".utf8)).base64EncodedString()
+        let tamperedInstall = try await installCandidate(safeZIP, signature: wrongSignature)
+        try await failure(.signature, "archive signature bound independently from signed manifest") {
+            _ = try await service.download(tamperedInstall, to: directory)
+        }
         print("\(passed) update service checks PASS")
     }
 }

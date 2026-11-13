@@ -73,7 +73,11 @@ log 'Ad hoc DMG. Gatekeeper and actual installation require separate acceptance.
 hdiutil verify "$dmg" >> "$output/install-test.log" 2>&1
 
 mkdir "$output/mount"
-hdiutil attach -readonly -nobrowse -mountpoint "$output/mount" "$dmg" >> "$output/install-test.log" 2>&1
+if diskutil image attach --help >/dev/null 2>&1; then
+    diskutil image attach --readOnly --nobrowse --mountPoint "$output/mount" "$dmg" >> "$output/install-test.log" 2>&1
+else
+    hdiutil attach -readonly -nobrowse -mountpoint "$output/mount" "$dmg" >> "$output/install-test.log" 2>&1
+fi
 mount_point="$output/mount"
 [[ "$(readlink "$mount_point/Applications")" = /Applications ]]
 installed="$output/Installed/HD2FXNative.app"
