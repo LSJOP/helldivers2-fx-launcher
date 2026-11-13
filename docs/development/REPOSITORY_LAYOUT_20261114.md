@@ -65,3 +65,13 @@
 | `origin/main` | 已包含于 main |
 | `origin/release/v1.0.0-integration` | 未合并，保留 |
 | `origin/ui/remove-global-fx-bar-20261104` | 已包含于 main |
+
+## 验证结果
+
+- 文档检查 15/15；双语 README、索引和移动报告的本地链接有效，14 个截图引用的语言目录、来源及哈希通过。界面与截图内容未修改。
+- `native-app/script/build_and_run.sh --build-only`：arm64 Xcode Debug build 通过。
+- `native-app/script/run_checks.sh`：完整通过，覆盖本地化正反例、FEX、更新资源、Proton、SSH、权限、网络、Native Core、FX 身份、启动、凭据、性能、选择和部署恢复隔离测试（部署检查 140 项）。首次遇到迁盘前旧 ModuleCache 路径，保留缓存后重跑通过；无产品代码修改。
+- 源码、旧 Python、十语言资源、构建配置、发布脚本、updates 和 CoreSnapshot 指针均无差异。未执行真实 Guest/游戏/网络写入，未新增真实环境兼容性承诺。
+- 当前 main 无 GitHub Actions 工作流，发布模板保持非激活；更新资源测试通过。远程 main 规则查询返回空规则列表。
+- 引用更新限于双语 README、`.codex/progress.md`、系统验收报告和四份迁移报告；已跟踪文本无遗留裸旧路径。
+- 其他工作树存在未提交成果，全部原样保留。未删除分支。提交前密钥扫描通过。
