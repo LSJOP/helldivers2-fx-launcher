@@ -701,12 +701,15 @@ printf '{"guest_os":"%s","guest_arch":"%s","components":{"steam_files":%s,"game_
         guard (before["game_count"]?.integer ?? 0) == 0 else {
             throw CoreError("GAME_START_FAILED", ["reason": .string("game_appeared_during_preparation")])
         }
-        let dispatchSnapshot = try backend.snapshot()
+        let dispatchIdentity = try backend.hostIdentity()
+        var dispatchSnapshot = fexSnapshot
+        try FEXWorkflow.observe(backend, snapshot: &dispatchSnapshot, approvals: request.fexApprovals)
+        guard try backend.hostIdentity() == dispatchIdentity else { throw CoreError("TARGET_CHANGED") }
         try FEXWorkflow.requireCompatible(dispatchSnapshot)
         guard dispatchSnapshot.facts["fex_fingerprint"] == fexSnapshot.facts["fex_fingerprint"] else { throw CoreError("FEX_CHANGED") }
         let launch = try GuestService.launchGame(transport, session: session, context: context)
         _ = launch
-        let count = try GuestService.waitForGame(transport, attempts: 90, context: context)
+        let count = try GuestService.waitForGame(transport, attempts: 300, context: context)
         var value = connected
         value["game_process_detected"] = .bool(true)
         value["game_process_count"] = .number(Double(count))
