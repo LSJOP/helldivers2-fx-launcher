@@ -4,7 +4,7 @@ Date: 2026-11-04 (Asia/Shanghai). Candidate only; no Latest publication, main me
 
 ## Git and preservation — PASS
 
-Original 14 local branches / 5 worktrees; integration adds one branch/worktree (15 / 6). Full HEAD, dirty/untracked files, unique/unpushed commit inventory: [branch inventory](docs/NATIVE_BRANCH_INVENTORY_20261104.md). All original local heads have recoverable refs under `refs/codex-backups/memory-only-20261104/`. No stash existed. No branches/worktrees deleted: active/unknown ownership, original unknown files and archive history are preserved. Cleanup is PARTIAL by design.
+Original 14 local branches / 5 worktrees; integration adds one branch/worktree (15 / 6). Full HEAD, dirty/untracked files, unique/unpushed commit inventory: [branch inventory](../NATIVE_BRANCH_INVENTORY_20261104.md). All original local heads have recoverable refs under `refs/codex-backups/memory-only-20261104/`. No stash existed. No branches/worktrees deleted: active/unknown ownership, original unknown files and archive history are preserved. Cleanup is PARTIAL by design.
 
 PR #3 development target is `feature/full-swift-native-migration`. Implementation worktree: `/Volumes/Thunderbolt2TB/HD2-Native-memory-only-20261104`, branch `integration/memory-only-20261104`; isolated because original primary worktree contains an unknown untracked environment trace. Baseline `7725cacad5498a3f92fcdbfb649d324bff5f86fb` retains `1188d59`. UI branch `918db0a` merged with two changelog conflicts resolved by retaining both features; merge `e577aa665aa72fe0c1c774f6fb6b5563e7042a1d`. Main remains `1b26b129183dc006113becb7f1ef30de8d53c646`. No forced update permitted.
 
@@ -20,7 +20,7 @@ GuestPrivilegedExecutor owns every active privileged path: fixed root UID verifi
 
 Errors distinguish missing input, rejection, sudo policy denial, SSH transport/authentication, identity change, timeout/cancel and command failure. Nested logs/diagnostics redact secrets. Static audit scans all 37 production Swift files; code-signing Security APIs remain intact. Crash-report memory guarantees are NOT TESTED; no secret is intentionally attached to diagnostics.
 
-Changed production modules: SessionCredentialManager, AppState, SettingsView, BridgeModels, SSHTransport, LaunchService, NativeCoreService, GuestService, ConfigurationService, SmokeRunner, localization catalogs/bundle strings, version/build settings. Removed credential vault and SecItem credential APIs; no old item queried/deleted. Build-time notarization keychain-profile tooling is unrelated and preserved. See [architecture](docs/MEMORY_ONLY_CREDENTIAL_ARCHITECTURE.md).
+Changed production modules: SessionCredentialManager, AppState, SettingsView, BridgeModels, SSHTransport, LaunchService, NativeCoreService, GuestService, ConfigurationService, SmokeRunner, localization catalogs/bundle strings, version/build settings. Removed credential vault and SecItem credential APIs; no old item queried/deleted. Build-time notarization keychain-profile tooling is unrelated and preserved. See [architecture](../MEMORY_ONLY_CREDENTIAL_ARCHITECTURE.md).
 
 ## sudo and safety verification
 
@@ -41,7 +41,7 @@ Tests do not execute a privileged remote operation against a real Guest. Product
 
 ## Functional audit and known issues
 
-Full implementation/original Python comparison: [function matrix](docs/FUNCTION_MIGRATION.md).
+Full implementation/original Python comparison: [function matrix](../FUNCTION_MIGRATION.md).
 
 | Capability | Implementation | Live acceptance |
 |---|---|---|

@@ -10,6 +10,20 @@
 
 HD2FXNative is an unofficial community launcher and management tool for Apple Silicon Macs. Built with SwiftUI and a native core, it helps users inspect FX, configure the runtime environment and manage game performance settings.
 
+### Screenshots
+
+These are real windows from different historical Debug builds, **not final v1.0.0 screenshots**. Final captures must be taken, reviewed and replaced after the final build; see [capture provenance](docs/images/README.md).
+
+| Dashboard | First-Run Setup |
+| --- | --- |
+| ![Dashboard](docs/images/en/dashboard.png) | ![First-Run Setup](docs/images/en/first-run-setup.png) |
+| Environment | FX Manager |
+| ![Environment](docs/images/en/environment.png) | ![FX Manager](docs/images/en/fx-manager.png) |
+| Game Performance | Settings |
+| ![Game Performance](docs/images/en/performance.png) | ![Settings](docs/images/en/settings.png) |
+| Logs | |
+| ![Logs](docs/images/en/logs.png) | |
+
 ### Download and installation
 
 **Release target: HD2FXNative v1.0.0.** GitHub has no published release. The inspected local App is version `0.1.0`, arm64 and ad hoc signed without a Developer ID. It has no verified Apple notarization. Gatekeeper may block a downloaded copy. The public DMG and its SHA-256 are pending. [GitHub Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
@@ -25,20 +39,6 @@ After publication, install on an Apple Silicon Mac running macOS 14 or later.
 
 For source builds, see the [development guide](docs/NATIVE_DEVELOPMENT.md).
 
-### Screenshots
-
-These are real windows from different historical Debug builds, **not final v1.0.0 screenshots**. Final captures must be taken, reviewed and replaced after the final build; see [capture provenance](docs/images/README.md).
-
-| Dashboard | First-Run Setup |
-| --- | --- |
-| ![Dashboard](docs/images/en/dashboard.png) | ![First-Run Setup](docs/images/en/first-run-setup.png) |
-| Environment | FX Manager |
-| ![Environment](docs/images/en/environment.png) | ![FX Manager](docs/images/en/fx-manager.png) |
-| Game Performance | Settings |
-| ![Game Performance](docs/images/en/performance.png) | ![Settings](docs/images/en/settings.png) |
-| Logs | |
-| ![Logs](docs/images/en/logs.png) | |
-
 ### Features
 
 - Dashboard starts the guarded HELLDIVERS 2 launch workflow. FX Manager inspects the selected FX installation and exposes supported FX/Steam actions.
@@ -53,7 +53,7 @@ These are real windows from different historical Debug builds, **not final v1.0.
 - A real Guest built an experimental FEX candidate. Its executable hash failed deployment review. Candidate installation, recovery and game compatibility remain unverified. Alternate Proton-JE builds and fresh SteamOS deployment require validation.
 - A historical Native build reached the game menu/ship on November 5. Final-package launch, single-player missions, EAC and multiplayer remain separately unverified.
 - Public distribution, Gatekeeper handling and signed automatic updates are pending. The inspected local App uses ad hoc signing, without verified notarization.
-- [Acceptance report](docs/acceptance/RELEASE_READINESS_REPORT.md) · [Known issues detail](docs/acceptance/KNOWN_ISSUES.md) · [First-run acceptance](NATIVE_FIRST_RUN_ACCEPTANCE.md) · [Update integration](docs/NATIVE_UPDATES.md) · [Performance limits](docs/GAME_PERFORMANCE.md)
+- [Acceptance report](docs/acceptance/RELEASE_READINESS_REPORT.md) · [Known issues detail](docs/acceptance/KNOWN_ISSUES.md) · [First-run acceptance](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md) · [Update integration](docs/NATIVE_UPDATES.md) · [Performance limits](docs/GAME_PERFORMANCE.md)
 
 ### Changelog
 
@@ -62,3 +62,7 @@ Unreleased changes include Dashboard launch, first-run Proton-JE verification an
 ### Disclaimer
 
 This community project is not affiliated with the makers of HELLDIVERS 2; names and marks belong to their respective owners. No project-wide source license has been selected. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party components and artwork.
+
+### Documentation
+
+User and developer guides, architecture notes and historical reports are available in the [documentation index](docs/README.md).

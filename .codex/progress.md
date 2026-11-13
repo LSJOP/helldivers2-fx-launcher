@@ -63,7 +63,7 @@ Fresh Release and Debug builds PASS. Release retains the existing local ad-hoc/S
 
 ## Codex Native takeover — 2026-11-04
 
-User-authorized follow-up supersedes the completed historical queue for this task only. Baseline `0ba4e20` on `feature/full-swift-native-migration`; PR #3 open. No main merge, Bridge restoration, UI redesign or protected-worktree edits. The original Latest executable matches f219577 Release; subsequent commits are documentation only. Fix duplicate SSH argv, provide a controlling terminal, pass secure diagnostic credentials, preserve host/FX identity checks, and bundle build metadata. Source/test changes are staged as a new verified checkpoint; final build/publication evidence is recorded in CODEX_NATIVE_APP_TAKEOVER_REPORT.md. Real Guest authentication, Steam/game and multiplayer remain unverified until explicit live acceptance.
+User-authorized follow-up supersedes the completed historical queue for this task only. Baseline `0ba4e20` on `feature/full-swift-native-migration`; PR #3 open. No main merge, Bridge restoration, UI redesign or protected-worktree edits. The original Latest executable matches f219577 Release; subsequent commits are documentation only. Fix duplicate SSH argv, provide a controlling terminal, pass secure diagnostic credentials, preserve host/FX identity checks, and bundle build metadata. Source/test changes are staged as a new verified checkpoint; final build/publication evidence is recorded in docs/development/CODEX_NATIVE_APP_TAKEOVER_REPORT.md. Real Guest authentication, Steam/game and multiplayer remain unverified until explicit live acceptance.
 
 ## Global UI simplification — 2026-11-04
 
