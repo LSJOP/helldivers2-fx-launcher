@@ -547,7 +547,13 @@ final class AppState: ObservableObject {
                     input["deployment_plan"] = raw
                     input["approved_steps"] = .array(plan.executable.map { .string($0.id) })
                     input["restart_vm_approved"] = .bool(restartApproved)
-                    let deployed = try await self.core.request("first_run_deploy", timeout: 1500, params: input)
+                    let deployed = try await self.core.request("first_run_deploy", timeout: 1500, params: input) { [weak self] event in
+                        guard let stage = event["deployment_state"]?.text, DeploymentState(rawValue: stage) != nil else { return }
+                        Task { @MainActor in
+                            guard let self, self.environmentWorkflow.phase == .deploying else { return }
+                            self.environmentWorkflow.deploymentStage = stage
+                        }
+                    }
                     if let receipt = deployed.result["receipt"] {
                         let record = try JSONDecoder().decode(DeploymentReceipt.self, from: JSONEncoder().encode(receipt))
                         self.firstRunReceipt = record

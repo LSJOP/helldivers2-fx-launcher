@@ -205,6 +205,9 @@ struct EnvironmentWorkflowProgressView: View {
         if workflow.phase != .idle {
             TacticalPanel(number: "", title: state.t("ui.workflow.result"), symbol: "gearshape.2") {
                 Text(state.t(workflow.phase.titleKey))
+                if workflow.phase == .deploying, let stage = workflow.deploymentStage {
+                    Text(state.t("ui.setup.state." + stage)).font(TacticalTypography.caption)
+                }
                 if workflow.active {
                     HStack {
                         ProgressView().controlSize(.small)
