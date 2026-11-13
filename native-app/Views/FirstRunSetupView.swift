@@ -221,7 +221,10 @@ struct EnvironmentWorkflowProgressView: View {
                     .animation(.easeInOut(duration: 0.2), value: workflow.completedSteps)
                 Text(state.t("ui.workflow.stepProgress") + " · " + String(Int(workflow.fraction * 100)) + "%")
                 if let failure = workflow.failure {
-                    Text(failure.message(state.languageCode)).foregroundStyle(.orange)
+                    Text(failure.code == "ARTIFACT_UNAPPROVED" && failure.details["component"]?.text == "fex"
+                         ? "FEX · " + state.t("ui.setup.artifactUnavailable")
+                         : failure.message(state.languageCode))
+                        .foregroundStyle(.orange)
                     DisclosureGroup(state.t("ui.setup.details")) {
                         Text(failure.code).font(.caption.monospaced())
                         Text(CoreJSON.encode(.object(failure.details))).font(.caption.monospaced()).textSelection(.enabled)

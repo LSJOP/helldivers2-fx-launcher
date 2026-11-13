@@ -16,26 +16,25 @@ The setup profile now includes all four launch tokens required by the guarded la
 
 ## Automated results
 
-Functional suite passed, with screenshot provenance checked separately because the desktop is locked.
+Functional suite passed independently of the README screenshot provenance gate. The latest Release Home and setup windows were captured on November 14 in the Codex GUI tool output.
 
 - SSH 35, privileged executor 30, network 66
-- Core 100, integration 27, FX identity 16
+- Core 100, integration 27, FX identity 19
 - Launch/workflow 23, session credentials 29, encrypted persistence 31
-- Deployment 144, including conflict/recovery and externally restored receipt regression
+- Deployment 150, including conflict/recovery and externally restored receipt regression
+- Proton installer 19, including the verified archive cache and runtime-cache validation
 - Ten-language localization and 15 documentation checks passed
 
 Fixture checks do not establish live deployment or gameplay success.
 
 ## Live observations and remaining acceptance
 
-The GUI Home action started FX, reused the saved SSH password, connected to SteamOS, detected the environment and reached restart approval. After approval it reached deployment. The Mac locked before the final result could be observed. Configuration success remains unverified.
+The first GUI Home attempt started FX, reused the saved SSH password and detected SteamOS. The initial Proton download was too slow. A matching SHA-256 archive from the local research cache enabled a retry, followed by verified installation and launch-option writeback. The VM rebooted, but its first SSH reconnect attempt stopped during gvproxy startup. A later authenticated detection verified the new boot on the same machine and resumed configuration without another reboot. The Core sudo verification succeeded.
 
-A separate read-only Core probe confirmed the game installation and both live Steam configuration APIs. Proton-JE was missing. Installed FEX is an aarch64 ELF with SHA-256 f9cbb7a70e804b9930fed02fd9d1349d49d7808faace703063a9b4944bc3568e. It differs from the reviewed executable baseline. Runtime readiness and candidate installation remain unverified.
+A post-reboot file comparison found only generated Python cache entries and no changes to distributed Proton files. After the runtime-cache check was corrected, the configured Proton passed the full distributed-file inventory check. Steam readback confirmed the selected compatibility tool is proton-je-11.0-20261014-3. The November 14 standalone GUI run applied and verified all four managed launch options. The subsequent Home run reused saved credentials and skipped writes to already configured components.
 
-A separate-process sudo probe encountered SSH_LOCAL_PORT_BUSY while the GUI App owned the normal tunnel. This does not establish sudo success or failure.
-
-Final Home/setup screenshots, successful configuration, reboot/reconnect continuation, game process, main menu, EAC and multiplayer acceptance remain pending. Incomplete results prevent main promotion.
+Both GUI paths stopped at ARTIFACT_UNAPPROVED for FEX. The installed executable is aarch64 and has SHA-256 f9cbb7a70e804b9930fed02fd9d1349d49d7808faace703063a9b4944bc3568e. It differs from the reviewed baseline. No matching reviewed replacement was available, and FEX runtime readiness was not established. The Home flow did not reach game process creation. Main menu, EAC and multiplayer remain unverified. These results do not qualify for promotion to main.
 
 ## Internal build
 
-native-app/build/Workflow-Release/Products/HD2FXNative.app is an arm64 Release-configuration internal candidate with an ad hoc signature. Metadata explicitly records dirty source and internal-test status. The formal clean-source release gate remains unsatisfied. No version number was changed.
+The arm64 Release-configuration candidate is built from a clean committed checkout at native-app/build/Workflow-Release/CommittedProducts/HD2FXNative.app. It has an ad hoc signature and passed bundle validation. The marketing version remains 0.1.0.
