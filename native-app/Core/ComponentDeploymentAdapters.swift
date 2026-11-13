@@ -210,16 +210,17 @@ enum ProtonJERelease {
               object["archiveSHA256"] as? String == digest, object["version"] as? String == version else { throw CoreError("ARTIFACT_UNAPPROVED") }
         return data
     }
-    static func script(mode: String, manifest: Data, boot: String = "", suffix: String = UUID().uuidString) throws -> String {
+    static func script(mode: String, manifest: Data, boot: String = "", suffix: String = UUID().uuidString, useHostProxy: Bool = false) throws -> String {
         guard ["probe", "install", "recover"].contains(mode), mode == "probe" || UUID(uuidString: boot) != nil,
               UUID(uuidString: suffix) != nil else { throw CoreError("INVALID_ARGUMENT") }
         let prefix = "MANIFEST=" + CoreJSON.encode(.string(manifest.base64EncodedString())) + "\nMODE=" + CoreJSON.encode(.string(mode)) + "\nBOOT=" + CoreJSON.encode(.string(boot)) + "\nSUFFIX=" + CoreJSON.encode(.string(suffix)) + "\n"
-        return "python3 - <<'HD2_PROTON_PY'\n" + prefix + python + "\nHD2_PROTON_PY\n"
+        return "python3 - <<'HD2_PROTON_PY'\n" + prefix + "USE_HOST_PROXY=" + (useHostProxy ? "1" : "0") + "\n" + python + "\nHD2_PROTON_PY\n"
     }
     static let python = #"""
 import os,sys,json,base64,hashlib,pathlib,stat,subprocess,tempfile,tarfile,shutil,posixpath
 m=json.loads(base64.b64decode(MANIFEST))
 mode=MODE
+curl=['curl'] + (['--proxy','http://192.168.127.254:7890'] if USE_HOST_PROXY else [])
 steam=pathlib.Path.home()/'.local/share/Steam'
 alias=pathlib.Path.home()/'.steam/root'
 if os.path.lexists(alias) and alias.resolve()!=steam.resolve():raise RuntimeError('STEAM_ROOT_CONFLICT')
@@ -277,10 +278,10 @@ try:
  stage=pathlib.Path(tempfile.mkdtemp(prefix='.hd2-proton-stage-',dir=root))
  try:
   archive=stage/'payload.tar.xz'
-  subprocess.run(['curl','--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','600','--max-filesize',str(m['archiveBytes']),'--output',str(archive),m['url']],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=610)
+  subprocess.run(curl+['--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','600','--max-filesize',str(m['archiveBytes']),'--output',str(archive),m['url']],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=610)
   if archive.stat().st_size!=m['archiveBytes'] or digest(archive)!=m['archiveSHA256']:raise RuntimeError('ARTIFACT_HASH')
   checksum=stage/'payload.sha512sum'
-  subprocess.run(['curl','--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','30','--max-filesize','4096','--output',str(checksum),m['url'].replace('.tar.xz','.sha512sum')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=40)
+  subprocess.run(curl+['--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','30','--max-filesize','4096','--output',str(checksum),m['url'].replace('.tar.xz','.sha512sum')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=40)
   published=checksum.read_text().split()
   if len(published)!=2 or published[0]!=m['archiveSHA512'] or published[1] not in [m['version']+'.tar.xz','*'+m['version']+'.tar.xz']:raise RuntimeError('ARTIFACT_HASH')
   sha512=hashlib.sha512()

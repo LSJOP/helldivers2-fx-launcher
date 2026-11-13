@@ -22,6 +22,9 @@ struct FXSelectionManager {
         candidates = rows.filter { $0["identity_valid"]?.boolean == true && $0["structure"]?.text == "metadata_valid" }
         scanned = true
         if selected != nil { return }
+        // An incomplete scan is not evidence that a remembered installation vanished.
+        // Keep the path, but selected stays nil until fresh identity evidence is available.
+        if incomplete && selectedPath != nil { return }
         // Scan scope warnings remain visible; selection never claims launch readiness.
         if candidates.count == 1 {
             select(candidates[0]["path"]?.text, automatic: true)

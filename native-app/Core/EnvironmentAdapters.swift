@@ -218,7 +218,8 @@ final class SSHEnvironmentBackend: DeploymentBackend {
             guard EnvironmentDeploymentService.identity(current, expected), current.revision == expected.revision,
                   current.values == expected.values else { throw CoreError("CONFIG_CHANGED") }
             try EnvironmentDeploymentService.idle(current, requiresStoppedSteam: false)
-            let script = try ProtonJERelease.script(mode: target == "missing" ? "recover" : "install", manifest: ProtonJERelease.manifest(), boot: current.boot)
+            let script = try ProtonJERelease.script(mode: target == "missing" ? "recover" : "install", manifest: ProtonJERelease.manifest(), boot: current.boot,
+                useHostProxy: SSHTransport.localHost(transport.settings.host) && LaunchService.checkProxyPort())
             _ = try hostIdentity()
             let result = try transport.run(script, timeout: 750, context: context)
             if result.status != 0 {
