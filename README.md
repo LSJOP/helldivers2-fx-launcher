@@ -27,7 +27,7 @@ For source builds, see the [development guide](docs/NATIVE_DEVELOPMENT.md).
 
 ### Screenshots
 
-These are real windows from different historical Debug builds, **not final v1.0.0 screenshots**. Final captures must be taken, reviewed and replaced after the final build; see [capture provenance](docs/images/README.md).
+These are real windows from the integration Debug build, **not final v1.0.0 screenshots**. Final captures must be taken, reviewed and replaced after the final build; see [capture provenance](docs/images/README.md).
 
 | Dashboard | First-Run Setup |
 | --- | --- |
@@ -43,11 +43,11 @@ These are real windows from different historical Debug builds, **not final v1.0.
 
 - Dashboard starts the guarded HELLDIVERS 2 launch workflow. FX Manager inspects the selected FX installation and exposes supported FX/Steam actions.
 - First-Run Setup checks Guest identity, runtime capabilities and component integrity. Approved configuration can install the pinned Proton-JE package, select a verified Steam compatibility tool and merge launch options while retaining custom arguments. Detection is read-only. Deployment and recovery require their own checks.
-- Environment reports FEX and Proton-JE evidence. SSH and sudo credentials can be reused separately in process memory within the verified target/session.
+- Environment reports FEX and Proton-JE evidence. SSH and sudo credentials are independently reused for a verified target/session, with installation-local encrypted storage for restart reuse.
 - The Swift App provides seven native pages, logs, scoped performance controls and ten interface languages. Optional SteamOS installation steps require Python 3.
 - Settings includes Sparkle update integration. Published update service and end-to-end installation have yet to be verified.
 
-The v1.0.0 integration candidate checks installed FEX files, execute permission, arm64 architecture and a bounded x86-64 execution probe. Unknown provenance requires confirmation tied to the current installation and file-tree fingerprint. A different fixed hash alone does not reject the candidate. This workflow has passed isolated checks; live acceptance and refreshed candidate screenshots are pending.
+The v1.0.0 integration candidate checks installed FEX files, execute permission, arm64 architecture and a bounded x86-64 execution probe. Unknown provenance requires confirmation tied to the current installation and file-tree fingerprint. A different fixed hash alone does not reject the candidate. This workflow has passed isolated checks; live acceptance remains pending.
 
 ### Known Issues
 

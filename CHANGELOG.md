@@ -8,6 +8,8 @@ v1.0.0 is the release target. The inspected local arm64 App is `0.1.0` and ad ho
 
 ## Unreleased
 
+- Allocate a process-local loopback Steam API tunnel for the default forwarding port, avoiding conflicts with another running App copy. Explicit custom ports and endpoint ownership checks remain active.
+
 - Integration candidate separates installed FEX compatibility from provenance, with installation/fingerprint-bound confirmation and a bounded execution probe. Live acceptance remains pending.
 
 - Add a shared Home/setup preparation state machine, completed-step progress, folded maintenance controls and guarded continuation into game launch. Scope deployment revisions to managed values, reconcile exact externally restored receipts and separate approved installed FEX readiness from candidate review. Live acceptance remains incomplete.
