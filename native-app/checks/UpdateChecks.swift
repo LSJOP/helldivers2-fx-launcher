@@ -4,6 +4,7 @@ import CryptoKit
 final class FixtureTransport: NativeUpdateTransport {
     var responses: [URL: Data] = [:]
     var fail = false
+    var symlinkTarget: URL?
     var archive = Data("isolated-test-archive-not-an-app".utf8)
     func data(from url: URL, limit: Int) async throws -> Data {
         if fail { throw URLError(.notConnectedToInternet) }
@@ -14,9 +15,20 @@ final class FixtureTransport: NativeUpdateTransport {
     func download(from url: URL, limit: Int64) async throws -> URL {
         if fail { throw NativeUpdateFailure.download }
         let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try archive.write(to: file)
+        if let symlinkTarget { try FileManager.default.createSymbolicLink(at: file, withDestinationURL: symlinkTarget) }
+        else { try archive.write(to: file) }
         return file
     }
+    func download(from url: URL, limit: Int64, progress: @escaping @Sendable (Int64, Int64) -> Void) async throws -> URL {
+        progress(Int64(archive.count / 2), limit)
+        return try await download(from: url, limit: limit)
+    }
+}
+final class ProgressRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var recorded: (Int64, Int64)?
+    func record(_ current: Int64, _ total: Int64) { lock.lock(); defer { lock.unlock() }; recorded = (current,total) }
+    func read() -> (Int64, Int64)? { lock.lock(); defer { lock.unlock() }; return recorded }
 }
 
 @main struct UpdateChecks {
@@ -87,8 +99,17 @@ final class FixtureTransport: NativeUpdateTransport {
         let directory=FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString,isDirectory:true)
         defer { try? FileManager.default.removeItem(at: directory) }
         try await failure(.unconfigured,"download requires trusted signature") { _ = try await noKey.download(unsigned,to:directory) }
-        let output=try await service.download(candidate,to:directory)
+        let progress=ProgressRecorder()
+        let output=try await service.download(candidate,to:directory,progress: { progress.record($0,$1) })
+        try check(progress.read()?.0 == Int64(transport.archive.count / 2) && progress.read()?.1 == candidate.manifest.length,"download progress carries signed length")
         try check(try Data(contentsOf:output)==transport.archive,"verified download cached without installing")
+        let symlinkTarget=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try transport.archive.write(to:symlinkTarget)
+        defer { try? FileManager.default.removeItem(at:symlinkTarget) }
+        transport.symlinkTarget=symlinkTarget
+        try await failure(.integrity,"download refuses symlink source") { _ = try await service.download(candidate,to:directory) }
+        try check(FileManager.default.fileExists(atPath:symlinkTarget.path),"rejecting symlink preserves target")
+        transport.symlinkTarget=nil
         let attrs=try FileManager.default.attributesOfItem(atPath:output.path)
         try check((attrs[.posixPermissions] as? NSNumber)?.intValue==0o600,"cached archive is private")
         transport.archive[0] ^= 1
@@ -108,6 +129,36 @@ final class FixtureTransport: NativeUpdateTransport {
         try check(try NativeVersion("1.0.0-preview.2") < NativeVersion("1.0.0-preview.10") && NativeVersion("1.0.0-preview.10") < NativeVersion("1.0.0"),"numeric semantic prerelease order")
         try check(!NativeUpdateHTTP.trusted(URL(string:"https://evil.example/updates.zip")!) && !NativeUpdateHTTP.trusted(URL(string:"http://github.com/LSJOP/helldivers2-fx-launcher/releases/download/native-v0.2.0/a.zip")!),"untrusted URLs and HTTP rejected")
         try check(!NativeUpdateHTTP.trusted(URL(string:"https://user:pass@github.com/LSJOP/helldivers2-fx-launcher/releases/download/native-v0.2.0/a.zip")!),"URL credentials rejected")
+        try check(NativeUpdateHTTP.trusted(URL(string:"https://release-assets.githubusercontent.com/assets/example?token=temporary")!,redirect:true) && !NativeUpdateHTTP.trusted(URL(string:"https://release-assets.githubusercontent.com.evil.example/assets/example")!,redirect:true) && !NativeUpdateHTTP.trusted(URL(string:"https://release-assets.githubusercontent.com:8443/assets/example")!,redirect:true),"redirect host and port allowlist")
+        // A GitHub prerelease can use a plain v1.0.0 tag; channel is a release property,
+        // not necessarily a semantic-version suffix.
+        let vTag = "v1.0.0"
+        let vPrefix = "https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/\(vTag)/"
+        let vManifestURL = URL(string:vPrefix + "update-manifest.json")!
+        let vSignatureURL = URL(string:vPrefix + "update-manifest.sig")!
+        let vArchiveURL = URL(string:vPrefix + "HD2FXNative-v1.0.0-arm64.zip")!
+        var vManifest: [String:Any] = ["schema":1,"bundleID":NativeReleaseService.bundleID,"version":"1.0.0","build":3,"channel":"preview","platform":"macOS","architecture":"arm64","minimumSystemVersion":"14.0","archive":"HD2FXNative-v1.0.0-arm64.zip","length":transport.archive.count,"sha256":sha,"sourceCommit":String(repeating:"a",count:40)]
+        var vAssets: [[String:Any]] = [("update-manifest.json",vManifestURL,100),("update-manifest.sig",vSignatureURL,88),("HD2FXNative-v1.0.0-arm64.zip",vArchiveURL,transport.archive.count)].map { ["name":$0.0,"browser_download_url":$0.1.absoluteString,"size":$0.2] }
+        func vFixture() throws {
+            let bytes=try JSONSerialization.data(withJSONObject:vManifest,options:[.sortedKeys])
+            transport.responses[vManifestURL]=bytes
+            transport.responses[vSignatureURL]=try key.signature(for:bytes).base64EncodedData()
+            transport.responses[NativeReleaseService.api]=try JSONSerialization.data(withJSONObject:[["tag_name":vTag,"draft":false,"prerelease":true,"html_url":"https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/\(vTag)","body":"preview","assets":vAssets]])
+        }
+        try vFixture()
+        try await failure(.unconfigured,"v1 release requires trusted key") { _ = try await noKey.check(version:"0.1.0",build:1,channel:"preview",osVersion:"26.1",architecture:"arm64") }
+        if case .noReleases = try await run() { try check(true,"stable channel excludes plain-tag prerelease") } else { try check(false,"stable excludes preview") }
+        if case .available(let release) = try await service.check(version:"0.1.0",build:1,channel:"preview",osVersion:"26.1",architecture:"arm64") {
+            try check(release.signatureVerified && release.manifest.sourceCommit == String(repeating:"a",count:40),"preview accepts signed v1.0.0 with source commit")
+        } else { try check(false,"preview candidate") }
+        vManifest["sourceCommit"]="invalid";try vFixture()
+        try await failure(.malformed,"invalid source commit rejected") { _ = try await service.check(version:"0.1.0",build:1,channel:"preview",osVersion:"26.1",architecture:"arm64") }
+        vManifest["sourceCommit"]=String(repeating:"a",count:40);vManifest["bundleID"]="invalid.bundle";try vFixture()
+        try await failure(.malformed,"manifest bundle identity mismatch rejected") { _ = try await service.check(version:"0.1.0",build:1,channel:"preview",osVersion:"26.1",architecture:"arm64") }
+        vManifest["bundleID"]=NativeReleaseService.bundleID;vManifest["archive"]="../evil.zip";try vFixture()
+        try await failure(.malformed,"manifest archive traversal rejected") { _ = try await service.check(version:"0.1.0",build:1,channel:"preview",osVersion:"26.1",architecture:"arm64") }
+        vManifest["archive"]="HD2FXNative-v1.0.0-arm64.zip";vAssets.append(vAssets[2]);try vFixture()
+        try await failure(.missingAsset,"ambiguous duplicate archive rejected") { _ = try await service.check(version:"0.1.0",build:1,channel:"preview",osVersion:"26.1",architecture:"arm64") }
         print("\(passed) update service checks PASS")
     }
 }
