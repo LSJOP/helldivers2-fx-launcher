@@ -596,7 +596,7 @@ final class AppState: ObservableObject {
                 self.firstRunState = .Failed
                 if self.launchSession.running { self.launchSession.fail(failure); self.recordLaunch() }
                 if ["AUTH_REQUIRED", "SSH_AUTH_FAILED", "SUDO_AUTH_FAILED"].contains(failure.code) {
-                    self.launchCredentialKind = failure.code == "SUDO_AUTH_FAILED" ? "sudo_password" : "password"
+                    self.launchCredentialKind = failure.code == "SUDO_AUTH_FAILED" ? CredentialKind.sudo.bridgeField : CredentialKind.ssh.bridgeField
                 }
             }
         }
