@@ -86,6 +86,19 @@ struct FXIdentityChecks {
         catch { ok(false, "unsigned diagnostic network unexpected error") }
         try? FileManager.default.removeItem(at: spoof)
 
+        let bundled = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("Resources/launch/gvproxy-eim")
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("hd2-network-identity-" + UUID().uuidString)
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let copied = directory.appendingPathComponent("gvproxy-eim")
+            try FileManager.default.copyItem(at: bundled, to: copied)
+            let processes = [1: row(1, 0, fxExe), 2: row(2, 1, copied.path)]
+            ok(LaunchService.verifiedBundledNetworkPath(rows: processes, supervisor: 1) == copied.path, "reviewed network is reusable across App bundle locations")
+            ok(LaunchService.verifiedBundledNetworkPath(rows: processes, supervisor: 99) == nil, "reviewed hash never replaces selected-FX ancestry")
+            try Data("changed-network".utf8).write(to: copied)
+            ok(LaunchService.verifiedBundledNetworkPath(rows: processes, supervisor: 1) == nil, "changed network binary rejected across bundle locations")
+        } catch { ok(false, "isolated network identity fixture") }
         print("TOTAL \(passed) passed, \(failed) failed")
         exit(failed == 0 ? 0 : 1)
     }

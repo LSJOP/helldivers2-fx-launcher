@@ -217,7 +217,7 @@ enum ProtonJERelease {
         return "python3 - <<'HD2_PROTON_PY'\n" + prefix + "USE_HOST_PROXY=" + (useHostProxy ? "1" : "0") + "\n" + python + "\nHD2_PROTON_PY\n"
     }
     static let python = #"""
-import os,sys,json,base64,hashlib,pathlib,stat,subprocess,tempfile,tarfile,shutil,posixpath
+import os,sys,json,base64,hashlib,pathlib,stat,subprocess,tempfile,tarfile,shutil,posixpath,re
 m=json.loads(base64.b64decode(MANIFEST))
 mode=MODE
 curl=['curl'] + (['--proxy','http://192.168.127.254:7890'] if USE_HOST_PROXY else [])
@@ -234,13 +234,29 @@ def digest(path):
 def safe_parents(path):
  for part in [path,*path.parents]:
   if part.is_symlink():raise RuntimeError('UNSAFE_PATH')
-def verified(path):
+def verified(path,allow_runtime_cache=True):
  if not path.is_dir() or path.is_symlink():return False
  expected=set(m['files'])|set(m['links'])|set(m['directories'])
  actual=set()
  for d,dirs,files in os.walk(path,followlinks=False):
   for name in dirs+files:actual.add(str((pathlib.Path(d)/name).relative_to(path)))
- if actual!=expected:return False
+ if expected-actual:return False
+ extras=actual-expected
+ if extras and not allow_runtime_cache:return False
+ # CPython writes derived caches during ordinary Steam tool discovery.
+ # Every distributed file is still hashed below; other additions remain conflicts.
+ for name in extras:
+  f=path/name
+  if f.is_symlink() or f.lstat().st_mode&0o7000:return False
+  if f.is_dir() and f.name=='__pycache__':continue
+  match=re.fullmatch(r'([A-Za-z_][A-Za-z0-9_]*)\.cpython-[0-9]{2,3}(?:\.opt-[12])?\.pyc',f.name)
+  if not match or f.parent.name!='__pycache__' or not f.is_file() or f.stat().st_nlink!=1 or f.stat().st_size>4*1024*1024:return False
+  source=f.parent.parent/(match.group(1)+'.py')
+  if str(source.relative_to(path)) not in m['files']:return False
+  with f.open('rb') as stream:header=stream.read(16)
+  source_stat=source.stat()
+  if len(header)!=16 or header[2:4]!=b'\r\n' or int.from_bytes(header[4:8],'little')!=0:return False
+  if int.from_bytes(header[8:12],'little')!=int(source_stat.st_mtime)&0xffffffff or int.from_bytes(header[12:16],'little')!=source_stat.st_size:return False
  for name,(sha,permissions) in m['files'].items():
   f=path/name
   if not stat.S_ISREG(f.lstat().st_mode) or f.is_symlink() or digest(f)!=sha or (f.stat().st_mode&0o111)!=(permissions&0o111):return False
@@ -312,7 +328,7 @@ try:
      if str(parent) in names and not names[str(parent)].isdir():raise RuntimeError('UNSAFE_PATH')
    t.extractall(unpack,members=members)
   candidate=unpack/m['version']
-  if not verified(candidate):raise RuntimeError('ARTIFACT_HASH')
+  if not verified(candidate,allow_runtime_cache=False):raise RuntimeError('ARTIFACT_HASH')
   idle();safe_parents(p)
   if os.path.lexists(p):raise RuntimeError('EXTERNAL_DRIFT')
   candidate.rename(p)

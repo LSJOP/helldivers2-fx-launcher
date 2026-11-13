@@ -74,6 +74,24 @@ class ProtonReleaseChecks(unittest.TestCase):
  def test_proxy_download_preserves_integrity_checks(self):
   r=self.run_script('install',use_proxy=True);self.assertEqual(r.returncode,0,r.stderr)
   self.assertIn(self.manifest['archiveSHA256'],self.run_script('probe').stdout)
+ def add_python_cache(self):
+  import py_compile
+  source=self.p/'fixture_module.py';source.write_text('value=1\n');source.chmod(0o644)
+  self.manifest['files']['fixture_module.py']=[hashlib.sha256(source.read_bytes()).hexdigest(),0o644]
+  return pathlib.Path(py_compile.compile(str(source),doraise=True))
+ def test_generated_cache_does_not_invalidate_pinned_sources(self):
+  self.assertEqual(self.run_script('install').returncode,0);self.add_python_cache()
+  self.assertIn(self.manifest['archiveSHA256'],self.run_script('probe').stdout)
+ def test_cache_cannot_hide_modified_source(self):
+  self.assertEqual(self.run_script('install').returncode,0);self.add_python_cache();(self.p/'fixture_module.py').write_text('value=2\n')
+  self.assertIn('unknown',self.run_script('probe').stdout)
+ def test_unknown_module_cache_remains_a_conflict(self):
+  self.assertEqual(self.run_script('install').returncode,0);cache=self.add_python_cache()
+  self.manifest['files'].pop('fixture_module.py');(self.p/'fixture_module.py').unlink()
+  self.assertIn('unknown',self.run_script('probe').stdout)
+ def test_symlink_runtime_cache_rejected(self):
+  self.assertEqual(self.run_script('install').returncode,0);cache=self.add_python_cache();cache.unlink();cache.symlink_to(self.archive)
+  self.assertIn('unknown',self.run_script('probe').stdout)
  def test_approved_metadata(self):
   m=json.loads((ROOT/'Resources/proton-je-approved.json').read_text())
   self.assertEqual(m['version'],'proton-je-11.0-20261014-3');self.assertEqual(m['archiveSHA256'],'aa5430696ca39451299e2f007ef652bc030e6419242776343d48947e21827485')
