@@ -10,21 +10,6 @@
 
 HD2FXNative is an unofficial community launcher and management tool for Apple Silicon Macs. Built with SwiftUI and a native core, it helps users inspect FX, configure the runtime environment and manage game performance settings.
 
-### Download and installation
-
-**Release target: HD2FXNative v1.0.0.** GitHub has no published release. The inspected local App is version `0.1.0`, arm64 and ad hoc signed without a Developer ID. It has no verified Apple notarization. Gatekeeper may block a downloaded copy. The public DMG and its SHA-256 are pending. [GitHub Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
-
-After publication, install on an Apple Silicon Mac running macOS 14 or later.
-
-1. Download the macOS arm64 DMG from the published release.
-2. Run `shasum -a 256 <downloaded-dmg>` and compare the result with the SHA-256 in the release notes. Open the DMG after they match.
-3. Drag HD2FXNative to Applications.
-4. Open HD2FXNative.
-5. Select an installed FX Steam Launcher in FX Manager and follow First-Run Setup. You need SteamOS with Steam and HELLDIVERS 2 (AppID 553850) installed under an account that owns the game. The Guest must be reachable over SSH. Enter required credentials in the App and review the proposed changes.
-6. Choose **Launch HELLDIVERS 2** on Dashboard.
-
-For source builds, see the [development guide](docs/NATIVE_DEVELOPMENT.md).
-
 ### Screenshots
 
 These are real windows from the integration Debug build, **not final v1.0.0 screenshots**. Final captures must be taken, reviewed and replaced after the final build; see [capture provenance](docs/images/README.md).
@@ -38,6 +23,21 @@ These are real windows from the integration Debug build, **not final v1.0.0 scre
 | ![Game Performance](docs/images/en/performance.png) | ![Settings](docs/images/en/settings.png) |
 | Logs | |
 | ![Logs](docs/images/en/logs.png) | |
+
+### Download and installation
+
+**Release target: HD2FXNative v1.0.0.** GitHub has no published release. The local arm64 acceptance candidate is version `1.0.0` (build `2026111401`), ad hoc signed without Developer ID or Apple notarization. Game and complete upgrade acceptance remain pending. Gatekeeper may block a downloaded copy. The public DMG and its SHA-256 are pending. [GitHub Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+
+After publication, install on an Apple Silicon Mac running macOS 14 or later.
+
+1. Download the macOS arm64 DMG from the published release.
+2. Run `shasum -a 256 <downloaded-dmg>` and compare the result with the SHA-256 in the release notes. Open the DMG after they match.
+3. Drag HD2FXNative to Applications.
+4. Open HD2FXNative.
+5. Select an installed FX Steam Launcher in FX Manager and follow First-Run Setup. You need SteamOS with Steam and HELLDIVERS 2 (AppID 553850) installed under an account that owns the game. The Guest must be reachable over SSH. Enter required credentials in the App and review the proposed changes.
+6. Choose **Launch HELLDIVERS 2** on Dashboard.
+
+For source builds, see the [development guide](docs/NATIVE_DEVELOPMENT.md).
 
 ### Features
 
@@ -57,7 +57,7 @@ The v1.0.0 integration candidate checks installed FEX files, execute permission,
 - A real Guest built an experimental FEX candidate. Its executable hash failed deployment review. The historical fixed-hash deployment rejection is being replaced in the integration candidate. Candidate installation, recovery and game compatibility remain unverified. Alternate Proton-JE builds and fresh SteamOS deployment require validation.
 - A historical Native build reached the game menu/ship on November 5. Final-package launch, single-player missions, EAC and multiplayer remain separately unverified.
 - Public distribution, Gatekeeper handling and signed automatic updates are pending. The inspected local App uses ad hoc signing, without verified notarization.
-- [Acceptance report](docs/acceptance/RELEASE_READINESS_REPORT.md) · [Known issues detail](docs/acceptance/KNOWN_ISSUES.md) · [First-run acceptance](NATIVE_FIRST_RUN_ACCEPTANCE.md) · [Update integration](docs/NATIVE_UPDATES.md) · [Performance limits](docs/GAME_PERFORMANCE.md)
+- [Acceptance report](docs/acceptance/RELEASE_READINESS_REPORT.md) · [Known issues detail](docs/acceptance/KNOWN_ISSUES.md) · [First-run acceptance](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md) · [Update integration](docs/NATIVE_UPDATES.md) · [Performance limits](docs/GAME_PERFORMANCE.md)
 
 ### Changelog
 
@@ -66,3 +66,7 @@ Unreleased changes include Dashboard launch, first-run Proton-JE verification an
 ### Disclaimer
 
 This community project is not affiliated with the makers of HELLDIVERS 2; names and marks belong to their respective owners. No project-wide source license has been selected. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party components and artwork.
+
+### Documentation
+
+User and developer guides, architecture notes and historical reports are available in the [documentation index](docs/README.md).

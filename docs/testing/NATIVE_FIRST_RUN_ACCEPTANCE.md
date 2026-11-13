@@ -5,7 +5,7 @@ Development scope: isolated source/build only. No current successful SteamOS cha
 | Status | Result |
 | --- | --- |
 | IMPLEMENTED | SwiftUI wizard, real host/SSH detector, versioned profile, reviewable plan, exact consent, executor, receipts, selective safe recovery, FEX/Proton/FX/Steam/network adapter interfaces |
-| VERIFIED | See NATIVE_DEPLOYMENT_TEST_RESULTS.md for exact isolated checks and build evidence |
+| VERIFIED | See docs/testing/NATIVE_DEPLOYMENT_TEST_RESULTS.md for exact isolated checks and build evidence |
 | BLOCKED | Reviewed distributable FEX/Proton artifacts and clean installed-tree manifests; package/download UI activation; unsupported archive formats and version combinations |
 | NOT_TESTED | Clean official FX 1.9.8 + recorded SteamOS VM; full Native deployment; compatibility tool recognition; real game/official EAC chain; independent multiplayer; live repeated install and restore |
 
