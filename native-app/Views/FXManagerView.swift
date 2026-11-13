@@ -28,7 +28,6 @@ struct FXManagerView: View {
                     TacticalPanel(number: "FX", title: "FX " + version(row), symbol: "shippingbox") {
                         if state.fxSelection.selectedPath == row["path"]?.text {
                             TacticalStatusBadge(text: state.t(state.fxSelection.automatic ? "ui.fx.auto" : "ui.fx.default"))
-                            Text(state.fxStatus).font(TacticalTypography.caption)
                         } else if row["identity_valid"]?.boolean == true, let path = row["path"]?.text {
                             Button(state.t("ui.fx.setDefault")) { state.selectFX(path) }.disabled(state.tasks.busy)
                         } else { TacticalStatusBadge(text: state.t("ui.368")) }
@@ -36,15 +35,11 @@ struct FXManagerView: View {
                             Text(state.t("ui.fx.localTestCopy")).font(TacticalTypography.caption).foregroundStyle(.secondary)
                         }
                         TacticalInfoRow(title: state.t("ui.019"), value: row["path"]?.text.map { URL(fileURLWithPath: $0).lastPathComponent } ?? state.t("ui.366"))
-                        TacticalInfoRow(title: state.t("ui.102"), value: row["location"]?.text ?? state.t("ui.366"))
-                        TacticalInfoRow(title: state.t("ui.132"), value: row["path"]?.text ?? state.t("ui.366"))
-                        TacticalDivider()
-                        TacticalInfoRow(title: state.t("ui.165"), value: state.t("ui.131"))
-                        TacticalInfoRow(title: state.t("ui.324"), value: row["structure"]?.text == "metadata_valid" ? state.t("ui.190") : state.t("ui.368"))
-                        TacticalDivider()
-                        TacticalInfoRow(title: state.t("ui.235"), value: state.t("ui.044"))
-                        TacticalInfoRow(title: "Guest", value: state.t("ui.043"))
-                        TacticalInfoRow(title: state.t("ui.103"), value: state.t("ui.011"))
+                        DisclosureGroup(state.t("ui.095")) {
+                            TacticalInfoRow(title: state.t("ui.102"), value: row["location"]?.text ?? state.t("ui.366"))
+                            TacticalInfoRow(title: state.t("ui.132"), value: row["path"]?.text ?? state.t("ui.366"))
+                            TacticalInfoRow(title: state.t("ui.324"), value: row["structure"]?.text == "metadata_valid" ? state.t("ui.190") : state.t("ui.368"))
+                        }
                     }
                 }
             }

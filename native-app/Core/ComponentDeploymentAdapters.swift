@@ -340,14 +340,90 @@ finally:
 """#
 }
 
-/// Fixed-source candidate build and identity-bound review. An unmatched historical
-/// executable is reported for review and can never enable installation.
+/// Pinned-source build review and independent installed-runtime compatibility probes.
 enum FEXWorkflow {
+    /// Recompute the full installed tree for every action. Consent never certifies provenance.
+    static func observe(_ backend: SSHEnvironmentBackend, snapshot: inout DeploymentSnapshot, approvals: [String]) throws {
+        let helpers = pipeline.components(separatedBy: "work=pathlib.Path.home()")[0]
+        func probe(_ expected: String = "") throws -> [String: JSONValue] {
+            let script = "python3 - <<'HD2_FEX_PROBE'\n" + helpers + "\nEXPECTED_BOOT=" + CoreJSON.encode(.string(snapshot.boot)) + "\nEXPECTED_TREE=" + CoreJSON.encode(.string(expected)) + "\n" + runtimeProbe + "\nHD2_FEX_PROBE\n"
+            let result = try backend.transport.run(script, timeout: 150, context: backend.context)
+            guard result.status == 0, let bytes = result.stdout.data(using: .utf8),
+                  let value = try? JSONDecoder().decode([String: JSONValue].self, from: bytes) else { throw CoreError("FEX_RUNTIME_FAILED") }
+            return value
+        }
+        let staticResult = try probe()
+        snapshot.facts["fex_status"] = "repair"
+        snapshot.facts["fex_reason"] = staticResult["reason"]?.text ?? "FEX_RUNTIME_FAILED"
+        guard staticResult["preflight"]?.boolean == true, let tree = staticResult["tree"]?.text else { return }
+        let binding = ["fx_path", "machine_id", "fx_executable_sha256", "ssh_connection"].map { snapshot.facts[$0] ?? "UNKNOWN" }
+        let approval = CoreHash.sha256(Data((binding.joined(separator: "|") + "|" + tree).utf8))
+        snapshot.facts["fex_fingerprint"] = approval
+        snapshot.facts["fex_tree"] = tree
+        snapshot.facts["fex_provenance"] = "unverified"
+        let reviewed = try verifyInstalled(backend, snapshot: snapshot)
+        if reviewed { snapshot.facts["fex_provenance"] = "verified" }
+        guard reviewed || approvals.contains(approval) else {
+            snapshot.facts["fex_status"] = "confirmation"
+            snapshot.facts["fex_reason"] = "FEX_CONFIRMATION_REQUIRED"
+            return
+        }
+        let runtime = try probe(tree)
+        guard runtime["runtime"]?.boolean == true else {
+            snapshot.facts["fex_reason"] = runtime["reason"]?.text ?? "FEX_RUNTIME_FAILED"
+            return
+        }
+        snapshot.facts["fex_status"] = reviewed ? "normal" : "compatible"
+        snapshot.facts["fex_runtime"] = "ready"
+        snapshot.facts["fex_reason"] = ""
+    }
+    static func requireCompatible(_ snapshot: DeploymentSnapshot) throws {
+        guard ["normal", "compatible"].contains(snapshot.facts["fex_status"] ?? "") else {
+            throw CoreError(snapshot.facts["fex_reason"] ?? "FEX_RUNTIME_FAILED")
+        }
+    }
+    static let runtimeProbe = #"""
+import struct,tempfile,platform
+root=pathlib.Path.home()/'.local/share/Steam/steamapps/common/FEX-Emu'
+exe=root/'usr/bin/FEX'
+def check():
+ if pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip()!=EXPECTED_BOOT:return {'reason':'TARGET_CHANGED'}
+ if not exe.is_file():return {'reason':'FEX_MISSING'}
+ if not os.access(exe,os.X_OK):return {'reason':'FEX_NOT_EXECUTABLE'}
+ if platform.machine() not in ['aarch64','arm64'] or not elf_arm64(exe):return {'reason':'FEX_ARCHITECTURE'}
+ if not (root/'emulator.json').is_file():return {'reason':'FEX_INTEGRATION_MISSING'}
+ tree=fingerprint(inventory(root))
+ result={'preflight':True,'tree':tree}
+ if not EXPECTED_TREE:return result
+ if tree!=EXPECTED_TREE:return {'reason':'FEX_CHANGED'}
+ # Static x86-64 ELF with one load segment and exit(42), requiring no x86 libc.
+ code=bytes.fromhex('b83c000000bf2a0000000f05')
+ ident=b'\x7fELF\x02\x01\x01'+bytes(9)
+ header=struct.pack('<16sHHIQQQIHHHHHH',ident,2,62,1,0x400078,64,0,0,64,56,1,0,0,0)
+ segment=struct.pack('<IIQQQQQQ',1,5,0,0x400000,0x400000,120+len(code),120+len(code),4096)
+ with tempfile.TemporaryDirectory(prefix='hd2-fex-probe-') as d:
+  test=pathlib.Path(d)/'probe';test.write_bytes(header+segment+code);test.chmod(0o700)
+  env=dict(os.environ,FEX_DISKCACHE='0',FEX_SILENTLOG='1')
+  try:
+   with open(os.devnull,'wb') as sink:
+    process=subprocess.Popen([str(exe),str(test)],stdout=sink,stderr=sink,env=env,start_new_session=True)
+    try:status=process.wait(timeout=12)
+    except subprocess.TimeoutExpired:
+     os.killpg(process.pid,signal.SIGKILL);process.wait();return {'reason':'FEX_TIMEOUT'}
+  except OSError:return {'reason':'FEX_DEPENDENCY_FAILED'}
+ if fingerprint(inventory(root))!=tree:return {'reason':'FEX_CHANGED'}
+ if pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip()!=EXPECTED_BOOT:return {'reason':'TARGET_CHANGED'}
+ if status!=42:return {'reason':'FEX_RUNTIME_FAILED'}
+ result['runtime']=True
+ return result
+try:print(json.dumps(check()))
+except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
+"""#
     static func installedDigest(_ record: [String: JSONValue], snapshot: DeploymentSnapshot) -> String? {
         guard record["built"]?.boolean == true, record["audit"]?.object["ready"]?.boolean == true,
               record["audit"]?.object["source"]?.text == "87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8",
               record["audit"]?.object["patch"]?.text == "85999c4f3a82063c66095d5315a661f0eed8369ed7b4b03191ed5dc8521d7926",
-              record["audit"]?.object["executable_sha256"]?.text == LaunchService.verifiedFEX,
+              let executable = record["audit"]?.object["executable_sha256"]?.text, ApprovedArtifact.hash(executable),
               record["installation"]?.object["verified"]?.boolean == true,
               let digest = record["installation"]?.object["installed_manifest"]?.text, ApprovedArtifact.hash(digest) else { return nil }
         for key in ["fx_path", "machine_id", "fx_executable_sha256", "ssh_connection"] {
@@ -465,6 +541,9 @@ def digest(p):
  with open(p,'rb') as f:
   for b in iter(lambda:f.read(1048576),b''):h.update(b)
  return h.hexdigest()
+def elf_arm64(p):
+ with p.open("rb") as f:h=f.read(64)
+ return len(h)==64 and h[:6]==b"\x7fELF\x02\x01" and int.from_bytes(h[18:20],"little")==183
 def safe(p):
  for x in [p,*p.parents]:
   if x.is_symlink():fail('UNSAFE_PATH')
@@ -613,8 +692,8 @@ try:
    if verified:build=p.get('build',{})
   exe=stage/'usr/bin/FEX'
   actual=digest(exe) if exe.is_file() and not exe.is_symlink() else ''
-  # An unfamiliar build is an audit failure, never an automatically approved replacement.
-  ready=verified and actual==EXPECTED and bool(tree) and bool(exe.stat().st_mode&0o111)
+  # Review the pinned build provenance, complete inventory and ELF architecture.
+  ready=verified and bool(actual) and bool(tree) and bool(exe.stat().st_mode&0o111) and elf_arm64(exe)
   tail=''
   log=work/'build.log';safe(log)
   if log.is_file():

@@ -47,10 +47,12 @@ These are real windows from different historical Debug builds, **not final v1.0.
 - The Swift App provides seven native pages, logs, scoped performance controls and ten interface languages. Optional SteamOS installation steps require Python 3.
 - Settings includes Sparkle update integration. Published update service and end-to-end installation have yet to be verified.
 
+The v1.0.0 integration candidate checks installed FEX files, execute permission, arm64 architecture and a bounded x86-64 execution probe. Unknown provenance requires confirmation tied to the current installation and file-tree fingerprint. A different fixed hash alone does not reject the candidate. This workflow has passed isolated checks; live acceptance and refreshed candidate screenshots are pending.
+
 ### Known Issues
 
 - FX and SteamOS compatibility depends on the selected build and runtime evidence. The current launch path has a recorded proxy mismatch. Safe FX stop/restart remains unavailable.
-- A real Guest built an experimental FEX candidate. Its executable hash failed deployment review. Candidate installation, recovery and game compatibility remain unverified. Alternate Proton-JE builds and fresh SteamOS deployment require validation.
+- A real Guest built an experimental FEX candidate. Its executable hash failed deployment review. The historical fixed-hash deployment rejection is being replaced in the integration candidate. Candidate installation, recovery and game compatibility remain unverified. Alternate Proton-JE builds and fresh SteamOS deployment require validation.
 - A historical Native build reached the game menu/ship on November 5. Final-package launch, single-player missions, EAC and multiplayer remain separately unverified.
 - Public distribution, Gatekeeper handling and signed automatic updates are pending. The inspected local App uses ad hoc signing, without verified notarization.
 - [Acceptance report](docs/acceptance/RELEASE_READINESS_REPORT.md) · [Known issues detail](docs/acceptance/KNOWN_ISSUES.md) · [First-run acceptance](NATIVE_FIRST_RUN_ACCEPTANCE.md) · [Update integration](docs/NATIVE_UPDATES.md) · [Performance limits](docs/GAME_PERFORMANCE.md)

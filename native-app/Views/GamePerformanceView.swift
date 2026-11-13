@@ -80,10 +80,10 @@ struct GamePerformanceView: View {
                     state.runOperation("performance_read")
                 }
                 if !configuration.isEmpty {
-                    Stepper(value: integer("cpus", fallback: 8), in: (rules["cpu_min"]?.integer ?? 1)...max(1, rules["cpu_max"]?.integer ?? 1)) {
+                    Stepper(value: integer("cpus", fallback: 8), in: (rules["cpu_min"]?.integer ?? 1)...max(rules["cpu_min"]?.integer ?? 1, rules["cpu_max"]?.integer ?? 1)) {
                         Text(label("cpus") + ": " + GamePerformanceInferenceService.render(state.editedPerformance["cpus"]))
                     }
-                    Stepper(value: integer("memMiB", fallback: 8192), in: (rules["memory_min"]?.integer ?? 4096)...max(4096, rules["memory_max"]?.integer ?? 4096), step: 256) {
+                    Stepper(value: integer("memMiB", fallback: 8192), in: (rules["memory_min"]?.integer ?? 4096)...max(rules["memory_min"]?.integer ?? 4096, rules["memory_max"]?.integer ?? 4096), step: 256) {
                         Text(label("memMiB") + ": " + GamePerformanceInferenceService.render(state.editedPerformance["memMiB"]) + " MiB")
                     }
                     Picker(label("vulkanDriver"), selection: Binding(get: { state.editedPerformance["vulkanDriver"]?.text ?? "" }, set: { state.editedPerformance["vulkanDriver"] = .string($0) })) {
@@ -100,12 +100,10 @@ struct GamePerformanceView: View {
                     Text(l("ui.integrated.006"))
                     DisclosureGroup(l("ui.integrated.007")) {
                         ForEach(keys, id: \.self) { key in Text(key + ": " + GamePerformanceInferenceService.render(current[key])).font(TacticalTypography.log) }
-                        Text(verbatim: "es.fxgam.steamac · FX 1.9.4")
                         Text(verbatim: "CPU: 1–" + String(rules["cpu_max"]?.integer ?? 0))
                         Text(verbatim: "MiB: 4096–" + String(rules["memory_max"]?.integer ?? 0) + " / 256")
                     }
                 }
-                TacticalInfoRow(title: l("ui.integrated.008"), value: "6144 MiB")
             }
             TacticalPanel(number: "E", title: l("ui.021"), symbol: "arrow.uturn.backward") {
                 Text(l("ui.integrated.009"))

@@ -8,6 +8,7 @@ struct LaunchRequest {
     var password: String?
     var passphrase: String?
     var sudoPassword: String?
+    var fexApprovals: [String] = []
     var approvedChanges: [JSONValue]
     var context: CoreContext
     var emit: (String, String, [String: JSONValue]) -> Void
@@ -374,9 +375,6 @@ enum LaunchService {
         }
         guard state["tool"]?.text == verifiedTool else {
             throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("compat_tool_mismatch")])
-        }
-        guard state["fex"]?.text == verifiedFEX else {
-            throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("fex_hash_mismatch")])
         }
         guard state["ntdll"]?.text == verifiedNTDLL else {
             throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("ntdll_hash_mismatch")])

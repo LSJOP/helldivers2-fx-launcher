@@ -144,7 +144,9 @@ enum DeploymentPlanBuilder {
         for (component, version) in [("fex", profile.fexVersion), ("proton", profile.protonVersion)] {
             let verified = snapshot.facts[component + "_manifest"] == "verified" || (component == "fex" && snapshot.facts["fex_runtime"] == "ready")
             let artifact = profile.artifacts.first { $0.component == component && $0.version == version }
-            if component == "proton", snapshot.values["proton_package"] == "missing", version == ProtonJERelease.version {
+            if component == "fex", let status = snapshot.facts["fex_status"] {
+                add(component, target: version, block: ["normal", "compatible"].contains(status) ? nil : snapshot.facts["fex_reason"] ?? "FEX_RUNTIME_FAILED", observed: status)
+            } else if component == "proton", snapshot.values["proton_package"] == "missing", version == ProtonJERelease.version {
                 add(component, target: version, changes: ["proton_package": ProtonJERelease.digest], restart: true, bytes: 4 * 1_073_741_824)
             } else {
                 add(component, target: version, block: verified ? nil : component == "proton" && snapshot.values["proton_package"] == "unknown" ? "COMPONENT_CONFLICT" : artifact == nil ? "ARTIFACT_UNAPPROVED" : "ARTIFACT_IMPORT_REQUIRED", observed: verified ? "verified" : nil)

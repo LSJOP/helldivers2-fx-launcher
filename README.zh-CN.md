@@ -47,10 +47,12 @@ HD2FXNative 是面向 Apple Silicon Mac 的第三方社区启动与管理工具�
 - Swift App 提供七个原生页面、日志、限定范围的性能设置和十种界面语言。SteamOS 内的可选安装步骤需要 Python 3。
 - 设置集成 Sparkle 更新功能。公开更新服务和端到端安装仍待验证。
 
+v1.0.0 整合候选检查已安装 FEX 的文件、执行权限、arm64 架构，并运行有超时限制的 x86-64 执行探针。来源未知时须确认，确认绑定当前安装及文件树指纹。固定哈希不同本身不再拒绝该候选。流程已通过隔离检查；实机验收及候选截图重拍仍待完成。
+
 ### 已知问题
 
 - FX 和 SteamOS 兼容性取决于所选构建和实测能力。当前启动路径有已记录的代理不匹配问题。安全停止或重启 FX 暂不可用。
-- 实验性 FEX 候选曾在真实 Guest 中构建成功，但可执行文件的哈希未通过部署审核。候选的安装、恢复和游戏兼容性均待验证。其他 Proton-JE 构建和全新 SteamOS 部署仍需验收。
+- 实验性 FEX 候选曾在真实 Guest 中构建成功，但可执行文件的哈希未通过部署审核。整合候选正在替换历史固定哈希部署限制。候选的安装、恢复和游戏兼容性均待验证。其他 Proton-JE 构建和全新 SteamOS 部署仍需验收。
 - 11 月 5 日的历史 Native 构建曾进入游戏主菜单／舰桥。正式包启动、单人任务、EAC 和多人联机仍需分别验证。
 - 公开分发、Gatekeeper 实际行为和签名自动更新仍待验收。已检查的本地 App 使用 ad hoc 签名，公证未获验证。
 - [验收报告](docs/acceptance/RELEASE_READINESS_REPORT.md) · [已知问题详情](docs/acceptance/KNOWN_ISSUES.md) · [首次运行验收](NATIVE_FIRST_RUN_ACCEPTANCE.md) · [更新机制](docs/NATIVE_UPDATES.md) · [性能设置限制](docs/GAME_PERFORMANCE.md)
