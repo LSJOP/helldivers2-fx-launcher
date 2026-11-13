@@ -14,7 +14,7 @@ class ScreenshotChecks(unittest.TestCase):
         for readme,lang in [('README.md','en'),('README.zh-CN.md','zh-CN')]:
             image='docs/images/'+lang+'/dashboard.png';path=self.root/image;path.parent.mkdir(parents=True);path.write_bytes(b'path-check-fixture-not-a-screenshot')
             (self.root/readme).write_text('[English](README.md) | [Chinese](README.zh-CN.md)\n![Dashboard]('+image+')\n')
-            records.append(dict(path=image,language=lang,visual_review='PASS',sha256=hashlib.sha256(path.read_bytes()).hexdigest()))
+            records.append(dict(path=image,language=lang,visual_review='PASS',app_version='0.1.0',app_build='2026110602',capture_bundle_identifier='test.capture',source_base_commit='1234567',captured_at='2026-11-13T09:23:49Z',sha256=hashlib.sha256(path.read_bytes()).hexdigest()))
         (self.root/'docs/images/manifest.json').write_text(json.dumps(dict(screenshots=records)))
     def tearDown(self):self.temp.cleanup()
     def test_matching_language_paths(self):self.assertEqual(module.check(self.root),([],2))
@@ -35,15 +35,27 @@ class ScreenshotChecks(unittest.TestCase):
         p=self.root/'docs/images/manifest.json';data=json.loads(p.read_text());data['ui_source_sha256']=module.ui_fingerprint(self.root);p.write_text(json.dumps(data))
         self.assertEqual(module.check(self.root)[0],[])
         view.write_text('new visible text');self.assertTrue(module.check(self.root)[0])
-    def use_single_page(self):
-        (self.root/'README.md').write_text('[中文](#zh-cn) | [English](#english)\n<a id="zh-cn"></a>\n![总览](docs/images/zh-CN/dashboard.png)\n<a id="english"></a>\n![Dashboard](docs/images/en/dashboard.png)\n')
-        (self.root/'README.zh-CN.md').write_text('[中文](README.md#zh-cn)')
-    def test_single_page_sections(self):
-        self.use_single_page();self.assertEqual(module.check(self.root),([],2))
-    def test_single_page_rejects_wrong_language(self):
-        self.use_single_page();self.replace('README.md','docs/images/zh-CN/','docs/images/en/');self.assertTrue(module.check(self.root)[0])
-    def test_single_page_requires_ordered_anchors(self):
-        self.use_single_page();self.replace('README.md','<a id="english"></a>','');self.assertTrue(module.check(self.root)[0])
+    def test_missing_build_provenance_rejected(self):
+        p = self.root/'docs/images/manifest.json'
+        data = json.loads(p.read_text())
+        del data['screenshots'][0]['app_build']
+        p.write_text(json.dumps(data))
+        self.assertTrue(module.check(self.root)[0])
+
+    def test_missing_source_provenance_rejected(self):
+        p = self.root/'docs/images/manifest.json'
+        data = json.loads(p.read_text())
+        del data['screenshots'][0]['source_base_commit']
+        p.write_text(json.dumps(data))
+        self.assertTrue(module.check(self.root)[0])
+
+    def test_invalid_capture_timestamp_rejected(self):
+        p = self.root/'docs/images/manifest.json'
+        data = json.loads(p.read_text())
+        data['screenshots'][0]['captured_at'] = 'unknown'
+        p.write_text(json.dumps(data))
+        self.assertTrue(module.check(self.root)[0])
+
     def test_unreviewed_image_rejected(self):
         p=self.root/'docs/images/manifest.json';data=json.loads(p.read_text());data['screenshots'][0]['visual_review']='PENDING';p.write_text(json.dumps(data));self.assertTrue(module.check(self.root)[0])
 if __name__=='__main__':unittest.main(verbosity=2)

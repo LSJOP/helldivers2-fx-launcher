@@ -41,3 +41,7 @@ Build 2026110410: real isolated Debug windows for zh-CN/en First-Run Setup, Dash
 2026-11-05: FX Manager only recaptured in zh-CN/en from the dirty Debug build2026110505 (base1879f33); both installed1.9.9 copies and the local-test marker are visible. No FX, SSH or game action. Other images retain individual provenance.
 
 2026-11-13: Dashboard and First-Run Setup were recaptured in English and Simplified Chinese from clean Debug build 2026110602 at `8c63609`. The real windows show the current launcher entry and FEX review panel. The capture process disabled credential autoload and performed no Guest actions. Other images retain their individual provenance.
+
+2026-11-14 provenance gate update: referenced screenshots require App version, build, capture bundle identifier, timezone-aware capture time and a source commit (per-image or manifest baseline). Missing provenance fails validation. Final v1.0.0 captures remain pending.
+
+2026-11-14 来源门禁更新：README 引用截图必须包含 App 版本、构建号、采集包标识、带时区的时间和来源提交（逐图记录或清单基线）。缺失即校验失败。v1.0.0 正式构建截图仍待采集。

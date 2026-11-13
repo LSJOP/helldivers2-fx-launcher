@@ -27,7 +27,7 @@ UDP新测时包含SSH和身份复核开销，不能与旧Guest内部RTT直接比
 
 新状态保留NOT_TESTED/RUNNING/PASS/FAIL/PAUSED/TIMEOUT/UNSUPPORTED，增加CANCELLED和UNVERIFIED。暂停/未检测不显示失败；超时不证明网络不可用；TLS/STUN不证明NAT类型、P2P、菜单、EAC或多人联机。诊断现为显式操作；若用户启动游戏，诊断可取消并让出串行任务队列，诊断结果不是启动门槛。
 
-完整功能矩阵：[PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md](docs/PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md)。逐项列出FX、实例选择、SSH/sudo/身份、代理、VM/TLS/PlayFab/UDP、哈希、启动项、Steam/游戏、观察、日志、备份恢复、CPU/内存/Vulkan、更新与十语言等；PARTIAL没有冒充全部迁移。优先遗漏为安全启动项编辑、Guest代理完整配置、历史诊断导入、全新VM依赖准备。终端装饰与危险旧实验恢复入口不迁为Native自动功能。
+完整功能矩阵：[PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md](../PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md)。逐项列出FX、实例选择、SSH/sudo/身份、代理、VM/TLS/PlayFab/UDP、哈希、启动项、Steam/游戏、观察、日志、备份恢复、CPU/内存/Vulkan、更新与十语言等；PARTIAL没有冒充全部迁移。优先遗漏为安全启动项编辑、Guest代理完整配置、历史诊断导入、全新VM依赖准备。终端装饰与危险旧实验恢复入口不迁为Native自动功能。
 
 ## 3. IPv6 启动解耦与独立设置
 
@@ -124,4 +124,4 @@ Memory-Only沿用已整合SessionCredentialManager，SSH与sudo独立，切目�
 3. 真正游戏启动与多人验收均需另行授权。本候选不宣称全新FX即可运行HD2。
 4. 其他Python遗漏按矩阵评估后另开实施范围，不顺带安装FEX/JE、改prefix、更新FX或覆盖Latest。
 
-主参考：[网络使用说明](docs/STEAMOS_NETWORK_SETTINGS.md)，[功能矩阵](docs/PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md)。Linux控制项语义与STUN格式的一手依据链接位于网络说明内。
+主参考：[网络使用说明](../STEAMOS_NETWORK_SETTINGS.md)，[功能矩阵](../PYTHON_TO_SWIFT_FEATURE_PARITY_AUDIT.md)。Linux控制项语义与STUN格式的一手依据链接位于网络说明内。

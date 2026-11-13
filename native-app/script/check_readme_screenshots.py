@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Lightweight local README image checks. Content language still needs visual review."""
 import argparse
+from datetime import datetime
 import hashlib
 import json
 from pathlib import Path
@@ -63,6 +64,18 @@ def check(root):
                 record=records.get(local)
                 if not record:errors.append(name+': screenshot has no provenance '+local);continue
                 if record.get('language')!=language or record.get('visual_review')!='PASS':errors.append(name+': language/visual review missing '+local)
+                for field in ('app_version', 'app_build', 'capture_bundle_identifier'):
+                    if not isinstance(record.get(field), str) or not record[field].strip():
+                        errors.append(name+': screenshot build provenance missing '+field+' '+local)
+                source_commit = record.get('source_base_commit', manifest.get('source_base_commit', ''))
+                if not isinstance(source_commit, str) or not re.fullmatch(r'[0-9a-f]{7,40}', source_commit):
+                    errors.append(name+': screenshot source commit missing or invalid '+local)
+                try:
+                    captured = datetime.fromisoformat(record.get('captured_at', '').replace('Z', '+00:00'))
+                    if captured.tzinfo is None:
+                        raise ValueError('timezone required')
+                except (ValueError, TypeError, AttributeError):
+                    errors.append(name+': screenshot capture timestamp missing or invalid '+local)
                 if record.get('sha256')!=hashlib.sha256(target.read_bytes()).hexdigest():errors.append(name+': screenshot bytes changed since review '+local)
     if count==0:errors.append('No localized README screenshots referenced; document missing captures explicitly')
     return errors,count
