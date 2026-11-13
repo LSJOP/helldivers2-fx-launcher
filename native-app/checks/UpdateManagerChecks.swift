@@ -28,10 +28,12 @@ import Sparkle
         try check(AppUpdateManager.noUpdateStatus(reason:nil) == .finished,"unknown no-update cycle is not up to date or installation success")
         let valid: [String:Any] = ["HD2UpdateServiceEnabled":"YES","SUFeedURL":"https://lsjop.github.io/helldivers2-fx-launcher/updates/stable/appcast.xml","SUPublicEDKey":Data(repeating:1,count:32).base64EncodedString()]
         try check(UpdateConfiguration(info:valid).isValid,"official HTTPS feed and correctly sized public key accepted")
+        try check(UpdateConfiguration(info: valid.merging(["SUFeedURL": "https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/appcast.xml"]) { _, value in value }).isValid,
+                  "official stable GitHub Release appcast accepted")
         for feed in ["http://lsjop.github.io/helldivers2-fx-launcher/updates/stable/appcast.xml","https://evil.example/appcast.xml","https://lsjop.github.io/helldivers2-fx-launcher/updates/stable/appcast.xml?override=1"] {
             try check(!UpdateConfiguration(info:valid.merging(["SUFeedURL":feed]) { _,new in new }).isValid,"unsafe feed rejected")
         }
-        try check(!UpdateConfiguration.trustedDistribution(),"local test executable is never a Developer ID distribution")
+        try check(!UpdateConfiguration.trustedDistribution(),"standalone test executable is not the signed launcher bundle")
         print("\(passed) update manager checks PASS")
     }
 }

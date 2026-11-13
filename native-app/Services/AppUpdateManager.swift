@@ -74,7 +74,8 @@ struct UpdateConfiguration {
     }
     var isValid: Bool {
         guard enabled, let feed, feed.scheme == "https", feed.user == nil, feed.password == nil, feed.port == nil,
-              feed.host == "lsjop.github.io", feed.path == "/helldivers2-fx-launcher/updates/stable/appcast.xml",
+              ((feed.host == "lsjop.github.io" && feed.path == "/helldivers2-fx-launcher/updates/stable/appcast.xml") ||
+               (feed.host == "github.com" && feed.path == "/LSJOP/helldivers2-fx-launcher/releases/latest/download/appcast.xml")),
               feed.query == nil, feed.fragment == nil, Data(base64Encoded: publicKey)?.count == 32 else { return false }
         return true
     }
@@ -82,13 +83,12 @@ struct UpdateConfiguration {
         var code: SecStaticCode?
         guard SecStaticCodeCreateWithPath(Bundle.main.bundleURL as CFURL, [], &code) == errSecSuccess, let code else { return false }
         var requirement: SecRequirement?
-        let rule = "anchor apple generic and certificate leaf[field.1.2.840.113635.100.6.1.13] exists and identifier \"\(NativeReleaseService.bundleID)\""
+        let rule = "identifier \"\(NativeReleaseService.bundleID)\""
         guard SecRequirementCreateWithString(rule as CFString, [], &requirement) == errSecSuccess,
-              SecStaticCodeCheckValidity(code, SecCSFlags(rawValue: kSecCSStrictValidate), requirement) == errSecSuccess else { return false }
-        var info: CFDictionary?
-        guard SecCodeCopySigningInformation(code, SecCSFlags(rawValue: kSecCSSigningInformation), &info) == errSecSuccess,
-              let flags = (info as? [String: Any])?[kSecCodeInfoFlags as String] as? NSNumber else { return false }
-        return flags.uint32Value & 0x10000 != 0 // CS_RUNTIME; ad-hoc builds never enable installation.
+              SecStaticCodeCheckValidity(code, SecCSFlags(rawValue: kSecCSStrictValidate | kSecCSCheckNestedCode), requirement) == errSecSuccess else { return false }
+        // Ed25519 verifies publisher authority. This gate checks local code structure.
+        // Stable ad hoc builds are supported without a Developer ID requirement.
+        return Bundle.main.bundleIdentifier == NativeReleaseService.bundleID
     }
 }
 

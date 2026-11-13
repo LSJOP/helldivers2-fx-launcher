@@ -90,3 +90,10 @@ Secret gates retain index/Release App/ZIP/feed scanning via `check_release_secre
 保留手动触发、只读权限的 Actions 构建检查模板于 `docs/ci/native-release-check.yml`，未注册为可执行工作流。当前 OAuth 缺少 workflow 权限，后续启用需要单独审阅和相应授权；模板不签名、不发布、不创建定时任务。原发布准备脚本已扩展清单生成与签名；历史 Appcast 先冻结并使用匹配密钥验签，再校验渠道、构建顺序及精确资源地址，未签名／篡改／错误密钥均中止，首次空白源也必须明确签名。仍需操作者主动运行、Developer ID、公证配置和正式更新源。GitHub Release 必须先草稿审阅并获得批准，再发布附件，最后发布签名 Appcast；本次没有执行这些发布步骤。更新下载成功、安装完成、重新启动和新版本运行须独立验收。十语言文案已同步，真实生产升级仍未验证。
 
 References: [official Sparkle setup](https://sparkle-project.org/documentation/), [publishing and signatures](https://sparkle-project.org/documentation/publishing/), [security configuration](https://sparkle-project.org/documentation/customization/), [GitHub runner requirements](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+
+
+## Stable ad hoc integration candidate · 2026-11-14
+
+The v1.0.0 integration accepts strict code structure and bundle identity checks for ad hoc signing. Publisher authority continues to depend on the embedded Ed25519 key and verified signatures. The allowlisted official GitHub stable Release appcast can be used alongside the historical Pages feed. The service remains unconfigured until real public metadata and keys are ready. Archive path preflight is still a standalone policy; complete archive/install/relaunch/recovery and a real upgrade remain required before release.
+
+正式版整合候选允许通过严格代码结构及 Bundle 身份校验的 ad hoc 签名，发布者授权仍依赖内置 Ed25519 公钥和签名。增加官方 GitHub 正式 Release appcast 入口，并保留历史 Pages 入口。真实公开元数据和公钥准备好之前，服务仍保持未配置。归档路径预检目前仍是独立策略，发布前必须完成归档、安装、重启、恢复链路及真实升级验收。

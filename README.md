@@ -51,6 +51,8 @@ The v1.0.0 integration candidate checks installed FEX files, execute permission,
 
 ### Known Issues
 
+- Current integration live acceptance passed setup checks but game startup failed. FEX reported an empty RootFS in the Steam container chain. A separate dynamic probe with the installed RootFS passed. Full container/Proton integration remains unresolved.
+
 - FX and SteamOS compatibility depends on the selected build and runtime evidence. The current launch path has a recorded proxy mismatch. Safe FX stop/restart remains unavailable.
 - A real Guest built an experimental FEX candidate. Its executable hash failed deployment review. The historical fixed-hash deployment rejection is being replaced in the integration candidate. Candidate installation, recovery and game compatibility remain unverified. Alternate Proton-JE builds and fresh SteamOS deployment require validation.
 - A historical Native build reached the game menu/ship on November 5. Final-package launch, single-player missions, EAC and multiplayer remain separately unverified.
