@@ -41,7 +41,7 @@ struct FirstRunSetupView: View {
                     state.startEnvironmentWorkflow(launchGame: false)
                 }
             }
-            EnvironmentWorkflowProgressView(state: state, tasks: tasks)
+            EnvironmentWorkflowProgressView(state: state, tasks: tasks, showIdle: true)
             DisclosureGroup(state.t("ui.workflow.advanced")) {
             TacticalPanel(number: "1", title: state.t("ui.setup.fx"), symbol: "shippingbox") {
                 HStack {
@@ -200,9 +200,10 @@ struct FirstRunSetupView: View {
 struct EnvironmentWorkflowProgressView: View {
     @ObservedObject var state: AppState
     @ObservedObject var tasks: TaskManager
+    var showIdle = false
     private var workflow: EnvironmentWorkflow { state.environmentWorkflow }
     var body: some View {
-        if workflow.phase != .idle {
+        if showIdle || workflow.phase != .idle {
             TacticalPanel(number: "", title: state.t("ui.workflow.result"), symbol: "gearshape.2") {
                 Text(state.t(workflow.phase.titleKey))
                 if workflow.phase == .deploying, let stage = workflow.deploymentStage {

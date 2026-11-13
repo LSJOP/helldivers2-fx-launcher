@@ -601,10 +601,12 @@ final class AppState: ObservableObject {
                     self.environmentWorkflow.completedSteps = 6
                 }
                 self.environmentWorkflow.phase = .completed
+                self.appendLog("environment_workflow: COMPLETED")
             } catch {
                 let failure = error as? ErrorState ?? ErrorState(error is CancellationError ? "CANCELLED" : "PROTOCOL_ERROR")
                 self.environmentWorkflow.failure = ErrorState(failure.code, details: self.credentials.redactor.diagnostic(failure.details))
                 self.environmentWorkflow.phase = failure.code == "CANCELLED" ? .cancelled : .failed
+                self.appendLog("environment_workflow: " + failure.code)
                 self.firstRunState = .Failed
                 if self.launchSession.running { self.launchSession.fail(failure); self.recordLaunch() }
                 if ["AUTH_REQUIRED", "SSH_AUTH_FAILED", "SUDO_AUTH_FAILED"].contains(failure.code) {
