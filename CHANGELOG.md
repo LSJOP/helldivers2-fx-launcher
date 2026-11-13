@@ -8,6 +8,8 @@ v1.0.0 is the release target. The inspected local arm64 App is `0.1.0` and ad ho
 
 ## Unreleased
 
+- Localize the App display name in all ten languages while preserving bundle, executable and update identities. Current screenshots and live update acceptance remain pending.
+
 - Require screenshot App/build identity, source commit and capture timestamp in addition to language paths and reviewed hashes.
 
 - Start the existing guarded launch flow directly from the dashboard; ask for a credential only on an authentication error, then continue. Live FX launch remains blocked by the proxy mismatch.

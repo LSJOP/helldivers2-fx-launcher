@@ -1,14 +1,14 @@
 <div align="center">
-  <img src="docs/assets/app-icon.png" width="128" alt="HD2FXNative icon">
-  <h1>HD2FXNative</h1>
-  <p>HELLDIVERS 2 FX Launcher · Apple Silicon macOS</p>
+  <img src="docs/assets/app-icon.png" width="128" alt="绝地潜兵2 FX启动器 icon">
+  <h1>绝地潜兵2 FX启动器</h1>
+  <p>绝地潜兵2 FX启动器 · Apple Silicon macOS</p>
 </div>
 
 [简体中文](README.zh-CN.md) | [English](README.md)
 
 ## 简体中文
 
-HD2FXNative 是面向 Apple Silicon Mac 的第三方社区启动与管理工具，使用 SwiftUI 和原生核心，帮助用户检查 FX 环境、配置运行环境和管理游戏性能设置。
+绝地潜兵2 FX启动器 是面向 Apple Silicon Mac 的第三方社区启动与管理工具，使用 SwiftUI 和原生核心，帮助用户检查 FX 环境、配置运行环境和管理游戏性能设置。
 
 ### 软件截图
 
@@ -26,14 +26,14 @@ HD2FXNative 是面向 Apple Silicon Mac 的第三方社区启动与管理工具�
 
 ### 下载与安装
 
-**发布目标：HD2FXNative v1.0.0。** GitHub 尚无已发布版本。已检查的本地 App 为 `0.1.0`、arm64，采用 ad hoc 签名，无 Developer ID，Apple 公证未获验证。Gatekeeper 可能拦截下载的副本。公开 DMG 及其 SHA-256 待发布。[GitHub Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**发布目标：绝地潜兵2 FX启动器 v1.0.0。** GitHub 尚无已发布版本。已检查的本地 App 为 `0.1.0`、arm64，采用 ad hoc 签名，无 Developer ID，Apple 公证未获验证。Gatekeeper 可能拦截下载的副本。公开 DMG 及其 SHA-256 待发布。[GitHub Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
 
 发布后，可在运行 macOS 14 或更高版本的 Apple Silicon Mac 上安装。
 
 1. 从正式 Release 下载 macOS arm64 DMG。
 2. 运行 `shasum -a 256 <下载的 DMG>`，与发布说明中的 SHA-256 比对。匹配后打开 DMG。
-3. 将 HD2FXNative 拖入「应用程序」。
-4. 打开 HD2FXNative。
+3. 将 绝地潜兵2 FX启动器 拖入「应用程序」。
+4. 打开 绝地潜兵2 FX启动器。
 5. 在 FX 管理中选择已安装的 FX Steam Launcher，按首次运行向导操作。SteamOS 内须安装 Steam 和 HELLDIVERS 2（AppID 553850），使用拥有游戏的账号，并确保 Guest 可通过 SSH 访问。在 App 内输入所需凭据并审核拟执行的变更。
 6. 在总览点击「启动 HELLDIVERS 2」。
 

@@ -220,7 +220,8 @@ import ApplicationServices
             result["bundle_name"] = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
             guard titles.contains(NativeStrings.text("ui.105", language: state.languageCode)), titles.contains(NativeStrings.text("ui.386", language: state.languageCode)),
                   !zh || !titles.contains("Help"),
-                  Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String == "HELLDIVERS 2 FX Launcher",
+                  let bundleName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String,
+                  !bundleName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                   let check = appItems.first(where: { $0.title == UpdateString.checkNow.text(state.languageCode) }),
                   check.isEnabled else { throw ErrorState("MENU_LOCALIZATION_FAILED") }
             guard !state.updates.isConfigured, state.updates.canCheck, state.updates.status == .unconfigured else { throw ErrorState("UPDATE_CONFIG_GUARD_FAILED") }

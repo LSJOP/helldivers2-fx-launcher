@@ -42,7 +42,7 @@ struct HD2FXNativeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var state = AppState()
     var body: some Scene {
-        WindowGroup("HELLDIVERS 2 FX Launcher", id: "main") {
+        WindowGroup(state.t("ui.brand.name"), id: "main") {
             ContentView(state: state, tasks: state.tasks)
                 .frame(minWidth: 850, minHeight: 560)
                 .preferredColorScheme(state.appearance.scheme)

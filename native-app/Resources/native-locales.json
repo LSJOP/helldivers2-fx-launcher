@@ -1,5 +1,6 @@
 {
  "en": {
+  "ui.brand.name": "HD2 FX Launcher",
   "ui.193": "Navigate",
   "ui.262": "Refresh",
   "ui.167": "Interpreter in use",
@@ -609,6 +610,7 @@
   "ui.fex.pendingReview": "A candidate was found, but integrity review has not passed. Deployment is blocked."
  },
  "zh-CN": {
+  "ui.brand.name": "绝地潜兵2 FX启动器",
   "ui.193": "导航",
   "ui.262": "刷新",
   "ui.167": "本次解释器使用中",
@@ -1218,6 +1220,7 @@
   "ui.fex.pendingReview": "已发现候选，完整性审核尚未通过，不能部署。"
  },
  "ja": {
+  "ui.brand.name": "ヘルダイバー2 FXランチャー",
   "ui.193": "移動",
   "ui.262": "更新",
   "ui.368": "未検証",
@@ -1827,6 +1830,7 @@
   "ui.fex.pendingReview": "候補は見つかりましたが、整合性審査に合格していないため配置できません。"
  },
  "ko": {
+  "ui.brand.name": "헬다이버즈 2 FX 런처",
   "ui.193": "탐색",
   "ui.262": "새로 고침",
   "ui.368": "미검증",
@@ -2436,6 +2440,7 @@
   "ui.fex.pendingReview": "후보가 발견되었지만 무결성 검토를 통과하지 못해 배포할 수 없습니다."
  },
  "ru": {
+  "ui.brand.name": "Запускатель HD2 FX",
   "ui.193": "Навигация",
   "ui.262": "Обновить",
   "ui.368": "Не проверено",
@@ -3045,6 +3050,7 @@
   "ui.fex.pendingReview": "Сборка найдена, но проверка целостности не пройдена. Установка заблокирована."
  },
  "es": {
+  "ui.brand.name": "Lanzador HD2 FX",
   "ui.193": "Navegación",
   "ui.262": "Actualizar",
   "ui.368": "Sin verificar",
@@ -3654,6 +3660,7 @@
   "ui.fex.pendingReview": "Se encontró un candidato, pero no ha superado la revisión de integridad. Instalación bloqueada."
  },
  "de": {
+  "ui.brand.name": "HD2 FX-Launcher",
   "ui.193": "Navigation",
   "ui.262": "Aktualisieren",
   "ui.368": "Nicht verifiziert",
@@ -4263,6 +4270,7 @@
   "ui.fex.pendingReview": "Ein Kandidat wurde gefunden, hat die Integritätsprüfung aber nicht bestanden. Installation gesperrt."
  },
  "fr": {
+  "ui.brand.name": "Lanceur HD2 FX",
   "ui.193": "Navigation",
   "ui.262": "Actualiser",
   "ui.368": "Non vérifié",
@@ -4872,6 +4880,7 @@
   "ui.fex.pendingReview": "Un candidat a été trouvé, mais la vérification d’intégrité n’a pas abouti. Installation bloquée."
  },
  "pt-BR": {
+  "ui.brand.name": "Inicializador HD2 FX",
   "ui.193": "Navegação",
   "ui.262": "Atualizar",
   "ui.368": "Não verificado",
@@ -5481,6 +5490,7 @@
   "ui.fex.pendingReview": "Um candidato foi encontrado, mas não passou na revisão de integridade. Instalação bloqueada."
  },
  "zh-TW": {
+  "ui.brand.name": "絕地潛兵2 FX啟動器",
   "ui.270": "無需外部執行環境；檢測後按 ⌘R 重新讀取全部唯讀快照。",
   "ui.229": "性能監控疊層",
   "ui.279": "先做只讀預檢",
