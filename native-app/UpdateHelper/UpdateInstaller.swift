@@ -106,7 +106,8 @@ enum UpdateInstaller {
         guard wait(seconds: 30, until: { kill(pid, 0) == -1 && errno == ESRCH }),
               !runningAt(installed, identifier: identifier) else { throw POSIXError(.ETIMEDOUT) }
         state.phase = .rollingBack
-        try persist(state, in: directory, fd: fd)
+        // A full volume must not prevent restoring the verified original bundle.
+        try? persist(state, in: directory, fd: fd)
         try exchange(parentFD, name, fd, staged.lastPathComponent, installedIdentity, oldIdentity)
         try launchAndConfirm(installed.appendingPathComponent(oldExecutable), directory: directory)
         try archiveTransaction(directory, parent: parent, message: "interrupted exchange rolled back and original confirmed")
@@ -240,7 +241,9 @@ enum UpdateInstaller {
             do {
                 if swapped {
                     state.phase = .rollingBack
-                    try persist(state, in: transaction, fd: transactionFD)
+                    // The prior durable record already binds both bundle identities.
+                    // Proceed with the identity-checked exchange even if the journal cannot grow.
+                    try? persist(state, in: transaction, fd: transactionFD)
                     try exchange(parentFD, installed.lastPathComponent, transactionFD, staged.lastPathComponent, stagedIdentity, installedIdentity)
                     swapped = false
                 }
