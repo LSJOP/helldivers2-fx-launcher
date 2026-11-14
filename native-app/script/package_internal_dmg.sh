@@ -37,7 +37,7 @@ xcodebuild -project "$root/HD2FXNative.xcodeproj" -scheme HD2FXNative \
     -derivedDataPath "$output/DerivedData" CONFIGURATION_BUILD_DIR="$output/Products" \
     "MARKETING_VERSION=$version" "CURRENT_PROJECT_VERSION=$build" \
     HD2_UPDATE_DISTRIBUTION_READY=NO HD2_UPDATE_ENABLED=NO \
-    "${package_settings[@]}" "${sign_settings[@]}" build > "$output/build.log" 2>&1
+    ${package_settings[@]+"${package_settings[@]}"} "${sign_settings[@]}" build > "$output/build.log" 2>&1
 app="$output/Products/HD2FXNative.app"
 codesign --force --deep --sign - "$app"
 codesign -dv --verbose=4 "$app" > "$output/signature.log" 2>&1
