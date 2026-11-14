@@ -1,7 +1,7 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.22** · Updated: **2026-11-14**.
-Change: streamline task delivery and scope-based verification; retain safety safeguards. Instruction version is independent of App version.
+Instruction version: **v1.2.23** · Updated: **2026-11-14**.
+Change: add bounded Swift fixture selection and explicit release checks. Instruction version is independent of App version.
 
 ## Authority and task lifecycle
 
@@ -32,7 +32,7 @@ Change: streamline task delivery and scope-based verification; retain safety saf
 
 ## Verification and reporting
 
-- Use `python3 script/check_changed.py [BASE] --run` for a conservative starting selection; review its manual notes and add required task-specific checks. It does not establish acceptance. Avoid full Release/DMG builds except for release, packaging/signing, complete launch flow, explicit request or real installation testing.
+- Use `python3 script/check_changed.py [BASE] --run` for a conservative starting selection; add `--release` for release work; review its manual notes and add required task-specific checks. It does not establish acceptance. Avoid full Release/DMG builds except for release, packaging/signing, complete launch flow, explicit request or real installation testing.
 - Batch edits, use rg for discovery and run relevant checks once per meaningful change. Level 1 static/text/layout: static checks first; Level 2 logic: affected checks and one build; Level 3 filesystem/auth/updates/launch: necessary safety/regression checks and build. Do not skip critical checks or repeat unrelated builds. Read existing errors and fix causes before rerunning.
 - Typical commands are in the handoff; `script/check_docs.py`, Native localization and screenshot provenance gates apply where affected. Release requires clean committed source, fresh arm64 build, resources/icon/locales, ad-hoc or authorized signing, package validation and separate artifact hashes. Never relabel an old build as new.
 - Distinguish main implementation, branch candidate, automated PASS, blocked/incomplete and pending user hardware acceptance. Compilation/Mock/process detection never proves current game menu, single-player, EAC or multiplayer success. Report command/source/results honestly, including failed gates and unverified installation/rollback/relaunch.
