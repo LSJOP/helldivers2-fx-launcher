@@ -65,3 +65,47 @@ bash native-app/script/build_local_release.sh /absolute/new/output-directory
 4. 报告完成/阻塞/待实机验收、交付源码 SHA 和明确下一项任务。推送失败不能说已上 GitHub。
 
 本次文档验证：双语文档检查 15/15、14 个截图引用的路径/来源/hash 检查、当前入口本地链接检查与 git diff --check 均通过。未更改 UI/本地化资源，未重编译 App。fetch GitHub HTTPS 连接超时；远端更新未确认，必须在网络恢复后重新 fetch/核对并普通推送，不得声称已上 GitHub。
+
+## 本轮补充交接：已核对的本地 main 与候选
+
+本轮开始时本地 main 为 `3e0539db51da2a432983711cfe33297d45a3562d`（只含长期状态文档更新）；最后已知远端 main 仍为 `478d2bfdf0b75b92aaaf7516e5ddcd10d03309af`。不得把本地 main 称为已推送的最终 main。当前代码整合尚未满足晋级条件。
+
+本轮重新执行 `codesign --verify --deep --strict` 检查上一轮 arm64 Release App，通过；SOURCE-COMMIT 为 cd27baa。没有重新构建或将该包冒充新 main 构建。App 路径：`绝地潜兵脚本/APP 版本/Consolidation-20261114-cd27baa/HD2FXNative.app`。版本 0.1.0。DMG SHA-256：`f4ba6d22b12c8e0a79bc60b10e1f5fc723b40b7e8921d05bc3a64eb671b97551`。
+
+### 模块交付边界
+
+| 模块 | 已完成/现有实现 | 未完成与验收 |
+|---|---|---|
+| FEX | main 有能力探测、审核部署/回执恢复；候选加强 helper 注册及启动前重探测 | 官方/自定义 FEX、新 Guest、部署失败/恢复真实矩阵待用户实机验收 |
+| 首次配置 | main 有计划/执行/恢复；候选共享首页配置服务与自动接续 | 全新环境和重复执行/取消/重连待实机；完整门禁未通过 |
+| SSH/sudo | 独立角色、身份/boot 绑定、stdin 传密和脱敏；候选保留独立 sudo 与隧道隔离 | 不同密码、认证失败、身份漂移待用户实机验收 |
+| 凭据 | main 仅内存；候选 AES-GCM store 有隔离测试 | App 重启、更新/忘记/拒绝、目标变化实机验收未完成；无 Keychain |
+| 自动更新 | main GitHub/Sparkle；候选 SHA/Ed25519/归档路径与安装元数据绑定、进度和 feed 修复 | 公钥/feed 生产配置、失败回滚/安装/重启端到端待完成；不降低验证 |
+| 品牌/十语言 | main 有十语言，候选有十语言 bundle 品牌；静态检查通过 | 真实 Finder/菜单/页面截断/自然度和截图来源门禁待验收 |
+
+### 尚未整合/必须保留的分支
+
+| 分支 | 保留原因 |
+|---|---|
+| integration/native-app-consolidation (`41af2ef`) | 核心候选，完整门禁未过，未确认推送 |
+| release/v1.0.0-integration (`267a2b5`) | 主要实现来源，路径整合不代表全部历史/独有内容完成审查 |
+| feature/native-recovery-20261112 (`64141fa`) | 有部署/实机历史与脏成果；候选仅补入确认的独有探测 |
+| feature/localized-app-brand-20261114 (`6e93460`) | 候选已挑入品牌实现，main 未含该功能，尚有活跃 Worktree |
+| development (`c8cfa5a`) | 脏暂存成果和独有测试/实现尚未全部审查 |
+| docs/v1-release-preparation-20261113 (`c8cfa5a`) | 脏更新 UI/十语言/文档成果仍有差异 |
+| docs/native-development-state-20261114 | 已在本地 main，远端未确认，有活跃 Worktree |
+| docs/native-handoff-final-20261114 | 本轮规范清理和接续交接成果；按最终 Git 包含关系确认整合 |
+| legacy-script | 必须保留的原脚本历史/固定 submodule 来源 |
+
+其余远程分支是否进入最后已知 main 的清单，见候选 consolidation 报告；祖先关系不等于可删除，仍须查活跃 Worktree/聊天依赖。本次不删除任何远程分支。
+
+本轮按工作区实际字节与候选比较：development 5 个已修改文件相同、22 个不同；recovery 2 个相同、6 个不同；release-preparation 0 个相同、19 个不同（仅已跟踪修改，不含未跟踪文件）。这些数量只是后续复核入口，差异不自动表示候选缺失功能。备份已保存，禁止直接覆盖。
+
+### 可直接执行的优先级与验收标准
+
+1. **P0 远端同步与成果保护**：fetch 成功、核实真实 main SHA；逐项检查差异和所有未跟踪文件。验收：每项独有代码标明复用/替代/待完成，原改动可恢复，无秘密入库。
+2. **P0 候选截图门禁**：从实际候选构建采集所需十语言 UI，核对 Finder/菜单/设置/首次配置/更新错误文本与裁剪。验收：真实视觉审阅和 provenance 完整，原始 run_checks 不跳过截图检查通过。
+3. **P0 更新故障测试**：以隔离 App/临时目录测试受信签名、错误 hash/signature、恶意路径、安装失败与回滚/重启。验收：所有失败拒绝安装或恢复原包；无签名关闭、无真实系统替换。
+4. **P1 发布候选验证**：受影响 Swift/Python隔离测试、本地化、文档和新 arm64 Release 一次验证。验收：全部必要门禁通过，源码/版本/资源/签名/hash 一致；未获授权的实机项目仍标 pending。
+5. **P1 主线晋级**：在最新 main 上验证集成，不混入其他脏成果。验收：无冲突/高风险未决项，普通 push 成功，ls-remote SHA 与本地 main 一致，交接和代码同一次交付。
+6. **随后用户实机验收**：按 FEX、首次配置、双角色密码、IPv6、性能、菜单/单人/多人分别记录结果。任何一项未执行都不标已验收。
