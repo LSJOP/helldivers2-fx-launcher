@@ -1,12 +1,12 @@
 <div align="center">
-  <img src="docs/assets/app-icon.png" width="128" alt="HD2FXNative icon">
-  <h1>HD2FXNative</h1>
+  <img src="docs/assets/app-icon.png" width="128" alt="绝地潜兵2 FX启动器 icon">
+  <h1>绝地潜兵2 FX启动器</h1>
   <p>HELLDIVERS 2 FX Launcher · Apple Silicon macOS</p>
 </div>
 
 [简体中文](README.zh-CN.md) | [English](README.md)
 
-### [🟨 ⬇️ 下载 HD2FXNative 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)
+### [🟨 ⬇️ 下载 绝地潜兵2 FX启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)
 
 **🟨 Stable Release · v1.0.0** · **macOS · Apple Silicon / arm64**
 
@@ -14,23 +14,17 @@
 
 ## 简体中文
 
-HD2FXNative 是面向 Apple Silicon Mac 的第三方社区启动与管理工具，使用 SwiftUI 和原生核心，帮助用户检查 FX 环境、配置运行环境和管理游戏性能设置。
+绝地潜兵2 FX启动器是面向 Apple Silicon Mac 的第三方社区启动与管理工具，使用 SwiftUI 和原生核心，帮助用户检查 FX 环境、配置运行环境和管理游戏性能设置。
 
 FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游戏，主菜单／飞船获用户确认；单人、多人及自动更新完整闭环仍未测试。正式 FX 1.9.12 仅离线只读调查。见[修复证据](docs/environment/FX199_RF_REPAIR_20261114.md)。
 
 ### 软件截图
 
-以下是不同历史 Debug 构建的真实窗口截图，**并非 v1.0.0 最终截图**。最终版本截图待构建后重新采集、检查并替换；各图片来源见[截图记录](docs/images/README.md)。
+首页状态灯更新后的截图仍待补充；下图为历史 Debug 截图。
 
-| 总览 | 首次运行环境配置 |
-| --- | --- |
-| ![总览](docs/images/zh-CN/dashboard.png) | ![首次运行环境配置](docs/images/zh-CN/first-run-setup.png) |
-| 运行环境 | FX 管理 |
-| ![运行环境](docs/images/zh-CN/environment.png) | ![FX 管理](docs/images/zh-CN/fx-manager.png) |
-| 游戏性能配置 | 设置 |
-| ![游戏性能配置](docs/images/zh-CN/performance.png) | ![设置](docs/images/zh-CN/settings.png) |
-| 日志 | |
-| ![日志](docs/images/zh-CN/logs.png) | |
+首页截图来自当前隔离 Debug 候选；其他页面截图待复核，暂不展示。截图不能证明游戏或网络就绪。
+
+![总览](docs/images/zh-CN/dashboard.png)
 
 ### 主要功能
 
@@ -46,8 +40,8 @@ FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游�
 
 1. 从正式 Release 下载 macOS arm64 DMG。
 2. 运行 `shasum -a 256 <下载的 DMG>`，与发布说明中的 SHA-256 比对。匹配后打开 DMG。
-3. 将 HD2FXNative 拖入「应用程序」。
-4. 打开 HD2FXNative。
+3. 将 App 拖入「应用程序」。
+4. 打开 App。
 5. 在 FX 管理中选择已安装的 FX Steam Launcher，按首次运行向导操作。SteamOS 内须安装 Steam 和 HELLDIVERS 2（AppID 553850），使用拥有游戏的账号，并确保 Guest 可通过 SSH 访问。在 App 内输入所需凭据并审核拟执行的变更。
 6. 在总览点击「启动 HELLDIVERS 2」。
 

@@ -10,11 +10,11 @@ struct DashboardView: View {
         VStack(alignment: .leading, spacing: TacticalSpacing.panel) {
             hero
             TacticalAdaptiveLayout(minimumWidth: 120, maximumColumns: 5) {
-                TacticalMetric(title: "FX", value: observed("fx_host_running"), symbol: "shippingbox")
-                TacticalMetric(title: state.t("ui.144"), value: observed("ssh_connected"), symbol: "link")
-                TacticalMetric(title: "Steam", value: observed("steam_running"), symbol: "play.circle")
-                TacticalMetric(title: "EAC", value: unverified, symbol: "shield.lefthalf.filled")
-                TacticalMetric(title: state.t("ui.191"), value: unverified, symbol: "person.2")
+                statusCard("FX", "shippingbox", "fx_host_running", .startingFX)
+                statusCard(state.t("ui.144"), "link", "ssh_connected", .waitingForGuest)
+                statusCard("Steam", "play.circle", "steam_running", .startingSteam)
+                statusCard("EAC", "shield.lefthalf.filled", "eac", .checkingEAC)
+                statusCard(state.t("ui.191"), "person.2", "multiplayer", nil)
             }
             if state.environmentWorkflow.phase == .idle {
                 VStack(alignment: .leading, spacing: 12) {
@@ -34,15 +34,19 @@ struct DashboardView: View {
             if state.stale { TacticalWarningBanner(text: state.t("ui.309")) }
         }.foregroundStyle(c.text).font(TacticalTypography.body)
     }
-    private func observed(_ key: String) -> String {
-        // A completed login step is newer evidence than the pre-launch snapshot.
-        if key == "steam_running", state.environmentWorkflow.launchesGame,
-           state.launchSession.evidence[.startingSteam] == "done" {
-            return state.t("ui.219")
-        }
-        if let value = state.latestGUIEvidence[key]?.boolean { return value ? state.t("ui.219") : state.t("ui.214") }
-        if key == "steam_running", let count = state.latestGUIEvidence["steam_process_count"]?.integer { return count > 0 ? state.t("ui.237") : state.t("ui.201") }
-        return unverified
+    private func statusCard(_ title: String, _ symbol: String, _ key: String, _ stage: LaunchStage?) -> some View {
+        let evidence = stage.flatMap { state.launchSession.evidence[$0] }
+        let processing = state.launchSession.running && stage != nil && state.launchSession.current == stage
+            || (key == "fx_host_running" && state.environmentWorkflow.phase == .startingFX)
+            || (key == "ssh_connected" && state.environmentWorkflow.phase == .connecting)
+        let failed = evidence == "failed"
+        let connected = key == "ssh_connected" && state.latestGUIEvidence[key]?.boolean == true && !state.stale
+        let detectedEAC = false // A completed check does not by itself prove EAC loaded.
+        let detected = !state.stale && ((key == "fx_host_running" && state.latestGUIEvidence[key]?.boolean == true)
+            || (key == "steam_running" && (state.latestGUIEvidence[key]?.boolean == true || (state.latestGUIEvidence["steam_process_count"]?.integer ?? 0) > 0)))
+        let tone = DashboardLED.resolve(processing: processing, failed: failed, confirmed: connected || detectedEAC)
+        let text = processing ? state.t("ui.157") : failed ? state.t("ui.125") : connected ? state.t("ui.dashboard.connected") : detectedEAC ? state.t("ui.dashboard.loaded") : detected ? state.t("ui.dashboard.process") : unverified
+        return DashboardStatusCard(title: title, value: text, symbol: symbol, tone: tone)
     }
     private var hero: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -73,5 +77,55 @@ struct DashboardView: View {
         TacticalButton(title: tasks.busy ? state.t("ui.055") : state.t("ui.049"),
                        symbol: "arrow.clockwise", primary: false, loading: tasks.busy) { state.refresh() }
             .accessibilityIdentifier("dashboard.inspect")
+    }
+}
+
+private struct DashboardStatusCard: View {
+    let title: String
+    let value: String
+    let symbol: String
+    let tone: DashboardLED.Tone
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        let c = TacticalColors(scheme: scheme)
+        HStack(spacing: 8) {
+            Image(systemName: symbol).font(.system(size: 19)).frame(width: 24).foregroundStyle(c.accent).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title).font(TacticalTypography.caption).foregroundStyle(c.muted).lineLimit(1).minimumScaleFactor(0.7)
+                Text(value).font(TacticalTypography.caption.weight(.semibold)).foregroundStyle(c.text).lineLimit(2).minimumScaleFactor(0.8)
+            }
+            Spacer(minLength: 0)
+            DashboardLED(tone: tone)
+        }.padding(12).frame(maxWidth: .infinity, minHeight: 76, maxHeight: 76, alignment: .leading)
+            .background(c.panel, in: RoundedRectangle(cornerRadius: 5))
+            .overlay(RoundedRectangle(cornerRadius: 5).stroke(c.line, lineWidth: 1))
+            .accessibilityElement(children: .combine)
+    }
+}
+
+private struct DashboardLED: View {
+    enum Tone { case success, working, failed, unknown }
+    static func resolve(processing: Bool, failed: Bool, confirmed: Bool) -> Tone {
+        if processing { return .working }
+        if failed { return .failed }
+        return confirmed ? .success : .unknown
+    }
+    let tone: Tone
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var scheme
+    @State private var pulse = false
+    private var color: Color {
+        let c = TacticalColors(scheme: scheme)
+        switch tone { case .success: return c.success; case .working: return c.accent; case .failed: return c.error; case .unknown: return c.muted }
+    }
+    var body: some View {
+        Circle().fill(color).frame(width: 8, height: 8)
+            .shadow(color: color.opacity(tone == .unknown ? 0 : 0.35), radius: 3)
+            .opacity(tone == .working && pulse && !reduceMotion ? 0.45 : 1)
+            .animation(tone == .working && !reduceMotion ? .easeInOut(duration: 1.3).repeatForever(autoreverses: true) : .default, value: pulse)
+            .onAppear { pulse = tone == .working && !reduceMotion }
+            .onChange(of: tone) { _, value in pulse = value == .working && !reduceMotion }
+            .onChange(of: reduceMotion) { _, value in pulse = tone == .working && !value }
+            .accessibilityHidden(true)
     }
 }
