@@ -161,6 +161,34 @@ final class ProgressRecorder: @unchecked Sendable {
         vManifest["archive"]="HD2FXNative-v1.0.0-arm64.zip";vAssets.append(vAssets[2]);try vFixture()
         try await failure(.missingAsset,"ambiguous duplicate archive rejected") { _ = try await service.check(version:"0.1.0",build:1,channel:"preview",osVersion:"26.1",architecture:"arm64") }
 
+        let testTag = "v1.0.2-update-test.1"
+        let testVersion = String(testTag.dropFirst())
+        let testPrefix = "https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/\(testTag)/"
+        let testArchive = "HD2FXNative-\(testTag)-arm64.zip"
+        let testAssets = [("update-manifest.json", 100), ("update-manifest.sig", 88), (testArchive, transport.archive.count)]
+            .map { ["name": $0.0, "browser_download_url": testPrefix + $0.0, "size": $0.1] as [String: Any] }
+        vManifest["version"] = testVersion
+        vManifest["bundleID"] = NativeReleaseService.testBundleID
+        vManifest["archive"] = testArchive
+        let testManifest = try JSONSerialization.data(withJSONObject: vManifest)
+        transport.responses[URL(string: testPrefix + "update-manifest.json")!] = testManifest
+        transport.responses[URL(string: testPrefix + "update-manifest.sig")!] = try key.signature(for: testManifest).base64EncodedData()
+        transport.responses[NativeReleaseService.api] = try JSONSerialization.data(withJSONObject: [
+            ["tag_name": testTag, "draft": false, "prerelease": true,
+             "html_url": "https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/\(testTag)", "assets": testAssets]
+        ])
+        for channel in ["stable", "preview"] {
+            let result = try await service.check(version: "1.0.1", build: 1, channel: channel, osVersion: "26.1", architecture: "arm64")
+            if case .noReleases = result { try check(true, "test tag excluded from \(channel)") }
+            else { try check(false, "test tag must stay isolated") }
+        }
+        let testResult = try await service.check(version: "1.0.1-update-test.1", build: 1,
+                                                 channel: NativeReleaseService.testChannel, osVersion: "26.1", architecture: "arm64")
+        if case .available(let candidate) = testResult {
+            try check(candidate.signatureVerified && candidate.manifest.bundleID == NativeReleaseService.testBundleID,
+                      "test channel requires its signed app identity")
+        } else { try check(false, "test update unavailable") }
+
         // Schema 2 binds the archive signature to the same bytes that pass SHA-256 and path validation.
         func installCandidate(_ archiveBytes: Data, signature: String? = nil) async throws -> NativeUpdateCandidate {
             transport.archive = archiveBytes
