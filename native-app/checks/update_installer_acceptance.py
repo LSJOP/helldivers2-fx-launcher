@@ -131,7 +131,8 @@ request = location / 'request'
 transaction = location / '.HD2FXNative-update'
 old = subprocess.Popen([installed/'Contents/MacOS/HD2FXNative', str(request)])
 try:
-    for _ in range(200):
+    for _ in range(700):
+        old.poll()  # Reap the exited parent so the helper can observe ESRCH.
         state = transaction / 'state.json'
         if state.exists() and json.loads(state.read_text())['phase'] == 'awaitingStartup':
             os.kill(int((request/'helper-pid').read_text()), signal.SIGKILL)
