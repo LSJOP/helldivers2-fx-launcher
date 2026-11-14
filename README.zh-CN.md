@@ -28,7 +28,7 @@ FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游�
 
 ### 下载与安装
 
-**发布目标：HD2FXNative v1.0.0。** GitHub 尚无已发布版本。本地 arm64 验收候选为 `1.0.0`（构建 `2026111401`），采用 ad hoc 签名，未使用 Developer ID 或进行 Apple 公证。游戏与完整升级验收仍待完成。Gatekeeper 可能拦截下载的副本。公开 DMG 及其 SHA-256 待发布。[GitHub Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**发布目标：HD2FXNative v1.0.0。** GitHub 尚无已发布版本。本地 arm64 验收候选为 `1.0.0`（构建 `2026111403`），采用 ad hoc 签名，未使用 Developer ID 或进行 Apple 公证。游戏与完整升级验收仍待完成。Gatekeeper 可能拦截下载的副本。公开 DMG 及其 SHA-256 待发布。[GitHub Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
 
 发布后，可在运行 macOS 14 或更高版本的 Apple Silicon Mac 上安装。
 

@@ -28,7 +28,7 @@ These are real windows from the integration Debug build, **not final v1.0.0 scre
 
 ### Download and installation
 
-**Release target: HD2FXNative v1.0.0.** GitHub has no published release. The local arm64 acceptance candidate is version `1.0.0` (build `2026111401`), ad hoc signed without Developer ID or Apple notarization. Game and complete upgrade acceptance remain pending. Gatekeeper may block a downloaded copy. The public DMG and its SHA-256 are pending. [GitHub Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**Release target: HD2FXNative v1.0.0.** GitHub has no published release. The local arm64 acceptance candidate is version `1.0.0` (build `2026111403`), ad hoc signed without Developer ID or Apple notarization. Game and complete upgrade acceptance remain pending. Gatekeeper may block a downloaded copy. The public DMG and its SHA-256 are pending. [GitHub Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
 
 After publication, install on an Apple Silicon Mac running macOS 14 or later.
 

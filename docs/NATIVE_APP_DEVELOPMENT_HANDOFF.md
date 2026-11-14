@@ -151,3 +151,5 @@ FX 1.9.9 的 RootFS 丢失点已在 Steam Runtime 内复现，当前测试 Guest
 ## FX 1.9.9 RF 恢复及 GUI 启动（2026-11-14）
 
 本轮实际证据见 [修复报告](environment/FX199_RF_REPAIR_20261114.md)。正式盘未写入；测试盘十文件有完整备份及回执。GUI 启动/EAC 引导/游戏进程窗口通过，主菜单或飞船由用户确认，单人/多人按用户选择未测。下一步完成新 UI 截图、回归和内部候选；自动更新真实安装闭环与玩法门禁未过，不发布公开 Beta。当前任务分支以 Git 实际 HEAD 为准。
+
+最终内部 RC：1.0.0 (2026111403)，干净构建源码 `4119d65e64468afaa763cf8ffc134a34786bb83f`；DMG `/Volumes/Thunderbolt2TB/绝地潜兵脚本/HD2-App-Builds/Candidates/FX199-RC-20261114-2026111403/HD2FXNative-v1.0.0-macOS-arm64.dmg`，SHA-256 `59730d98f3a4c358ca335da481d170f57c452d075728441147aa38723c50a478`。arm64 Release、ad-hoc、资源/秘密扫描、DMG 校验/只读挂载/安装副本及卸载后实际进程启动均通过。最终完整核心检查 549 项及更新专项通过；末次仅补面板重试入口并重新 Debug/Release 编译，未声称重跑全部核心测试。终态按钮动态交互、真实更新安装/恢复和单人/多人仍待验收；不发布、不合 main。源码分支 `fix/fx199-verified-rf-20261114`，远端以实际 ref 查询为准。
