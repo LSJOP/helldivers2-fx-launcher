@@ -1,12 +1,13 @@
 # Native development / Native 开发指南
 
+当前进度和接续流程仅维护在 [开发状态](DEVELOPMENT_STATUS.md) 与 [交接](NATIVE_APP_DEVELOPMENT_HANDOFF.md)。先读根 AGENTS.md；以下历史迁移说明不应覆盖当前源码。
+
 ## Source and build
 
-- Native mainline: `main` now integrates the completed Native snapshot. `feature/macos-native-app` is retained; safely synchronize it with main before reuse. UX v2.1.0 remains deferred; future work should start from latest main in a separate worktree, suggested branch `feature/native-app-ux-v2`. No scheduling was configured.
-- Pinned archive: `native-app/CoreSnapshot` (`legacy-script`); original Core version `0.1.0-preview.4`. Native bundle version is `0.1.0`, build `1`, from the Xcode project. Neither is a published Release claim.
-- Apple Silicon / macOS 14+, complete Xcode and macOS SDK, Python 3.9+. Clone with `--recurse-submodules`; source ZIPs omit Core.
-- Build/run: from `native-app`, use `./script/build_and_run.sh --xcode-only`, then open `build/Debug/HD2FXNative.app`. The build packages selected archived Python/locale sources; it does not install FX or download runtime/game/Guest images.
-- Source-level isolation and targeted checks live under `native-app/checks`. Use `script/run_checks.sh` only when a full local suite is appropriate; UI/documentation tasks normally need narrower checks. See [AGENTS.md](../AGENTS.md).
+- 从最新 origin/main 创建任务分支，保护所有 Worktree。未合并候选不等于 main 已实现。
+- 当前为 Swift Native Core，CoreSnapshot/legacy-script 保留历史，不重新引入 Python Bridge。
+- Apple Silicon / macOS 14+、完整 Xcode、Python 3 检查工具及固定 Sparkle SPM。使用 `bash native-app/script/build_and_run.sh --build-only` 仅编译。
+- 详细 Release/测试命令、架构和候选边界见交接文档。旧阶段版本号和测试结果不代表当前构建。
 
 ## State, credentials and recovery
 

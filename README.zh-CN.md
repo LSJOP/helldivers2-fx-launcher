@@ -72,3 +72,5 @@ v1.0.0 整合候选检查已安装 FEX 的文件、执行权限、arm64 架构�
 使用与开发指南、架构说明和历史报告见[文档索引](docs/README.md)。
 
 整合候选：共享启动/恢复、分角色加密凭据、本地化品牌与统一更新源已纳入 `integration/native-app-consolidation`。截图来源复核与实机验收待完成。
+
+接续开发请读取[当前状态](docs/DEVELOPMENT_STATUS.md)和[交接文档](docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md)，以 main 源码与 AGENTS.md 为准，未合并候选及实机验收单独记录。
