@@ -6,11 +6,11 @@
 
 [简体中文](README.zh-CN.md) | [English](README.md)
 
-### [🟨 ⬇️ 下载 绝地潜兵2 FX启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)
+### [🟨 ⬇️ 下载 绝地潜兵2 FX启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.1/HD2FXNative-v1.0.1-macOS-arm64.dmg)
 
-**🟨 Stable Release · v1.0.0** · **macOS · Apple Silicon / arm64**
+**🟨 Stable Release · v1.0.1** · **macOS · Apple Silicon / arm64**
 
-**[⬇️ 立即下载 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)** · [查看所有版本](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**[⬇️ 立即下载 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.1/HD2FXNative-v1.0.1-macOS-arm64.dmg)** · [查看所有版本](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
 
 ## 简体中文
 
@@ -20,7 +20,7 @@ FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游�
 
 ### 软件截图
 
-以下中英文真实窗口来自 2026-11-14 最终整合源码的 Debug 构建，已完成视觉审核，展示 Unreleased 开发改动，**并非已发布的 v1.0.0 DMG**；来源见[截图记录](docs/images/README.md)。
+截图来自隔离 Debug 构建。软件更新面板的截图使用捕获专用 App，服务显示未配置。见[截图记录](docs/images/README.md)。
 
 首页保留 FX、虚拟机、Steam、EAC、联机五张卡片。绿色表示已观测到的 FX／Steam 进程或经 Guest 身份验证的 SSH 连接；黄色表示正在检查，红色表示明确的阶段失败，灰色表示缺少或过期证据。进程检测、检查完成以及菜单／单人确认均不能证明 EAC 加载或多人联机成功。隔离状态矩阵验证的是显示逻辑，不代表真实游戏已就绪。
 
@@ -36,17 +36,17 @@ FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游�
 
 ### 主要功能
 
-**开发候选：**日志页使用系统本地时间，实时显示有容量限制的任务事件，支持自动滚动和导出脱敏的原始 ISO 8601 时间戳。启动命令成功、游戏进程、窗口和实际进入游戏分别记录；窗口及游戏内状态不会自动推断。该变更尚未包含在已发布的 v1.0.0 DMG 中。
+日志页使用系统本地时间，实时显示有容量限制的任务事件，支持自动滚动和导出脱敏的原始 ISO 8601 时间戳。启动命令成功、游戏进程、窗口和实际进入游戏分别记录；窗口及游戏内状态不会自动推断。
 
 - 从总览发起带保护检查的 HELLDIVERS 2 启动流程。FX 管理检查所选 FX 安装并提供受支持的 FX／Steam 操作。
 - 首次运行环境配置检查 Guest 身份、运行能力和组件完整性。经确认后可安装固定版本的 Proton-JE、选择已验证的 Steam 兼容工具，并合并启动参数以保留自定义参数。检测为只读，部署与恢复各有检查条件。
 - 运行环境页面报告 FEX 和 Proton-JE 的检测依据。SSH 和 sudo 凭据可针对已验证目标分别加密保存在本地；跨重启复用仍需实机验收。
 - Swift App 提供七个原生页面、日志、限定范围的性能设置和十种界面语言。SteamOS 内的可选安装步骤需要 Python 3。
-- 设置集成 Sparkle 更新功能。v1.0.0 包未配置更新公钥和服务；未来启用自动更新需先通过可信方式手动安装。端到端安装和恢复仍待验证。
+- v1.0.1 支持在「设置 → 软件更新」中检查和安装后续稳定版。v1.0.0 用户需先使用正式 DMG 手动升级一次。
 
 ### 安装说明
 
-当前 App：`1.0.0`（构建 `2026111403`），适用于 macOS 14+ Apple Silicon arm64。采用 ad-hoc 签名，无 Apple Developer ID 签名，未经 Apple 公证。Gatekeeper 可能拦截下载副本；打开前核对 [SHA-256 文件](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg.sha256)。若被拦截，对已核验 App 使用「隐私与安全性 → 仍要打开」。
+当前 App：`1.0.1`（构建 `2026111406`），适用于 macOS 14+ Apple Silicon arm64。采用 ad-hoc 签名，无 Apple Developer ID 签名，未经 Apple 公证。Gatekeeper 可能拦截下载副本；打开前核对 [SHA-256 文件](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.1/SHA256SUMS.txt)。若被拦截，对已核验 App 使用「隐私与安全性 → 仍要打开」。
 
 1. 从正式 Release 下载 macOS arm64 DMG。
 2. 运行 `shasum -a 256 <下载的 DMG>`，与发布说明中的 SHA-256 比对。匹配后打开 DMG。
@@ -59,7 +59,7 @@ FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游�
 
 ### 已知问题
 
-发布范围：本产物包含共享启动／重试修复和本地加密 SSH/sudo 存储。FX 1.9.9 测试环境记录 GUI 启动及用户确认的菜单／飞船；单人、EAC／多人、全新部署与完整 Sparkle 安装／回滚仍未验证。包内公开自动更新关闭／未配置，请使用 Release DMG 手动安装。正式 FX 1.9.12 仅离线调查。
+FX 1.9.9 历史实测记录了游戏主菜单及飞船。单人、EAC、多人及全新环境部署仍待验证。
 
 
 - FX 和 SteamOS 兼容性取决于所选构建和实测能力。当前启动路径有已记录的代理不匹配问题。安全停止或重启 FX 暂不可用。
@@ -70,7 +70,7 @@ FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游�
 
 ### 更新日志
 
-[v1.0.0 — 2026-11-14](https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/v1.0.0) · 正式稳定版，构建 `2026111403`。见[发布说明](CHANGELOG.zh-CN.md)。
+[v1.0.1 — 2026-11-14](https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/v1.0.1) · 正式稳定版，构建 `2026111406`。见[发布说明](CHANGELOG.zh-CN.md)。
 
 未发布变更包括总览启动、首次运行 Proton-JE 校验及 Steam 配置、实验性 FEX 审核及恢复，以及 SSH 认证修复。参见[更新日志](CHANGELOG.zh-CN.md)和[原版启动器历史](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script)。
 
@@ -84,8 +84,6 @@ FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游�
 
 接续开发请读取[当前状态](docs/DEVELOPMENT_STATUS.md)和[交接文档](docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md)，以 main 源码与 AGENTS.md 为准，未合并候选及实机验收单独记录。
 
-自动更新开发：v1.0.1 候选固定稳定版 Ed25519 公钥，私钥保存在仓库和 App 外。生产更新服务保持关闭。候选安装助手使用已下载并验证的 ZIP。签名测试 App 用于实测替换和启动确认。正式启动器界面跨版本升级和 Helper 中断恢复仍待验收。
+
 
 原生更新中断后，下次打开 App 可恢复事务。生产更新服务仍待完整升级验收。
-
-PR #4 使用独立的 GitHub 预发行更新渠道，签名密钥、App 身份、偏好和数据均独立。ad-hoc 构建可能受 macOS Gatekeeper 限制。稳定版更新服务仍关闭。

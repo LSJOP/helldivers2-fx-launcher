@@ -187,6 +187,11 @@ The development entries below retain earlier stage evidence; the published relea
 - Safe FX stop/restart and validated automatic performance recommendations remain unavailable. Saved settings are not proof of runtime adoption; the original launch preflight may reject custom values.
 - Ground missions, independent EAC acceptance and multiplayer remain unverified.
 
+### v1.0.1 — 2026-11-14
+
+- Stable in-app updates verify Ed25519 and SHA-256, download once, install and restart automatically, and roll back on startup failure.
+- Appearance persists across restarts. Upgrade once from v1.0.0 using the DMG.
+
 ### v1.0.0 — 2026-11-14
 
 Stable release: App version `1.0.0`, build `2026111403`, macOS 14+ arm64. Reuses the existing Release DMG built from `4119d65e64468afaa763cf8ffc134a34786bb83f`; no rebuild or version change.
