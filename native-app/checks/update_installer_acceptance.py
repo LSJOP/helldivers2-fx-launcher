@@ -134,7 +134,7 @@ try:
     for _ in range(700):
         old.poll()  # Reap the exited parent so the helper can observe ESRCH.
         state = transaction / 'state.json'
-        if state.exists() and json.loads(state.read_text())['phase'] == 'awaitingStartup':
+        if state.exists() and json.loads(state.read_text())['phase'] == 'awaitingStartup' and list(transaction.glob('startup-*')):
             os.kill(int((request/'helper-pid').read_text()), signal.SIGKILL)
             break
         time.sleep(.05)
@@ -146,7 +146,7 @@ try:
     executable = str(installed/'Contents/MacOS/HD2FXNative')
     for line in run('ps','-axo','pid=,command=').decode().splitlines():
         pid, _, command = line.strip().partition(' ')
-        if command.startswith(executable + ' --confirm-update-startup '):
+        if command.startswith(tuple(path + ' --confirm-update-startup ' for path in (executable, executable.replace('/private/tmp/', '/tmp/', 1)))):
             os.kill(int(pid), signal.SIGTERM)
     recovery = subprocess.Popen([executable, '--recover-fixture'])
     recovery.wait(timeout=10)
