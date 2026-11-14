@@ -361,7 +361,7 @@ enum FEXWorkflow {
         snapshot.facts["fex_fingerprint"] = approval
         snapshot.facts["fex_tree"] = tree
         snapshot.facts["fex_provenance"] = "unverified"
-        let reviewed = try verifyInstalled(backend, snapshot: snapshot)
+        let reviewed = verifyInstalled(tree: tree, snapshot: snapshot)
         if reviewed { snapshot.facts["fex_provenance"] = "verified" }
         guard reviewed || approvals.contains(approval) else {
             snapshot.facts["fex_status"] = "confirmation"
@@ -440,23 +440,18 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
         }
         return digest
     }
-    static func verifyInstalled(_ backend: SSHEnvironmentBackend, snapshot: DeploymentSnapshot) throws -> Bool {
+    static func verifyInstalled(tree: String, snapshot: DeploymentSnapshot) -> Bool {
         let store = CoreFS.nativeData().appendingPathComponent("fex-reviews", isDirectory: true)
-        guard let files = try? FileManager.default.contentsOfDirectory(at: store, includingPropertiesForKeys: nil), files.count <= 1024 else { return false }
-        var approved = Set<String>()
+        guard let files = try? FileManager.default.contentsOfDirectory(at: store, includingPropertiesForKeys: nil),
+              files.count <= 1024 else { return false }
         for file in files where file.pathExtension == "json" && !FileManager.default.isSymbolicLink(atPath: file.path) {
             guard let bytes = try? Data(contentsOf: file), bytes.count < 1_048_576,
                   let record = try? JSONDecoder().decode([String: JSONValue].self, from: bytes),
                   let digest = installedDigest(record, snapshot: snapshot) else { continue }
-            approved.insert(digest)
+            // The runtime probe rechecks this exact tree before executing any FEX code.
+            if digest == tree { return true }
         }
-        guard !approved.isEmpty else { return false }
-        // Reuse only the bounded read-only inventory helpers, never the write dispatcher.
-        let helpers = pipeline.components(separatedBy: "work=pathlib.Path.home()")[0]
-        let script = "python3 - <<'HD2_FEX_VERIFY'\n" + helpers + "\nprint(fingerprint(inventory(pathlib.Path.home()/'.local/share/Steam/steamapps/common/FEX-Emu')))\nHD2_FEX_VERIFY\n"
-        let reply = try backend.transport.run(script, timeout: 120, context: backend.context)
-        guard reply.status == 0 else { return false }
-        return approved.contains(reply.stdout.trimmingCharacters(in: .whitespacesAndNewlines))
+        return false
     }
     static func run(_ method: String, backend: SSHEnvironmentBackend, params: [String: JSONValue]) throws -> [String: JSONValue] {
         let mode = String(method.dropFirst("first_run_fex_".count))
