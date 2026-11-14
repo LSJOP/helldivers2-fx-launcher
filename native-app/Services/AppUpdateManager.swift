@@ -72,6 +72,9 @@ struct UpdateConfiguration {
         distributionReady = info["HD2UpdateDistributionReady"] as? String == "YES"
     }
     var isValid: Bool {
+        if Bundle.main.bundleIdentifier == NativeReleaseService.testBundleID {
+            return enabled && previewEnabled && Data(base64Encoded: publicKey)?.count == 32
+        }
         guard enabled, let feed, feed.scheme == "https", feed.user == nil, feed.password == nil, feed.port == nil,
               ((feed.host == "lsjop.github.io" && feed.path == "/helldivers2-fx-launcher/updates/stable/appcast.xml") ||
                (feed.host == "github.com" && feed.path == "/LSJOP/helldivers2-fx-launcher/releases/latest/download/appcast.xml")),
@@ -90,12 +93,14 @@ struct UpdateConfiguration {
         var code: SecStaticCode?
         guard SecStaticCodeCreateWithPath(Bundle.main.bundleURL as CFURL, [], &code) == errSecSuccess, let code else { return false }
         var requirement: SecRequirement?
-        let rule = "identifier \"\(NativeReleaseService.bundleID)\""
+        guard let identifier = Bundle.main.bundleIdentifier,
+              [NativeReleaseService.bundleID, NativeReleaseService.testBundleID].contains(identifier) else { return false }
+        let rule = "identifier \"\(identifier)\""
         guard SecRequirementCreateWithString(rule as CFString, [], &requirement) == errSecSuccess,
               SecStaticCodeCheckValidity(code, SecCSFlags(rawValue: kSecCSStrictValidate | kSecCSCheckNestedCode), requirement) == errSecSuccess else { return false }
         // Ed25519 verifies publisher authority. This gate checks local code structure.
         // Stable ad hoc builds are supported without a Developer ID requirement.
-        return Bundle.main.bundleIdentifier == NativeReleaseService.bundleID
+        return true
     }
 }
 
@@ -135,6 +140,7 @@ struct UpdateConfiguration {
     init(preferences: UserDefaults) {
         self.preferences = preferences
         super.init()
+        if Bundle.main.bundleIdentifier == NativeReleaseService.testBundleID { channel = NativeReleaseService.testChannel }
         lastCheck = preferences.object(forKey: "NativeUpdateLastCheck") as? Date
         guard isConfigured else { return }
         status = .ready
@@ -167,7 +173,7 @@ struct UpdateConfiguration {
         }
     }
     func selectChannel(_ channel: String) {
-        guard operation == nil, canCheck, channel == "stable" || (channel == "preview" && isConfigured && configuration.previewEnabled) else { return }
+        guard self.channel != NativeReleaseService.testChannel, operation == nil, canCheck, channel == "stable" || (channel == "preview" && isConfigured && configuration.previewEnabled) else { return }
         self.channel = channel; candidate = nil; cachedArchive = nil; status = isConfigured ? .ready : .unconfigured
     }
     func setAutomaticChecks(_ enabled: Bool) {
@@ -194,7 +200,7 @@ struct UpdateConfiguration {
             var readyToInstall = false
             do {
                 let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-                    .appendingPathComponent("Helldivers2FXLauncher/VerifiedUpdates", isDirectory: true)
+                    .appendingPathComponent(self.channel == NativeReleaseService.testChannel ? "HD2FXNativeUpdateTest/VerifiedUpdates" : "Helldivers2FXLauncher/VerifiedUpdates", isDirectory: true)
                 self.cachedArchive = try await self.service.download(candidate, to: base) { [weak self] received, total in
                     Task { @MainActor [weak self] in
                         guard let self, self.status == .downloading, total > 0,

@@ -77,13 +77,15 @@ enum UpdateInstaller {
 
         var state = try JSONDecoder().decode(Transaction.self, from: readRegularFile(directory.appendingPathComponent("state.json"), limit: 16_384))
         guard state.target == installed.path,
-              Bundle(url: installed)?.infoDictionary?["SUPublicEDKey"] as? String == state.key
+              let bundle = Bundle(url: installed), let identifier = bundle.bundleIdentifier,
+              [NativeReleaseService.bundleID, NativeReleaseService.testBundleID].contains(identifier),
+              bundle.infoDictionary?["SUPublicEDKey"] as? String == state.key
         else { throw NativeUpdateFailure.integrity }
         let name = installed.lastPathComponent
         let staged = directory.appendingPathComponent("HD2FXNative.app")
         let installedIdentity = try identity(parentFD, name)
         if BundleIdentity(installedIdentity) == state.old {
-            _ = try validate(installed, version: state.oldVersion, build: state.oldBuild, key: state.key)
+            _ = try validate(installed, version: state.oldVersion, build: state.oldBuild, key: state.key, identifier: identifier)
             guard state.phase != .confirmed else { throw NativeUpdateFailure.integrity }
             try archiveTransaction(directory, parent: parent, message: "interrupted transaction recovered with original bundle")
             return
@@ -92,8 +94,8 @@ enum UpdateInstaller {
         guard let new = state.new, BundleIdentity(installedIdentity) == new,
               let version = state.newVersion, let build = state.newBuild, state.phase != .preparing,
               BundleIdentity(try identity(fd, staged.lastPathComponent)) == state.old else { throw NativeUpdateFailure.integrity }
-        _ = try validate(installed, version: version, build: build, key: state.key)
-        let oldExecutable = try validate(staged, version: state.oldVersion, build: state.oldBuild, key: state.key)
+        _ = try validate(installed, version: version, build: build, key: state.key, identifier: identifier)
+        let oldExecutable = try validate(staged, version: state.oldVersion, build: state.oldBuild, key: state.key, identifier: identifier)
         if state.phase == .confirmed {
             try archiveTransaction(directory, parent: parent, message: "confirmed transaction cleaned up")
             return
@@ -102,7 +104,7 @@ enum UpdateInstaller {
         let ready = directory.appendingPathComponent("recover-\(token.uuidString)")
         try Data().write(to: ready, options: .withoutOverwriting)
         guard wait(seconds: 30, until: { kill(pid, 0) == -1 && errno == ESRCH }),
-              !runningAt(installed) else { throw POSIXError(.ETIMEDOUT) }
+              !runningAt(installed, identifier: identifier) else { throw POSIXError(.ETIMEDOUT) }
         state.phase = .rollingBack
         try persist(state, in: directory, fd: fd)
         try exchange(parentFD, name, fd, staged.lastPathComponent, installedIdentity, oldIdentity)
@@ -110,8 +112,8 @@ enum UpdateInstaller {
         try archiveTransaction(directory, parent: parent, message: "interrupted exchange rolled back and original confirmed")
     }
 
-    private static func runningAt(_ installed: URL) -> Bool {
-        NSRunningApplication.runningApplications(withBundleIdentifier: NativeReleaseService.bundleID).contains {
+    private static func runningAt(_ installed: URL, identifier: String) -> Bool {
+        NSRunningApplication.runningApplications(withBundleIdentifier: identifier).contains {
             !$0.isTerminated && $0.bundleURL?.resolvingSymlinksInPath() == installed
         }
     }
@@ -137,7 +139,8 @@ enum UpdateInstaller {
         let installed = URL(fileURLWithPath: arguments[0])
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         guard let current = Bundle(url: installed), running.bundleURL?.resolvingSymlinksInPath() == installed.resolvingSymlinksInPath(),
-              current.bundleIdentifier == NativeReleaseService.bundleID,
+              let identifier = current.bundleIdentifier,
+              [NativeReleaseService.bundleID, NativeReleaseService.testBundleID].contains(identifier),
               let currentBuild = current.infoDictionary?["CFBundleVersion"] as? String, let build = Int(currentBuild),
               let currentVersion = current.infoDictionary?["CFBundleShortVersionString"] as? String,
               let encoded = current.infoDictionary?["SUPublicEDKey"] as? String,
@@ -184,7 +187,7 @@ enum UpdateInstaller {
             }
         }
         try record("transaction started")
-        _ = try validate(installed, version: currentVersion, build: currentBuild, key: encoded)
+        _ = try validate(installed, version: currentVersion, build: currentBuild, key: encoded, identifier: identifier)
         let old = try identity(parentFD, installed.lastPathComponent)
         var state = Transaction(phase: .preparing, target: installed.path, old: BundleIdentity(old),
                                 oldVersion: currentVersion, oldBuild: currentBuild, key: encoded)
@@ -198,7 +201,7 @@ enum UpdateInstaller {
             throw NativeUpdateFailure.signature
         }
         let manifest = try JSONDecoder().decode(NativeUpdateManifest.self, from: manifestBytes)
-        guard manifest.bundleID == NativeReleaseService.bundleID, manifest.build > build,
+        guard manifest.bundleID == identifier, manifest.build > build,
               try NativeVersion(manifest.version) >= NativeVersion(currentVersion) else { throw NativeUpdateFailure.incompatible }
         let archive = transaction.appendingPathComponent("archive.zip")
         try copyArchive(request.appendingPathComponent("archive.zip"), to: archive, length: manifest.length)
@@ -207,8 +210,8 @@ enum UpdateInstaller {
         let extractor = try spawn("/usr/bin/ditto", ["-x", "-k", archive.path, transaction.path])
         extractor.waitUntilExit()
         guard extractor.terminationStatus == 0 else { throw NativeUpdateFailure.integrity }
-        let newExecutable = try validate(staged, version: manifest.version, build: String(manifest.build), key: encoded)
-        let oldExecutable = try validate(installed, version: currentVersion, build: currentBuild, key: encoded)
+        let newExecutable = try validate(staged, version: manifest.version, build: String(manifest.build), key: encoded, identifier: identifier)
+        let oldExecutable = try validate(installed, version: currentVersion, build: currentBuild, key: encoded, identifier: identifier)
         let installedIdentity = try identity(parentFD, installed.lastPathComponent)
         let stagedIdentity = try identity(transactionFD, staged.lastPathComponent)
         guard installedIdentity == old else { throw NativeUpdateFailure.integrity }
@@ -223,7 +226,7 @@ enum UpdateInstaller {
             throw POSIXError(.ETIMEDOUT)
         }
         do {
-            guard !runningAt(installed) else { throw NativeUpdateFailure.integrity }
+            guard !runningAt(installed, identifier: identifier) else { throw NativeUpdateFailure.integrity }
             try record("exchange pending")
             try exchange(parentFD, installed.lastPathComponent, transactionFD, staged.lastPathComponent, installedIdentity, stagedIdentity)
             swapped = true
@@ -244,7 +247,7 @@ enum UpdateInstaller {
                 guard try identity(parentFD, installed.lastPathComponent) == installedIdentity else {
                     throw NativeUpdateFailure.integrity
                 }
-                _ = try validate(installed, version: currentVersion, build: currentBuild, key: encoded)
+                _ = try validate(installed, version: currentVersion, build: currentBuild, key: encoded, identifier: identifier)
                 try launchAndConfirm(installed.appendingPathComponent(oldExecutable), directory: transaction)
                 try record("old version restored and confirmed")
             } catch {
@@ -292,14 +295,14 @@ enum UpdateInstaller {
         try output.synchronize()
     }
 
-    private static func validate(_ app: URL, version: String, build: String, key: String) throws -> String {
+    private static func validate(_ app: URL, version: String, build: String, key: String, identifier: String) throws -> String {
         var code: SecStaticCode?
         guard app.resolvingSymlinksInPath().path == app.standardizedFileURL.path,
               SecStaticCodeCreateWithPath(app as CFURL, [], &code) == errSecSuccess,
               let code,
               SecStaticCodeCheckValidity(code, SecCSFlags(rawValue: kSecCSStrictValidate | kSecCSCheckNestedCode), nil) == errSecSuccess,
               let bundle = Bundle(url: app),
-              bundle.bundleIdentifier == NativeReleaseService.bundleID,
+              bundle.bundleIdentifier == identifier,
               bundle.infoDictionary?["CFBundleVersion"] as? String == build,
               bundle.infoDictionary?["CFBundleShortVersionString"] as? String == version,
               bundle.infoDictionary?["SUPublicEDKey"] as? String == key,

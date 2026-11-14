@@ -9,8 +9,12 @@ struct SoftwareUpdateView: View {
             TacticalInfoRow(title: text(.currentVersion), value: manager.version)
             TacticalInfoRow(title: text(.build), value: manager.build)
             Picker(text(.channel), selection: Binding(get: { manager.channel }, set: { manager.selectChannel($0) })) {
-                Text(text(.stable)).tag("stable")
-                if manager.isConfigured && manager.configuration.previewEnabled { Text(text(.preview)).tag("preview") }
+                if manager.channel == NativeReleaseService.testChannel {
+                    Text(text(.preview)).tag(NativeReleaseService.testChannel)
+                } else {
+                    Text(text(.stable)).tag("stable")
+                    if manager.isConfigured && manager.configuration.previewEnabled { Text(text(.preview)).tag("preview") }
+                }
             }.disabled(!manager.canCheck)
             if !manager.configuration.previewEnabled { Text(text(.previewBlocked)).font(TacticalTypography.caption).foregroundStyle(.secondary) }
             TacticalInfoRow(title: text(.lastCheck), value: manager.lastCheck?.formatted(date: .abbreviated, time: .shortened) ?? text(.never))

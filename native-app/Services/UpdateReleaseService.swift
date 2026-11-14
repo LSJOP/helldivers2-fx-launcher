@@ -1,6 +1,7 @@
 import Foundation
 import CryptoKit
 import Darwin
+import OSLog
 
 struct NativeRelease: Decodable {
     struct Asset: Decodable { let name: String; let browser_download_url: URL; let size: Int64 }
@@ -150,18 +151,29 @@ final class NativeUpdateHTTP: NSObject, NativeUpdateTransport, URLSessionTaskDel
         guard totalBytesWritten >= 0, totalBytesWritten <= limit, totalBytesExpectedToWrite <= limit else { downloadTask.cancel(); return }
         progress(totalBytesWritten, limit)
     }
+    func urlSession(_ session: URLSession, task: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
+        guard task is URLSessionDownloadTask, Bundle.main.bundleIdentifier == NativeReleaseService.testBundleID else { return }
+        let log = Logger(subsystem: NativeReleaseService.testBundleID, category: "updates")
+        for transaction in metrics.transactionMetrics {
+            let host = transaction.request.url?.host ?? "unknown"
+            let status = (transaction.response as? HTTPURLResponse)?.statusCode ?? 0
+            log.notice("ZIP request host=\(host, privacy: .public) status=\(status) bytes=\(transaction.countOfResponseBodyBytesReceived)")
+        }
+    }
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {}
 }
 
 struct NativeReleaseService {
     static let bundleID = "com.lsjop.helldivers2fx.native.phase1"
+    static let testBundleID = bundleID + ".update-test"
+    static let testChannel = "update-test"
     static let api = URL(string: "https://api.github.com/repos/\(NativeUpdateHTTP.repository)/releases?per_page=100&page=1")!
     let transport: NativeUpdateTransport
     let publicKey: Data?
     init(transport: NativeUpdateTransport = NativeUpdateHTTP(), publicKey: Data? = nil) { self.transport = transport; self.publicKey = publicKey }
 
     func check(version: String, build: Int, channel: String, osVersion: String, architecture: String) async throws -> NativeReleaseResult {
-        guard ["stable","preview"].contains(channel), build > 0 else { throw NativeUpdateFailure.malformed }
+        guard ["stable","preview",Self.testChannel].contains(channel), build > 0 else { throw NativeUpdateFailure.malformed }
         let local = try NativeVersion(version)
         var releases: [NativeRelease] = []
         for page in 1...5 {
@@ -173,7 +185,15 @@ struct NativeReleaseService {
             if values.count < 100 { break }
             if page == 5 { throw NativeUpdateFailure.malformed } // Incomplete listing must never mean up to date.
         }
-        let eligible = try releases.filter { !$0.draft && ($0.tag_name.hasPrefix("native-v") || $0.tag_name.hasPrefix("v")) && (channel == "preview" || !$0.prerelease) }.map { release -> (NativeRelease, NativeVersion) in
+        let isTest = channel == Self.testChannel
+        let testTag = #"^v[0-9]+\.[0-9]+\.[0-9]+-update-test\.[1-9][0-9]*$"#
+        let eligible = try releases.filter { release in
+            guard !release.draft else { return false }
+            let test = release.tag_name.range(of: testTag, options: .regularExpression) != nil
+            if isTest { return test && release.prerelease }
+            return !test && (release.tag_name.hasPrefix("native-v") || release.tag_name.hasPrefix("v"))
+                && (channel == "preview" || !release.prerelease)
+        }.map { release -> (NativeRelease, NativeVersion) in
             let value = try NativeVersion(String(release.tag_name.dropFirst(release.tag_name.hasPrefix("native-v") ? 8 : 1)))
             guard release.prerelease || value.prerelease.isEmpty else { throw NativeUpdateFailure.malformed }
             return (release,value)
@@ -201,7 +221,7 @@ struct NativeReleaseService {
         }
         let manifest: NativeUpdateManifest
         do { manifest = try JSONDecoder().decode(NativeUpdateManifest.self, from: manifestBytes) } catch { throw NativeUpdateFailure.malformed }
-        guard [1, 2].contains(manifest.schema), manifest.bundleID == Self.bundleID, manifest.version == String(release.tag_name.dropFirst(legacy ? 8 : 1)), manifest.build > 0,
+        guard [1, 2].contains(manifest.schema), manifest.bundleID == (isTest ? Self.testBundleID : Self.bundleID), manifest.version == String(release.tag_name.dropFirst(legacy ? 8 : 1)), manifest.build > 0,
               manifest.channel == (release.prerelease ? "preview" : "stable"), manifest.sha256.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil,
               manifest.length > 0, manifest.length <= 536_870_912, manifest.archive == (legacy ? "HD2FXLauncher-\(manifest.version).zip" : "HD2FXNative-v\(manifest.version)-arm64.zip"),
               legacy || manifest.sourceCommit?.range(of: "^[a-f0-9]{40}$", options: .regularExpression) != nil else { throw NativeUpdateFailure.malformed }
