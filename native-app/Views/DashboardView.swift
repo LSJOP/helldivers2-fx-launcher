@@ -154,7 +154,8 @@ struct DashboardView: View {
         guard let raw = state.observedAt else { return state.t("ui.213") }
         let parser = ISO8601DateFormatter()
         parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = parser.date(from: raw) else { return raw }
+        let wholeSecondParser = ISO8601DateFormatter()
+        guard let date = parser.date(from: raw) ?? wholeSecondParser.date(from: raw) else { return raw }
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: state.languageCode)
         formatter.timeZone = TimeZone(identifier: "Asia/Shanghai")
