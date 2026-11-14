@@ -87,3 +87,5 @@ Development resumes from [current status](docs/DEVELOPMENT_STATUS.md) and [hando
 Update development: v1.0.1 candidate pins a stable Ed25519 public key, with the private key stored outside the repository and App. Production update service remains disabled. The installer candidate uses the already downloaded and verified ZIP. Signed fixture apps exercise actual replacement and startup confirmation. Full launcher UI upgrade and recovery from an interrupted Helper remain pending.
 
 Interrupted native update transactions can be recovered on the next App launch. The production feed remains disabled pending full upgrade acceptance.
+
+FX 1.9.9 environment observations are recorded in the [FEX baseline report](docs/environment/FEX_BASELINE_REPORT_20261115.md).

@@ -8,6 +8,8 @@ v1.0.0 (2026111403) is published. Game and complete update acceptance remain lim
 
 ## Unreleased
 
+- Detect the known FX 1.9.9 stock FEX incompatibility and restore the original FEX tree if candidate activation fails.
+
 - Added an isolated, signed GitHub pre-release update channel for acceptance testing. Appearance preferences now persist across App restarts.
 
 - On next startup, the update helper resumes cleanup or rolls back an interrupted atomic swap after validating the saved bundle identities. Production rollout is pending end-to-end acceptance.
