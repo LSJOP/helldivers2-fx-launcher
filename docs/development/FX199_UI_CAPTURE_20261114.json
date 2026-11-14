@@ -1,0 +1,245 @@
+{
+  "captures": [
+    {
+      "source_capture": "native-app/evidence/rf-ui-capture/ja/readme-capture.json",
+      "language": "ja",
+      "sha256": {
+        "dashboard.png": "0e2dacce1bc04fa072af9c605b65016aaba56298817c9da4e76c703925b8ec14",
+        "environment.png": "09656787392ce6cb2ae61b620c30b8a5ca8fc8b071a828b10f299a9bc154a437",
+        "environment-network.png": "86f59ce8ff65a017ab490d6280b0051128f4d45d0b679300d8a06589bd20f3cf",
+        "fx-manager.png": "27140f475269cff84aa2cf7cbd82840ac2c86cb006e277c959205d8b6034b1ba",
+        "performance.png": "66e4f4c76997e7d1aa8c1574f0142bc3eb622279bd0453499d68c59582b0bfdd",
+        "performance-actions.png": "4100254dc338ecd6ca64c5e0a1f7ffac18b478cbc54d043dc6a398d3e4f7df69",
+        "logs.png": "9bff414f187812096a62adfee0f239d087e5e819778947d8768f58449e4a9465",
+        "settings.png": "163dc15c55ac47a4b1d062e94d9efddd6e5db4c83ea26718b7a33fefa7fa5d55",
+        "settings-updates.png": "99a7471a72366d8f045a5b0aef38356207f94fd09ba588969b50399d2f40523a",
+        "first-run-setup.png": "baa6bff2bb3c54c0717efbb396727f2fd0264522f441c3b45139562df5dae839"
+      },
+      "result": "PASS",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.rf20261114",
+      "captured_at": "2026-11-14T06:46:34Z",
+      "scope": "isolated real windows; no Guest operations; fixture/idle state, not gameplay"
+    },
+    {
+      "source_capture": "native-app/evidence/rf-ui-capture/ru/readme-capture.json",
+      "language": "ru",
+      "sha256": {
+        "dashboard.png": "843e0d35f2f303e8de9b7d1b74b7a315ccb9c8f1dde6a6cf3f57eb78620d2a6d",
+        "environment.png": "bb020e8d6332b3cb2ea3f7f449133fd4c4533f5070f1f169bc8779792b062ca8",
+        "environment-network.png": "ff8a891988064e98bd27a42273b8f16085b74c71e782ed006b6fabd3fcf9ab85",
+        "fx-manager.png": "4b458d45eb9241a6eedc53e950b0dc2c635970b610bc6d48f5c88213ac262961",
+        "performance.png": "5d3f2effcf1d5dcc720daf1d638ec8421dd921e58958a9f1cb2363bd0f5a03b2",
+        "performance-actions.png": "bbbf275429ee9be002a81f3bb77294293aaebcb2cb8f1bec372671362ea92179",
+        "logs.png": "48c8c004d666ee63ce19236996d22e14a1e31a9a93be9d6e0df05d9f962037d2",
+        "settings.png": "d574689d05d31c9171735683d46fc5d682f22726906762ba3a7058cf745ff948",
+        "settings-updates.png": "2593bd976260255f774d2229f04365d6ba01277ed3b66b9ac850c84fc5ecaa84",
+        "first-run-setup.png": "4e3c90aad91fc65761d82a79c8e2d92cada928d643e85b72ae81698c41c7bad7"
+      },
+      "result": "PASS",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.rf20261114",
+      "captured_at": "2026-11-14T06:47:26Z",
+      "scope": "isolated real windows; no Guest operations; fixture/idle state, not gameplay"
+    },
+    {
+      "source_capture": "native-app/evidence/rf-ui-capture/zh-CN/readme-capture.json",
+      "language": "zh-CN",
+      "sha256": {
+        "dashboard.png": "acf8356b539f5d59652c1392dee656fa1758defd76b8b4ed482afca7c24b0964",
+        "environment.png": "c45c44e3b325b012c3c13acd6fc510bd3058271c94263f78e83760b4b7320792",
+        "environment-network.png": "3bee8e795aae5e916cad7f30f18e33a08fac2feddf13747e8e3295e7acbdb334",
+        "fx-manager.png": "1c2c60f2307f0036a4c3b93f950236ab4127521157e8e2ccbf807a46f37ee0dc",
+        "performance.png": "c8d71321261872b2e3f943a5688d6d54f625a49f14fcfdd6681f98667a483f62",
+        "performance-actions.png": "1360ee838d651c32ac2dfbab5e9ecf7762bcbc533eab9942856f9b48688c83de",
+        "logs.png": "934c80240de7ef9163d8715f018974c18efc17d80a76832d5c688a879589d129",
+        "settings.png": "bd6929188a7a236ebf07c350245c00451138038f816e60363842adbcebfd002b",
+        "settings-updates.png": "d6a4dbc12aef4b368b60da5a45db9bddc32fd1d10b287d336fe3e04384e8b169",
+        "first-run-setup.png": "956e7876374c6a63e7a1cd31429dfe11540951960b4bf2f5724fc122e85a76d6"
+      },
+      "result": "PASS",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.rf20261114",
+      "captured_at": "2026-11-14T06:46:08Z",
+      "scope": "isolated real windows; no Guest operations; fixture/idle state, not gameplay"
+    },
+    {
+      "source_capture": "native-app/evidence/rf-ui-capture/zh-TW/readme-capture.json",
+      "language": "zh-TW",
+      "sha256": {
+        "dashboard.png": "1187d1e6faf6e14479b352e75f2728a421fe1b3043c7d26e9c65dd69cccd2239",
+        "environment.png": "700b4f3f0e8f686d4d46512043c7d20e43a95fe3e9deb9ce95bb6b6232751c12",
+        "environment-network.png": "8b0d00e007a8dca122027cb1ce812f9890aa6132d0b760d4333e315bae9dfe0b",
+        "fx-manager.png": "3f9955ad81299226152952b886ae1e79f4652c81fc9a01bca53330cd41c00af9",
+        "performance.png": "b5f15a0fc14bcc2f71f009d471e2c81808bf4949c9cc4fcab47ef69b776d37c3",
+        "performance-actions.png": "fb66b0ecb4bca83045f24a7c95303b7c66854f86b4a5682ae542eab846e9fd1a",
+        "logs.png": "18429615ce47dc817623cf6a7934ec1c7d48bddf02311d7dc257e185db7ff0e3",
+        "settings.png": "c62e1bd7f5797b8353a62549f1d8e6dafc62589e524bc9383d81aad783bca91e",
+        "settings-updates.png": "661c88c8c9869ec8fc4457d7f5ce13800cec11b7f800cbbff483d519a15c5714",
+        "first-run-setup.png": "52ed51b107f7c4b0d9a75a91c266d2be556b4631a70472415f9854c5b1d16ae5"
+      },
+      "result": "PASS",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.rf20261114",
+      "captured_at": "2026-11-14T06:49:36Z",
+      "scope": "isolated real windows; no Guest operations; fixture/idle state, not gameplay"
+    },
+    {
+      "source_capture": "native-app/evidence/rf-ui-capture/pt-BR/readme-capture.json",
+      "language": "pt-BR",
+      "sha256": {
+        "dashboard.png": "06fc64978883113d20b61b8035d408c14b177ce33248ceeeaa09dacfe1d17c54",
+        "environment.png": "bc0a8d0d7cc0e18640a76d2c7babe36ea258ae85177323032c708b82177f318f",
+        "environment-network.png": "ae00077b49a659974706294459c4e8f80f8062655f8bafbb5f74ec85535bd30e",
+        "fx-manager.png": "c4cd5b742116c5cadd5a29b73934e4a0fcad302d3cca70d122af2db2a1bc4c5b",
+        "performance.png": "86034d776e7e70e7e107d49e05932f79eae7b32f776acf3a391aed68d45c6ebb",
+        "performance-actions.png": "b815b2a51deb41898ebe1bc9108386149fa2fa9dd48404ecf109150e022ebd11",
+        "logs.png": "a2bdbf3b5548f4369d97b55540f94570fa748246f2508bcc1b4fb68d60179a61",
+        "settings.png": "7c04e660e55300d7ead3e8530c34aaeb72685796b00a682fa29435d14b988d73",
+        "settings-updates.png": "6c4b30e8b09c410b7194e27879d483323edc0fb729617f6432d642b3bd3601b0",
+        "first-run-setup.png": "5d63a9646b81d1c3ece6f5d415ebeef091dd475af58944e32db3a46c25479f55"
+      },
+      "result": "PASS",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.rf20261114",
+      "captured_at": "2026-11-14T06:49:09Z",
+      "scope": "isolated real windows; no Guest operations; fixture/idle state, not gameplay"
+    },
+    {
+      "source_capture": "native-app/evidence/rf-ui-capture/de/readme-capture.json",
+      "language": "de",
+      "sha256": {
+        "dashboard.png": "c2077b1f214fb1ed0eaebb3e1dd0364430a9ee3ba8d7deef42e392aae478748a",
+        "environment.png": "afa6747d26d48f292d93529c4c3b36cfc444ecb2199113771c52e653b56f0d1d",
+        "environment-network.png": "ef37f50701282e569b3f9b27c667affe3931fd118048e42f3a714a72ac14380a",
+        "fx-manager.png": "9ab10d638dbbbf4f4fc59792cece8f2af4ac9ac6aa62c5c78338a3766b899904",
+        "performance.png": "2d27157df4f7ac51e62060640e72dbd4902a98a90d054dc937a7d6d88f1651d0",
+        "performance-actions.png": "e463133ae08cfe6ebbb6098f349beaf6cac6afb64402763d868362871d2927a1",
+        "logs.png": "75b72a13abcac3c065fa35271245c7d168031f6b2f593a060a4e2ada664e829f",
+        "settings.png": "2988cf232135bfc4e2599a525bd1a57c98f3cd7a28a46c10ac7b131d078274b3",
+        "settings-updates.png": "9968f202cb05f34770efb23f586b5d6b925a2d91995a5fdab95a8a0abc3dcf26",
+        "first-run-setup.png": "30a5cf414bf0233e98e259610f9287c68dd50c3f0d085b8d95af4795e68a1a0d"
+      },
+      "result": "PASS",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.rf20261114",
+      "captured_at": "2026-11-14T06:48:17Z",
+      "scope": "isolated real windows; no Guest operations; fixture/idle state, not gameplay"
+    },
+    {
+      "source_capture": "native-app/evidence/rf-ui-capture/ko/readme-capture.json",
+      "language": "ko",
+      "sha256": {
+        "dashboard.png": "e224102313179639dd8717444cc11eda33b9755e0e57a02a6378e30f31386497",
+        "environment.png": "6d64746d7da6401c545b8babbda2a0a378e13710c6073b1e656370e46cac06dc",
+        "environment-network.png": "513ec84949965420ef69c53ca756870ad63c36fac33939fd2d1db2dba6a86fc7",
+        "fx-manager.png": "3b9b3f533bbac4d192a0bdc63ad42b547e90ec2536f6ec85e08aef38fcded3d8",
+        "performance.png": "605308bcf87fedcae0f57c3ee578811eeb36127f240fa3aff097dffd6a5e23cd",
+        "performance-actions.png": "121656751c785fa1c74c2cd4ddfca8c120b45221178be97a7d8fedfa10cbabf7",
+        "logs.png": "54e5b99948ec6318c3d90cc0a451fdd10e0215a44212eb7718c30234e604cea6",
+        "settings.png": "e4fd4e504eaae78955268e2cf3cb5183dfb3c2ff153ea6797e3a788b6e81e347",
+        "settings-updates.png": "40a2b1e27f75781f8bc315b2bd3ef834a70118cbef5cf99d73ca20abf38eb11f",
+        "first-run-setup.png": "3c04789f8ac916e887d7fe22305bbc81a64925de06ba15003532403e42c6d3d8"
+      },
+      "result": "PASS",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.rf20261114",
+      "captured_at": "2026-11-14T06:47:00Z",
+      "scope": "isolated real windows; no Guest operations; fixture/idle state, not gameplay"
+    },
+    {
+      "source_capture": "native-app/evidence/rf-ui-capture/fr/readme-capture.json",
+      "language": "fr",
+      "sha256": {
+        "dashboard.png": "db330dd7bf30ec9196fa7e4ca8b66805fdc5a2e175003fd62f2038fed853ae15",
+        "environment.png": "30b7bdb4e220ca331255cabc9cd88289b7f3bf6a7c4500606884911773d6ffd0",
+        "environment-network.png": "0264181b1a05979533a056a5bcb39281f96f56db575fefd0e474c5a00ab83296",
+        "fx-manager.png": "195b5e7c203bd7ae9e63276e1768123b2230a2ca9b010759b22ca955b6dfdc63",
+        "performance.png": "a84112f16d8da740b148d9befafc856bf4c69532187c18d8b83b01ff99842ff3",
+        "performance-actions.png": "800d0ad3c4ab5e39050aaa6768408521b476bf8c95e7207ca94a552c5cb155cd",
+        "logs.png": "cfe6134670f67b6d786a0be609a92a8ef2f26bb7ee9d6ef419ff317b8d3343b2",
+        "settings.png": "4c8f215da446cef851476d66615f72ec0ed59d38cd3f8fb119f802a9d5fe9302",
+        "settings-updates.png": "2498946db7fa19cea6a14eebd16223338fbe1870ce7112c59065f93e86ea83e2",
+        "first-run-setup.png": "63812134f2060cb57f566d95c106666ce747e9566fead92ac4b303a6f991a1c8"
+      },
+      "result": "PASS",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.rf20261114",
+      "captured_at": "2026-11-14T06:48:43Z",
+      "scope": "isolated real windows; no Guest operations; fixture/idle state, not gameplay"
+    },
+    {
+      "source_capture": "native-app/evidence/rf-ui-capture/es/readme-capture.json",
+      "language": "es",
+      "sha256": {
+        "dashboard.png": "85288904f6345460da892bac11ed5b77d9d0f89202f219d22fb35d4f7275fcf7",
+        "environment.png": "c152bc97d2b8184f565a162990d8795a28869f79bdb8eeabc7d59f619a3f8bab",
+        "environment-network.png": "16820121deb247de911cca76687e22f0dd0d4937edf413347d30d6f8944feb57",
+        "fx-manager.png": "7a6a8fce6219983d3fa98a1c267a2c4264ecb1f3f9509144fa7fff70bf7b97db",
+        "performance.png": "c0446d70a768b8d42a045fe7a70695437497f527e7a4ac4f01bc01b25d946401",
+        "performance-actions.png": "3113d321168e9c667e4f6a5222c8028bfa649c3bdcdca3d4320b6d4be6d9d401",
+        "logs.png": "12786c25b0528aef1cdd7fcf1a6e57e74e6d60d50cc515ae537e253177a80033",
+        "settings.png": "85b4674c651222e0184af5235c34caed02e02ae36bbb6f1c852633e2d3fc8dea",
+        "settings-updates.png": "cb5d064bc78e3948f756dd97a53027db3d0d8eeebb1fe3244e92ce1e195325c6",
+        "first-run-setup.png": "435343d9714bd5a2d86fb02c2e9eee98caf130c8fd006e2097d0b248e225483a"
+      },
+      "result": "PASS",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.rf20261114",
+      "captured_at": "2026-11-14T06:47:51Z",
+      "scope": "isolated real windows; no Guest operations; fixture/idle state, not gameplay"
+    },
+    {
+      "source_capture": "native-app/evidence/rf-ui-capture/en/readme-capture.json",
+      "language": "en",
+      "sha256": {
+        "dashboard.png": "149ea0c6f6dd3e9db70056c77ce1428a1af366dd40f81f6e3453dd017e68b612",
+        "environment.png": "457fd54bb17873ca95af1470bc5aac8e279bcad54233736f80be5bc625518faa",
+        "environment-network.png": "dd572b9d922a3600fa660c1c20d0680b5322239319c16aa5fa8c7c54f830850f",
+        "fx-manager.png": "e394ee6d41749fe1f6ad5c904570416b3c96d55b69a610e6650b533d4f161e59",
+        "performance.png": "3dd4c1579abcb9604bf9e4271123885311b0d171db95fffcd0d2887e5be6c7de",
+        "performance-actions.png": "cbacf3fe47d91cd284a041b483672708ecc124147c130b733e3dbc4e6cdeb3e7",
+        "logs.png": "1f77ca4225b8c7d8e302fba39d21e13dc7e156a783dd53d97a4d721f6c500d20",
+        "settings.png": "c6de3fb40ef6dba7e4d3029d9ab9aea2a3c0955b67968d1e3ddfe0741b175fdb",
+        "settings-updates.png": "259f9c25fbb75795623c9e87ac99f5af5fe98d0719c722af4d7ae88307acc632",
+        "first-run-setup.png": "1621a426fc0f826b70ef683f5b17b0a56bdb3f60989b36d4c067eeb1ec841d3c"
+      },
+      "result": "PASS",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.rf20261114",
+      "captured_at": "2026-11-14T06:45:42Z",
+      "scope": "isolated real windows; no Guest operations; fixture/idle state, not gameplay"
+    },
+    {
+      "source_capture": "native-app/evidence/rf-final-capture/zh-CN/readme-capture.json",
+      "language": "zh-CN",
+      "sha256": {
+        "dashboard.png": "f556176a6deafbfa2932eaec21c18f68a0fb2e918ec022434fc55b35cbbf981f",
+        "environment.png": "cd57f314d386b5f3455af32cde918a17d8a5b72b131f850e1a19272e55f3efe9",
+        "environment-network.png": "dbbdd3c88bfe1d2c4cc9944303448e2e7abddf594b5ce29884d80560e035bd96",
+        "fx-manager.png": "4e5df22bb665c36c0e415231811478f3fd71dda5bfb1787a6bb1e6e36553298a",
+        "performance.png": "f72a64f90d4f331d50fcad4ea37a55f7501634fe742471994b9fbd2f710766bf",
+        "performance-actions.png": "9d48baf4e0d245077363369e0f7d85551597d8026ab4fdf4ad071d5d714ba024",
+        "logs.png": "daa3a6c05a243384f402335786207b7696704b982cc3fd6d9dfd57de58fe32e4",
+        "settings.png": "2224b4c618621e6f9833e1b939ce828a767dba9e81d8aeabec587e73fee456ab",
+        "settings-updates.png": "13dce4fc5dcada7be3bee83e81254270e3e07120e00be31858b6547f52d334ff",
+        "first-run-setup.png": "43737b0afce69fb75c7e52bc8a4076b52bc8a22a0df88673ca49957dfb666fab"
+      },
+      "result": "PASS",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.rffinal20261114",
+      "captured_at": "2026-11-14T06:50:22Z",
+      "scope": "isolated real windows; no Guest operations; fixture/idle state, not gameplay"
+    },
+    {
+      "source_capture": "native-app/evidence/rf-final-capture/en/readme-capture.json",
+      "language": "en",
+      "sha256": {
+        "dashboard.png": "657d90af7f15d99c3865166dfceb8f942826c13464574e70ccbf23d7156d5b1a",
+        "environment.png": "787f7e9591408059344241b285ea9bbf9affaddc4ef83839dbeef0e9e470b25b",
+        "environment-network.png": "5d87bb3917f5bfcbfd5c0bd0b8d4e8d5c9d55399da0dad55dfcd38bdaf62aaf0",
+        "fx-manager.png": "8d8953ccf8f42e6e2e016d0b35817212227f7f3df5ad5fa95400a595fb22a2ea",
+        "performance.png": "33e49e67c604622b7c1dd6ef9a7f69fb71226939be2c55b80d6550f1089c87f1",
+        "performance-actions.png": "5a82db5e89dd82c855bf3de4e074d3dbf95f89f6aba5ee7aca56331c84acfdd4",
+        "logs.png": "9ae284e46e9af89c47075e098f2ab875f948e03967f04b93fa84a96cf2838057",
+        "settings.png": "ef85f30049ad0fb9cb16331c2ecccbd979be54b20719c552f469643aa38acb0c",
+        "settings-updates.png": "6e35e95efd61209e07abfd66840624aae70ebb01e4e9fdf3a8bb79b67564582b",
+        "first-run-setup.png": "77871ff4092fd4715c6df6ad2744a9f662b0affa7c6a69778575a99d81c6dbbb"
+      },
+      "result": "PASS",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.rffinal20261114",
+      "captured_at": "2026-11-14T06:49:55Z",
+      "scope": "isolated real windows; no Guest operations; fixture/idle state, not gameplay"
+    }
+  ],
+  "visual_review": "ten-language Dashboard layout and final English/Chinese pages reviewed; narrow/dynamic/error/Finder/naturalness not fully tested"
+}

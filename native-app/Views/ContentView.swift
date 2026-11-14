@@ -35,7 +35,7 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.bottom)
                 }
                 .id(state.selection)
-                if tasks.busy {
+                if tasks.busy && !(state.selection == .dashboard && state.environmentWorkflow.active) {
                     HStack(spacing: 10) {
                         ProgressView().controlSize(.small)
                         Text(state.inspectingTarget ? state.t("ui.ux.checking") : state.refreshing ? state.t("ui.255") : state.t("ui.225"))

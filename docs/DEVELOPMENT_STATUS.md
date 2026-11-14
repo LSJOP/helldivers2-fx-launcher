@@ -110,3 +110,8 @@ GitHub main 的源码、AGENTS.md 和本文件/交接文档是权威。聊天不
 ### FX 1.9.9 容器 RootFS 对照实验
 
 在测试 Guest 用 Steam 的 FEX wrapper 与 Steam Linux Runtime 4 执行动态 x86-64 探针。原始 emulator.json 的 container_environment.FEX_ROOTFS 为空，进入容器后覆盖外层传入的值。只在临时 FEX 副本把该值设置为 /run/gfx/main，容器收到正确值并且动态探针退出 0。核对测试盘和 Guest machine ID 后同样修改测试 Guest 的 emulator.json，原件备份于 /home/steamos/.hd2-rootfs-backup-sfvym6ou，实装探针退出 0。游戏菜单仍需单独验证。文件变动会改变 FEX 文件树审核指纹。App 尚未自动应用此修复，后续需要版本与目标绑定的部署/回滚及容器内探针。
+
+
+## FX 1.9.9 RF 恢复及 GUI 启动（2026-11-14）
+
+本轮实际证据见 [修复报告](environment/FX199_RF_REPAIR_20261114.md)。正式盘未写入；测试盘十文件有完整备份及回执。GUI 启动/EAC 引导/游戏进程窗口通过，主菜单或飞船由用户确认，单人/多人按用户选择未测。下一步完成新 UI 截图、回归和内部候选；自动更新真实安装闭环与玩法门禁未过，不发布公开 Beta。当前任务分支以 Git 实际 HEAD 为准。

@@ -10,6 +10,8 @@
 
 HD2FXNative is an unofficial community launcher and management tool for Apple Silicon Macs. Built with SwiftUI and a native core, it helps users inspect FX, configure the runtime environment and manage game performance settings.
 
+FX 1.9.9 test-Guest repair now reaches the game through the GUI with the historically verified RF FEX components. Main menu/ship was confirmed by the user; single-player, multiplayer and end-to-end updating remain untested. Production FX 1.9.12 was inspected offline without writes. See [repair evidence](docs/environment/FX199_RF_REPAIR_20261114.md).
+
 ### Screenshots
 
 These are real windows from the integration Debug build, **not final v1.0.0 screenshots**. Final captures must be taken, reviewed and replaced after the final build; see [capture provenance](docs/images/README.md).

@@ -205,7 +205,7 @@ struct EnvironmentWorkflowProgressView: View {
     @State private var showFEXDetails = false
     var body: some View {
         if showIdle || workflow.phase != .idle {
-            TacticalPanel(number: "", title: state.t("ui.workflow.result"), symbol: "gearshape.2") {
+            TacticalPanel(number: "", title: state.t(workflow.launchesGame ? "ui.176" : "ui.workflow.result"), symbol: workflow.launchesGame ? "play.rectangle" : "gearshape.2") {
                 Text(state.t(workflow.launchesGame && workflow.phase == .completed ? "ui.140" : workflow.phase.titleKey))
                 if workflow.phase == .launching { Text(state.launchSession.current.title(state.languageCode)) }
                 if workflow.phase == .deploying, let stage = workflow.deploymentStage {
@@ -216,7 +216,6 @@ struct EnvironmentWorkflowProgressView: View {
                 }
                 if workflow.active {
                     HStack {
-                        ProgressView().controlSize(.small)
                         Text(state.t("ui.workflow.stepProgress"))
                         Text("\(workflow.completedSteps)/\(workflow.totalSteps)")
                     }
@@ -236,6 +235,12 @@ struct EnvironmentWorkflowProgressView: View {
                     HStack {
                         Button(state.t("ui.workflow.retry")) { state.startEnvironmentWorkflow(launchGame: workflow.launchesGame) }.disabled(tasks.busy)
                         Button(state.t("ui.setup.launch")) { state.selection = .dashboard }
+                    }
+                }
+                DisclosureGroup(state.t("ui.workflow.stepProgress")) {
+                    ForEach(Array([EnvironmentWorkflowPhase.startingFX, .connecting, .detecting, .deploying, .verifying, .launching].prefix(workflow.totalSteps).enumerated()), id: \.offset) { index, phase in
+                        Label(state.t(phase.titleKey), systemImage: index < workflow.completedSteps ? "checkmark.circle" : "circle.dashed")
+                            .font(TacticalTypography.caption)
                     }
                 }
                 if workflow.launchesGame && state.launchSession.current != .idle {
