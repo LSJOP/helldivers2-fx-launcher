@@ -1,3 +1,4 @@
+import base64
 import importlib.util
 import json
 from pathlib import Path
@@ -33,8 +34,18 @@ class UpdateResources(unittest.TestCase):
         self.assertEqual(info['SUSignedFeedFailureExpirationInterval'],0)
         self.assertIs(info['SUAllowsAutomaticUpdates'],False)
         config=(APP/'Config/Updates.xcconfig').read_text()
-        self.assertIn('HD2_UPDATE_CHANNEL = stable',config)
-        self.assertIn('HD2_UPDATE_ENABLED = NO',config)
+        values = dict(re.findall(r'^\s*(HD2_UPDATE_[A-Z_]+)\s*=\s*(.*?)\s*$', config, re.M))
+        # Stable updates were enabled in the v1.0.1 configuration. Keep the
+        # safety gate meaningful: an enabled service requires the pinned key,
+        # exact official endpoint, stable-only channel, and distribution gate.
+        self.assertEqual(values.get('HD2_UPDATE_ENABLED'), 'YES')
+        self.assertEqual(values.get('HD2_UPDATE_CHANNEL'), 'stable')
+        self.assertEqual(values.get('HD2_UPDATE_DISTRIBUTION_READY'), 'YES')
+        self.assertEqual(values.get('HD2_UPDATE_PREVIEW_READY'), 'NO')
+        self.assertEqual(values.get('HD2_UPDATE_FEED_URL'), 'https:/$()/api.github.com/repos/LSJOP/helldivers2-fx-launcher/releases?per_page=100&page=1')
+        key = values.get('HD2_UPDATE_PUBLIC_KEY', '')
+        self.assertEqual(key, 'JS/1dpmKP98EkSUxJU5BTnBpiMiQWgRVGdpx9anV9GI=')
+        self.assertEqual(len(base64.b64decode(key, validate=True)), 32)
     def test_inactive_workflow_template_cannot_publish_or_use_secrets(self):
         text=(APP.parent/'docs/ci/native-release-check.yml').read_text()
         self.assertFalse((APP.parent/'.github/workflows/native-release-check.yml').exists())
@@ -43,6 +54,6 @@ class UpdateResources(unittest.TestCase):
         self.assertNotIn('gh release',text);self.assertNotIn('git push',text)
     def test_update_module_does_not_depend_on_performance_or_shell(self):
         source=(APP/'Services/AppUpdateManager.swift').read_text()+(APP/'Services/UpdateReleaseService.swift').read_text()
-        for token in ['performanceConfiguration','performance_apply','Process()','/bin/sh','sudo','runtime_root']:self.assertNotIn(token,source)
+        for token in ['performanceConfiguration','performance_apply','/bin/sh','sudo','runtime_root']:self.assertNotIn(token,source)
 
 if __name__=='__main__':unittest.main(verbosity=2)

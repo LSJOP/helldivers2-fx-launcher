@@ -9,8 +9,12 @@ struct SoftwareUpdateView: View {
             TacticalInfoRow(title: text(.currentVersion), value: manager.version)
             TacticalInfoRow(title: text(.build), value: manager.build)
             Picker(text(.channel), selection: Binding(get: { manager.channel }, set: { manager.selectChannel($0) })) {
-                Text(text(.stable)).tag("stable")
-                if manager.isConfigured && manager.configuration.previewEnabled { Text(text(.preview)).tag("preview") }
+                if manager.channel == NativeReleaseService.testChannel {
+                    Text(text(.preview)).tag(NativeReleaseService.testChannel)
+                } else {
+                    Text(text(.stable)).tag("stable")
+                    if manager.isConfigured && manager.configuration.previewEnabled { Text(text(.preview)).tag("preview") }
+                }
             }.disabled(!manager.canCheck)
             if !manager.configuration.previewEnabled { Text(text(.previewBlocked)).font(TacticalTypography.caption).foregroundStyle(.secondary) }
             TacticalInfoRow(title: text(.lastCheck), value: manager.lastCheck?.formatted(date: .abbreviated, time: .shortened) ?? text(.never))
@@ -20,7 +24,7 @@ struct SoftwareUpdateView: View {
             HStack {
                 TacticalButton(title: text(.checkNow), symbol: "arrow.clockwise", disabledReason: manager.canCheck ? nil : text(.checking)) { manager.checkForUpdates() }
                     .accessibilityIdentifier("updates.check")
-                if !manager.canCheck && !manager.isConfigured { Button(text(.cancel)) { manager.cancel() } }
+                if manager.canCancelOperation { Button(text(.cancel)) { manager.cancel() } }
             }
             Text(text(manager.status)).accessibilityIdentifier("updates.status")
             if let candidate = manager.candidate {
@@ -29,7 +33,7 @@ struct SoftwareUpdateView: View {
                 Link(text(.releaseNotes), destination: candidate.release.html_url)
                 HStack {
                     TacticalButton(title: text(.downloadOnly), symbol: "arrow.down.circle", disabledReason: manager.canDownload ? nil : text(manager.canCheck ? .trustBlocked : .downloading)) { manager.downloadVerifiedArchive() }
-                    TacticalButton(title: text(.downloadInstall), symbol: "arrow.down.app", disabledReason: manager.canInstall ? nil : text(.trustBlocked)) { manager.installWithSparkle() }
+                    TacticalButton(title: text(.downloadInstall), symbol: "arrow.down.app", disabledReason: manager.canStartInstall ? nil : text(.trustBlocked)) { manager.downloadAndInstall() }
                 }
             }
             if manager.status == .downloading {

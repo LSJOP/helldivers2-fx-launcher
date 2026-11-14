@@ -70,3 +70,7 @@ Ten language welcome windows and ten settings credit windows were visually revie
 The fourteen README page images were recaptured from isolated Debug build 2026111401, dirty source based on `5f7c77e`; their original PNG bytes and per-image provenance are recorded in the manifest. The Chinese and English idle windows were reviewed for language, the preserved dashboard artwork and Earth header, and the updated first-run layout. The captures do not establish Guest readiness, successful setup, or game launch. No Guest, FX, SSH, or game action was initiated.
 
 2026-11-15：中英文各七张 README 截图来自隔离 Debug 版本，来源与 SHA-256 见清单。审核覆盖空闲状态的语言、首页主视觉、顶部地球横幅和首次运行布局；截图不证明真实配置或游戏启动成功，也未执行 FX、Guest、SSH 或游戏操作。
+
+2026-11-15 merge review: seven idle pages and the software-update viewport per language were recaptured and visually reviewed from the 1.0.2 / 2026111501 isolated Debug candidate (base `afc1158`, integrating main `b967ccd`). Performance screenshots contain read-only hardware and preference values. Setup completion and game launch remain unverified; no FX, SSH, Guest or game action was performed.
+
+2026-11-15 合并审核：中英文各七页和软件更新视口均从 1.0.2 / 2026111501 隔离 Debug 候选重拍并审核（基于 `afc1158`，整合 main `b967ccd`）。性能截图含只读硬件和偏好值；真实配置完成及游戏启动未验证，采集未执行 FX、SSH、Guest 或游戏操作。
