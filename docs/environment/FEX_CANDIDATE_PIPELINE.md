@@ -22,3 +22,26 @@ Therefore **real deployment and real recovery are NOT TESTED**. The existing FEX
 Historical recipe comparison found an additional source difference: the retained 2026-10-26 candidate record explicitly changed disk-cache FormatVersion from 35 to 36 and used synthetic source identity `e42baddf6fbf43a8286a21dd9a3abcd68b617f77`. Its clang version was also 19.1.7. The current fixed-base plus RF-only candidate does not reproduce those extra identity changes. Thus compiler variation alone is not an established explanation. Reconstruct and review the exact historical source/cache-identity/build recipe before approving a replacement; never copy a historical success result onto this candidate or alter the expected hash to make it pass.
 
 Sources: [fixed source commit](https://github.com/StonkGuy/FEX/commit/87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8), [RF PR20](https://github.com/StonkGuy/FEX/pull/20), [upstream build recipe](https://github.com/StonkGuy/steamac/blob/fex-eac/fex-eac/build-fex.sh). Source compilation and license provenance do not establish current game compatibility.
+
+## FX 1.9.9 provenance recheck
+
+- GitHub reports PR #20 open and draft, with head `97583564c7983321f974f867eeab52bf25702079`. The patch concerns x86 fault-frame Resume Flag fidelity and its regression fixture. This is source evidence for the signal behavior, not proof that the patch is necessary for HELLDIVERS 2. The PR itself records unchanged behavior in its live comparison of another game.
+- The repository license endpoint returns MIT at that head. The pinned Steam Runtime 4 workflow uses clang/LLVM, CMake and Ninja in a Steam Runtime 4 distrobox, then stages a CMake install. Neither that workflow nor the license endpoint authenticates the historical product or proves that every companion binary is covered by the upstream license.
+- All ten files in the retained RF stage match the SHA-256 values in the historical test deployment receipt. Seven are under `usr/bin`, and three are `FEXCompatTool`, `ConfigTemplate.json` and `VERSIONS.txt`. This recheck authenticates neither the receipt nor the binary-to-source relationship. The stage reports `eac-main-20261022` and synthetic identity `e42baddf6fbf43a8286a21dd9a3abcd68b617f77`. The public commit endpoint rejected that identity with HTTP 422. A reviewed patch stack and reproducible package are still missing.
+- Offline copies of `emulator.json` show an empty `container_environment.FEX_ROOTFS` for the historical production image and `/` for the repaired FX 1.9.9 test image. Both register the portable FEX program and separate compatibility/server entry points. The test already used `/` when the stock FEX failed; only the RF group was changed in that comparison. These observations justify preserving the target's existing registration and testing the effective container RootFS separately. They do not justify setting `/` on fresh targets by default.
+- The comparison held Proton-JE `11.0-20261014-3` and SteamLinuxRuntime_4 constant. It does not identify which individual RF files or Proton settings are necessary. The scope is the recorded aarch64 FX 1.9.9 SteamOS test environment, with no new compatibility claims for other versions.
+
+Deployment remains gated. The next evidence required is a reviewed, reproducible source-to-package mapping for the entire deployed group, followed by controlled stock-versus-candidate runs on a fresh isolated target and an observed rollback. No new VM deployment, rollback, game launch, EAC or multiplayer result was established in this recheck.
+
+## Matched source experiment
+
+PR #20's two commits descend from `9d0a260cbf03f2ebc48f4d70c92ba713a91c3d32`. The base branch tip reported by GitHub (`ac8b72bf1c89af993e54704a51a06ba844576cf7`) is 39 commits ahead of that fork point, so it is unsuitable as the matched control. The Steam depot binary remains a separate stock control. Do not label the source baseline as the FX depot build.
+
+`bash tools/build-fex-comparison.sh NEW_OUTPUT_DIRECTORY` uses pinned objects, one Linux arm64 build environment and the same CMake options for both source variants. It records dependency versions, submodule commits, build commands, staged hashes and symlinks. No staged output is installed. This is a build recipe, pending execution and dependency pinning after a successful build. On the Darwin arm64 host its platform guard rejected the run.
+
+| Variant | Original RootFS registration | RootFS `/` |
+| --- | --- | --- |
+| FX 1.9.9 stock depot | No fresh run | No fresh run. Recorded prior test failed with error 731 |
+| PR #20 head | Not run | Not run |
+
+The matched source baseline adds another control once built. Use the same verified test snapshot per run and keep Proton-JE and SteamLinuxRuntime_4 fixed. None of the fresh runs has been performed. The known historical copy was made while the guest could write and is not a verified restore point. An isolated Linux arm64 build environment and a verified restorable guest baseline are still required. No necessity claim or deployment approval follows from this experiment setup.

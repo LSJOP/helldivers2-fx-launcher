@@ -46,6 +46,7 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
     func message(_ zh: Bool) -> String { message(zh ? "zh-CN" : "en") }
     func message(_ language: String) -> String {
         switch code {
+        case "FEX_KNOWN_LAUNCH_INCOMPATIBILITY": return NativeStrings.text("ui.fex.knownLaunchIncompatibility", language: language)
         case "FEX_CONFIRMATION_REQUIRED": return NativeStrings.text("ui.fex.unverified", language: language)
         case "FEX_MISSING", "FEX_NOT_EXECUTABLE", "FEX_ARCHITECTURE", "FEX_INTEGRATION_MISSING", "FEX_ROOTFS_UNAVAILABLE", "FEX_CHANGED", "FEX_RUNTIME_FAILED", "FEX_DEPENDENCY_FAILED", "FEX_TIMEOUT", "FEX_INTEGRITY_FAILED":
             return NativeStrings.text("ui.fex.repair", language: language)

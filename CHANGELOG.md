@@ -4,7 +4,7 @@
 
 All notable changes to the HELLDIVERS 2 FX Launcher Native App are recorded here, newest first. Unreleased entries have no release date. This file is the single source of truth for user-facing release notes; the README summary, GitHub Release notes and the future Sparkle appcast reuse this reviewed text. Do not paste raw, unreviewed Git commit messages into it.
 
-v1.0.0 (2026111403) is published. Game and complete update acceptance remain limited as recorded below.
+v1.0.1 (2026111406) is the latest published stable release. Fresh SteamOS deployment, single-player, EAC and multiplayer were not revalidated for that release. The 1.0.2 work below remains unreleased.
 
 ## Unreleased
 
@@ -12,13 +12,25 @@ v1.0.0 (2026111403) is published. Game and complete update acceptance remain lim
 
 - Move snapshot refresh into a shared content-area action on Environment, FX and Logs; avoid repeated resource hashing during FX view updates. Add shared UI design standards and disable first-run rescan during tasks.
 
+- Detect the known FX 1.9.9 stock FEX incompatibility and restore the original FEX tree if candidate activation fails.
+
+- Added an isolated, signed GitHub pre-release update channel for acceptance testing. Appearance preferences now persist across App restarts.
+
+- On next startup, the update helper resumes cleanup or rolls back an interrupted atomic swap after validating the saved bundle identities. Production rollout is pending end-to-end acceptance.
+
+- The update candidate hands the verified ZIP to a separate installer instead of starting a second download. The installer waits for the launcher to quit, atomically swaps bundles, and requires a per-run startup receipt. An unconfirmed launch triggers a swap back and a fresh launch of the old version.
+
+- Historical v1.0.1 development candidate pinned the stable Ed25519 public key and adds an operator-only file signer with no Keychain access. The update service remains disabled pending single-download installation and rollback acceptance; v1.0.1 had not yet been published at that stage.
+
+- Update candidate: connect the install action to verified download and expose cancellation during the native operation. Sparkle may still show its own confirmation and download again; installation and rollback are not yet accepted. v1.0.0 requires a trusted manual bootstrap because it contains no update key.
+
 - Stream bounded, redacted workflow and launch events with per-attempt IDs, component progress and elapsed times; display local timestamps while exporting original ISO 8601 timestamps. Bound Steam/game waiting and stop showing 83% after failure. Live full launch and end-to-end EAC/gameplay validation remain pending.
 
-- Align the displayed app name with system language: Simplified and Traditional Chinese use their respective names, and other languages use HD2 FX Launcher. The internal project and data identities remain unchanged.
+- Align the displayed app name with system language: Simplified and Traditional Chinese use their respective names, and other languages use HELLDIVERS 2 FX Launcher. The internal project and data identities remain unchanged.
 
 - Retain the five Dashboard cards with evidence-bound green/yellow/red/gray indicators and completed-step progress, with details folded by default. Verify the isolated status matrix and refresh reviewed English/Chinese Debug screenshots. EAC/multiplayer success remains unverified; no Release or DMG replacement.
 
-The development entries below retain earlier stage evidence; the published release status is recorded in v1.0.0.
+The development entries below retain historical stage evidence; statements about candidate status describe that earlier stage, not the current v1.0.1 release.
 
 - Simplify Dashboard to the brand banner, environment summary and one launch area with real completed-step progress. Restore reviewed historical RF components only in the authorized FX 1.9.9 test Guest; GUI launch and user-confirmed menu/ship pass, single-player/multiplayer and full updating remain untested.
 
@@ -180,6 +192,11 @@ The development entries below retain earlier stage evidence; the published relea
 - No signed/notarized installer or GitHub Release exists; `0.1.0` is a development preview.
 - Safe FX stop/restart and validated automatic performance recommendations remain unavailable. Saved settings are not proof of runtime adoption; the original launch preflight may reject custom values.
 - Ground missions, independent EAC acceptance and multiplayer remain unverified.
+
+### v1.0.1 — 2026-11-14
+
+- Stable in-app updates verify Ed25519 and SHA-256, download once, install and restart automatically, and roll back on startup failure.
+- Appearance persists across restarts. Upgrade once from v1.0.0 using the DMG.
 
 ### v1.0.0 — 2026-11-14
 

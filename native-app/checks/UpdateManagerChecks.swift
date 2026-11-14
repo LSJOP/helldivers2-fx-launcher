@@ -1,5 +1,4 @@
 import Foundation
-import Sparkle
 
 @main struct UpdateManagerChecks {
     @MainActor static func main() throws {
@@ -19,13 +18,7 @@ import Sparkle
         try check(manager.channel == "stable","preview remains closed without verified publishing setup")
         try check(manager.service.publicKey == nil, "empty public key remains unconfigured, never a signature failure")
         try check(!manager.canInstall && !manager.canDownload,"unsigned test bundle cannot install or download an unverified candidate")
-        for (code,status) in [(2001,UpdateString.download),(3001,.signature),(3002,.integrity),(4001,.installFailed),(4005,.installFailed),(4007,.cancelled),(4012,.installFailed)] {
-            manager.recordSparkleFailure(NSError(domain:SUSparkleErrorDomain,code:code))
-            try check(manager.status == status,"actual Sparkle error maps to honest state: " + String(code))
-        }
-        try check(AppUpdateManager.noUpdateStatus(reason:1) == .upToDate && AppUpdateManager.noUpdateStatus(reason:2) == .upToDate,"up-to-date requires a known Sparkle version reason")
-        try check(AppUpdateManager.noUpdateStatus(reason:3) == .incompatible,"OS incompatibility is separate from no update")
-        try check(AppUpdateManager.noUpdateStatus(reason:nil) == .finished,"unknown no-update cycle is not up to date or installation success")
+        try check(!manager.canStartInstall && !manager.canCancelOperation, "one-click install and cancellation stay unavailable without a verified candidate or active operation")
         let valid: [String:Any] = ["HD2UpdateServiceEnabled":"YES","SUFeedURL":"https://lsjop.github.io/helldivers2-fx-launcher/updates/stable/appcast.xml","SUPublicEDKey":Data(repeating:1,count:32).base64EncodedString()]
         try check(UpdateConfiguration(info:valid).isValid,"official HTTPS feed and correctly sized public key accepted")
         try check(UpdateConfiguration(info: valid.merging(["SUFeedURL": "https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/appcast.xml"]) { _, value in value }).isValid,

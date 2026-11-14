@@ -9,6 +9,6 @@
 "updates.finished" = "Update cycle finished; installation and relaunch are not confirmed.";
 "updates.failed" = "Update failed";
 "updates.scope" = "Only this Launcher is updated. Game, Steam, FX Runtime, Guest and EAC are excluded.";
-"updates.languageRestart" = "Language is saved only for this App; restart to apply menu language. Appearance is session-only. Native UI supports all ten languages.";
-"updates.automaticOff" = "Automatic checks are off. Sparkle manages consent when the signed service is ready.";
-"updates.automaticOn" = "Automatic checks are on (Sparkle preference).";
+"updates.languageRestart" = "Language is saved only for this App; restart to apply menu language. Native UI supports all ten languages.";
+"updates.automaticOff" = "Automatic checks are off.";
+"updates.automaticOn" = "Automatic checks are on.";

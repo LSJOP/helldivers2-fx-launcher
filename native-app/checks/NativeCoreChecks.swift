@@ -52,6 +52,13 @@ func runChecks() {
     wrongFEXRecord = fexRecord; wrongFEXRecord["installation"] = .object(["verified": .bool(true)])
     check(FEXWorkflow.installedDigest(wrongFEXRecord, snapshot: fexSnapshot) == nil, "FEX executable alone is not a complete installed manifest")
 
+    let stock199 = "f9cbb7a70e804b9930fed02fd9d1349d49d7808faace703063a9b4944bc3568e"
+    check(FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.9", architecture: "aarch64", executableSHA256: stock199),
+          "known failing stock FX 1.9.9 FEX cannot inherit probe success")
+    check(!FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.12", architecture: "aarch64", executableSHA256: stock199)
+          && !FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.9", architecture: "aarch64", executableSHA256: LaunchService.verifiedFEX),
+          "known incompatibility does not apply to other FX versions or FEX binaries")
+
     var installedFEX = fexSnapshot
     installedFEX.facts["fex_runtime"] = "ready"
     let existingPlan = DeploymentPlanBuilder.build(installedFEX, profile: try! EnvironmentProfile.load(resources.deletingLastPathComponent().appendingPathComponent("environment-profile-v1.json")))

@@ -78,14 +78,14 @@ class PipelineChecks(unittest.TestCase):
   (self.installed/'usr/bin').symlink_to('../other',target_is_directory=True)
   a=self.run_pipeline('audit')
   with self.assertRaisesRegex(RuntimeError,'UNSAFE_PATH'):self.run_pipeline('install',a)
- def test_recovery_after_backup_swap_gap(self):
+ def test_automatic_recovery_after_backup_swap_gap(self):
   a=self.run_pipeline('audit');rename=pathlib.Path.rename
   def interrupted(p,d):
    if '.hd2-stage-' in p.name:raise OSError('fixture interruption')
    return rename(p,d)
   with patch.object(pathlib.Path,'rename',interrupted):
    with self.assertRaises(OSError):self.run_pipeline('install',a)
-  self.assertFalse(self.installed.exists());self.assertTrue(self.run_pipeline('recover')['recovered'])
+  self.assertNotIn(self.ticket,self.run_pipeline('audit')['recoverable'])
   self.assertEqual(self.inventory(self.installed),self.original)
  def test_recovery_resumes_after_retaining_new_tree(self):
   self.run_pipeline('install',self.run_pipeline('audit'));rename=pathlib.Path.rename

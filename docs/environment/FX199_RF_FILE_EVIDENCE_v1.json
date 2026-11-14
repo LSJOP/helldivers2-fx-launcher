@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "status": "historical_evidence_only",
+  "fx_version": "1.9.9",
+  "architecture": "aarch64",
+  "proton": "11.0-20261014-3",
+  "runtime": "SteamLinuxRuntime_4",
+  "artifacts": [
+    {
+      "target": "steamapps/common/FEX-Emu/usr/bin/FEX",
+      "sha256": "ce93cadae7b7d3ef01376ba2acd58aedb602a7fc077e49592179766d13c294bf",
+      "mode": 493
+    },
+    {
+      "target": "steamapps/common/FEX-Emu/usr/bin/FEXBash",
+      "sha256": "ec3e084e8ace83eee1de61d052b5d6b61f19d4ca6ca8d17180aeb39ccf512ddd",
+      "mode": 493
+    },
+    {
+      "target": "steamapps/common/FEX-Emu/usr/bin/FEXGetConfig",
+      "sha256": "7da0614a4c1c16ac4cf92e7eae5b4bc0255722cf3675e7b30f7a5a6c06e21cde",
+      "mode": 493
+    },
+    {
+      "target": "steamapps/common/FEX-Emu/usr/bin/FEXOfflineCompiler",
+      "sha256": "7c7aa677f33cbc8ac5d7cff7ef693fabd6d74d162809120eb51124a281f5c03e",
+      "mode": 493
+    },
+    {
+      "target": "steamapps/common/FEX-Emu/usr/bin/FEXpidof",
+      "sha256": "907b6801d8cbb2844b66ad8cb199cff933aa7e9b63f596ebd924179bbde9ef56",
+      "mode": 493
+    },
+    {
+      "target": "steamapps/common/FEX-Emu/usr/bin/FEXServer",
+      "sha256": "f32cf426de3d1126bc89bdbf59bd244f9a371fe967b5c2e76437c496eea98236",
+      "mode": 493
+    },
+    {
+      "target": "steamapps/common/FEX-Emu/usr/bin/FEXServerManager",
+      "sha256": "02ff8a14554a8ffc91ec4c71bb2fa470c965b6f38bb5316c44e9296a3bfa4898",
+      "mode": 493
+    },
+    {
+      "target": "steamapps/common/FEX-Emu/FEXCompatTool",
+      "sha256": "85a86207a34c9ae286435ba7ea19aa004ef50220ddc043eeb6bc8963ce516b67",
+      "mode": 493
+    },
+    {
+      "target": "steamapps/common/FEX-Emu/ConfigTemplate.json",
+      "sha256": "e458d3fe3d0e259de3465f621b6742df16e6f0858aa8484a39fd5e47366aeb1d",
+      "mode": 420
+    },
+    {
+      "target": "steamapps/common/FEX-Emu/VERSIONS.txt",
+      "sha256": "e4d61eba61576bfd8ea8dae3cde90dd079b9bf000cf6352b2ff52dfbdd781fea",
+      "mode": 420
+    }
+  ],
+  "blocking_evidence": [
+    "No reviewed distribution archive",
+    "Historical successful test retained a modified RootFS registration",
+    "Exact build inputs and third-party notices not bound to every binary"
+  ]
+}

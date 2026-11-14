@@ -9,6 +9,6 @@
 "updates.finished" = "Updatezyklus beendet; Installation und Neustart unbestätigt.";
 "updates.failed" = "Update fehlgeschlagen";
 "updates.scope" = "Nur dieser Launcher wird aktualisiert. Spiel, Steam, FX Runtime, Gast und EAC bleiben unberührt.";
-"updates.languageRestart" = "Die Sprache wird nur für diese App gespeichert; die Menüsprache erfordert einen Neustart. Das Erscheinungsbild gilt für diese Sitzung. Die Oberfläche unterstützt zehn Sprachen.";
-"updates.automaticOff" = "Automatische Prüfung aus. Sparkle verwaltet die Zustimmung nach Einrichtung des signierten Dienstes.";
-"updates.automaticOn" = "Automatische Prüfung an (Sparkle-Einstellung).";
+"updates.languageRestart" = "Die Sprache wird nur für diese App gespeichert; die Menüsprache erfordert einen Neustart. Die Oberfläche unterstützt zehn Sprachen.";
+"updates.automaticOff" = "Automatische Prüfung aus.";
+"updates.automaticOn" = "Automatische Prüfung an.";

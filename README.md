@@ -1,26 +1,26 @@
 <div align="center">
   <img src="docs/assets/app-icon.png" width="128" alt="HD2 FX Launcher icon">
-  <h1>HD2 FX Launcher</h1>
+  <h1>HELLDIVERS 2 FX Launcher</h1>
   <p>HELLDIVERS 2 FX Launcher · Apple Silicon macOS</p>
 </div>
 
 [简体中文](README.zh-CN.md) | [English](README.md)
 
-### [🟨 ⬇️ Download HD2 FX Launcher — Latest Stable](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)
+### [🟨 ⬇️ Download HD2 FX Launcher — Latest Stable](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.1/HD2FXNative-v1.0.1-macOS-arm64.dmg)
 
-**🟨 Stable Release · v1.0.0** · **macOS · Apple Silicon / arm64**
+**🟨 Stable Release · v1.0.1** · **macOS · Apple Silicon / arm64**
 
-**[⬇️ Download DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)** · [All Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**[⬇️ Download DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.1/HD2FXNative-v1.0.1-macOS-arm64.dmg)** · [All Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
 
 ## English
 
-HD2 FX Launcher is an unofficial community launcher and management tool for Apple Silicon Macs. Built with SwiftUI and a native core, it helps users inspect FX, configure the runtime environment and manage game performance settings.
+HELLDIVERS 2 FX Launcher is an unofficial community launcher and management tool for Apple Silicon Macs. Built with SwiftUI and a native core, it helps users inspect FX, configure the runtime environment and manage game performance settings.
 
 FX 1.9.9 test-Guest repair now reaches the game through the GUI with the historically verified RF FEX components. Main menu/ship was confirmed by the user; single-player, multiplayer and end-to-end updating remain untested. Production FX 1.9.12 was inspected offline without writes. See [repair evidence](docs/environment/FX199_RF_REPAIR_20261114.md).
 
 ### Screenshots
 
-These real bilingual windows were captured from the integrated Debug source on 2026-11-14 and visually reviewed. They show development changes under Unreleased, **not the published v1.0.0 DMG**; see [capture provenance](docs/images/README.md).
+Screenshots come from isolated Debug builds. The update panel capture uses a separate App identity and shows the service as unconfigured. See [capture provenance](docs/images/README.md).
 
 The Dashboard retains five cards: FX, virtual machine, Steam, EAC and multiplayer. Green identifies an observed FX/Steam process or a verified Guest SSH connection; yellow means an active check, red an explicit stage failure, and gray missing or stale evidence. Process detection, completed checks and menu/single-player confirmation do not establish EAC loading or multiplayer success. The isolated status matrix validates display logic; it does not establish live game readiness.
 
@@ -40,17 +40,17 @@ Unreleased setup and launch workflow artwork is by **MOTR7**, used with the arti
 
 **Unreleased UI:** Environment, FX Manager and Logs use a shared content-area snapshot refresh. The FX details view reuses inspection evidence to avoid repeated hashing during redraw.
 
-**Development candidate:** The Logs page displays local system time, streams bounded task events, supports auto-scroll and exports redacted raw ISO 8601 timestamps. Launch command success, process detection, window and gameplay remain separate; game-window and gameplay evidence are not automatic. This change is not included in the published v1.0.0 DMG.
+The Logs page displays local system time, streams bounded task events, supports auto-scroll and exports redacted raw ISO 8601 timestamps. Launch command success, process detection, window and gameplay remain separate; game-window and gameplay evidence are not automatic.
 
 - Dashboard starts the guarded HELLDIVERS 2 launch workflow. FX Manager inspects the selected FX installation and exposes supported FX/Steam actions.
 - First-Run Setup checks Guest identity, runtime capabilities and component integrity. Approved configuration can install the pinned Proton-JE package, select a verified Steam compatibility tool and merge launch options while retaining custom arguments. Detection is read-only. Deployment and recovery require their own checks.
 - Environment reports FEX and Proton-JE evidence. SSH and sudo credentials can be stored separately in encrypted local storage for a verified target; reuse after restart still requires real-world acceptance.
 - The Swift App provides seven native pages, logs, scoped performance controls and ten interface languages. Optional SteamOS installation steps require Python 3.
-- Settings includes Sparkle update integration. Published update service and end-to-end installation have yet to be verified.
+- In v1.0.1, open Settings → Software Update to check for and install later stable releases. Upgrade once from v1.0.0 using the official DMG.
 
 ### Installation
 
-Current App: `1.0.0` (build `2026111403`), macOS 14+ Apple Silicon arm64. Ad-hoc signed; no Apple Developer ID signature or Apple notarization. Gatekeeper may block the download. Verify the [SHA-256 file](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg.sha256) before opening. If blocked, use Privacy & Security → Open Anyway for the verified App.
+Current App: `1.0.1` (build `2026111406`), macOS 14+ Apple Silicon arm64. Ad-hoc signed; no Apple Developer ID signature or Apple notarization. Gatekeeper may block the download. Verify the [SHA-256 file](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.1/SHA256SUMS.txt) before opening. If blocked, use Privacy & Security → Open Anyway for the verified App.
 
 1. Download the macOS arm64 DMG from the published release.
 2. Run `shasum -a 256 <downloaded-dmg>` and compare the result with the SHA-256 in the release notes. Open the DMG after they match.
@@ -63,7 +63,7 @@ For source builds, see the [development guide](docs/NATIVE_DEVELOPMENT.md).
 
 ### Known Issues
 
-Release scope: shared launch/retry fixes and local encrypted SSH/sudo storage are included in this artifact. FX 1.9.9 test GUI launch and user-confirmed menu/ship are recorded. Single-player, EAC/multiplayer, fresh deployments and full Sparkle installation/rollback remain unverified. The bundled public updater is disabled/unconfigured; use the Release DMG for manual installation. Production FX 1.9.12 was only inspected offline.
+Earlier FX 1.9.9 testing reached the game menu and ship. Single-player, EAC, multiplayer and fresh environment deployment remain unverified.
 
 
 - FX and SteamOS compatibility depends on the selected build and runtime evidence. The current launch path has a recorded proxy mismatch. Safe FX stop/restart remains unavailable.
@@ -74,7 +74,7 @@ Release scope: shared launch/retry fixes and local encrypted SSH/sudo storage ar
 
 ### Changelog
 
-[v1.0.0 — 2026-11-14](https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/v1.0.0) · Stable release, build `2026111403`. See [release notes](CHANGELOG.md).
+[v1.0.1 — 2026-11-14](https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/v1.0.1) · Stable release, build `2026111406`. See [release notes](CHANGELOG.md).
 
 Unreleased changes include Dashboard launch, first-run Proton-JE verification and Steam configuration, experimental FEX review and recovery, and SSH authentication fixes. See the [changelog](CHANGELOG.md) and [original launcher history](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script).
 
@@ -87,3 +87,9 @@ This community project is not affiliated with the makers of HELLDIVERS 2; names 
 User and developer guides, architecture notes and historical reports are available in the [documentation index](docs/README.md).
 
 Development resumes from [current status](docs/DEVELOPMENT_STATUS.md) and [handoff](docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md), with main source and AGENTS.md as authority. Unmerged candidates and live acceptance are tracked separately.
+
+Update development: v1.0.1 candidate pins a stable Ed25519 public key, with the private key stored outside the repository and App. Production update service remains disabled. The installer candidate uses the already downloaded and verified ZIP. Signed fixture apps exercise actual replacement and startup confirmation. Full launcher UI upgrade and recovery from an interrupted Helper remain pending.
+
+Interrupted native update transactions can be recovered on the next App launch. The production feed remains disabled pending full upgrade acceptance.
+
+FX 1.9.9 environment observations are recorded in the [FEX baseline report](docs/environment/FEX_BASELINE_REPORT_20261115.md).

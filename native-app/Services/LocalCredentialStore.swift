@@ -17,8 +17,10 @@ final class LocalCredentialStore: SavedCredentialStore {
     let root: URL
     init(root: URL) { self.root = root.standardizedFileURL }
     static func production() -> LocalCredentialStore {
-        LocalCredentialStore(root: FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/Helldivers2FXLauncher/native/saved-credentials-v1", isDirectory: true))
+        let name = Bundle.main.bundleIdentifier == "com.lsjop.helldivers2fx.native.phase1.update-test"
+            ? "HD2FXNativeUpdateTest" : "Helldivers2FXLauncher"
+        return LocalCredentialStore(root: FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/\(name)/native/saved-credentials-v1", isDirectory: true))
     }
     private func name(_ scope: String, _ kind: CredentialKind) -> String {
         SHA256.hash(data: Data(("v1|" + scope + "|" + kind.rawValue).utf8)).map { String(format: "%02x", $0) }.joined()

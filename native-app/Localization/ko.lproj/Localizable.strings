@@ -9,6 +9,6 @@
 "updates.finished" = "업데이트 주기 종료. 설치와 재시작은 확인되지 않았습니다.";
 "updates.failed" = "업데이트 실패";
 "updates.scope" = "런처만 업데이트합니다. 게임, Steam, FX Runtime, Guest, EAC는 제외됩니다.";
-"updates.languageRestart" = "언어는 이 앱에만 저장됩니다. 메뉴 언어를 적용하려면 다시 시작하세요. 모양은 현재 세션에만 적용됩니다. 기본 UI는 10개 언어를 지원합니다.";
-"updates.automaticOff" = "자동 확인 꺼짐. 서명 서비스가 준비되면 Sparkle이 동의를 관리합니다.";
-"updates.automaticOn" = "자동 확인 켜짐 (Sparkle 설정).";
+"updates.languageRestart" = "언어는 이 앱에만 저장됩니다. 메뉴 언어를 적용하려면 다시 시작하세요. 기본 UI는 10개 언어를 지원합니다.";
+"updates.automaticOff" = "자동 확인 꺼짐.";
+"updates.automaticOn" = "자동 확인 켜짐.";
