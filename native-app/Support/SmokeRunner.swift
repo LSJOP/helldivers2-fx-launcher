@@ -291,7 +291,7 @@ import ApplicationServices
                        let scroll = scrollViews(root).filter({ $0.bounds.width > 600 }).max(by: { $0.bounds.width < $1.bounds.width }),
                        let document = scroll.documentView {
                         let maximum = max(0, document.bounds.height - scroll.contentView.bounds.height)
-                        let fraction: CGFloat = page == .performance ? 1 : page == .environment ? 0.35 : 0.7
+                        let fraction: CGFloat = page == .performance ? 1 : page == .environment ? 0.35 : 1
                         scroll.contentView.scroll(to: NSPoint(x: 0, y: maximum * (document.isFlipped ? fraction : 1 - fraction)))
                         scroll.reflectScrolledClipView(scroll.contentView)
                         try await Task.sleep(nanoseconds: 500_000_000)
