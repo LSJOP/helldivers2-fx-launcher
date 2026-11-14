@@ -8,6 +8,8 @@ v1.0.0 (2026111403) is published. Game and complete update acceptance remain lim
 
 ## Unreleased
 
+- Report the known FX 1.9.9 stock FEX launch incompatibility before the static probe can mark it ready. A reviewed automatic replacement is still unavailable.
+
 - Stream bounded, redacted workflow and launch events with per-attempt IDs, component progress and elapsed times; display local timestamps while exporting original ISO 8601 timestamps. Bound Steam/game waiting and stop showing 83% after failure. Live full launch and end-to-end EAC/gameplay validation remain pending.
 
 - Align the displayed app name with system language: Simplified and Traditional Chinese use their respective names, and other languages use HD2 FX Launcher. The internal project and data identities remain unchanged.

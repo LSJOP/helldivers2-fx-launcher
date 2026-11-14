@@ -59,6 +59,8 @@ For source builds, see the [development guide](docs/NATIVE_DEVELOPMENT.md).
 
 ### Known Issues
 
+The unreleased FX 1.9.9 readiness check identifies the stock FEX build that failed the historical launch comparison. Automatic replacement is pending a reviewed distribution package. [File evidence](docs/environment/FX199_RF_FILE_EVIDENCE_v1.json)
+
 Release scope: shared launch/retry fixes and local encrypted SSH/sudo storage are included in this artifact. FX 1.9.9 test GUI launch and user-confirmed menu/ship are recorded. Single-player, EAC/multiplayer, fresh deployments and full Sparkle installation/rollback remain unverified. The bundled public updater is disabled/unconfigured; use the Release DMG for manual installation. Production FX 1.9.12 was only inspected offline.
 
 

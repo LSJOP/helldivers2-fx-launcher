@@ -342,6 +342,13 @@ finally:
 
 /// Pinned-source build review and independent installed-runtime compatibility probes.
 enum FEXWorkflow {
+    // The FX 1.9.9 stock binary passed the synthetic probe but failed the
+    // recorded Wine launch comparison. A tree approval cannot override this.
+    static func hasKnownLaunchIncompatibility(fxVersion: String, architecture: String, executableSHA256: String?) -> Bool {
+        fxVersion == "1.9.9" && architecture == "aarch64" &&
+            executableSHA256 == "f9cbb7a70e804b9930fed02fd9d1349d49d7808faace703063a9b4944bc3568e"
+    }
+
     /// Recompute the full installed tree for every action. Consent never certifies provenance.
     static func observe(_ backend: SSHEnvironmentBackend, snapshot: inout DeploymentSnapshot, approvals: [String]) throws {
         let helpers = pipeline.components(separatedBy: "work=pathlib.Path.home()")[0]
@@ -356,6 +363,11 @@ enum FEXWorkflow {
         snapshot.facts["fex_status"] = "repair"
         snapshot.facts["fex_reason"] = staticResult["reason"]?.text ?? "FEX_RUNTIME_FAILED"
         guard staticResult["preflight"]?.boolean == true, let tree = staticResult["tree"]?.text else { return }
+        if hasKnownLaunchIncompatibility(fxVersion: snapshot.fxVersion, architecture: snapshot.architecture,
+                                         executableSHA256: staticResult["executable_sha256"]?.text) {
+            snapshot.facts["fex_reason"] = "FEX_KNOWN_LAUNCH_INCOMPATIBILITY"
+            return
+        }
         let binding = ["fx_path", "machine_id", "fx_executable_sha256", "ssh_connection"].map { snapshot.facts[$0] ?? "UNKNOWN" }
         let approval = CoreHash.sha256(Data((binding.joined(separator: "|") + "|" + tree).utf8))
         snapshot.facts["fex_fingerprint"] = approval
@@ -409,8 +421,11 @@ def check():
          'lib64/ld-linux-x86-64.so.2', 'usr/lib/ld-linux-x86-64.so.2',
          'lib/x86_64-linux-gnu/ld-linux-x86-64.so.2')):
   return {'reason':'FEX_ROOTFS_UNAVAILABLE'}
- tree=fingerprint(inventory(root))
- result={'preflight':True,'tree':tree}
+ files=inventory(root)
+ entry=files.get('usr/bin/FEX',[])
+ if not entry or entry[0]!='file':return {'reason':'FEX_INTEGRITY_FAILED'}
+ tree=fingerprint(files)
+ result={'preflight':True,'tree':tree,'executable_sha256':entry[1]}
  if not EXPECTED_TREE:return result
  if tree!=EXPECTED_TREE:return {'reason':'FEX_CHANGED'}
  # Static x86-64 ELF with one load segment and exit(42), requiring no x86 libc.

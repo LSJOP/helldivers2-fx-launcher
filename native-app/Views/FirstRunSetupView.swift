@@ -93,7 +93,9 @@ struct FirstRunSetupView: View {
                                     .foregroundStyle(operation.detectionPassed ? .green : operation.warning ? .orange : .secondary)
                             }
                             Text(operation.component == "proton" && operation.detectionPassed ? operation.targetVersion : operation.changes.isEmpty ? operation.currentVersion : operation.currentVersion + " → " + operation.targetVersion).font(.caption.monospaced())
-                            if operation.component == "fex", operation.blocked != nil { Text(state.t("ui.setup.artifactUnavailable")).font(.caption) }
+                            if operation.component == "fex", let code = operation.blocked {
+                                Text(code == "FEX_KNOWN_LAUNCH_INCOMPATIBILITY" ? ErrorState(code).message(state.languageCode) : state.t("ui.setup.artifactUnavailable")).font(.caption)
+                            }
                             if operation.blocked == "COMPONENT_CONFLICT" { Text(state.t("ui.setup.blocked") + " / COMPONENT_CONFLICT").font(.caption) }
                             DisclosureGroup(state.t("ui.setup.details")) {
                                 if !operation.changes.isEmpty {
