@@ -121,6 +121,24 @@ for mode in ('success', 'crash', 'receipt-crash', 'timeout'):
     expected='old version restored and confirmed' if mode!='success' else ': confirmed'
     assert expected in logs[0].read_text()
 
+# Deny writes to the real installation parent while leaving the old bundle runnable.
+location = root / 'unwritable-install'
+installed = location / 'Installed Launcher.app'
+app(installed, '1.0.1', 1, 'success')
+shutil.copytree(root / 'success/request', location / 'request', ignore=shutil.ignore_patterns('prepared', 'helper-pid'))
+executable = installed / 'Contents/MacOS/HD2FXNative'
+original = (installed.stat().st_ino, executable.read_bytes())
+location.chmod(0o500)
+try:
+    denied = subprocess.run([executable, location / 'request'], capture_output=True, timeout=10)
+    assert denied.returncode == 19 and (b'13' in denied.stderr or b'Permission denied' in denied.stderr), denied.stderr
+    assert not list(location.glob('.HD2FXNative-update*'))
+    assert (installed.stat().st_ino, executable.read_bytes()) == original
+    run('codesign', '--verify', '--deep', '--strict', installed)
+    print('PASS unwritable installation preserves signed original', flush=True)
+finally:
+    location.chmod(0o700)
+
 # Force the installing helper to exit after the atomic exchange, while the
 # new process is still unconfirmed. Relaunching that bundle takes over.
 location = root / 'interrupted-after-exchange'
