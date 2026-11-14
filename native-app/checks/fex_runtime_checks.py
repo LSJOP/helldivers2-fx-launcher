@@ -10,6 +10,10 @@ class RuntimeChecks(unittest.TestCase):
   self.root=self.home/'.local/share/Steam/steamapps/common/FEX-Emu';self.exe=self.root/'usr/bin/FEX'
   self.exe.parent.mkdir(parents=True);self.exe.write_bytes(b'\x7fELF\x02\x01'+bytes(12)+b'\xb7\x00'+bytes(44));self.exe.chmod(0o700)
   (self.root/'emulator.json').write_text(json.dumps({'emulator_v0':{'argv':'./usr/bin/FEX'}}))
+  self.provider=self.home/'fex-mesa'
+  (self.provider/'usr/lib').mkdir(parents=True)
+  (self.provider/'graphics_provider.json').write_text('{}')
+  (self.provider/'usr/lib/ld-linux-x86-64.so.2').touch()
   self.ns={};tree=ast.parse(pipeline)
   exec(compile(ast.Module(body=[n for n in tree.body if isinstance(n,(ast.Import,ast.ImportFrom,ast.FunctionDef))],type_ignores=[]),'helpers','exec'),self.ns)
  def tearDown(self):self.temp.cleanup()
@@ -19,7 +23,7 @@ class RuntimeChecks(unittest.TestCase):
   def read(p,*a,**k):return 'fixture' if str(p)=='/proc/sys/kernel/random/boot_id' else original_read(p,*a,**k)
   with patch.object(pathlib.Path,'home',return_value=self.home),patch.object(pathlib.Path,'read_text',read),patch('platform.machine',return_value='aarch64'),patch('subprocess.Popen') as process,contextlib.redirect_stdout(output):
    process.return_value.wait.return_value=status
-   exec(probe,ns)
+   exec(probe.replace("/usr/share/guestos/fex-mesa",str(self.provider)),ns)
    self.calls=process.call_count
   return json.loads(output.getvalue())
  def test_unknown_hash_preflight_does_not_execute(self):
@@ -37,6 +41,10 @@ class RuntimeChecks(unittest.TestCase):
   self.exe.chmod(0o600);self.assertEqual(self.run_probe()['reason'],'FEX_NOT_EXECUTABLE')
  def test_wrong_architecture(self):
   self.exe.write_bytes(b'wrong');self.assertEqual(self.run_probe()['reason'],'FEX_ARCHITECTURE')
+ def test_missing_rootfs_loader(self):
+  (self.provider/'usr/lib/ld-linux-x86-64.so.2').unlink()
+  self.assertEqual(self.run_probe()['reason'],'FEX_ROOTFS_UNAVAILABLE')
+  self.assertEqual(self.calls,0)
  def test_missing_integration(self):
   (self.root/'emulator.json').unlink();self.assertEqual(self.run_probe()['reason'],'FEX_INTEGRATION_MISSING')
  def test_unsafe_symlink_never_executes(self):

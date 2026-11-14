@@ -401,6 +401,14 @@ def check():
    if len(parts)!=1:return {'reason':'FEX_INTEGRATION_MISSING'}
    component=root/parts[0]
    if not component.resolve().is_relative_to(root.resolve()) or not component.is_file() or not os.access(component,os.X_OK):return {'reason':'FEX_INTEGRATION_MISSING'}
+ # The SteamOS wrapper uses this provider when Steam supplies no override.
+ # This is a guest-side prerequisite, not proof of the container's effective configuration.
+ provider=pathlib.Path('/usr/share/guestos/fex-mesa')
+ if not (provider/'graphics_provider.json').is_file() or not any(
+     (provider/path).is_file() for path in (
+         'lib64/ld-linux-x86-64.so.2', 'usr/lib/ld-linux-x86-64.so.2',
+         'lib/x86_64-linux-gnu/ld-linux-x86-64.so.2')):
+  return {'reason':'FEX_ROOTFS_UNAVAILABLE'}
  tree=fingerprint(inventory(root))
  result={'preflight':True,'tree':tree}
  if not EXPECTED_TREE:return result
