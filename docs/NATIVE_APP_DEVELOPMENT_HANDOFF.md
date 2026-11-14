@@ -113,3 +113,9 @@ bash native-app/script/build_local_release.sh /absolute/new/output-directory
 4. **P1 发布候选验证**：受影响 Swift/Python隔离测试、本地化、文档和新 arm64 Release 一次验证。验收：全部必要门禁通过，源码/版本/资源/签名/hash 一致；未获授权的实机项目仍标 pending。
 5. **P1 主线晋级**：在最新 main 上验证集成，不混入其他脏成果。验收：无冲突/高风险未决项，普通 push 成功，ls-remote SHA 与本地 main 一致，交接和代码同一次交付。
 6. **随后用户实机验收**：按 FEX、首次配置、双角色密码、IPv6、性能、菜单/单人/多人分别记录结果。任何一项未执行都不标已验收。
+
+## 继续整合检查点（2026-11-14）
+
+候选已合入 main `50f3ecae9fd545bc6aacbda6c4665f089db64feb` 的规则/文档，保留双方 README/CHANGELOG。新增安装边界缓存重验（SHA-256、Ed25519、ZIP 路径和拒绝符号链接），增加下载后篡改/链接测试。更新服务 39 项、更新管理 23 项及 ZIP 7 项隔离检查通过。未完成 Sparkle 实际替换/失败回滚/重启隔离闭环；不得将重验测试称为安装闭环完成。
+
+已从当前候选新建 Debug 构建并启动隔离捕获副本，禁用凭据加载和 Guest 操作。捕获未产生请求，CUA getApp 接口 timeoutReached；截图未通过，不改写 provenance 或视觉 PASS。main 晋级继续阻塞。实际最新代码/构建提交通过 Git 和 SOURCE-COMMIT.txt 核对，cd27baa 仅保留历史。App 版本维持 0.1.0，构建号更新为 2026111401。

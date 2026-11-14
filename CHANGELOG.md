@@ -8,6 +8,8 @@ v1.0.0 is the release target. The inspected local arm64 App is `0.1.0` and ad ho
 
 ## Unreleased
 
+- Revalidate cached update SHA-256, Ed25519 and archive paths at installation; reject post-download changes and symlinks.
+
 - Consolidate native launch/recovery and localized branding; retain configured stable update feed. Screenshot and live acceptance remain pending.
 
 - Require SHA-256, an independent archive Ed25519 signature and ZIP metadata/path preflight before installation. Bind Sparkle installation to the verified archive signature, URL and version. Real upgrade/recovery acceptance remains pending.

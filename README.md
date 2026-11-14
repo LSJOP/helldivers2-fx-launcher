@@ -74,3 +74,5 @@ User and developer guides, architecture notes and historical reports are availab
 Consolidation candidate: shared launch/recovery, encrypted role-separated credentials, localized branding and consistent update feeds are integrated on `integration/native-app-consolidation`. Screenshot provenance and live acceptance remain pending.
 
 Development resumes from [current status](docs/DEVELOPMENT_STATUS.md) and [handoff](docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md), with main source and AGENTS.md as authority. Unmerged candidates and live acceptance are tracked separately.
+
+The consolidation candidate revalidates cached update integrity at installation. Screenshot acceptance and isolated installer rollback/relaunch acceptance remain incomplete.

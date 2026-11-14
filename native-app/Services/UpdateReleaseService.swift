@@ -216,6 +216,31 @@ struct NativeReleaseService {
         return .available(NativeUpdateCandidate(release: release, manifest: manifest, archive: archive, signatureVerified: verified))
     }
 
+    /// Revalidate the cache at the install boundary; a prior download is not current proof.
+    func verifyForInstallation(_ candidate: NativeUpdateCandidate, archive: URL) throws {
+        guard candidate.signatureVerified, candidate.manifest.schema == 2,
+              let publicKey, publicKey.count == 32 else { throw NativeUpdateFailure.unconfigured }
+        let fd = open(archive.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+        guard fd >= 0 else { throw NativeUpdateFailure.integrity }
+        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+        defer { try? handle.close() }
+        var info = stat()
+        guard fstat(fd, &info) == 0, info.st_mode & S_IFMT == S_IFREG,
+              info.st_size == candidate.manifest.length, info.st_size <= 536_870_912 else {
+            throw NativeUpdateFailure.integrity
+        }
+        let bytes = try handle.readToEnd() ?? Data()
+        guard bytes.count == candidate.manifest.length,
+              SHA256.hash(data: bytes).map({ String(format: "%02x", $0) }).joined() == candidate.manifest.sha256 else {
+            throw NativeUpdateFailure.integrity
+        }
+        guard let encoded = candidate.manifest.archiveEdSignature, let signature = Data(base64Encoded: encoded),
+              let key = try? Curve25519.Signing.PublicKey(rawRepresentation: publicKey),
+              key.isValidSignature(signature, for: bytes) else { throw NativeUpdateFailure.signature }
+        // Sparkle independently verifies the same archive signature on its private download.
+        try UpdateZIPPreflight.validate(archive)
+    }
+
     func download(_ candidate: NativeUpdateCandidate, to directory: URL, progress: @escaping @Sendable (Int64, Int64) -> Void = { _, _ in }) async throws -> URL {
         guard candidate.signatureVerified, publicKey?.count == 32 else { throw NativeUpdateFailure.unconfigured }
         let fm = FileManager.default

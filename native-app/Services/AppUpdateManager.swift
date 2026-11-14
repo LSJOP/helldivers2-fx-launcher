@@ -209,7 +209,9 @@ struct UpdateConfiguration {
         }
     }
     func installWithSparkle() {
-        guard canInstall else { return }
+        guard canInstall, let candidate, let cachedArchive else { return }
+        do { try service.verifyForInstallation(candidate, archive: cachedArchive) }
+        catch { record(error); self.cachedArchive = nil; return }
         controller.checkForUpdates(nil) // Official consent/download/signature/install UI; never install a cache ourselves.
     }
     func cancel() { operation?.cancel() }
@@ -262,7 +264,9 @@ struct UpdateConfiguration {
         configuration.resolvedFeed(channel: channel)?.absoluteString
     }
     func updater(_ updater: SPUUpdater, shouldProceedWithUpdate updateItem: SUAppcastItem, updateCheck: SPUUpdateCheck) throws {
-        guard isConfigured, let candidate, candidate.manifest.schema == 2, cachedArchive != nil,
+        guard let candidate, let cachedArchive else { throw NativeUpdateFailure.integrity }
+        try service.verifyForInstallation(candidate, archive: cachedArchive)
+        guard isConfigured, candidate.manifest.schema == 2,
               let enclosure = updateItem.propertiesDictionary["enclosure"] as? [String: Any],
               enclosure["sparkle:edSignature"] as? String == candidate.manifest.archiveEdSignature,
               updateItem.fileURL == candidate.archive.browser_download_url,

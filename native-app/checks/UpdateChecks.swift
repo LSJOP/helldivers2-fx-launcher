@@ -187,7 +187,19 @@ final class ProgressRecorder: @unchecked Sendable {
         }
         let safeZIP = Data(base64Encoded: "UEsDBBQAAAAIANYWbl3uQOUFCQAAAAcAAAAjAAAASEQyRlhOYXRpdmUuYXBwL0NvbnRlbnRzL0luZm8ucGxpc3RLy6woKS1KBQBQSwECFAMUAAAACADWFm5d7kDlBQkAAAAHAAAAIwAAAAAAAAAAAAAAgAEAAAAASEQyRlhOYXRpdmUuYXBwL0NvbnRlbnRzL0luZm8ucGxpc3RQSwUGAAAAAAEAAQBRAAAASgAAAAAA")!
         let install = try await installCandidate(safeZIP)
-        _ = try await service.download(install, to: directory)
+        let installCache = try await service.download(install, to: directory)
+        try service.verifyForInstallation(install, archive: installCache)
+        try check(true, "install boundary revalidates signed archive")
+        try Data(repeating: 0, count: safeZIP.count).write(to: installCache)
+        try await failure(.integrity, "cache mutation after download is rejected at installation") {
+            try service.verifyForInstallation(install, archive: installCache)
+        }
+        try FileManager.default.removeItem(at: installCache)
+        try FileManager.default.createSymbolicLink(at: installCache, withDestinationURL: directory)
+        try await failure(.integrity, "install cache symlink is rejected") {
+            try service.verifyForInstallation(install, archive: installCache)
+        }
+        try FileManager.default.removeItem(at: installCache)
         try check(true, "signed schema 2 archive passes digest, archive signature and path preflight")
         let unsafeZIP = Data(base64Encoded: "UEsDBBQAAAAIANYWbl3uQOUFCQAAAAcAAAAcAAAASEQyRlhOYXRpdmUuYXBwLy4uLy4uL2VzY2FwZUvLrCgpLUoFAFBLAQIUAxQAAAAIANYWbl3uQOUFCQAAAAcAAAAcAAAAAAAAAAAAAACAAQAAAABIRDJGWE5hdGl2ZS5hcHAvLi4vLi4vZXNjYXBlUEsFBgAAAAABAAEASgAAAEMAAAAAAA==")!
         let unsafeInstall = try await installCandidate(unsafeZIP)
