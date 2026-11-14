@@ -30,7 +30,7 @@ launch_args=['--readme-screenshots',str(output),args.language,
 if args.fx_only: launch_args.append('--fx-only')
 if args.credentials_only: launch_args.append('--credentials-only')
 subprocess.run(['/usr/bin/open','-n',str(bundle),'--args',*launch_args],check=True)
-seen=set();started=time.monotonic();deadline=started+90;reopened=False
+seen=set();started=time.monotonic();deadline=started+240;reopened=False
 while time.monotonic()<deadline:
     if not reopened and time.monotonic()-started>3 and not request_file.exists():
         subprocess.run(['/usr/bin/open',str(bundle)],check=True) # Native reopen event if launch restored no window.
