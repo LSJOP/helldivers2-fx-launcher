@@ -119,3 +119,9 @@ bash native-app/script/build_local_release.sh /absolute/new/output-directory
 候选已合入 main `50f3ecae9fd545bc6aacbda6c4665f089db64feb` 的规则/文档，保留双方 README/CHANGELOG。新增安装边界缓存重验（SHA-256、Ed25519、ZIP 路径和拒绝符号链接），增加下载后篡改/链接测试。更新服务 39 项、更新管理 23 项及 ZIP 7 项隔离检查通过。未完成 Sparkle 实际替换/失败回滚/重启隔离闭环；不得将重验测试称为安装闭环完成。
 
 已从当前候选新建 Debug 构建并启动隔离捕获副本，禁用凭据加载和 Guest 操作。捕获未产生请求，CUA getApp 接口 timeoutReached；截图未通过，不改写 provenance 或视觉 PASS。main 晋级继续阻塞。实际最新代码/构建提交通过 Git 和 SOURCE-COMMIT.txt 核对，cd27baa 仅保留历史。App 版本维持 0.1.0，构建号更新为 2026111401。
+
+### 新候选交付与截图后续
+
+最新 Release 源码 `4e104b7936fc20e2e7a5ef763f9ea4af6163525c`，0.1.0 (2026111401)，arm64，source_dirty=false。输出：`绝地潜兵脚本/APP 版本/Consolidation-20261114-4e104b79/HD2FXNative.app`，ad-hoc/资源/来源检查通过；不是 cd27baa 旧包，也不是已合入 main 的包。此前“未产生请求”的说明只适用于首次英文尝试：中文随后捕获成功，原图在候选 worktree `native-app/evidence/capture-resume-zh`，dashboard/settings 已视觉查看，其他图片及英文/其余语言尚未完成审阅。未改写截图 manifest。完整截图门禁依旧失败。
+
+本轮更新测试已通过，不等于 Sparkle 安装/回滚/重启闭环通过。main 仍保持 50f3eca，整合尚未结束；候选已合入 main 的规则，AGENTS v1.2.20 本轮无需规则变更。下一步先解决英文捕获/全语言审阅，再完成真正隔离安装闭环和独有分支差异审查，不能继续以补文档代替这三项工作。
