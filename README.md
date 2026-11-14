@@ -22,17 +22,9 @@ FX 1.9.9 test-Guest repair now reaches the game through the GUI with the histori
 
 Dashboard screenshot update for the status indicators is pending; the images below are historical Debug captures.
 
-These are real windows from different historical Debug builds, **not final v1.0.0 screenshots**. Final captures must be taken, reviewed and replaced after the final build; see [capture provenance](docs/images/README.md).
+The Dashboard screenshot is from the current isolated Debug candidate; other page captures are pending review and are not shown here. It does not establish game or network readiness.
 
-| Dashboard | First-Run Setup |
-| --- | --- |
-| ![Dashboard](docs/images/en/dashboard.png) | ![First-Run Setup](docs/images/en/first-run-setup.png) |
-| Environment | FX Manager |
-| ![Environment](docs/images/en/environment.png) | ![FX Manager](docs/images/en/fx-manager.png) |
-| Game Performance | Settings |
-| ![Game Performance](docs/images/en/performance.png) | ![Settings](docs/images/en/settings.png) |
-| Logs | |
-| ![Logs](docs/images/en/logs.png) | |
+![Dashboard](docs/images/en/dashboard.png)
 
 ### Features
 

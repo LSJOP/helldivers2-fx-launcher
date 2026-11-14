@@ -44,7 +44,7 @@ struct DashboardView: View {
         let detectedEAC = false // A completed check does not by itself prove EAC loaded.
         let detected = !state.stale && ((key == "fx_host_running" && state.latestGUIEvidence[key]?.boolean == true)
             || (key == "steam_running" && (state.latestGUIEvidence[key]?.boolean == true || (state.latestGUIEvidence["steam_process_count"]?.integer ?? 0) > 0)))
-        let tone: DashboardLED.Tone = processing ? .working : failed ? .failed : (connected || detectedEAC) ? .success : .unknown
+        let tone = DashboardLED.resolve(processing: processing, failed: failed, confirmed: connected || detectedEAC)
         let text = processing ? state.t("ui.157") : failed ? state.t("ui.125") : connected ? state.t("ui.dashboard.connected") : detectedEAC ? state.t("ui.dashboard.loaded") : detected ? state.t("ui.dashboard.process") : unverified
         return DashboardStatusCard(title: title, value: text, symbol: symbol, tone: tone)
     }
@@ -91,7 +91,7 @@ private struct DashboardStatusCard: View {
         HStack(spacing: 8) {
             Image(systemName: symbol).font(.system(size: 19)).frame(width: 24).foregroundStyle(c.accent).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 5) {
-                Text(title).font(TacticalTypography.caption).foregroundStyle(c.muted).lineLimit(1)
+                Text(title).font(TacticalTypography.caption).foregroundStyle(c.muted).lineLimit(1).minimumScaleFactor(0.7)
                 Text(value).font(TacticalTypography.caption.weight(.semibold)).foregroundStyle(c.text).lineLimit(2).minimumScaleFactor(0.8)
             }
             Spacer(minLength: 0)
@@ -105,6 +105,11 @@ private struct DashboardStatusCard: View {
 
 private struct DashboardLED: View {
     enum Tone { case success, working, failed, unknown }
+    static func resolve(processing: Bool, failed: Bool, confirmed: Bool) -> Tone {
+        if processing { return .working }
+        if failed { return .failed }
+        return confirmed ? .success : .unknown
+    }
     let tone: Tone
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var scheme

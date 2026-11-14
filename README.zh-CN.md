@@ -22,17 +22,9 @@ FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游�
 
 首页状态灯更新后的截图仍待补充；下图为历史 Debug 截图。
 
-以下是不同历史 Debug 构建的真实窗口截图，**并非 v1.0.0 最终截图**。最终版本截图待构建后重新采集、检查并替换；各图片来源见[截图记录](docs/images/README.md)。
+首页截图来自当前隔离 Debug 候选；其他页面截图待复核，暂不展示。截图不能证明游戏或网络就绪。
 
-| 总览 | 首次运行环境配置 |
-| --- | --- |
-| ![总览](docs/images/zh-CN/dashboard.png) | ![首次运行环境配置](docs/images/zh-CN/first-run-setup.png) |
-| 运行环境 | FX 管理 |
-| ![运行环境](docs/images/zh-CN/environment.png) | ![FX 管理](docs/images/zh-CN/fx-manager.png) |
-| 游戏性能配置 | 设置 |
-| ![游戏性能配置](docs/images/zh-CN/performance.png) | ![设置](docs/images/zh-CN/settings.png) |
-| 日志 | |
-| ![日志](docs/images/zh-CN/logs.png) | |
+![总览](docs/images/zh-CN/dashboard.png)
 
 ### 主要功能
 
