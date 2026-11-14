@@ -42,6 +42,8 @@ final class AppState: ObservableObject {
         guard !tasks.busy else { return }
         if method == "first_run_fex_install" { firstRunFEXRestore = receipt }
         let generation = UUID(); firstRunEventGeneration = generation
+        let started = ProcessInfo.processInfo.systemUptime
+        workflowLog(generation, "\(method): started")
         let root = runtimeRoot, launch = fxSelection.launchParameters(runtimeRoot: runtimeRoot)
         let plan = firstRunPlan
         firstRunFailure = nil
@@ -85,6 +87,14 @@ final class AppState: ObservableObject {
                             await self.credentials.authenticated(role, value: value, target: requestCredentialTarget)
                         }
                         if let raw = event["deployment_state"]?.text, let status = DeploymentState(rawValue: raw) { self.firstRunState = status }
+                        if let raw = event["deployment_state"]?.text, DeploymentState(rawValue: raw) != nil {
+                            self.workflowLog(generation, "\(method): \(raw)")
+                        }
+                        if event["kind"]?.text == "deployment_component", let component = event["component"]?.text,
+                           ["fex", "proton", "steam", "tool", "launch", "vulkan"].contains(component),
+                           let status = event["status"]?.text, ["running", "done", "failed", "deferred"].contains(status) {
+                            self.workflowLog(generation, "\(component): \(status)", level: status == "failed" ? "ERROR" : "INFO")
+                        }
                     }
                 }
                 if let transition = reply.result["reboot_transition"]?.object {
@@ -126,9 +136,11 @@ final class AppState: ObservableObject {
                     }
                 }
                 if let value = reply.result["receipts"] { self.firstRunReceipts = try JSONDecoder().decode([DeploymentReceipt].self, from: JSONEncoder().encode(value)) }
+                self.workflowLog(generation, "\(method): completed (\(Int(max(0, ProcessInfo.processInfo.systemUptime - started)))s)", level: "SUCCESS")
             } catch {
                 self.firstRunEventGeneration = nil
                 let code = (error as? ErrorState)?.code ?? (error as? CoreError)?.code ?? "DEPLOYMENT_FAILED"
+                self.workflowLog(generation, "\(method): \(code) (\(Int(max(0, ProcessInfo.processInfo.systemUptime - started)))s)", level: "ERROR")
                 self.firstRunFailure = code
                 if method.hasPrefix("first_run_fex_"), let failure = error as? ErrorState {
                     self.firstRunFEX["error"] = .string(code)
@@ -278,12 +290,13 @@ final class AppState: ObservableObject {
     func runOperation(_ method: String, params: [String: JSONValue] = [:]) {
         guard !tasks.busy else { return }
         let generation = UUID(); operationGeneration = generation
+        workflowLog(generation, "\(method): \(logStatus("started"))")
         let selectedRoot = runtimeRoot
         let launchParameters = fxSelection.launchParameters(runtimeRoot: selectedRoot)
         var redactor = credentials.redactor
         if method == "run_network_diagnostics" { networkRows = []; networkDiagnosticError = nil }
         if method.hasSuffix("steamos_ipv6") { networkError = nil; if method != "apply_steamos_ipv6" { networkPlan = [:] } }
-        if method == "launch_game" { launchSession.begin(root: selectedRoot); recordLaunch() }
+        if method == "launch_game" { launchSession.begin(root: selectedRoot, taskID: generation); recordLaunch() }
         if method == "observe_launch", selectedRoot != launchSession.root { launchSession.begin(root: selectedRoot) }
         guiRecords[method] = GUIOperationRecord(method: method, target: selectedRoot)
         if GUIAction(rawValue: method) != nil { guiSnapshots = [:] }
@@ -322,7 +335,8 @@ final class AppState: ObservableObject {
                 let eventRedactor = redactor
                 let authInput = input
                 let credentialTarget = selectedRoot + "|" + (input["credential_revision"]?.text ?? "") + "|" + (input["credential_host_identity"]?.text ?? "")
-                let reply = try await self.core.request(method, timeout: method == "launch_game" || method == "performance_apply" || method == "performance_restore" ? 900 : 90, params: input) { [weak self] event in
+                let operationTimeout: TimeInterval = method == "launch_game" ? 600 : (method == "performance_apply" || method == "performance_restore" ? 900 : 90)
+                let reply = try await self.core.request(method, timeout: operationTimeout, params: input) { [weak self] event in
                     Task { @MainActor in
                         guard let self, self.operationGeneration == generation else { return }
                         if method == "launch_game" { self.launchSession.consume(event) }
@@ -340,7 +354,10 @@ final class AppState: ObservableObject {
                         }
                         let safeEvent = eventRedactor.event(event)
                         self.operationEvents.append(safeEvent)
-                        self.runtimeLogs.append(safeEvent)
+                        var logEvent = safeEvent
+                        logEvent["id"] = .string(UUID().uuidString)
+                        if method == "launch_game" { logEvent["message"] = .string("[\(generation.uuidString)] " + (safeEvent["message"]?.text ?? "")) }
+                        self.runtimeLogs.append(logEvent)
                         if self.runtimeLogs.count > 500 { self.runtimeLogs.removeFirst(self.runtimeLogs.count - 500) }
                         if self.operationEvents.count > 200 { self.operationEvents.removeFirst(self.operationEvents.count - 200) }
                     }
@@ -379,7 +396,6 @@ final class AppState: ObservableObject {
                 self.guiRecords[method]?.finish()
                 self.recordGUIOperation(method)
                 if method == "launch_game" || method == "observe_launch" { self.launchSession.complete(reply.result, at: reply.observedAt); self.recordLaunch() }
-                self.appendLog(method + ": COMPLETED")
                 if method == "launch_game", reply.result["game_process_detected"]?.boolean == true,
                    !Task.isCancelled, self.operationGeneration == generation,
                    self.operationSelection?.method == method {
@@ -417,7 +433,6 @@ final class AppState: ObservableObject {
                 } else if GUIAction(rawValue: method) != nil, ["AUTH_REQUIRED","SSH_AUTH_FAILED","SUDO_AUTH_FAILED","CREDENTIAL_SCOPE_CHANGED","CHANGE_CONFIRMATION_REQUIRED","RUNTIME_ROOT_REQUIRED"].contains(failure.code), self.operationSelection == nil {
                     self.operationSelection = NativeOperation(method: method)
                 }
-                self.appendLog(method + ": " + (self.operationError?.code ?? "UNKNOWN"))
             }
         }
     }
@@ -487,16 +502,83 @@ final class AppState: ObservableObject {
     }
     private func recordGUIOperation(_ method: String) {
         guard let record = guiRecords[method] else { return }
-        let details: [String: JSONValue] = ["operation": .string(method), "started_at": .string(ISO8601DateFormatter().string(from: record.startedAt)),
+        let details: [String: JSONValue] = ["task_id": .string(operationGeneration.uuidString), "operation": .string(method), "started_at": .string(ISO8601DateFormatter().string(from: record.startedAt)),
             "ended_at": .string(ISO8601DateFormatter().string(from: record.endedAt ?? Date())), "status": .string(record.status.rawValue),
             "error_code": .string(record.error?.code ?? "none")]
         if let data = try? JSONEncoder().encode(JSONValue.object(details)), let text = String(data: data, encoding: .utf8) {
-            runtimeLogs.append(["at": .string(ISO8601DateFormatter().string(from: Date())), "source": .string("Native action"), "level": .string(record.error == nil ? "INFO" : "ERROR"), "message": .string(credentials.redactor.text(text))])
+            runtimeLogs.append(["id": .string(UUID().uuidString), "at": .string(ISO8601DateFormatter().string(from: Date())), "source": .string("Native action"), "level": .string(record.error == nil ? "INFO" : "ERROR"), "message": .string(credentials.redactor.text(text))])
             if runtimeLogs.count > 500 { runtimeLogs.removeFirst(runtimeLogs.count - 500) }
         }
     }
     private var pendingEnvironmentDestination: EnvironmentWorkflowDestination?
     @Published var environmentWorkflow = EnvironmentWorkflow()
+    private var workflowPhaseStarted = ProcessInfo.processInfo.systemUptime
+    private var workflowStarted = ProcessInfo.processInfo.systemUptime
+    private var workflowEventIDs = Set<String>()
+    private var workflowStageStarted: [String: TimeInterval] = [:]
+
+    private func logStatus(_ value: String) -> String {
+        switch value {
+        case "running": return t("ui.157")
+        case "failed": return t("ui.125")
+        case "waiting": return t("ui.logs.waiting")
+        case "deferred": return t("ui.logs.deferred")
+        case "done", "passed", "completed": return t("ui.logs.completed")
+        case "started": return t("ui.logs.started")
+        default: return value
+        }
+    }
+
+    private func workflowLog(_ id: UUID, _ message: String, level: String = "INFO", at: String? = nil) {
+        let safe = credentials.redactor.text(message)
+        runtimeLogs.append(["id": .string(UUID().uuidString), "at": .string(at ?? ISO8601DateFormatter().string(from: Date())),
+                            "source": .string("Workflow"), "level": .string(level),
+                            "message": .string("[\(id.uuidString)] " + safe)])
+        if runtimeLogs.count > 500 { runtimeLogs.removeFirst(runtimeLogs.count - 500) }
+    }
+    private func workflowPhase(_ phase: EnvironmentWorkflowPhase) {
+        let now = ProcessInfo.processInfo.systemUptime
+        let id = environmentWorkflow.taskID
+        workflowLog(id, "\(t(environmentWorkflow.phase.titleKey)): \(logStatus("completed")) (\(Int(max(0, now - workflowPhaseStarted)))s)")
+        environmentWorkflow.phase = phase
+        workflowPhaseStarted = now
+        workflowLog(id, "\(t(phase.titleKey)): \(logStatus("started"))")
+    }
+    private func workflowEvent(_ event: [String: JSONValue], taskID: UUID) {
+        guard environmentWorkflow.taskID == taskID else { return }
+        let request = event["request_id"]?.text ?? ""
+        let sequence = event["sequence"]?.integer ?? -1
+        let key = request + ":" + String(sequence)
+        guard !request.isEmpty, sequence >= 0, workflowEventIDs.insert(key).inserted else { return }
+        if workflowEventIDs.count > 1000 { workflowEventIDs.removeAll(keepingCapacity: true); workflowEventIDs.insert(key) }
+        let at = event["at"]?.text
+        if let raw = event["stage"]?.text, let stage = LaunchStage(rawValue: raw),
+           let status = event["status"]?.text, ["running", "waiting", "done", "passed", "failed"].contains(status) {
+            let now = ProcessInfo.processInfo.systemUptime
+            let started = workflowStageStarted[raw]
+            if status == "running", started == nil { workflowStageStarted[raw] = now }
+            let elapsed = (status == "done" || status == "passed" || status == "failed") && started != nil
+                ? " (\(Int(max(0, now - started!)))s)" : ""
+            if status == "done" || status == "passed" || status == "failed" { workflowStageStarted.removeValue(forKey: raw) }
+            workflowLog(taskID, "\(stage.title(languageCode)): \(logStatus(status))\(elapsed)", level: status == "failed" ? "ERROR" : "INFO", at: at)
+        } else if event["kind"]?.text == "deployment_component", let component = event["component"]?.text,
+                  ["fex", "proton", "steam", "tool", "launch", "vulkan"].contains(component),
+                  let status = event["status"]?.text, ["running", "done", "failed", "deferred"].contains(status) {
+            let key = "component:" + component
+            let now = ProcessInfo.processInfo.systemUptime
+            let start = workflowStageStarted[key]
+            if status == "running" { workflowStageStarted[key] = now }
+            let elapsed = status != "running" && start != nil ? " (\(Int(max(0, now - start!)))s)" : ""
+            if status != "running" { workflowStageStarted.removeValue(forKey: key) }
+            workflowLog(taskID, "\(component): \(logStatus(status))\(elapsed)", level: status == "failed" ? "ERROR" : "INFO", at: at)
+        } else if let raw = event["deployment_state"]?.text, let stage = DeploymentState(rawValue: raw) {
+            workflowLog(taskID, "FEX / Proton / Steam: \(stage.rawValue)", at: at)
+        } else if event["kind"]?.text == "credential_status", event["status"]?.text == "authenticated" {
+            workflowLog(taskID, "SSH / sudo: authenticated", at: at)
+        } else if event["kind"]?.text == "launch_request", let success = event["command_succeeded"]?.boolean {
+            workflowLog(taskID, t(success ? "ui.logs.commandSucceeded" : "ui.logs.alreadyRunning"), at: at)
+        }
+    }
     @Published var pendingFEXApproval: String?
     func approveFEXBuild() {
         guard let fingerprint = pendingFEXApproval else { return }
@@ -518,6 +600,11 @@ final class AppState: ObservableObject {
             return
         }
         environmentWorkflow = EnvironmentWorkflow(phase: .startingFX, launchesGame: launchGame)
+        let taskID = environmentWorkflow.taskID
+        workflowStarted = ProcessInfo.processInfo.systemUptime; workflowPhaseStarted = workflowStarted
+        workflowEventIDs.removeAll(); workflowStageStarted.removeAll()
+        workflowLog(taskID, "\(t(launchGame ? "ui.176" : "ui.workflow.result")): \(logStatus("started"))")
+        workflowLog(taskID, "\(t(EnvironmentWorkflowPhase.startingFX.titleKey)): \(logStatus("started"))")
         firstRunPlan = nil
         if launchGame { launchSession = LaunchSession() }
         let root = runtimeRoot
@@ -533,7 +620,7 @@ final class AppState: ObservableObject {
                 self.environmentWorkflow.evidence = fx.result
                 try Task.checkCancellation()
                 self.environmentWorkflow.completedSteps = 1
-                self.environmentWorkflow.phase = .connecting
+                self.workflowPhase(.connecting)
                 let binding = try await self.core.request("credential_target", timeout: 45, params: launch)
                 guard let revision = binding.result["revision"]?.text,
                       let identity = binding.result["identity"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
@@ -553,11 +640,16 @@ final class AppState: ObservableObject {
                     await self.credentials.authenticated(.ssh, value: password, target: target)
                 }
                 self.environmentWorkflow.completedSteps = 2
-                self.environmentWorkflow.phase = .detecting
+                self.workflowPhase(.detecting)
                 let detected = try await self.core.request("first_run_detect", timeout: 240, params: input)
                 guard let raw = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
                 let plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
                 self.firstRunPlan = plan
+                for component in ["fex", "proton", "steam", "game"] {
+                    if let operation = plan.operations.first(where: { $0.component == component }) {
+                        self.workflowLog(taskID, "\(component): \(operation.detectionPassed ? "verified" : "unverified")")
+                    }
+                }
                 if plan.snapshot.facts["fex_status"] == "confirmation" {
                     self.pendingFEXApproval = plan.snapshot.facts["fex_fingerprint"]
                     throw ErrorState("FEX_CONFIRMATION_REQUIRED")
@@ -567,7 +659,7 @@ final class AppState: ObservableObject {
                 }
                 self.environmentWorkflow.evidence["steam_running"] = .bool(plan.snapshot.steamRunning)
                 self.environmentWorkflow.completedSteps = 3
-                self.environmentWorkflow.phase = .deploying
+                self.workflowPhase(.deploying)
                 if !plan.executable.isEmpty {
                     if plan.executable.contains(where: { $0.needsRestart }) && !restartApproved {
                         self.environmentWorkflow.needsRestartApproval = true
@@ -583,10 +675,12 @@ final class AppState: ObservableObject {
                            let value = deploymentCredentials[role.bridgeField]?.text {
                             Task { @MainActor in await self?.credentials.authenticated(role, value: value, target: target) }
                         }
-                        guard let stage = event["deployment_state"]?.text, DeploymentState(rawValue: stage) != nil else { return }
                         Task { @MainActor in
-                            guard let self, self.environmentWorkflow.phase == .deploying else { return }
-                            self.environmentWorkflow.deploymentStage = stage
+                            guard let self, self.environmentWorkflow.taskID == taskID else { return }
+                            self.workflowEvent(event, taskID: taskID)
+                            if self.environmentWorkflow.phase == .deploying, let stage = event["deployment_state"]?.text, DeploymentState(rawValue: stage) != nil {
+                                self.environmentWorkflow.deploymentStage = stage
+                            }
                         }
                     }
                     if let receipt = deployed.result["receipt"] {
@@ -606,7 +700,7 @@ final class AppState: ObservableObject {
                     }
                 }
                 self.environmentWorkflow.completedSteps = 4
-                self.environmentWorkflow.phase = .verifying
+                self.workflowPhase(.verifying)
                 try Task.checkCancellation()
                 let verified = try await self.core.request("first_run_detect", timeout: 240, params: input)
                 guard let raw = verified.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
@@ -619,10 +713,14 @@ final class AppState: ObservableObject {
                 self.firstRunState = .Completed
                 self.environmentWorkflow.completedSteps = 5
                 if launchGame {
-                    self.environmentWorkflow.phase = .launching
-                    self.launchSession.begin(root: root)
-                    let reply = try await self.core.request("launch_game", timeout: 900, params: input) { [weak self] event in
-                        Task { @MainActor in self?.launchSession.consume(event) }
+                    self.workflowPhase(.launching)
+                    self.launchSession.begin(root: root, taskID: taskID)
+                    let reply = try await self.core.request("launch_game", timeout: 600, params: input) { [weak self] event in
+                        Task { @MainActor in
+                            guard let self, self.environmentWorkflow.taskID == taskID else { return }
+                            self.launchSession.consume(event)
+                            self.workflowEvent(event, taskID: taskID)
+                        }
                     }
                     self.launchSession.complete(reply.result, at: reply.observedAt)
                     self.environmentWorkflow.evidence.merge(reply.result) { _, value in value }
@@ -630,12 +728,18 @@ final class AppState: ObservableObject {
                     guard reply.result["game_process_detected"]?.boolean == true else { throw ErrorState("GAME_LAUNCH_FAILED") }
                     self.environmentWorkflow.completedSteps = 6
                 }
+                self.workflowLog(taskID, "\(self.t(self.environmentWorkflow.phase.titleKey)): \(self.logStatus("completed")) (\(Int(max(0, ProcessInfo.processInfo.systemUptime - self.workflowPhaseStarted)))s)", level: "SUCCESS")
                 self.environmentWorkflow.phase = .completed
+                self.workflowLog(taskID, "\(self.t(launchGame ? "ui.176" : "ui.workflow.result")): \(self.logStatus("completed")) (\(Int(max(0, ProcessInfo.processInfo.systemUptime - self.workflowStarted)))s)", level: "SUCCESS")
+                if launchGame { self.workflowLog(taskID, self.t("ui.logs.processOnly")) }
                 self.appendLog("environment_workflow: COMPLETED")
             } catch {
                 let failure = error as? ErrorState ?? ErrorState(error is CancellationError ? "CANCELLED" : "PROTOCOL_ERROR")
                 self.environmentWorkflow.failure = ErrorState(failure.code, details: self.credentials.redactor.diagnostic(failure.details))
+                let reason = failure.details["reason"]?.text.flatMap { $0.range(of: "^[a-z0-9_]{1,80}$", options: .regularExpression) == nil ? nil : $0 }
+                self.workflowLog(taskID, "\(self.t(self.environmentWorkflow.phase.titleKey)): \(failure.code)\(reason.map { " / " + $0 } ?? "") (\(Int(max(0, ProcessInfo.processInfo.systemUptime - self.workflowPhaseStarted)))s)", level: "ERROR")
                 self.environmentWorkflow.phase = failure.code == "CANCELLED" ? .cancelled : .failed
+                self.workflowLog(taskID, "\(self.environmentWorkflow.phase.rawValue): \(failure.code) (\(Int(max(0, ProcessInfo.processInfo.systemUptime - self.workflowStarted)))s)", level: "ERROR")
                 self.appendLog("environment_workflow: " + failure.code)
                 self.firstRunState = .Failed
                 if self.launchSession.running { self.launchSession.fail(failure); self.recordLaunch() }
@@ -717,7 +821,7 @@ final class AppState: ObservableObject {
         let record = launchSession.diagnostic(appVersion: version + " (" + build + ")")
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         guard let bytes = try? encoder.encode(JSONValue.object(record)), let text = String(data: bytes, encoding: .utf8) else { return }
-        runtimeLogs.append(["at": .string(ISO8601DateFormatter().string(from: Date())), "source": .string("Native launch"),
+        runtimeLogs.append(["id": .string(UUID().uuidString), "at": .string(ISO8601DateFormatter().string(from: Date())), "source": .string("Native launch"),
                             "level": .string(launchSession.failure == nil ? "INFO" : "ERROR"),
                             "message": .string(credentials.redactor.text(text))])
         if runtimeLogs.count > 500 { runtimeLogs.removeFirst(runtimeLogs.count - 500) }
@@ -785,7 +889,8 @@ final class AppState: ObservableObject {
     }
     var logText: String {
         let bridgeLogs = rows("get_logs", "entries").map { ($0["at"]?.text ?? "") + "  " + ($0["message"]?.text ?? "") }
-        return credentials.redactor.text((sessionLogs + bridgeLogs).joined(separator: "\n"))
+        let liveLogs = runtimeLogs.map { ($0["at"]?.text ?? "") + "  " + ($0["message"]?.text ?? "") }
+        return credentials.redactor.text((sessionLogs + bridgeLogs + liveLogs).sorted().joined(separator: "\n"))
     }
 }
 

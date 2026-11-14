@@ -33,6 +33,25 @@ struct NativeCoreIntegrationChecks {
         ok(logs.result["source"]?.text == "native_core_session", "get_logs native source")
         ok(logs.error == nil, "get_logs no protocol error")
 
+        // A zero wait budget must fail without attempting SSH, rather than loop forever.
+        let emptyTransport = SSHTransport.make([:])
+        let waitStarted = CoreClock.monotonic
+        do {
+            _ = try GuestService.waitForGame(emptyTransport, attempts: 300, timeout: 0, context: nil)
+            ok(false, "zero game wait deadline fails")
+        } catch let error as CoreError {
+            ok(error.code == "GAME_START_FAILED" && error.details["reason"]?.text == "game_process_not_observed" && CoreClock.monotonic - waitStarted < 1,
+               "zero game wait deadline exits without SSH")
+        } catch { ok(false, "zero game wait returns expected failure") }
+        let shortWaitStarted = CoreClock.monotonic
+        do {
+            _ = try GuestService.waitForGame(emptyTransport, attempts: 300, timeout: 0.05, context: nil)
+            ok(false, "short game wait deadline fails")
+        } catch let error as CoreError {
+            ok(error.code == "GAME_START_FAILED" && CoreClock.monotonic - shortWaitStarted < 1,
+               "short game wait respects wall-clock deadline without SSH")
+        } catch { ok(false, "short game wait returns expected failure") }
+
         let system = run("get_system_info")
         ok(["os", "os_version", "arch", "native_runtime"].allSatisfy { system.result[$0]?.text != nil }, "get_system_info contract")
         ok(system.result["native_runtime"]?.text == "Swift Native Core", "native runtime value")

@@ -36,6 +36,8 @@ The Dashboard retains five cards: FX, virtual machine, Steam, EAC and multiplaye
 
 ### Features
 
+**Development candidate:** The Logs page displays local system time, streams bounded task events, supports auto-scroll and exports redacted raw ISO 8601 timestamps. Launch command success, process detection, window and gameplay remain separate; game-window and gameplay evidence are not automatic. This change is not included in the published v1.0.0 DMG.
+
 - Dashboard starts the guarded HELLDIVERS 2 launch workflow. FX Manager inspects the selected FX installation and exposes supported FX/Steam actions.
 - First-Run Setup checks Guest identity, runtime capabilities and component integrity. Approved configuration can install the pinned Proton-JE package, select a verified Steam compatibility tool and merge launch options while retaining custom arguments. Detection is read-only. Deployment and recovery require their own checks.
 - Environment reports FEX and Proton-JE evidence. SSH and sudo credentials can be stored separately in encrypted local storage for a verified target; reuse after restart still requires real-world acceptance.

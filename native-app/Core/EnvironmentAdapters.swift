@@ -456,7 +456,11 @@ extension NativeCoreService {
                     emit("INFO", "Sudo authenticated", ["kind": .string("credential_status"), "credential_kind": .string("sudo"), "status": .string("authenticated")])
                 }
             }
-            var receipt = try service.execute(plan, approved: Set(params["approved_steps"]?.array.compactMap(\.text) ?? []), context: context) { status in
+            let onComponent: (String, String) -> Void = { component, status in
+                emit(status == "failed" ? "ERROR" : "INFO", "Deployment component",
+                     ["kind": .string("deployment_component"), "component": .string(component), "status": .string(status)])
+            }
+            var receipt = try service.execute(plan, approved: Set(params["approved_steps"]?.array.compactMap(\.text) ?? []), context: context, componentProgress: onComponent) { status in
                 emit("INFO", "Environment deployment", ["deployment_state": .string(status.rawValue)])
             }
             var active = backend
@@ -486,7 +490,7 @@ extension NativeCoreService {
                 let nextPlan = SetupVMReboot.approvedFollowup(original: plan, fresh: fresh)
                 if !nextPlan.executable.isEmpty {
                     let nextService = EnvironmentDeploymentService(backend: connected, receipts: deploymentReceipts)
-                    receipt = try nextService.execute(nextPlan, approved: Set(nextPlan.executable.map(\.id)), context: context) { status in
+                    receipt = try nextService.execute(nextPlan, approved: Set(nextPlan.executable.map(\.id)), context: context, componentProgress: onComponent) { status in
                         emit("INFO", "Steam configuration after VM reboot", ["deployment_state": .string(status.rawValue)])
                     }
                 }

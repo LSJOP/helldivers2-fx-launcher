@@ -161,7 +161,10 @@ struct CredentialRedactor: Sendable {
         }
     }
     func event(_ input: [String: JSONValue]) -> [String: JSONValue] {
-        input.mapValues(scrub)
+        input.reduce(into: [:]) { result, entry in
+            let sensitive = ["password", "passphrase", "sudo_password", "token", "authorization", "private_key", "access_token", "client_secret"].contains(entry.key.lowercased())
+            result[entry.key] = sensitive ? .string("[REDACTED]") : scrub(entry.value)
+        }
     }
     func diagnostic(_ input: [String: JSONValue]) -> [String: JSONValue] {
         var result = event(input)

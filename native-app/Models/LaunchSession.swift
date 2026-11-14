@@ -30,6 +30,7 @@ enum LaunchStage: String, CaseIterable, Identifiable {
 }
 
 struct LaunchSession {
+    private(set) var taskID: UUID?
     var root = ""
     var startedAt: String?
     var fxPath: String?
@@ -40,16 +41,18 @@ struct LaunchSession {
     var sequence = 0
     var running = false
     var failure: ErrorState?
+    var launchCommandSucceeded: Bool?
     var observedAt: String?
     var mainMenuConfirmedAt: String?
     var singlePlayerConfirmedAt: String?
     var processDetected: Bool { evidence[.gameProcessDetected] == "done" || evidence[.gameProcessDetected] == "passed" }
-    mutating func begin(root: String) { self = LaunchSession(); self.root = root; startedAt = ISO8601DateFormatter().string(from: Date()); current = .checkingEnvironment; running = true }
+    mutating func begin(root: String, taskID: UUID = UUID()) { self = LaunchSession(); self.taskID = taskID; self.root = root; startedAt = ISO8601DateFormatter().string(from: Date()); current = .checkingEnvironment; running = true }
     mutating func consume(_ event: [String: JSONValue]) {
         guard running else { return }
         if event["kind"]?.text == "launch_context" {
             fxPath = event["fx_path"]?.text; fxVersion = event["fx_version"]?.text
         }
+        if event["kind"]?.text == "launch_request" { launchCommandSucceeded = event["command_succeeded"]?.boolean }
         guard let raw = event["stage"]?.text, let stage = LaunchStage(rawValue: raw),
               let order = event["sequence"]?.integer, order > (stageSequences[stage] ?? 0) else { return }
         stageSequences[stage] = order
@@ -58,6 +61,7 @@ struct LaunchSession {
     }
     mutating func complete(_ result: [String: JSONValue], at: String) {
         running = false; observedAt = at; failure = nil
+        if let success = result["game_launch_command_succeeded"]?.boolean { launchCommandSucceeded = success }
         if result["game_process_detected"]?.boolean == true {
             evidence[.gameProcessDetected] = "done"; current = .gameProcessDetected
         } else if result["game_process_detected"]?.boolean == false {
@@ -76,12 +80,13 @@ struct LaunchSession {
     }
     // A structured record, never evidence of a menu/window merely from process presence.
     func diagnostic(appVersion: String) -> [String: JSONValue] {
-        ["started_at": .string(startedAt ?? "unknown"), "app_version": .string(appVersion),
+        ["task_id": .string(taskID?.uuidString ?? "unknown"), "started_at": .string(startedAt ?? "unknown"), "app_version": .string(appVersion),
          "runtime_root": .string(root), "fx_path": .string(fxPath ?? "unverified"),
          "fx_version": .string(fxVersion ?? "unverified"), "stage": .string(current.rawValue),
          "stages": .object(evidence.reduce(into: [:]) { $0[$1.key.rawValue] = .string($1.value) }),
          "error_code": .string(failure?.code ?? "none"),
          "error_summary": .string(failure?.details["summary"]?.text ?? failure?.message("en") ?? ""),
+         "game_launch_command_succeeded": launchCommandSucceeded.map { .bool($0) } ?? .null,
          "game_process_detected": .bool(processDetected), "game_window": .string("unverified"),
          "main_menu": .string(mainMenuConfirmedAt == nil ? "unverified" : "user_confirmed"),
          "main_menu_confirmed_at": .string(mainMenuConfirmedAt ?? "unverified")]
@@ -117,6 +122,8 @@ enum EnvironmentWorkflowPhase: String {
     }
 }
 struct EnvironmentWorkflow {
+    var taskID = UUID()
+    var startedAt = Date()
     var phase: EnvironmentWorkflowPhase = .idle
     var completedSteps = 0
     var launchesGame = false
@@ -126,6 +133,7 @@ struct EnvironmentWorkflow {
     var evidence: [String: JSONValue] = [:]
     var totalSteps: Int { launchesGame ? 6 : 5 }
     var active: Bool { ![.idle, .completed, .failed, .cancelled].contains(phase) }
+    var showsProgress: Bool { phase != .failed && phase != .cancelled }
     var fraction: Double { phase == .completed ? 1 : min(Double(completedSteps) / Double(totalSteps), 0.99) }
 }
 
@@ -157,5 +165,39 @@ struct DashboardStatus: Equatable {
         default:
             return Self(tone: .unknown, textKey: "ui.368")
         }
+    }
+}
+
+/// Stored timestamps remain UTC; conversion is presentation-only.
+enum LogTimestamp {
+    private static let lock = NSLock()
+    private static let embeddedPattern = try! NSRegularExpression(pattern: #"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z"#)
+    private static let fractional: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    private static let standard = ISO8601DateFormatter()
+    private static let local: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter
+    }()
+    static func display(_ raw: String, timeZone: TimeZone = .autoupdatingCurrent) -> String {
+        lock.lock(); defer { lock.unlock() }
+        guard let date = fractional.date(from: raw) ?? standard.date(from: raw) else { return raw }
+        local.timeZone = timeZone
+        return local.string(from: date)
+    }
+    static func displayTimestamps(in text: String, timeZone: TimeZone = .autoupdatingCurrent) -> String {
+        var result = text
+        let matches = embeddedPattern.matches(in: text, range: NSRange(text.startIndex..., in: text))
+        for match in matches.reversed() {
+            guard let range = Range(match.range, in: result) else { continue }
+            result.replaceSubrange(range, with: display(String(result[range]), timeZone: timeZone))
+        }
+        return result
     }
 }

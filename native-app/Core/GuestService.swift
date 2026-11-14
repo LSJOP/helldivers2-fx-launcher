@@ -137,8 +137,8 @@ enum GuestService {
         return CoreJSON.value(object).object
     }
 
-    static func state(_ transport: SSHTransport, context: CoreContext?) throws -> [String: JSONValue] {
-        let result = try transport.run(GuestScripts.state, timeout: 40, context: context)
+    static func state(_ transport: SSHTransport, context: CoreContext?, timeout: TimeInterval = 40) throws -> [String: JSONValue] {
+        let result = try transport.run(GuestScripts.state, timeout: timeout, context: context)
         guard result.status == 0 else { throw CoreError("GUEST_INSPECTION_FAILED", ["summary": .string(CoreRedaction.scrub(result.stderr))]) }
         return try parse(result.stdout, expected: "GUEST_INSPECTION_FAILED")
     }
@@ -198,12 +198,18 @@ enum GuestService {
         return value
     }
 
-    static func waitForGame(_ transport: SSHTransport, attempts: Int = 90, context: CoreContext?) throws -> Int {
+    static func waitForGame(_ transport: SSHTransport, attempts: Int = 90, timeout: TimeInterval = 150,
+                            context: CoreContext?, onWaiting: (() -> Void)? = nil) throws -> Int {
+        let deadline = CoreClock.monotonic + max(0, timeout)
+        var nextNotice = CoreClock.monotonic + 15
         for _ in 0..<attempts {
             try context?.check()
-            Thread.sleep(forTimeInterval: 2)
-            let current = try state(transport, context: context)
+            guard CoreClock.monotonic < deadline else { break }
+            Thread.sleep(forTimeInterval: min(2, max(0, deadline - CoreClock.monotonic)))
+            guard CoreClock.monotonic < deadline else { break }
+            let current = try state(transport, context: context, timeout: max(0.1, min(40, deadline - CoreClock.monotonic)))
             if let count = current["game_count"]?.integer, count > 0 { return count }
+            if CoreClock.monotonic >= nextNotice { onWaiting?(); nextNotice = CoreClock.monotonic + 15 }
         }
         throw CoreError("GAME_START_FAILED", ["reason": .string("game_process_not_observed")])
     }

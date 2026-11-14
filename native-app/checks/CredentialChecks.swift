@@ -59,9 +59,9 @@ import Foundation
         shared.useSSHPasswordForSudo()
         try check(shared.sudoPassword == fake && !shared.reusable(.sudo), "explicit SSH password copy still requires sudo authentication")
         shared.password = ""
-        shared.sudoPassword = "retained"
+        shared.sudoPassword = "fixture-retained"
         shared.useSSHPasswordForSudo()
-        try check(shared.sudoPassword == "retained", "empty SSH input cannot overwrite sudo input")
+        try check(shared.sudoPassword == "fixture-retained", "empty SSH input cannot overwrite sudo input")
         let rebootManager = SessionCredentialManager()
         await rebootManager.prepare(for: "fixture-reboot-target")
         rebootManager.password = fake; rebootManager.sudoPassword = fake
@@ -77,6 +77,9 @@ import Foundation
         let redactor = CredentialRedactor(secrets: [fake])
         try check(!redactor.text(fake + " Authorization: Bearer " + fake).contains(fake), "secret and authorization redacted")
         let nested = redactor.event(["nested": .object(["password": .string(fake)]), "items": .array([.string(fake)])])
+        let sample = ["value", "not", "in", "session"].joined(separator: "-")
+        let sensitiveKeys = CredentialRedactor(secrets: []).event(["nested": .object(["token": .string(sample)])])
+        try check(!CoreString.encode(sensitiveKeys).contains(sample), "nested sensitive-key values are redacted even if not in session")
         try check(!CoreString.encode(nested).contains(fake), "nested event redaction")
         try check(!CoreString.encode(redactor.diagnostic(["other": .object(["secret": .string(fake)])])).contains(fake), "nested diagnostic redaction")
         try check(!CredentialRedactor(secrets: []).text("{\"password\":\"" + fake + "\"}").contains(fake), "unregistered structured password redaction")

@@ -45,7 +45,7 @@ struct ContentView: View {
                     }
                 }
                 if let time = state.observedAt, state.selection != .dashboard {
-                    Text(state.t("ui.311") + time)
+                    Text(state.t("ui.311") + LogTimestamp.display(time))
                         .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 }
             }
