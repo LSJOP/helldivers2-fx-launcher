@@ -1,7 +1,7 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.25** · Updated: **2026-11-14**.
-Change: establish shared UI design standards and review requirements. Instruction version is independent of App version.
+Instruction version: **v1.2.27** · Updated: **2026-11-14**.
+Change: protect the shared header and specify workflow artwork, attribution and review. Instruction version is independent of App version.
 
 ## Authority and task lifecycle
 
@@ -49,3 +49,5 @@ All subsequent UI work must first follow `docs/UI_DESIGN_GUIDELINES.md`: read th
 - Localize all visible additions in zh-CN, en, ja, ko, ru, es, de, fr, pt-BR and zh-TW; do not hardcode UI prose. Check long translations for clipping.
 - Preserve the SwiftUI + AppKit hybrid: SwiftUI owns presentation and normal interactions, AppKit native macOS capabilities, and the existing Swift Service Layer business state. Components must not create a duplicate business state system.
 - Review changed pages for visual consistency, action placement and duplication, clipping, loading, errors, accessibility and ten-language adaptation. Provide real App screenshots for substantial visual changes; routine code changes do not require screenshots.
+
+- Protect the Dashboard hero and the shared secondary-page starfield, sunrise and Super Earth emblem header; never replace or cover them with new illustrations. Restrict MOTR7 artwork to the first-run welcome, verified setup completion and game-launch preparation flows. Place it on the right using the shared adaptive container, consistent size and spacing; hide it when room is insufficient for controls. Preserve the whole original image and its aspect ratio. Record third-party authorship and permission. Workflow success and progress must come from actual service evidence; never fabricate them for presentation. Artwork must not reduce readability or impede actions. Review every substantial visual change with real App screenshots.

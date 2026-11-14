@@ -4,8 +4,35 @@ struct DashboardView: View {
     @ObservedObject var state: AppState
     @ObservedObject var tasks: TaskManager
     @Environment(\.colorScheme) private var scheme
+    @State private var showingOverview = false
     private var c: TacticalColors { TacticalColors(scheme: scheme) }
     var body: some View {
+        Group {
+            if state.environmentWorkflow.launchesGame && state.environmentWorkflow.phase != .idle && !showingOverview {
+                launchPreparation
+            } else {
+                overview
+            }
+        }
+        .foregroundStyle(c.text).font(TacticalTypography.body)
+        .onChange(of: state.environmentWorkflow.taskID) { _, _ in
+            if state.environmentWorkflow.launchesGame { showingOverview = false }
+        }
+    }
+    private var launchPreparation: some View {
+        VStack(alignment: .leading, spacing: TacticalSpacing.panel) {
+            TacticalPageHeader(title: state.t("ui.176"))
+            TacticalFlowArtwork(asset: "MOTR7Soldier") {
+                VStack(alignment: .leading, spacing: TacticalSpacing.panel) {
+                    EnvironmentWorkflowProgressView(state: state, tasks: tasks, showStepsInline: true, returnToDashboard: { showingOverview = true })
+                    TacticalButton(title: state.t("ui.092"), symbol: "square.grid.2x2", primary: false) { showingOverview = true }
+                }
+            }
+            if let error = state.error { TacticalWarningBanner(text: error.message(state.languageCode) + " · " + error.code, isError: true) }
+            if state.stale { TacticalWarningBanner(text: state.t("ui.309")) }
+        }
+    }
+    private var overview: some View {
         VStack(alignment: .leading, spacing: TacticalSpacing.panel) {
             hero
             TacticalAdaptiveLayout(minimumWidth: 120, maximumColumns: 5) {
@@ -24,6 +51,9 @@ struct DashboardView: View {
                     if state.launchSession.current != .idle { LaunchProgressView(state: state, tasks: tasks) }
                 }
             } else {
+                if state.environmentWorkflow.launchesGame {
+                    TacticalButton(title: state.t("ui.088"), symbol: "list.bullet.rectangle", primary: false) { showingOverview = false }
+                }
                 EnvironmentWorkflowProgressView(state: state, tasks: tasks)
             }
             if let error = state.error {
@@ -31,7 +61,7 @@ struct DashboardView: View {
                     .accessibilityIdentifier("bridge.error")
             }
             if state.stale { TacticalWarningBanner(text: state.t("ui.309")) }
-        }.foregroundStyle(c.text).font(TacticalTypography.body)
+        }
     }
     private func statusCard(_ title: String, _ symbol: String, _ key: String, _ stage: LaunchStage?) -> some View {
         let status = DashboardStatus.resolve(key: key, stage: stage, session: state.launchSession,
@@ -61,7 +91,7 @@ struct DashboardView: View {
         .overlay(alignment: .top) { Rectangle().fill(c.yellow).frame(height: 3) }
     }
     private var launchButton: some View {
-        TacticalButton(title: state.t("ui.176"), symbol: "play.fill", primary: true, loading: tasks.busy && !state.networkDiagnosticRunning) { state.perform(.game) }
+        TacticalButton(title: state.t("ui.176"), symbol: "play.fill", primary: true, loading: tasks.busy && !state.networkDiagnosticRunning) { showingOverview = false; state.perform(.game) }
             .accessibilityIdentifier("dashboard.launch")
             .disabled(tasks.busy && !state.networkDiagnosticRunning)
     }

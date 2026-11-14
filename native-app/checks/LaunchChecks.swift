@@ -76,6 +76,18 @@ import Foundation
         try check(!workflow.active && !workflow.showsProgress, "cancelled workflow ends without displaying a stale percentage")
         workflow = EnvironmentWorkflow(phase: .completed, completedSteps: 5, launchesGame: false)
         try check(workflow.totalSteps == 5 && workflow.fraction == 1, "setup-only workflow completes without a game stage")
-        print("23 launch and GUI state checks PASS")
+        try check(workflow.canShowSetupCompletion(busy: false, deploymentCompleted: true, hasCurrentBinding: true, hasRequiredObservations: true, inspectionReady: false), "completed setup can display its actual inspection plan")
+        try check(!workflow.canShowSetupCompletion(busy: true, deploymentCompleted: true, hasCurrentBinding: true, hasRequiredObservations: true, inspectionReady: true), "busy state cannot display setup completion")
+        try check(!workflow.canShowSetupCompletion(busy: false, deploymentCompleted: false, hasCurrentBinding: true, hasRequiredObservations: true, inspectionReady: true), "unfinished deployment cannot display setup completion")
+        try check(!workflow.canShowSetupCompletion(busy: false, deploymentCompleted: true, hasCurrentBinding: true, hasRequiredObservations: false, inspectionReady: true), "missing required observations cannot display setup completion")
+        try check(!workflow.canShowSetupCompletion(busy: false, deploymentCompleted: true, hasCurrentBinding: false, hasRequiredObservations: true, inspectionReady: true), "changed FX or Guest boot cannot display stale setup completion")
+        workflow.completedSteps = 4
+        try check(!workflow.canShowSetupCompletion(busy: false, deploymentCompleted: true, hasCurrentBinding: true, hasRequiredObservations: true, inspectionReady: false), "incomplete step count cannot display setup completion")
+        workflow.phase = .failed
+        try check(!workflow.canShowSetupCompletion(busy: false, deploymentCompleted: true, hasCurrentBinding: true, hasRequiredObservations: true, inspectionReady: false), "failed workflow without a ready inspection cannot display completion")
+        try check(workflow.canShowSetupCompletion(busy: false, deploymentCompleted: true, hasCurrentBinding: true, hasRequiredObservations: true, inspectionReady: true), "fresh ready inspection supports completed manual deployment")
+        workflow = EnvironmentWorkflow(phase: .completed, completedSteps: 6, launchesGame: true)
+        try check(!workflow.canShowSetupCompletion(busy: false, deploymentCompleted: true, hasCurrentBinding: true, hasRequiredObservations: true, inspectionReady: false), "game workflow alone cannot claim setup completion")
+        print("32 launch and GUI state checks PASS")
     }
 }

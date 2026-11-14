@@ -329,6 +329,35 @@ struct TacticalPageHeader: View {
     }
 }
 
+// Workflow illustrations never compete with controls in a narrow content area.
+struct TacticalFlowArtwork<Content: View>: View {
+    let asset: String
+    @ViewBuilder let content: Content
+    @State private var availableWidth: CGFloat = 0
+    var body: some View {
+        HStack(alignment: .top, spacing: 20) {
+            content.frame(maxWidth: .infinity, alignment: .topLeading)
+            if availableWidth >= 820 {
+                Image(asset)
+                    .resizable().scaledToFit()
+                    .frame(width: 280, height: 420)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.black.opacity(0.18)))
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.4)))
+                    .accessibilityHidden(true)
+                    .allowsHitTesting(false)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            GeometryReader { geometry in
+                Color.clear
+                    .onAppear { availableWidth = geometry.size.width }
+                    .onChange(of: geometry.size.width) { _, width in availableWidth = width }
+            }
+        }
+    }
+}
+
 struct TacticalMetric: View {
     let title: String
     let value: String

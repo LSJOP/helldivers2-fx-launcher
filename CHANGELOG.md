@@ -8,6 +8,8 @@ v1.0.0 (2026111403) is published. Game and complete update acceptance remain lim
 
 ## Unreleased
 
+- Add original MOTR7 artwork to setup and launch workflows and an artwork credit in Settings; preserve the Dashboard hero and shared header.
+
 - Move snapshot refresh into a shared content-area action on Environment, FX and Logs; avoid repeated resource hashing during FX view updates. Add shared UI design standards and disable first-run rescan during tasks.
 
 - Stream bounded, redacted workflow and launch events with per-attempt IDs, component progress and elapsed times; display local timestamps while exporting original ISO 8601 timestamps. Bound Steam/game waiting and stop showing 83% after failure. Live full launch and end-to-end EAC/gameplay validation remain pending.

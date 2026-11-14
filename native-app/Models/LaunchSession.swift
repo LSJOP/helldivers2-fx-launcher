@@ -135,6 +135,12 @@ struct EnvironmentWorkflow {
     var active: Bool { ![.idle, .completed, .failed, .cancelled].contains(phase) }
     var showsProgress: Bool { phase != .failed && phase != .cancelled }
     var fraction: Double { phase == .completed ? 1 : min(Double(completedSteps) / Double(totalSteps), 0.99) }
+    // Presentation gate only: a completed workflow or a ready inspection must be
+    // paired with a completed deployment state and actual required observations.
+    func canShowSetupCompletion(busy: Bool, deploymentCompleted: Bool, hasCurrentBinding: Bool, hasRequiredObservations: Bool, inspectionReady: Bool) -> Bool {
+        let completedSetup = !launchesGame && phase == .completed && completedSteps == totalSteps
+        return !busy && deploymentCompleted && hasCurrentBinding && hasRequiredObservations && (completedSetup || inspectionReady)
+    }
 }
 
 // Scope each LED to the fact it actually observes. No EAC/multiplayer success probe exists.
