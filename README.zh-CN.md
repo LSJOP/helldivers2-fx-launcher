@@ -16,14 +16,6 @@
 
 HD2FXNative 是面向 Apple Silicon Mac 的第三方社区启动与管理工具，使用 SwiftUI 和原生核心，帮助用户检查 FX 环境、配置运行环境和管理游戏性能设置。
 
-### 主要功能
-
-- 从总览发起带保护检查的 HELLDIVERS 2 启动流程。FX 管理检查所选 FX 安装并提供受支持的 FX／Steam 操作。
-- 首次运行环境配置检查 Guest 身份、运行能力和组件完整性。经确认后可安装固定版本的 Proton-JE、选择已验证的 Steam 兼容工具，并合并启动参数以保留自定义参数。检测为只读，部署与恢复各有检查条件。
-- 运行环境页面报告 FEX 和 Proton-JE 的检测依据。SSH 和 sudo 凭据可分别在已验证目标及会话的进程内存中复用。
-- Swift App 提供七个原生页面、日志、限定范围的性能设置和十种界面语言。SteamOS 内的可选安装步骤需要 Python 3。
-- 设置集成 Sparkle 更新功能。公开更新服务和端到端安装仍待验证。
-
 ### 软件截图
 
 以下是不同历史 Debug 构建的真实窗口截图，**并非 v1.0.0 最终截图**。最终版本截图待构建后重新采集、检查并替换；各图片来源见[截图记录](docs/images/README.md)。
@@ -37,6 +29,14 @@ HD2FXNative 是面向 Apple Silicon Mac 的第三方社区启动与管理工具�
 | ![游戏性能配置](docs/images/zh-CN/performance.png) | ![设置](docs/images/zh-CN/settings.png) |
 | 日志 | |
 | ![日志](docs/images/zh-CN/logs.png) | |
+
+### 主要功能
+
+- 从总览发起带保护检查的 HELLDIVERS 2 启动流程。FX 管理检查所选 FX 安装并提供受支持的 FX／Steam 操作。
+- 首次运行环境配置检查 Guest 身份、运行能力和组件完整性。经确认后可安装固定版本的 Proton-JE、选择已验证的 Steam 兼容工具，并合并启动参数以保留自定义参数。检测为只读，部署与恢复各有检查条件。
+- 运行环境页面报告 FEX 和 Proton-JE 的检测依据。SSH 和 sudo 凭据可针对已验证目标分别加密保存在本地；跨重启复用仍需实机验收。
+- Swift App 提供七个原生页面、日志、限定范围的性能设置和十种界面语言。SteamOS 内的可选安装步骤需要 Python 3。
+- 设置集成 Sparkle 更新功能。公开更新服务和端到端安装仍待验证。
 
 ### 安装说明
 
