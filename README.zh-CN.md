@@ -1,12 +1,12 @@
 <div align="center">
-  <img src="docs/assets/app-icon.png" width="128" alt="HD2FXNative icon">
-  <h1>HD2FXNative</h1>
+  <img src="docs/assets/app-icon.png" width="128" alt="绝地潜兵2 FX启动器 icon">
+  <h1>绝地潜兵2 FX启动器</h1>
   <p>HELLDIVERS 2 FX Launcher · Apple Silicon macOS</p>
 </div>
 
 [简体中文](README.zh-CN.md) | [English](README.md)
 
-### [🟨 ⬇️ 下载 HD2FXNative 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)
+### [🟨 ⬇️ 下载 绝地潜兵2 FX启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)
 
 **🟨 Stable Release · v1.0.0** · **macOS · Apple Silicon / arm64**
 
@@ -14,7 +14,7 @@
 
 ## 简体中文
 
-HD2FXNative 是面向 Apple Silicon Mac 的第三方社区启动与管理工具，使用 SwiftUI 和原生核心，帮助用户检查 FX 环境、配置运行环境和管理游戏性能设置。
+绝地潜兵2 FX启动器是面向 Apple Silicon Mac 的第三方社区启动与管理工具，使用 SwiftUI 和原生核心，帮助用户检查 FX 环境、配置运行环境和管理游戏性能设置。
 
 FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游戏，主菜单／飞船获用户确认；单人、多人及自动更新完整闭环仍未测试。正式 FX 1.9.12 仅离线只读调查。见[修复证据](docs/environment/FX199_RF_REPAIR_20261114.md)。
 
@@ -46,8 +46,8 @@ FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游�
 
 1. 从正式 Release 下载 macOS arm64 DMG。
 2. 运行 `shasum -a 256 <下载的 DMG>`，与发布说明中的 SHA-256 比对。匹配后打开 DMG。
-3. 将 HD2FXNative 拖入「应用程序」。
-4. 打开 HD2FXNative。
+3. 将 App 拖入「应用程序」。
+4. 打开 App。
 5. 在 FX 管理中选择已安装的 FX Steam Launcher，按首次运行向导操作。SteamOS 内须安装 Steam 和 HELLDIVERS 2（AppID 553850），使用拥有游戏的账号，并确保 Guest 可通过 SSH 访问。在 App 内输入所需凭据并审核拟执行的变更。
 6. 在总览点击「启动 HELLDIVERS 2」。
 

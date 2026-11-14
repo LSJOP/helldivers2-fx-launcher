@@ -1782,7 +1782,7 @@
   "ui.fex.compatible": "FEX 互換モード",
   "ui.fex.repair": "FEX の修復が必要",
   "ui.fex.unverified": "FEX の出所は未検証",
-  "ui.brand.name": "ヘルダイバー2 FXランチャー"
+  "ui.brand.name": "HD2 FX Launcher"
  },
  "ko": {
   "ui.workflow.environment": "환경 상태",
@@ -2377,7 +2377,7 @@
   "ui.fex.compatible": "FEX 호환 모드",
   "ui.fex.repair": "FEX 복구 필요",
   "ui.fex.unverified": "FEX 출처 미확인",
-  "ui.brand.name": "헬다이버즈 2 FX 런처"
+  "ui.brand.name": "HD2 FX Launcher"
  },
  "ru": {
   "ui.workflow.environment": "Состояние среды",
@@ -2972,7 +2972,7 @@
   "ui.fex.compatible": "Режим совместимости FEX",
   "ui.fex.repair": "Требуется исправление FEX",
   "ui.fex.unverified": "Источник FEX не проверен",
-  "ui.brand.name": "Запускатель HD2 FX"
+  "ui.brand.name": "HD2 FX Launcher"
  },
  "es": {
   "ui.workflow.environment": "Estado del entorno",
@@ -3567,7 +3567,7 @@
   "ui.fex.compatible": "Modo de compatibilidad FEX",
   "ui.fex.repair": "FEX requiere reparación",
   "ui.fex.unverified": "Origen de FEX sin verificar",
-  "ui.brand.name": "Lanzador HD2 FX"
+  "ui.brand.name": "HD2 FX Launcher"
  },
  "de": {
   "ui.workflow.environment": "Umgebungsstatus",
@@ -4162,7 +4162,7 @@
   "ui.fex.compatible": "FEX-Kompatibilitätsmodus",
   "ui.fex.repair": "FEX reparieren",
   "ui.fex.unverified": "FEX-Herkunft ungeprüft",
-  "ui.brand.name": "HD2 FX-Launcher"
+  "ui.brand.name": "HD2 FX Launcher"
  },
  "fr": {
   "ui.workflow.environment": "État de l’environnement",
@@ -4757,7 +4757,7 @@
   "ui.fex.compatible": "Mode de compatibilité FEX",
   "ui.fex.repair": "FEX à réparer",
   "ui.fex.unverified": "Provenance FEX non vérifiée",
-  "ui.brand.name": "Lanceur HD2 FX"
+  "ui.brand.name": "HD2 FX Launcher"
  },
  "pt-BR": {
   "ui.workflow.environment": "Estado do ambiente",
@@ -5352,7 +5352,7 @@
   "ui.fex.compatible": "Modo de compatibilidade FEX",
   "ui.fex.repair": "FEX precisa de reparo",
   "ui.fex.unverified": "Origem do FEX não verificada",
-  "ui.brand.name": "Inicializador HD2 FX"
+  "ui.brand.name": "HD2 FX Launcher"
  },
  "zh-TW": {
   "ui.workflow.environment": "環境狀態",

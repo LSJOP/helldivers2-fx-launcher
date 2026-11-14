@@ -1,12 +1,12 @@
 <div align="center">
-  <img src="docs/assets/app-icon.png" width="128" alt="HD2FXNative icon">
-  <h1>HD2FXNative</h1>
+  <img src="docs/assets/app-icon.png" width="128" alt="HD2 FX Launcher icon">
+  <h1>HD2 FX Launcher</h1>
   <p>HELLDIVERS 2 FX Launcher · Apple Silicon macOS</p>
 </div>
 
 [简体中文](README.zh-CN.md) | [English](README.md)
 
-### [🟨 ⬇️ Download HD2FXNative — Latest Stable](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)
+### [🟨 ⬇️ Download HD2 FX Launcher — Latest Stable](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)
 
 **🟨 Stable Release · v1.0.0** · **macOS · Apple Silicon / arm64**
 
@@ -14,7 +14,7 @@
 
 ## English
 
-HD2FXNative is an unofficial community launcher and management tool for Apple Silicon Macs. Built with SwiftUI and a native core, it helps users inspect FX, configure the runtime environment and manage game performance settings.
+HD2 FX Launcher is an unofficial community launcher and management tool for Apple Silicon Macs. Built with SwiftUI and a native core, it helps users inspect FX, configure the runtime environment and manage game performance settings.
 
 FX 1.9.9 test-Guest repair now reaches the game through the GUI with the historically verified RF FEX components. Main menu/ship was confirmed by the user; single-player, multiplayer and end-to-end updating remain untested. Production FX 1.9.12 was inspected offline without writes. See [repair evidence](docs/environment/FX199_RF_REPAIR_20261114.md).
 
@@ -46,8 +46,8 @@ Current App: `1.0.0` (build `2026111403`), macOS 14+ Apple Silicon arm64. Ad-hoc
 
 1. Download the macOS arm64 DMG from the published release.
 2. Run `shasum -a 256 <downloaded-dmg>` and compare the result with the SHA-256 in the release notes. Open the DMG after they match.
-3. Drag HD2FXNative to Applications.
-4. Open HD2FXNative.
+3. Drag the App to Applications.
+4. Open the App.
 5. Select an installed FX Steam Launcher in FX Manager and follow First-Run Setup. You need SteamOS with Steam and HELLDIVERS 2 (AppID 553850) installed under an account that owns the game. The Guest must be reachable over SSH. Enter required credentials in the App and review the proposed changes.
 6. Choose **Launch HELLDIVERS 2** on Dashboard.
 

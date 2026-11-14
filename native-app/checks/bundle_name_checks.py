@@ -10,10 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 NAMES = {
     'en': 'HD2 FX Launcher', 'zh-Hans': '绝地潜兵2 FX启动器',
-    'zh-Hant': '絕地潛兵2 FX啟動器', 'ja': 'ヘルダイバー2 FXランチャー',
-    'ko': '헬다이버즈 2 FX 런처', 'ru': 'Запускатель HD2 FX',
-    'es': 'Lanzador HD2 FX', 'de': 'HD2 FX-Launcher',
-    'fr': 'Lanceur HD2 FX', 'pt-BR': 'Inicializador HD2 FX',
+    'zh-Hant': '絕地潛兵2 FX啟動器',
+    **{language: 'HD2 FX Launcher' for language in ('ja', 'ko', 'ru', 'es', 'de', 'fr', 'pt-BR')},
 }
 
 def strings(path):
