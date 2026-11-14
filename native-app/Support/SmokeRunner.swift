@@ -249,19 +249,16 @@ import ApplicationServices
     private static func readmeScreenshots(_ state: AppState, directory: URL, language: String) async {
         var result: [String: Any] = [:]
         do {
-            guard ["zh-CN", "en"].contains(language),
+            guard NativeLocalization.languages.contains(where: { $0.0 == language }),
+                  Bundle.main.bundleIdentifier?.hasPrefix("com.lsjop.helldivers2fx.native.readme.") == true,
                   state.runtimeRoot.isEmpty, UserDefaults.standard.bool(forKey: "NativeCredentialAutoLoadDisabled") else {
                 throw ErrorState("SCREENSHOT_ARGUMENT_GUARD")
             }
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             try await waitForTask(state)
             guard state.hasLoaded, state.error == nil else { throw ErrorState("SNAPSHOT_FAILED") }
-            if state.languageCode != language {
-                // Cold English startup can restore no window in this macOS session.
-                // Change the real language state only inside a separately identified capture copy.
-                guard Bundle.main.bundleIdentifier?.hasPrefix("com.lsjop.helldivers2fx.native.readme.") == true else { throw ErrorState("SCREENSHOT_LANGUAGE_ISOLATION_REQUIRED") }
-                state.languageCode = language
-            }
+            // The bundle guard above keeps language changes confined to the capture copy.
+            if state.languageCode != language { state.languageCode = language }
             state.appearance = .dark
             state.runOperation("read_performance"); try await waitForTask(state)
             guard state.operationError == nil else { throw ErrorState("PERFORMANCE_READ_FAILED") }

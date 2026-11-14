@@ -11,20 +11,24 @@ import time
 
 parser=argparse.ArgumentParser()
 parser.add_argument('bundle',type=Path);parser.add_argument('output',type=Path)
-parser.add_argument('--language',required=True,choices=['zh-CN','en'])
+apple_languages = dict(zip(
+    ('zh-CN','en','ja','ko','ru','es','de','fr','pt-BR','zh-TW'),
+    ('zh-Hans','en','ja','ko','ru','es','de','fr','pt-BR','zh-Hant'),
+))
+parser.add_argument('--language',required=True,choices=apple_languages)
 parser.add_argument('--bootstrap-chinese',action='store_true',help='Use only with an isolated capture-copy bundle identifier')
 parser.add_argument('--fx-only',action='store_true',help='Capture only FX Manager in an isolated read-only window')
 parser.add_argument('--credentials-only',action='store_true',help='Capture only Settings and First-Run Setup, with no credential-store access')
 args=parser.parse_args();bundle=args.bundle.resolve();output=args.output.resolve()
 info=plistlib.loads((bundle/'Contents/Info.plist').read_bytes())
-if args.bootstrap_chinese and not info.get('CFBundleIdentifier','').startswith('com.lsjop.helldivers2fx.native.readme.'):
-    raise SystemExit('Language bootstrap requires a separate capture bundle identifier')
+if not info.get('CFBundleIdentifier','').startswith('com.lsjop.helldivers2fx.native.readme.'):
+    raise SystemExit('Capture requires a separate capture bundle identifier')
 initial='zh-CN' if args.bootstrap_chinese else args.language
 output.mkdir(parents=True,exist_ok=True)
 result_file=output/'readme-capture.json';request_file=output/'capture-request.json'
 if result_file.exists() or request_file.exists():raise SystemExit('Use a fresh capture directory')
 launch_args=['--readme-screenshots',str(output),args.language,
-             '-NativeLanguage',initial,'-AppleLanguages','(zh-Hans)' if initial=='zh-CN' else '(en)',
+             '-NativeLanguage',initial,'-AppleLanguages','('+apple_languages[initial]+')',
              '-NativeRememberedRuntimeRoot','',
              '-NativeCredentialAutoLoadDisabled','YES','-ApplePersistenceIgnoreState','YES','-NSQuitAlwaysKeepsWindows','NO']
 if args.fx_only: launch_args.append('--fx-only')
