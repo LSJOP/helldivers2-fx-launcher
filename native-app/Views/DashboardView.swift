@@ -24,8 +24,10 @@ struct DashboardView: View {
             TacticalPageHeader(title: state.t("ui.176"))
             TacticalFlowArtwork(asset: "MOTR7Soldier") {
                 VStack(alignment: .leading, spacing: TacticalSpacing.panel) {
+                    TacticalFlowMark()
                     EnvironmentWorkflowProgressView(state: state, tasks: tasks, showStepsInline: true, returnToDashboard: { showingOverview = true })
                     TacticalButton(title: state.t("ui.092"), symbol: "square.grid.2x2", primary: false) { showingOverview = true }
+                    TacticalFlowMark()
                 }
             }
             if let error = state.error { TacticalWarningBanner(text: error.message(state.languageCode) + " · " + error.code, isError: true) }

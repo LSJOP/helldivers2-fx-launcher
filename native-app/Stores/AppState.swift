@@ -3,6 +3,33 @@ import SwiftUI
 @MainActor
 final class AppState: ObservableObject {
     @Published var selection: Page? = .dashboard
+    #if DEBUG
+    // Only the isolated fixture host calls this. These values do not represent a real
+    // scan, deployment, guest, or game launch; the host labels and disables its UI.
+    func configureArtworkFixture(scenario: String, language: String, appearance: Appearance) {
+        guard NativeLocalization.artworkPreviewAllowed else { return }
+        languageCode = language == "zh-CN" ? "zh-CN" : "en"
+        self.appearance = appearance
+        if scenario == "completion" {
+            let root = "/ui-preview-fixture/FX.app"
+            let boot = "ui-preview-fixture-boot"
+            fxSelection.reconcile([["path": .string(root), "identity_valid": .bool(true), "structure": .string("metadata_valid")]], incomplete: false)
+            runtimeRoot = root
+            try? credentials.bindGuest(boot)
+            let snapshot = DeploymentSnapshot(target: "fixture", boot: boot, revision: "fixture", fxVersion: "fixture", osVersion: "fixture", architecture: "aarch64", steamRunning: false, gameRunning: false, freeBytes: 0, facts: [:], values: [:])
+            let operations = ["fex", "proton", "steam", "game"].map { component in
+                DeploymentOperation(id: component, component: component, currentVersion: ["fex", "proton"].contains(component) ? "verified" : "present", targetVersion: "fixture", changes: [:], permission: "", estimatedBytes: 0, needsRestart: false, backupLocation: "", rollback: "", verification: "", requirement: .REQUIRED, blocked: nil)
+            }
+            firstRunPlan = DeploymentPlan(id: UUID(), profileID: "fixture", profileVersion: 1, snapshot: snapshot, operations: operations)
+            firstRunState = .Completed
+            environmentWorkflow = EnvironmentWorkflow(phase: .completed, completedSteps: 5)
+            selection = .setup
+        } else if scenario == "launch" {
+            environmentWorkflow = EnvironmentWorkflow(phase: .detecting, completedSteps: 2, launchesGame: true)
+            selection = .dashboard
+        }
+    }
+    #endif
     @Published var languageCode = NativeLocalization.initialLanguage {
         didSet {
             guard !NativeLocalization.isolatedUXSmoke else { return }

@@ -102,7 +102,7 @@ struct LogsView: View {
                 .accessibilityIdentifier("logs.content")
         }
         .fileExporter(isPresented: $showExporter, document: LogExportDocument(text: exportText), contentType: .plainText,
-                      defaultFilename: "HD2FXNative-logs") { result in
+                      defaultFilename: state.t("ui.brand.name") + "-" + state.t("ui.187")) { result in
             if case .failure = result { exportFailed = true }
         }
     }

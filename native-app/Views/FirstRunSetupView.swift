@@ -18,6 +18,7 @@ struct FirstRunSetupView: View {
             .disabled(state.firstRunFEXRestore == nil)
     }
     private func statusKey(_ operation: DeploymentOperation) -> String {
+        if operation.component == "fex", let plan, setupObservationVerified(operation, in: plan) { return "ui.net.pass" }
         switch operation.observation {
         case .advisory: return "ui.setup.status.advisory"
         case .passed: return "ui.net.pass"
@@ -28,13 +29,19 @@ struct FirstRunSetupView: View {
         case .change: return "ui.setup.change"
         }
     }
+    private func setupObservationVerified(_ operation: DeploymentOperation, in plan: DeploymentPlan) -> Bool {
+        EnvironmentWorkflow.setupObservationVerified(component: operation.component, current: operation.currentVersion,
+            passed: operation.detectionPassed, blocked: operation.blocked != nil, hasChanges: !operation.changes.isEmpty,
+            fexRuntime: plan.snapshot.facts["fex_runtime"])
+    }
     private var verifiedCompletion: DeploymentPlan? {
         guard let plan else { return nil }
         let workflow = state.environmentWorkflow
+        let required = plan.operations.filter { !$0.advisory }
         guard workflow.canShowSetupCompletion(busy: tasks.busy, deploymentCompleted: state.firstRunState == .Completed,
                                               hasCurrentBinding: state.fxSelection.selected != nil && state.fxSelection.selectedPath == state.runtimeRoot && !plan.snapshot.boot.isEmpty && state.credentials.guestBoot == plan.snapshot.boot,
-                                              hasRequiredObservations: plan.operations.contains(where: { !$0.advisory }),
-                                              inspectionReady: plan.detectionState == .Ready) else { return nil }
+                                              hasRequiredObservations: !required.isEmpty,
+                                              inspectionReady: required.allSatisfy { setupObservationVerified($0, in: plan) }) else { return nil }
         return plan
     }
     private var setupStatusKey: String {
@@ -43,7 +50,8 @@ struct FirstRunSetupView: View {
     }
     private var welcomeContent: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text(state.t("ui.art.welcomeTitle")).font(TacticalTypography.module)
+            TacticalFlowMark()
+            Text(state.t("ui.art.welcomeTitle")).font(.system(size: 25, weight: .bold))
             Text(state.t("ui.art.welcomeDetail")).foregroundStyle(.secondary)
             TacticalPanel(number: "", title: state.t("ui.workflow.environment"), symbol: "checkmark.shield") {
                 TacticalInfoRow(title: "FX", value: state.t(state.fxSelection.selected != nil ? "ui.219" : "ui.210"))
@@ -51,19 +59,21 @@ struct FirstRunSetupView: View {
                 TacticalInfoRow(title: state.t("ui.135"), value: state.t(setupStatusKey))
             }
             TacticalPanel(number: "", title: state.t("ui.workflow.configure"), symbol: "wrench.and.screwdriver") {
-                Label(state.t("ui.setup.fx"), systemImage: "shippingbox")
-                Label(state.t("ui.setup.detect"), systemImage: "magnifyingglass")
-                Label(state.t("ui.setup.deploy"), systemImage: "wrench.and.screwdriver")
-                Label(state.t("ui.workflow.result"), systemImage: "checkmark.shield")
-                TacticalButton(title: state.t("ui.workflow.begin"), symbol: "play.fill", primary: true, disabledReason: tasks.busy ? state.t("ui.014") : nil) {
+                TacticalFlowStep(number: "01", title: state.t("ui.setup.fx"), symbol: "shippingbox")
+                TacticalFlowStep(number: "02", title: state.t("ui.setup.detect"), symbol: "magnifyingglass")
+                TacticalFlowStep(number: "03", title: state.t("ui.setup.deploy"), symbol: "wrench.and.screwdriver")
+                TacticalFlowStep(number: "04", title: state.t("ui.workflow.result"), symbol: "checkmark.shield")
+                TacticalButton(title: state.t("ui.workflow.begin"), symbol: "play.fill", primary: true, disabledReason: tasks.busy ? state.t("ui.014") : nil, fillsWidth: true) {
                     state.startEnvironmentWorkflow(launchGame: false)
                 }
             }
+            TacticalFlowMark()
             EnvironmentWorkflowProgressView(state: state, tasks: tasks)
         }
     }
     private func completionContent(_ plan: DeploymentPlan) -> some View {
         VStack(alignment: .leading, spacing: 20) {
+            TacticalFlowMark()
             Text(state.t("ui.art.completedTitle")).font(TacticalTypography.module)
             Text(state.t("ui.setup.acceptance")).foregroundStyle(.secondary)
             TacticalPanel(number: "", title: state.t("ui.workflow.environment"), symbol: "checkmark.shield") {
@@ -75,6 +85,7 @@ struct FirstRunSetupView: View {
                 HStack(spacing: 10) { completionActions }
                 VStack(alignment: .leading, spacing: 10) { completionActions }
             }
+            TacticalFlowMark()
         }
     }
     private var completionActions: some View {
@@ -261,7 +272,8 @@ struct EnvironmentWorkflowProgressView: View {
     @State private var showFEXDetails = false
     private var stepRows: some View {
         ForEach(Array([EnvironmentWorkflowPhase.startingFX, .connecting, .detecting, .deploying, .verifying, .launching].prefix(workflow.totalSteps).enumerated()), id: \.offset) { index, phase in
-            Label(state.t(phase.titleKey), systemImage: index < workflow.completedSteps ? "checkmark.circle" : workflow.active && phase == workflow.phase ? "arrow.right.circle" : "circle.dashed")
+            let stepKeys = ["ui.setup.fx", "ui.setup.connect", "ui.setup.detect", "ui.setup.deploy", "ui.workflow.result", "ui.176"]
+            Label(state.t(stepKeys[index]), systemImage: index < workflow.completedSteps ? "checkmark.circle" : workflow.active && phase == workflow.phase ? "arrow.right.circle" : "circle.dashed")
                 .font(TacticalTypography.caption)
         }
     }
@@ -280,9 +292,7 @@ struct EnvironmentWorkflowProgressView: View {
                     Text(workflow.phase == .launching ? state.launchSession.current.title(state.languageCode) :
                          state.t(workflow.launchesGame && workflow.phase == .failed ? "ui.179" : workflow.phase.titleKey))
                     Spacer()
-                    if workflow.showsProgress {
-                        Text(showStepsInline ? "\(workflow.completedSteps) / \(workflow.totalSteps)" : String(Int(workflow.fraction * 100)) + "%").monospacedDigit()
-                    }
+                    if workflow.showsProgress { Text("\(workflow.completedSteps) / \(workflow.totalSteps)").monospacedDigit() }
                 }
                 if workflow.active {
                     TimelineView(.periodic(from: workflow.startedAt, by: 1)) { context in
@@ -290,8 +300,8 @@ struct EnvironmentWorkflowProgressView: View {
                             .font(TacticalTypography.caption).monospacedDigit()
                     }
                 }
-                if workflow.showsProgress {
-                    ProgressView(value: workflow.fraction).tint(.yellow)
+                if workflow.active {
+                    ProgressView().tint(.yellow)
                 }
                 if let failure = workflow.failure {
                     Text(failure.code == "ARTIFACT_UNAPPROVED" && failure.details["component"]?.text == "fex"
@@ -310,7 +320,6 @@ struct EnvironmentWorkflowProgressView: View {
                     }
                 }
                 if showStepsInline {
-                    Text(state.t("ui.workflow.stepProgress")).font(TacticalTypography.caption.weight(.semibold))
                     stepRows
                     DisclosureGroup(state.t("ui.setup.details")) { stepDetails }
                 } else {

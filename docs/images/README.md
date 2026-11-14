@@ -64,3 +64,9 @@ The seven English and seven Simplified Chinese README viewports were recaptured 
 Ten language welcome windows and ten settings credit windows were visually reviewed on the preceding candidate with the same visible idle layouts; the subsequent change restricted only the completion-state target binding. The final Chinese and English page captures use the final source. The fingerprint covers the captured idle viewports; it does not certify unobserved states.
 
 **NOT_TESTED:** actual successful setup, live game-launch preparation and their requested screenshots. No FX, SSH, Guest write or game launch was initiated for capture. The manually navigated supplemental windows used a separate bundle ID and no selected FX target; the credential preparation guard therefore returned without loading saved credentials. The completion and progress fixture checks do not replace those live reviews.
+
+## MOTR7 visual review update · 2026-11-15
+
+The fourteen README page images were recaptured from isolated Debug build 2026111401, dirty source based on `5f7c77e`; their original PNG bytes and per-image provenance are recorded in the manifest. The Chinese and English idle windows were reviewed for language, the preserved dashboard artwork and Earth header, and the updated first-run layout. The captures do not establish Guest readiness, successful setup, or game launch. No Guest, FX, SSH, or game action was initiated.
+
+2026-11-15：中英文各七张 README 截图来自隔离 Debug 版本，来源与 SHA-256 见清单。审核覆盖空闲状态的语言、首页主视觉、顶部地球横幅和首次运行布局；截图不证明真实配置或游戏启动成功，也未执行 FX、Guest、SSH 或游戏操作。

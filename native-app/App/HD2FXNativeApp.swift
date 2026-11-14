@@ -43,16 +43,23 @@ struct HD2FXNativeApp: App {
     @StateObject private var state = AppState()
     var body: some Scene {
         WindowGroup(state.t("ui.brand.name"), id: "main") {
-            ContentView(state: state, tasks: state.tasks)
-                .frame(minWidth: 850, minHeight: 560)
-                .preferredColorScheme(state.appearance.scheme)
-                .task {
-                    NativeLifecycle.cancel = { state.endSession() }
-                    if !state.hasLoaded { state.refresh() }
-                    #if DEBUG
-                    await SmokeRunner.runIfRequested(state: state)
-                    #endif
+            Group {
+                #if DEBUG
+                if NativeLocalization.artworkPreviewRequested {
+                    if NativeLocalization.artworkPreviewAllowed {
+                        ArtworkFixturePreview(state: state)
+                    } else {
+                        Text(verbatim: "UI PREVIEW REFUSED: use an isolated review bundle with updates disabled.")
+                    }
+                } else {
+                    regularContent
                 }
+                #else
+                regularContent
+                #endif
+            }
+            .frame(minWidth: 850, minHeight: 560)
+            .preferredColorScheme(state.appearance.scheme)
         }
         .defaultSize(width: 1060, height: 720)
         .commands {
@@ -61,9 +68,20 @@ struct HD2FXNativeApp: App {
         }
         Settings {
             ScrollView { SettingsView(state: state).padding(24) }
+                .disabled(NativeLocalization.artworkPreviewRequested)
                 .frame(width: 650, height: 700)
                 .preferredColorScheme(state.appearance.scheme)
         }
+    }
+    private var regularContent: some View {
+        ContentView(state: state, tasks: state.tasks)
+            .task {
+                NativeLifecycle.cancel = { state.endSession() }
+                if !state.hasLoaded { state.refresh() }
+                #if DEBUG
+                await SmokeRunner.runIfRequested(state: state)
+                #endif
+            }
     }
 }
 
@@ -73,7 +91,7 @@ struct AppUpdateCommands: Commands {
     var body: some Commands {
         CommandGroup(after: .appInfo) {
             Button(UpdateString.checkNow.text(state.languageCode)) { manager.checkForUpdates() }
-                .disabled(!manager.canCheck)
+                .disabled(!manager.canCheck || NativeLocalization.artworkPreviewRequested)
                 .id(state.languageCode)
         }
     }
@@ -87,11 +105,77 @@ struct NavigationCommands: Commands {
             ForEach(Array(Page.allCases.enumerated()), id: \.element.id) { index, page in
                 Button(state.pageTitle(page)) { state.selection = page }
                     .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: .command)
+                    .disabled(NativeLocalization.artworkPreviewRequested)
             }
             .id(state.languageCode)
             Divider()
             Button(state.t("ui.262")) { state.refresh() }.keyboardShortcut("r", modifiers: .command)
+                .disabled(NativeLocalization.artworkPreviewRequested)
                 .id(state.languageCode)
         }
     }
 }
+
+#if DEBUG
+/// An isolated, non-interactive view of synthetic state. It never starts ContentView,
+/// its refresh task, or any Core, FX or SSH operation.
+@MainActor private struct ArtworkFixturePreview: View {
+    @ObservedObject var state: AppState
+    @State private var configured = false
+    private let args = ProcessInfo.processInfo.arguments
+    private func option(_ name: String, fallback: String) -> String {
+        guard let index = args.firstIndex(of: name), args.indices.contains(index + 1) else { return fallback }
+        return args[index + 1]
+    }
+    var body: some View {
+        VStack(spacing: 0) {
+            Text(verbatim: "UI PREVIEW / FIXTURE DATA — NOT REAL  ·  界面预览 / 模拟数据，非真实结果")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .padding(8)
+                .background(.yellow)
+            HStack(spacing: 0) {
+                SidebarView(state: state).frame(width: 210)
+                ScrollView {
+                    Group {
+                        if option("--artwork-fixture-preview", fallback: "") == "completion" {
+                            FirstRunSetupView(state: state, tasks: state.tasks, credentials: state.credentials)
+                        } else {
+                            DashboardView(state: state, tasks: state.tasks)
+                        }
+                    }
+                    .padding(TacticalSpacing.page)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
+                .background(TacticalColors(scheme: state.appearance.scheme ?? .dark).background)
+            }
+            .disabled(true)
+        }
+        .task {
+            guard !configured else { return }
+            state.configureArtworkFixture(
+                scenario: option("--artwork-fixture-preview", fallback: ""),
+                language: option("--preview-language", fallback: "en"),
+                appearance: option("--preview-appearance", fallback: "dark") == "light" ? .light : .dark)
+            configured = true
+            let request = option("--preview-capture-request", fallback: "")
+            guard !request.isEmpty else { return }
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard let window = NSApp.windows.first(where: { $0.isVisible }) else { return }
+            let width = Double(option("--preview-width", fallback: "1280")) ?? 1280
+            let height = Double(option("--preview-height", fallback: "900")) ?? 900
+            window.setContentSize(NSSize(width: max(850, width), height: max(560, height)))
+            window.makeKeyAndOrderFront(nil)
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            try? String(window.windowNumber).write(toFile: request, atomically: true, encoding: .utf8)
+            // Only this isolated fixture process exits; no other app is touched.
+            for _ in 0..<100 {
+                if FileManager.default.fileExists(atPath: request + ".ack") { break }
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+            NSApp.terminate(nil)
+        }
+    }
+}
+#endif

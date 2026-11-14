@@ -49,9 +49,25 @@ struct NativeOperation: Identifiable {
 }
 
 @MainActor enum NativeLocalization {
+    // Fixture mode must never use the production credential store or persisted FX selection.
+    static var artworkPreviewRequested: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("--artwork-fixture-preview")
+        #else
+        return false
+        #endif
+    }
+    static var artworkPreviewAllowed: Bool {
+        #if DEBUG
+        return artworkPreviewRequested && (Bundle.main.bundleIdentifier ?? "").hasPrefix("com.lsjop.helldivers2fx.native.ui-review.")
+            && Bundle.main.object(forInfoDictionaryKey: "HD2UpdateServiceEnabled") as? String == "NO"
+        #else
+        return false
+        #endif
+    }
     static var isolatedUXSmoke: Bool {
         #if DEBUG
-        return ProcessInfo.processInfo.arguments.contains("--takeover-smoke") || ProcessInfo.processInfo.arguments.contains("--ux-refinement-smoke") || ProcessInfo.processInfo.arguments.contains("--readme-screenshots")
+        return artworkPreviewRequested || ProcessInfo.processInfo.arguments.contains("--takeover-smoke") || ProcessInfo.processInfo.arguments.contains("--ux-refinement-smoke") || ProcessInfo.processInfo.arguments.contains("--readme-screenshots")
         #else
         return false
         #endif

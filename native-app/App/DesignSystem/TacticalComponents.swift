@@ -239,6 +239,7 @@ struct TacticalButton: View {
     var primary = false
     var loading = false
     var disabledReason: String? = nil
+    var fillsWidth = false
     let action: () -> Void
     var body: some View {
         Button(action: action) {
@@ -247,6 +248,7 @@ struct TacticalButton: View {
                 else { Image(systemName: symbol).accessibilityHidden(true) }
                 Text(title)
             }
+            .frame(maxWidth: fillsWidth ? .infinity : nil)
         }
         .buttonStyle(TacticalButtonStyle(primary: primary))
         .disabled(loading || disabledReason != nil)
@@ -336,12 +338,11 @@ struct TacticalFlowArtwork<Content: View>: View {
     @State private var availableWidth: CGFloat = 0
     var body: some View {
         HStack(alignment: .top, spacing: 20) {
-            content.frame(maxWidth: .infinity, alignment: .topLeading)
-            if availableWidth >= 820 {
+            content.fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .topLeading)
+            if availableWidth >= 860 {
                 Image(asset)
                     .resizable().scaledToFit()
-                    .frame(width: 280, height: 420)
-                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.black.opacity(0.18)))
+                    .frame(width: 320)
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.4)))
                     .accessibilityHidden(true)
                     .allowsHitTesting(false)
@@ -355,6 +356,41 @@ struct TacticalFlowArtwork<Content: View>: View {
                     .onChange(of: geometry.size.width) { _, width in availableWidth = width }
             }
         }
+    }
+}
+
+// Decorative marks are independent of the workflow's actual state.
+struct TacticalFlowMark: View {
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        let c = TacticalColors(scheme: scheme)
+        HStack(spacing: 5) {
+            ForEach(0..<3, id: \.self) { _ in
+                Rectangle().fill(c.accent).frame(width: 12, height: 5).rotationEffect(.degrees(-25))
+            }
+            Rectangle().fill(c.line).frame(height: 1)
+            Image(systemName: "shield.lefthalf.filled").font(.system(size: 11)).foregroundStyle(c.accent)
+        }
+        .frame(maxWidth: 180)
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
+    }
+}
+
+struct TacticalFlowStep: View {
+    let number: String
+    let title: String
+    let symbol: String
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        let c = TacticalColors(scheme: scheme)
+        HStack(spacing: 12) {
+            Text(verbatim: number).font(TacticalTypography.log).foregroundStyle(c.accent).accessibilityHidden(true)
+            Image(systemName: symbol).frame(width: 22).foregroundStyle(c.accent).accessibilityHidden(true)
+            Text(title).fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 5)
     }
 }
 

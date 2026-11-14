@@ -135,11 +135,16 @@ struct EnvironmentWorkflow {
     var active: Bool { ![.idle, .completed, .failed, .cancelled].contains(phase) }
     var showsProgress: Bool { phase != .failed && phase != .cancelled }
     var fraction: Double { phase == .completed ? 1 : min(Double(completedSteps) / Double(totalSteps), 0.99) }
-    // Presentation gate only: a completed workflow or a ready inspection must be
-    // paired with a completed deployment state and actual required observations.
+    // FEX reports a verified runtime as normal/compatible rather than the
+    // generic "verified" observation used by other components.
+    static func setupObservationVerified(component: String, current: String, passed: Bool, blocked: Bool, hasChanges: Bool, fexRuntime: String?) -> Bool {
+        guard !blocked && !hasChanges else { return false }
+        return passed || (component == "fex" && ["normal", "compatible"].contains(current) && fexRuntime == "ready")
+    }
+    // Presentation gate only: completion requires a ready inspection bound to
+    // the current target, in addition to the completed deployment state.
     func canShowSetupCompletion(busy: Bool, deploymentCompleted: Bool, hasCurrentBinding: Bool, hasRequiredObservations: Bool, inspectionReady: Bool) -> Bool {
-        let completedSetup = !launchesGame && phase == .completed && completedSteps == totalSteps
-        return !busy && deploymentCompleted && hasCurrentBinding && hasRequiredObservations && (completedSetup || inspectionReady)
+        return !busy && deploymentCompleted && hasCurrentBinding && hasRequiredObservations && inspectionReady
     }
 }
 

@@ -1,7 +1,7 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.27** · Updated: **2026-11-14**.
-Change: protect the shared header and specify workflow artwork, attribution and review. Instruction version is independent of App version.
+Instruction version: **v1.2.28** · Updated: **2026-11-14**.
+Change: clarify reference fidelity, product naming and workflow artwork review. Instruction version is independent of App version.
 
 ## Authority and task lifecycle
 
@@ -40,7 +40,7 @@ Change: protect the shared header and specify workflow artwork, attribution and 
 
 ## UI Design Standards
 
-All subsequent UI work must first follow `docs/UI_DESIGN_GUIDELINES.md`: read the rules, reuse existing components, implement, review consistency and all ten languages, then verify and commit. This section supersedes older instructions requiring controls beside page titles.
+All subsequent UI work must first follow `docs/UI_DESIGN_GUIDELINES.md`: read the rules, reuse existing components, implement, review consistency and ten-language resources, then verify and commit. This section supersedes older instructions requiring controls beside page titles.
 
 - Maintain the dark, yellow-accented HELLDIVERS 2 tactical style, consistent hierarchy, cards, spacing and restrained decoration. Titles and necessary explanations belong in headers; place actions in the content area.
 - Reuse shared buttons and cards. Review idle, hover, pressed, disabled, loading and, when applicable, success and failure states. Do not duplicate an operation or introduce unstyled default buttons.
@@ -48,6 +48,7 @@ All subsequent UI work must first follow `docs/UI_DESIGN_GUIDELINES.md`: read th
 - Preserve consistent margins, button heights, card spacing, icon sizes, alignment and action placement. Adapt to narrow windows and long text.
 - Localize all visible additions in zh-CN, en, ja, ko, ru, es, de, fr, pt-BR and zh-TW; do not hardcode UI prose. Check long translations for clipping.
 - Preserve the SwiftUI + AppKit hybrid: SwiftUI owns presentation and normal interactions, AppKit native macOS capabilities, and the existing Swift Service Layer business state. Components must not create a duplicate business state system.
-- Review changed pages for visual consistency, action placement and duplication, clipping, loading, errors, accessibility and ten-language adaptation. Provide real App screenshots for substantial visual changes; routine code changes do not require screenshots.
+- Review changed pages for visual consistency, action placement and duplication, clipping, loading, errors and accessibility. For ordinary visual iterations inspect Chinese and English in light/dark and wide/narrow layouts; expand review when localization or other languages are affected. Maintain automated checks and all ten languages. Provide real App screenshots for substantial visual changes; routine code changes do not require screenshots. Clearly label fixture previews and never present them as live success.
 
 - Protect the Dashboard hero and the shared secondary-page starfield, sunrise and Super Earth emblem header; never replace or cover them with new illustrations. Restrict MOTR7 artwork to the first-run welcome, verified setup completion and game-launch preparation flows. Place it on the right using the shared adaptive container, consistent size and spacing; hide it when room is insufficient for controls. Preserve the whole original image and its aspect ratio. Record third-party authorship and permission. Workflow success and progress must come from actual service evidence; never fabricate them for presentation. Artwork must not reduce readability or impede actions. Review every substantial visual change with real App screenshots.
+- User-facing product names are `绝地潜兵 2 FX 启动器` and `HELLDIVERS 2 FX Launcher`; localize product naming consistently and reserve `HD2FXNative` for engineering. Treat approved reference images as visual guidance, not evidence of functionality or state. Reuse tactical decoration components, avoid isolated miniature posters and meaningless image padding, and preserve complete authorized artwork.
