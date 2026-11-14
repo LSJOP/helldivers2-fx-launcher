@@ -31,6 +31,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @MainActor enum NativeLifecycle {
+    private static var didConfirmUpdate = false
+    static func confirmUpdateStartup() async {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard !didConfirmUpdate, let index = arguments.firstIndex(of: "--confirm-update-startup"),
+              arguments.indices.contains(index + 1),
+              let token = UUID(uuidString: arguments[index + 1]) else { return }
+        // The main scene has mounted. Give immediate startup crashes time to surface.
+        do { try await Task.sleep(for: .seconds(2)) } catch { return }
+        guard !didConfirmUpdate, NSApp.windows.contains(where: { $0.isVisible }) else { return }
+        didConfirmUpdate = true
+        FileHandle.standardOutput.write(Data("HD2_UPDATE_READY \(token.uuidString)\n".utf8))
+    }
+    private static var checkedInterruptedUpdate = false
+    static func recoverInterruptedUpdate() async {
+        guard !checkedInterruptedUpdate else { return }
+        checkedInterruptedUpdate = true
+        let bundle = Bundle.main.bundleURL.resolvingSymlinksInPath()
+        let directory = bundle.deletingLastPathComponent().appendingPathComponent(".HD2FXNative-update")
+        guard FileManager.default.fileExists(atPath: directory.appendingPathComponent("state.json").path) else { return }
+        let deadline = ContinuousClock.now + .seconds(40)
+        while ContinuousClock.now < deadline && !Task.isCancelled {
+            let token = UUID().uuidString
+            let helper = Process()
+            helper.executableURL = bundle.appendingPathComponent("Contents/MacOS/HD2UpdateInstaller")
+            helper.arguments = ["--recover", String(getpid()), token]
+            do { try helper.run() } catch { return }
+            let ready = directory.appendingPathComponent("recover-" + token)
+            while helper.isRunning {
+                if FileManager.default.fileExists(atPath: ready.path) {
+                    NSApp.terminate(nil)
+                    return
+                }
+                do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
+            }
+            guard helper.terminationStatus == 75 else { return }
+            do { try await Task.sleep(for: .milliseconds(500)) } catch { return }
+        }
+    }
+
     static var cancel: (() -> Void)?
     #if DEBUG
     static var event: ((String) -> Void)?
@@ -48,7 +87,9 @@ struct HD2FXNativeApp: App {
                 .preferredColorScheme(state.appearance.scheme)
                 .task {
                     NativeLifecycle.cancel = { state.endSession() }
+                    Task { await NativeLifecycle.recoverInterruptedUpdate() }
                     if !state.hasLoaded { state.refresh() }
+                    await NativeLifecycle.confirmUpdateStartup()
                     #if DEBUG
                     await SmokeRunner.runIfRequested(state: state)
                     #endif

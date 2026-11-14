@@ -1,7 +1,6 @@
 import AppKit
 import Combine
 import Security
-import Sparkle
 
 enum UpdateString: String {
     case section, currentVersion, automaticChecks, checkNow, unconfigured, ready, checking
@@ -73,10 +72,13 @@ struct UpdateConfiguration {
         distributionReady = info["HD2UpdateDistributionReady"] as? String == "YES"
     }
     var isValid: Bool {
+        if Bundle.main.bundleIdentifier == NativeReleaseService.testBundleID {
+            return enabled && previewEnabled && Data(base64Encoded: publicKey)?.count == 32
+        }
         guard enabled, let feed, feed.scheme == "https", feed.user == nil, feed.password == nil, feed.port == nil,
-              ((feed.host == "lsjop.github.io" && feed.path == "/helldivers2-fx-launcher/updates/stable/appcast.xml") ||
+              (feed == NativeReleaseService.api || (feed.host == "lsjop.github.io" && feed.path == "/helldivers2-fx-launcher/updates/stable/appcast.xml") ||
                (feed.host == "github.com" && feed.path == "/LSJOP/helldivers2-fx-launcher/releases/latest/download/appcast.xml")),
-              feed.query == nil, feed.fragment == nil, Data(base64Encoded: publicKey)?.count == 32 else { return false }
+              (feed == NativeReleaseService.api || feed.query == nil), feed.fragment == nil, Data(base64Encoded: publicKey)?.count == 32 else { return false }
         return true
     }
     func resolvedFeed(channel: String) -> URL? {
@@ -91,17 +93,19 @@ struct UpdateConfiguration {
         var code: SecStaticCode?
         guard SecStaticCodeCreateWithPath(Bundle.main.bundleURL as CFURL, [], &code) == errSecSuccess, let code else { return false }
         var requirement: SecRequirement?
-        let rule = "identifier \"\(NativeReleaseService.bundleID)\""
+        guard let identifier = Bundle.main.bundleIdentifier,
+              [NativeReleaseService.bundleID, NativeReleaseService.testBundleID].contains(identifier) else { return false }
+        let rule = "identifier \"\(identifier)\""
         guard SecRequirementCreateWithString(rule as CFString, [], &requirement) == errSecSuccess,
               SecStaticCodeCheckValidity(code, SecCSFlags(rawValue: kSecCSStrictValidate | kSecCSCheckNestedCode), requirement) == errSecSuccess else { return false }
         // Ed25519 verifies publisher authority. This gate checks local code structure.
         // Stable ad hoc builds are supported without a Developer ID requirement.
-        return Bundle.main.bundleIdentifier == NativeReleaseService.bundleID
+        return true
     }
 }
 
 // Updates only the current Launcher. No Python/Core/FX or Guest update calls.
-@MainActor final class AppUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate {
+@MainActor final class AppUpdateManager: NSObject, ObservableObject {
     @Published private(set) var canCheck = true
     @Published private(set) var automaticChecks = false
     @Published private(set) var status: UpdateString = .unconfigured
@@ -112,9 +116,8 @@ struct UpdateConfiguration {
     @Published private(set) var downloadProgress: Double?
     @Published private(set) var channel = "stable"
     let configuration = UpdateConfiguration(info: Bundle.main.infoDictionary ?? [:])
-    private var controller: SPUStandardUpdaterController!
-    private var subscriptions = Set<AnyCancellable>()
     private var operation: Task<Void, Never>?
+    var canCancelOperation: Bool { operation != nil }
     private var automaticTask: Task<Void, Never>?
     private let preferences: UserDefaults
     var isConfigured: Bool { configuration.isValid && configuration.distributionReady && UpdateConfiguration.trustedDistribution() }
@@ -125,6 +128,11 @@ struct UpdateConfiguration {
               isConfigured, canCheck, !CoreWorkerStatus.isActive else { return false }
         return FileManager.default.isWritableFile(atPath: Bundle.main.bundleURL.deletingLastPathComponent().path)
     }
+    var canStartInstall: Bool {
+        guard candidate?.signatureVerified == true, candidate?.manifest.schema == 2,
+              isConfigured, canCheck, operation == nil, !CoreWorkerStatus.isActive else { return false }
+        return FileManager.default.isWritableFile(atPath: Bundle.main.bundleURL.deletingLastPathComponent().path)
+    }
     var version: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?" }
     var build: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?" }
     var service: NativeReleaseService { NativeReleaseService(publicKey: Data(base64Encoded: configuration.publicKey).flatMap { $0.count == 32 ? $0 : nil }) }
@@ -132,13 +140,10 @@ struct UpdateConfiguration {
     init(preferences: UserDefaults) {
         self.preferences = preferences
         super.init()
+        if Bundle.main.bundleIdentifier == NativeReleaseService.testBundleID { channel = NativeReleaseService.testChannel }
         lastCheck = preferences.object(forKey: "NativeUpdateLastCheck") as? Date
-        controller = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: self, userDriverDelegate: nil)
         guard isConfigured else { return }
-        controller.updater.publisher(for: \.canCheckForUpdates).sink { [weak self] in self?.canCheck = $0 }.store(in: &subscriptions)
         status = .ready
-        controller.startUpdater()
-        controller.updater.automaticallyChecksForUpdates = false
         setAutomaticChecks(preferences.bool(forKey: "NativeAutomaticUpdateChecks"))
     }
     func checkForUpdates() {
@@ -168,9 +173,8 @@ struct UpdateConfiguration {
         }
     }
     func selectChannel(_ channel: String) {
-        guard operation == nil, canCheck, channel == "stable" || (channel == "preview" && isConfigured && configuration.previewEnabled) else { return }
+        guard self.channel != NativeReleaseService.testChannel, operation == nil, canCheck, channel == "stable" || (channel == "preview" && isConfigured && configuration.previewEnabled) else { return }
         self.channel = channel; candidate = nil; cachedArchive = nil; status = isConfigured ? .ready : .unconfigured
-        if isConfigured { controller.updater.resetUpdateCycle() }
     }
     func setAutomaticChecks(_ enabled: Bool) {
         guard isConfigured else { return }
@@ -188,15 +192,15 @@ struct UpdateConfiguration {
             }
         }
     }
-    func downloadVerifiedArchive() {
+    func downloadVerifiedArchive(installAfterDownload: Bool = false) {
         guard canDownload, let candidate, operation == nil else { return }
         canCheck = false; status = .downloading; errorCode = nil; downloadProgress = nil
         operation = Task { [weak self] in
             guard let self else { return }
-            defer { self.operation = nil; self.canCheck = true }
+            var readyToInstall = false
             do {
                 let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-                    .appendingPathComponent("Helldivers2FXLauncher/VerifiedUpdates", isDirectory: true)
+                    .appendingPathComponent(self.channel == NativeReleaseService.testChannel ? "HD2FXNativeUpdateTest/VerifiedUpdates" : "Helldivers2FXLauncher/VerifiedUpdates", isDirectory: true)
                 self.cachedArchive = try await self.service.download(candidate, to: base) { [weak self] received, total in
                     Task { @MainActor [weak self] in
                         guard let self, self.status == .downloading, total > 0,
@@ -204,89 +208,71 @@ struct UpdateConfiguration {
                         self.downloadProgress = min(1, Double(received) / Double(total))
                     }
                 }
+                try Task.checkCancellation()
                 self.status = .downloaded
+                readyToInstall = installAfterDownload
             } catch { self.record(error) }
+            self.operation = nil; self.canCheck = true
+            if readyToInstall { self.handoffInstallation() }
         }
     }
-    func installWithSparkle() {
+    func downloadAndInstall() {
+        guard canStartInstall else { return }
+        if cachedArchive != nil { handoffInstallation() }
+        else { downloadVerifiedArchive(installAfterDownload: true) }
+    }
+    private func handoffInstallation() {
         guard canInstall, let candidate, let cachedArchive else { return }
-        do { try service.verifyForInstallation(candidate, archive: cachedArchive) }
-        catch { record(error); self.cachedArchive = nil; return }
-        controller.checkForUpdates(nil) // Official consent/download/signature/install UI; never install a cache ourselves.
+        canCheck = false
+        status = .installing
+        errorCode = nil
+        do {
+            try service.verifyForInstallation(candidate, archive: cachedArchive)
+            let request = cachedArchive.deletingLastPathComponent().appendingPathComponent(UUID().uuidString)
+            try FileManager.default.createDirectory(at: request, withIntermediateDirectories: false,
+                                                    attributes: [.posixPermissions: 0o700])
+            do {
+                try candidate.manifestBytes.write(to: request.appendingPathComponent("manifest.json"))
+                try candidate.manifestSignature.write(to: request.appendingPathComponent("manifest.sig"))
+                try FileManager.default.linkItem(at: cachedArchive, to: request.appendingPathComponent("archive.zip"))
+                let helper = Process()
+                helper.executableURL = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/HD2UpdateInstaller")
+                helper.arguments = [request.path, String(ProcessInfo.processInfo.processIdentifier)]
+                helper.terminationHandler = { [weak self] process in
+                    try? FileManager.default.removeItem(at: request)
+                    guard process.terminationStatus != 0 else { return }
+                    Task { @MainActor [weak self] in
+                        self?.status = .installFailed
+                        self?.errorCode = "UPDATE_INSTALLER_FAILED"
+                        self?.canCheck = true
+                    }
+                }
+                try helper.run()
+                Task { @MainActor [weak self] in
+                    while helper.isRunning {
+                        if FileManager.default.fileExists(atPath: request.appendingPathComponent("prepared").path) {
+                            guard !CoreWorkerStatus.isActive else { return }
+                            NSApp.terminate(nil)
+                            return
+                        }
+                        try? await Task.sleep(for: .milliseconds(100))
+                    }
+                    self?.canCheck = true
+                }
+            } catch {
+                try? FileManager.default.removeItem(at: request)
+                throw error
+            }
+        } catch {
+            record(error)
+            if !(error is NativeUpdateFailure) { status = .installFailed }
+            canCheck = true
+        }
     }
     func cancel() { operation?.cancel() }
     private func record(_ error: Error) {
         if error is CancellationError || (error as? URLError)?.code == .cancelled { status = .cancelled; return }
         if let failure = error as? NativeUpdateFailure { status = UpdateString(rawValue: failure.rawValue) ?? .failed; errorCode = failure.rawValue }
         else { status = error is URLError ? .network : .download; errorCode = "UPDATE_OPERATION_FAILED" }
-    }
-    func updater(_ updater: SPUUpdater, mayPerform updateCheck: SPUUpdateCheck) throws {
-        guard isConfigured else { throw NativeUpdateFailure.unconfigured }
-        status = .checking; errorCode = nil
-        lastCheck = Date(); preferences.set(lastCheck, forKey: "NativeUpdateLastCheck")
-    }
-    func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) { status = .available }
-    func updaterDidNotFindUpdate(_ updater: SPUUpdater, error: Error) {
-        let value = error as NSError
-        let reason = value.userInfo[SPUNoUpdateFoundReasonKey] as? NSNumber
-        status = Self.noUpdateStatus(reason: reason?.intValue)
-    }
-    static func noUpdateStatus(reason: Int?) -> UpdateString {
-        if [1,2].contains(reason ?? -1) { return .upToDate }
-        if [3,4,5].contains(reason ?? -1) { return .incompatible }
-        return .finished // Unknown/no items is not evidence of current-version freshness.
-    }
-    func recordSparkleFailure(_ error: Error) {
-        let value = error as NSError
-        if value.domain == SUSparkleErrorDomain {
-            switch value.code {
-            case 1001: status = Self.noUpdateStatus(reason: (value.userInfo[SPUNoUpdateFoundReasonKey] as? NSNumber)?.intValue)
-            case 2000,2001: status = .download
-            case 3001: status = .signature
-            case 3002: status = .integrity
-            case 4007: status = .cancelled
-            case 4000..<5000: status = .installFailed
-            default: status = .failed
-            }
-        } else { status = (error as? URLError)?.code == .cancelled ? .cancelled : .network }
-        errorCode = value.domain + " / " + String(value.code)
-    }
-    func updater(_ updater: SPUUpdater, didAbortWithError error: Error) { recordSparkleFailure(error) }
-    func updater(_ updater: SPUUpdater, didFinishUpdateCycleFor updateCheck: SPUUpdateCheck, error: Error?) {
-        if let error { self.updater(updater, didAbortWithError: error) }
-        else if status == .checking { status = .finished }
-    }
-    func updater(_ updater: SPUUpdater, willDownloadUpdate item: SUAppcastItem, with request: NSMutableURLRequest) { status = .downloading }
-    func updater(_ updater: SPUUpdater, failedToDownloadUpdate item: SUAppcastItem, error: Error) { status = .download; errorCode = "SPARKLE_DOWNLOAD_FAILED" }
-    func userDidCancelDownload(_ updater: SPUUpdater) { status = .cancelled }
-    func updater(_ updater: SPUUpdater, willInstallUpdate item: SUAppcastItem) { status = .installing }
-    func feedURLString(for updater: SPUUpdater) -> String? {
-        configuration.resolvedFeed(channel: channel)?.absoluteString
-    }
-    func updater(_ updater: SPUUpdater, shouldProceedWithUpdate updateItem: SUAppcastItem, updateCheck: SPUUpdateCheck) throws {
-        guard let candidate, let cachedArchive else { throw NativeUpdateFailure.integrity }
-        try service.verifyForInstallation(candidate, archive: cachedArchive)
-        guard isConfigured, candidate.manifest.schema == 2,
-              let enclosure = updateItem.propertiesDictionary["enclosure"] as? [String: Any],
-              enclosure["sparkle:edSignature"] as? String == candidate.manifest.archiveEdSignature,
-              updateItem.fileURL == candidate.archive.browser_download_url,
-              updateItem.versionString == String(candidate.manifest.build),
-              updateItem.displayVersionString == candidate.manifest.version,
-              !CoreWorkerStatus.isActive,
-              FileManager.default.isWritableFile(atPath: Bundle.main.bundleURL.deletingLastPathComponent().path),
-              let url = updateItem.fileURL, NativeUpdateHTTP.trusted(url), url.pathExtension == "zip",
-              updateItem.installationType == "application", updateItem.isMacOsUpdate,
-              let remoteBuild = Int(updateItem.versionString), let localBuild = Int(build), remoteBuild > localBuild,
-              let remoteVersion = try? NativeVersion(updateItem.displayVersionString), let localVersion = try? NativeVersion(version),
-              remoteVersion >= localVersion else { throw NativeUpdateFailure.incompatible }
-    }
-    func allowedChannels(for updater: SPUUpdater) -> Set<String> { channel == "preview" && configuration.previewEnabled ? ["preview"] : [] }
-    func updater(_ updater: SPUUpdater, shouldPostponeRelaunchForUpdate item: SUAppcastItem, untilInvokingBlock installHandler: @escaping () -> Void) -> Bool {
-        guard CoreWorkerStatus.isActive else { return false }
-        Task { @MainActor in
-            while CoreWorkerStatus.isActive { try? await Task.sleep(nanoseconds: 200_000_000) }
-            installHandler()
-        }
-        return true
     }
 }

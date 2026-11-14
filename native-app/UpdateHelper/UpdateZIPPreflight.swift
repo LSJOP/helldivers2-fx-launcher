@@ -2,7 +2,8 @@ import Foundation
 
 /// Validate both ZIP directory and local names before any installer can extract it.
 enum UpdateZIPPreflight {
-    static func validate(_ archive: URL) throws {
+    @discardableResult
+    static func validate(_ archive: URL) throws -> Int {
         let data = try Data(contentsOf: archive, options: .mappedIfSafe)
         func reject() throws -> Never { throw NativeUpdateFailure.integrity }
         func integer(_ offset: Int, _ size: Int) throws -> Int {
@@ -96,5 +97,6 @@ enum UpdateZIPPreflight {
             guard previous.upperBound <= next.lowerBound else { try reject() }
         }
         try UpdateArchivePathPolicy.validate(entries, expectedRoot: "HD2FXNative.app")
+        return expanded
     }
 }

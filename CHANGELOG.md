@@ -8,6 +8,16 @@ v1.0.0 (2026111403) is published. Game and complete update acceptance remain lim
 
 ## Unreleased
 
+- Added an isolated, signed GitHub pre-release update channel for acceptance testing. Appearance preferences now persist across App restarts.
+
+- On next startup, the update helper resumes cleanup or rolls back an interrupted atomic swap after validating the saved bundle identities. Production rollout is pending end-to-end acceptance.
+
+- The update candidate hands the verified ZIP to a separate installer instead of starting a second download. The installer waits for the launcher to quit, atomically swaps bundles, and requires a per-run startup receipt. An unconfirmed launch triggers a swap back and a fresh launch of the old version.
+
+- v1.0.1 development candidate pins the stable Ed25519 public key and adds an operator-only file signer with no Keychain access. The update service remains disabled pending single-download installation and rollback acceptance; no v1.0.1 Release is published.
+
+- Update candidate: connect the install action to verified download and expose cancellation during the native operation. Sparkle may still show its own confirmation and download again; installation and rollback are not yet accepted. v1.0.0 requires a trusted manual bootstrap because it contains no update key.
+
 - Stream bounded, redacted workflow and launch events with per-attempt IDs, component progress and elapsed times; display local timestamps while exporting original ISO 8601 timestamps. Bound Steam/game waiting and stop showing 83% after failure. Live full launch and end-to-end EAC/gameplay validation remain pending.
 
 - Align the displayed app name with system language: Simplified and Traditional Chinese use their respective names, and other languages use HD2 FX Launcher. The internal project and data identities remain unchanged.
@@ -176,6 +186,11 @@ The development entries below retain earlier stage evidence; the published relea
 - No signed/notarized installer or GitHub Release exists; `0.1.0` is a development preview.
 - Safe FX stop/restart and validated automatic performance recommendations remain unavailable. Saved settings are not proof of runtime adoption; the original launch preflight may reject custom values.
 - Ground missions, independent EAC acceptance and multiplayer remain unverified.
+
+### v1.0.1 — 2026-11-14
+
+- Stable in-app updates verify Ed25519 and SHA-256, download once, install and restart automatically, and roll back on startup failure.
+- Appearance persists across restarts. Upgrade once from v1.0.0 using the DMG.
 
 ### v1.0.0 — 2026-11-14
 

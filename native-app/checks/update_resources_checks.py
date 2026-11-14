@@ -43,6 +43,6 @@ class UpdateResources(unittest.TestCase):
         self.assertNotIn('gh release',text);self.assertNotIn('git push',text)
     def test_update_module_does_not_depend_on_performance_or_shell(self):
         source=(APP/'Services/AppUpdateManager.swift').read_text()+(APP/'Services/UpdateReleaseService.swift').read_text()
-        for token in ['performanceConfiguration','performance_apply','Process()','/bin/sh','sudo','runtime_root']:self.assertNotIn(token,source)
+        for token in ['performanceConfiguration','performance_apply','/bin/sh','sudo','runtime_root']:self.assertNotIn(token,source)
 
 if __name__=='__main__':unittest.main(verbosity=2)

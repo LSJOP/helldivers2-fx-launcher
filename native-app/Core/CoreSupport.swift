@@ -148,6 +148,9 @@ extension FileManager {
 enum CoreFS {
     static func home() -> URL { FileManager.default.homeDirectoryForCurrentUser }
     static func appSupport() -> URL {
+        if Bundle.main.bundleIdentifier == "com.lsjop.helldivers2fx.native.phase1.update-test" {
+            return home().appendingPathComponent("Library/Application Support/HD2FXNativeUpdateTest", isDirectory: true)
+        }
         if let root = ProcessInfo.processInfo.environment["HD2FX_NATIVE_TEST_ROOT"], !root.isEmpty {
             return URL(fileURLWithPath: root, isDirectory: true)
         }

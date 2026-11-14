@@ -9,6 +9,6 @@
 "updates.finished" = "更新周期结束，安装和重新启动尚未确认。";
 "updates.failed" = "更新失败";
 "updates.scope" = "仅更新启动器，不更新游戏、Steam、FX Runtime、Guest 或 EAC。";
-"updates.languageRestart" = "语言仅为此 App 保存；菜单语言需重启生效。外观仅在当前会话有效。原生界面覆盖全部十语言。";
-"updates.automaticOff" = "自动检查已关闭。签名服务就绪后，由 Sparkle 管理授权。";
-"updates.automaticOn" = "自动检查已开启（Sparkle 偏好）。";
+"updates.languageRestart" = "语言仅为此 App 保存；菜单语言需重启生效。原生界面覆盖全部十语言。";
+"updates.automaticOff" = "自动检查已关闭。";
+"updates.automaticOn" = "自动检查已开启。";
