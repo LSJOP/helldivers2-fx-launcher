@@ -66,3 +66,5 @@ HD2FXNative 是面向 Apple Silicon Mac 的第三方社区启动与管理工具�
 ### 文档
 
 使用与开发指南、架构说明和历史报告见[文档索引](docs/README.md)。
+
+接续开发请读取[当前状态](docs/DEVELOPMENT_STATUS.md)和[交接文档](docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md)，以 main 源码与 AGENTS.md 为准，未合并候选及实机验收单独记录。

@@ -1,7 +1,18 @@
 # Native App development
 
-Instruction version: **v1.2.18** · Updated: **2026-11-14**.
-Change: require synchronized release documentation and verified automatic main integration.
+Instruction version: **v1.2.19** · Updated: **2026-11-14**.
+Change: establish repository-owned development status and handoff as the default workflow.
+
+## 长期开发状态规则（后续任务默认执行）
+
+- 权威来源是 GitHub `main` 的实际源码、本文件、[开发状态](docs/DEVELOPMENT_STATUS.md)和[接续交接](docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md)。聊天、记忆、旧分支和历史报告仅供线索，不得覆盖当前源码事实。以下规则优先于本文件中冲突的历史阶段说明。
+- 开发前先读取上述两个文档，再检查 `git status --short --branch`、`git branch -a -vv`、`git worktree list --porcelain`、`git remote -v`、`git log -5 --oneline`，并 fetch。检查所有相关 Worktree 的暂存、未暂存、未跟踪及未推送成果；备份后才进行整合。网络失败时明确最后已知 main 与本地状态，不能假称已同步。
+- 先定位现有服务、测试与分支差异，优先复用；按功能整合，不用旧分支整树覆盖新实现。保护 legacy-script、CoreSnapshot、未知文件及其他任务成果；禁止 reset --hard、clean -fd、强推或未授权删除。
+- 每次结束前完成必要测试，更新 DEVELOPMENT_STATUS（结果、证据、阻塞、实机验收、下一步）和 HANDOFF（源码基线、模块、命令、测试及接续方式），与本任务代码一起提交。仅文档任务使用相关文档/链接检查，不重复构建无改动代码。记录测试所用 commit，区分历史结果和本次执行。
+- 新功能及文案同步检查十语言；相关行为改动同步维护双语 README、CHANGELOG 和受影响截图。不涉及 UI 时记录本次本地化/截图无变更的理由。禁止把编译、Mock、进程存在或历史游戏记录标为本次实机验收。
+- 提交已完成且验证的逻辑修改，记录 commit、分支、main 包含关系、推送结果和明确下一任务。按下文 Git 安全门禁自动整合与普通推送 main，不要求用户重复提醒；失败时保留分支并记录阻塞，不绕过保护或伪报远端完成。提交本身的 SHA 用 `git log -- docs/DEVELOPMENT_STATUS.md docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md` 获取，不为填入自身 SHA 无限追加提交。
+- 两份文档是唯一当前状态/接续入口；历史报告和 `.codex/progress.md`、task-queue 只保留历史/专项证据并链接到入口，不再平行维护当前任务清单。每项状态必须区分“main 已实现”“分支候选”“自动化通过”“待实机验证”“阻塞/未完成”。
+- 当前架构以 Swift Native Core 为准；旧 Python Bridge 打包/执行说明是迁移历史，不得按旧说明重新引入。main 的凭据当前仅内存；AES-GCM 持久化是未合并候选，不能因历史授权就声称 main 已具备。具体实现以源码和当前状态表为准。
 
 - Architecture: SwiftUI + narrowly scoped AppKit; one AppState and existing Service Layer. Refresh remains read-only. The functional migration permits allowlisted Core actions through the supervised Bridge, with explicit user initiation and consent for writes/launch/SSH. Unknown/unverified is never success. Development tests use isolated fixtures; real game/network/system changes require the corresponding user action.
 - Develop in an appropriate task branch or isolated worktree. Batch related changes and verify the affected behavior. Apply the Git workflow policy below when the task is complete.

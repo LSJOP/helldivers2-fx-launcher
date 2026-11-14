@@ -1,5 +1,7 @@
 # Documentation / 文档索引
 
+- [Current development status / 当前开发状态](DEVELOPMENT_STATUS.md)
+- [Development handoff / 接续开发交接](NATIVE_APP_DEVELOPMENT_HANDOFF.md)
 - [Native development / 开发指南](NATIVE_DEVELOPMENT.md)
 - [Update integration / 自动更新](NATIVE_UPDATES.md)
 - [Release readiness / 发布状态](acceptance/RELEASE_READINESS_REPORT.md)

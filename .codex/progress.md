@@ -1,3 +1,5 @@
+> Historical stage evidence only. Current status: [DEVELOPMENT_STATUS](../docs/DEVELOPMENT_STATUS.md); resume: [HANDOFF](../docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md). Do not infer current completion from this log.
+
 # Unified task progress
 
 HD2_NATIVE_APP_UNIFIED_TASK_QUEUE v1.0.0 · 2026-11-03 · feature/macos-native-app

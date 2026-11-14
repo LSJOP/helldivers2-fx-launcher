@@ -188,5 +188,8 @@
       "automation_cleanup": "DELETED; automation_update returned deleteStatus=deleted",
       "automation_deleted_at": "2026-11-03T05:53:06.986712+08:00"
     }
-  ]
+  ],
+  "current_status_document": "docs/DEVELOPMENT_STATUS.md",
+  "handoff_document": "docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md",
+  "scope": "Historical task queue; not the authoritative current backlog."
 }
