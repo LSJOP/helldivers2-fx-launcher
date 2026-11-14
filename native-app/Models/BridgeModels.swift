@@ -95,6 +95,7 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
 
 enum GUIAction: String, CaseIterable, Identifiable {
     case connect = "connect_fx", inspect = "inspect_guest_environment", fxState = "check_fx_state"
+    case stopFX = "stop_fx", restartFX = "restart_fx"
     case startFX = "start_fx", steam = "start_steam", game = "launch_game"
     var id: String { rawValue }
     var labelKey: String {
@@ -102,12 +103,14 @@ enum GUIAction: String, CaseIterable, Identifiable {
         case .connect: return "ui.079"
         case .inspect: return "ui.159"
         case .fxState: return "ui.048"
+        case .stopFX: return "ui.323"
+        case .restartFX: return "ui.272"
         case .startFX: return "ui.316"
         case .steam: return "ui.317"
         case .game: return "ui.176"
         }
     }
-    var needsReview: Bool { self == .startFX || self == .steam || self == .game }
+    var needsReview: Bool { self == .stopFX || self == .restartFX }
     func accepts(_ result: [String: JSONValue]) -> Bool {
         switch self {
         case .connect: return result["ssh_connected"]?.boolean == true && result["guest_ready"]?.boolean == true
@@ -115,6 +118,8 @@ enum GUIAction: String, CaseIterable, Identifiable {
             guard case .object(let components) = result["components"] else { return false }
             return result["ssh_connected"]?.boolean == true && result["guest_ready"]?.boolean == true && result["guest_os"]?.text != nil && ["steam_files","game_manifest","game_directory","game_executable","proton_files","fex_files"].allSatisfy { components[$0]?.boolean != nil }
         case .fxState: return result["fx_host_running"]?.boolean != nil
+        case .stopFX: return result["fx_host_running"]?.boolean == false
+        case .restartFX: return result["ssh_connected"]?.boolean == true && result["guest_boot"]?.text != nil
         case .startFX: return result["fx_host_running"]?.boolean == true
         case .steam: return result["ssh_connected"]?.boolean == true && result["steam_running"]?.boolean == true
         case .game: return result["game_process_detected"]?.boolean != nil

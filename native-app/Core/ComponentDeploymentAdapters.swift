@@ -217,7 +217,7 @@ enum ProtonJERelease {
         return "python3 - <<'HD2_PROTON_PY'\n" + prefix + python + "\nHD2_PROTON_PY\n"
     }
     static let python = #"""
-import os,sys,json,base64,hashlib,pathlib,stat,subprocess,tempfile,tarfile,shutil,posixpath
+import os,sys,json,base64,hashlib,pathlib,stat,subprocess,tempfile,tarfile,shutil,posixpath,fcntl
 m=json.loads(base64.b64decode(MANIFEST))
 mode=MODE
 steam=pathlib.Path.home()/'.local/share/Steam'
@@ -261,8 +261,14 @@ if mode=='probe':
  sys.exit(0)
 safe_parents(root)
 root.mkdir(parents=True,exist_ok=True)
-lock=pathlib.Path.home()/'.hd2-native-deployment-lock'
-lock.mkdir(mode=0o700)
+lock=pathlib.Path.home()/'.hd2-native-proton.lock'
+lockfd=os.open(lock,os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW,0o600)
+info=os.fstat(lockfd)
+if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.getuid() or info.st_nlink!=1 or info.st_mode&0o077:
+ os.close(lockfd);raise RuntimeError('UNSAFE_PATH')
+try:fcntl.flock(lockfd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+except BaseException:
+ os.close(lockfd);raise RuntimeError('DEPLOYMENT_BUSY')
 try:
  idle()
  if mode=='recover':
@@ -272,21 +278,49 @@ try:
   if os.path.lexists(retained):raise RuntimeError('EXTERNAL_DRIFT')
   idle();p.rename(retained)
   sys.exit(0)
- if state()!='missing':raise RuntimeError('EXTERNAL_DRIFT')
+ current=state()
+ if current==m['archiveSHA256']:sys.exit(0)
+ if current!='missing':raise RuntimeError('EXTERNAL_DRIFT')
  if shutil.disk_usage(root).free < m['archiveBytes']+m['unpackedBytes']*2+67108864:raise RuntimeError('INSUFFICIENT_SPACE')
  stage=pathlib.Path(tempfile.mkdtemp(prefix='.hd2-proton-stage-',dir=root))
  try:
-  archive=stage/'payload.tar.xz'
-  subprocess.run(['curl','--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','600','--max-filesize',str(m['archiveBytes']),'--output',str(archive),m['url']],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=610)
-  if archive.stat().st_size!=m['archiveBytes'] or digest(archive)!=m['archiveSHA256']:raise RuntimeError('ARTIFACT_HASH')
-  checksum=stage/'payload.sha512sum'
-  subprocess.run(['curl','--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','30','--max-filesize','4096','--output',str(checksum),m['url'].replace('.tar.xz','.sha512sum')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=40)
-  published=checksum.read_text().split()
-  if len(published)!=2 or published[0]!=m['archiveSHA512'] or published[1] not in [m['version']+'.tar.xz','*'+m['version']+'.tar.xz']:raise RuntimeError('ARTIFACT_HASH')
-  sha512=hashlib.sha512()
-  with open(archive,'rb') as f:
-   for b in iter(lambda:f.read(1048576),b''):sha512.update(b)
-  if sha512.hexdigest()!=published[0]:raise RuntimeError('ARTIFACT_HASH')
+  cache=pathlib.Path.home()/'.cache/hd2-native/proton'/m['archiveSHA256']
+  safe_parents(cache)
+  cache.mkdir(parents=True,exist_ok=True,mode=0o700)
+  info=cache.stat()
+  if info.st_uid!=os.getuid() or info.st_mode&0o077:raise RuntimeError('UNSAFE_PATH')
+  archive=cache/'payload.tar.xz';partial=cache/'payload.partial';checksum=cache/'payload.sha512sum'
+  for file in [archive,partial,checksum]:
+   if os.path.lexists(file):
+    info=file.lstat()
+    if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.getuid() or info.st_nlink!=1:raise RuntimeError('UNSAFE_PATH')
+  def valid_archive(file):
+   if not file.exists() or file.stat().st_size!=m['archiveBytes'] or digest(file)!=m['archiveSHA256']:return False
+   sha512=hashlib.sha512()
+   with open(file,'rb') as f:
+    for b in iter(lambda:f.read(1048576),b''):sha512.update(b)
+   return sha512.hexdigest()==m['archiveSHA512']
+  def valid_checksum():
+   if not checksum.exists():return False
+   published=checksum.read_text().split()
+   return len(published)==2 and published[0]==m['archiveSHA512'] and published[1] in [m['version']+'.tar.xz','*'+m['version']+'.tar.xz']
+  if not valid_archive(archive):
+   if archive.exists():archive.unlink()
+   if partial.exists() and partial.stat().st_size>m['archiveBytes']:partial.unlink()
+   args=['curl','--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','600','--max-filesize',str(m['archiveBytes']),'--retry','2','--retry-delay','2']
+   resume=['--continue-at','-'] if partial.exists() else []
+   downloaded=subprocess.run(args+resume+['--output',str(partial),m['url']],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=610)
+   if downloaded.returncode==33 and resume:
+    partial.unlink()
+    downloaded=subprocess.run(args+['--output',str(partial),m['url']],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=610)
+   if downloaded.returncode!=0:raise RuntimeError('ARTIFACT_DOWNLOAD_FAILED')
+   if not valid_archive(partial):
+    partial.unlink();raise RuntimeError('ARTIFACT_HASH')
+   partial.rename(archive)
+  if not valid_checksum():
+   subprocess.run(['curl','--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','30','--max-filesize','4096','--output',str(checksum),m['url'].replace('.tar.xz','.sha512sum')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=40)
+   if not valid_checksum():
+    checksum.unlink();raise RuntimeError('ARTIFACT_HASH')
   unpack=stage/'unpack';unpack.mkdir()
   with tarfile.open(archive,'r:xz') as t:
    members=t.getmembers();seen=set()
@@ -314,6 +348,6 @@ try:
  finally:
   shutil.rmtree(stage)
 finally:
- lock.rmdir()
+ os.close(lockfd)
 """#
 }

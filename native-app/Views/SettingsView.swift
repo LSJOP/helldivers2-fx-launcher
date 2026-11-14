@@ -64,7 +64,7 @@ struct LegacyOperationsView: View {
             Text(state.t("ui.001"))
                 .font(TacticalTypography.caption).foregroundStyle(.secondary)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 10)], alignment: .leading, spacing: 10) {
-                ForEach(state.rows("get_legacy_catalog", "operations").filter { $0["scope"]?.text == scope && !(["check_updates","test_guest_sudo"] + GUIAction.allCases.map(\.rawValue)).contains($0["method"]?.text ?? "") }, id: \.operationID) { row in
+                ForEach(state.rows("get_legacy_catalog", "operations").filter { $0["scope"]?.text == scope && !(["check_updates","test_guest_sudo","test_vm_credentials"] + GUIAction.allCases.map(\.rawValue)).contains($0["method"]?.text ?? "") }, id: \.operationID) { row in
                     let method = row["method"]?.text ?? ""
                     let requiresConsent = row["confirmation"]?.boolean == true
                     TacticalButton(title: operationTitle(method, state), symbol: requiresConsent ? "lock" : "doc.text.magnifyingglass",
@@ -252,7 +252,6 @@ struct LegacyOperationSheet: View {
             }
             .task {
                 if operation == "save_configuration" { state.runOperation("read_configuration") }
-                else if !tasks.busy { await state.prepareCredentials() }
             }
     }
     private func pretty(_ value: JSONValue) -> String {
@@ -281,23 +280,14 @@ private struct CredentialInputFields: View {
     @ObservedObject var credentials: SessionCredentialManager
     @ObservedObject var tasks: TaskManager
     let operation: String
-    @State private var expanded = false
     var body: some View {
-        DisclosureGroup(state.t("ui.session.title"), isExpanded: $expanded) {
-            VStack(alignment: .leading, spacing: 10) {
-                SecureField(state.t("ui.305"), text: $credentials.password)
-                SecureField(state.t("ui.168"), text: $credentials.passphrase)
-                if operation == "test_guest_sudo" { SecureField(state.t("ui.304"), text: $credentials.sudoPassword) }
-                Text(state.t("ui.session.policy"))
-                    .font(TacticalTypography.caption).foregroundStyle(.secondary)
-                Button(state.t("ui.067")) { state.forgetSavedCredentials() }
-            }.padding(.top, 8).disabled(tasks.busy)
+        Button(state.t("ui.credentials.openSettings")) {
+            state.operationSelection = nil
+            state.selection = .settings
         }
-        .onAppear { expanded = ["test_ssh","test_guest_sudo"].contains(operation) || needsInput }
-        .onChange(of: state.operationError?.code) { if needsInput { expanded = true } }
     }
-    private var needsInput: Bool { ["AUTH_REQUIRED","SSH_AUTH_FAILED","SUDO_AUTH_FAILED"].contains(state.operationError?.code ?? "") }
 }
+
 
 private struct CredentialManagementView: View {
     @ObservedObject var state: AppState
@@ -305,27 +295,38 @@ private struct CredentialManagementView: View {
     @ObservedObject var tasks: TaskManager
     var body: some View {
         TacticalPanel(number: "K", title: state.t("ui.session.title"), symbol: "key") {
-            Text(state.t("ui.session.policy")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+            SecureField(state.t("ui.credentials.password"), text: Binding(
+                get: { credentials.password }, set: { credentials.setVirtualMachinePassword($0) }))
+                .accessibilityIdentifier("settings.vm.password")
+            HStack {
+                Button(state.t("ui.credentials.verify")) { state.verifyVirtualMachinePassword() }
+                    .accessibilityIdentifier("settings.vm.verify")
+                Button(state.t("ui.credentials.forget")) { state.forgetSavedCredentials() }
+            }
             ForEach(CredentialKind.allCases, id: \.self) { kind in
-                VStack(alignment: .leading, spacing: 8) {
-                    TacticalInfoRow(title: state.t(kind == .ssh ? "ui.session.ssh" : "ui.session.sudo"), value: status(kind))
-                    HStack {
-                        Button(state.t(kind == .ssh ? "ui.session.updateSSH" : "ui.session.updateSudo")) {
-                            credentials.update(kind)
-                            state.operationSelection = NativeOperation(method: kind == .ssh ? "test_ssh" : "test_guest_sudo")
-                        }
-                        Button(state.t(kind == .ssh ? "ui.session.testSSH" : "ui.session.testSudo")) {
-                            state.operationSelection = NativeOperation(method: kind == .ssh ? "test_ssh" : "test_guest_sudo")
-                        }
-                    }
+                TacticalInfoRow(title: state.t(kind == .ssh ? "ui.session.ssh" : "ui.session.sudo"), value: status(kind))
+            }
+            if let record = state.guiRecords["test_vm_credentials"] {
+                Text(record.status.title(state))
+                if let error = record.error {
+                    Text(error.message(state.languageCode) + " · " + error.code).foregroundStyle(.orange)
                 }
             }
-            HStack {
-                Button(state.t("ui.session.clear")) { state.forgetSavedCredentials() }
-                Button(state.t("ui.session.revalidate")) { state.operationSelection = NativeOperation(method: "test_ssh") }
+            if state.pendingCredentialMethod != nil {
+                Text(state.t("ui.credentials.resume"))
+                Button(state.t("ui.038")) { state.cancelCredentialContinuation() }
             }
+            if credentials.storageIssue {
+                Text(state.t("ui.credentials.storageError")).foregroundStyle(.orange)
+            }
+            DisclosureGroup(state.t("ui.setup.details")) {
+                Text(state.t("ui.credentials.storagePolicy")).font(TacticalTypography.caption)
+                Button(state.t("ui.credentials.restore")) { Task { await credentials.restoreSavedInput() } }
+                Button(state.t("ui.session.clear")) { state.clearSessionCredentials() }
+            }
+
         }.disabled(tasks.busy)
-            .task { if !tasks.busy { await state.prepareCredentials() } }
+
     }
     private func status(_ kind: CredentialKind) -> String {
         switch credentials.status(kind) {
@@ -501,7 +502,13 @@ private struct SSHConnectionSettingsView: View {
             }
         }
         .disabled(tasks.busy)
-        .task { if !tasks.busy { state.runOperation("read_configuration") } }
+         .task {
+            while tasks.busy {
+                do { try await Task.sleep(nanoseconds: 100_000_000) } catch { return }
+            }
+            guard !Task.isCancelled else { return }
+            state.runOperation("read_configuration")
+        }
         .onReceive(state.$sshConfiguration) { result in
             guard let config = result["configuration"]?.object["ssh"]?.object, let value = result["revision"]?.text else { return }
             original = config; revision = value

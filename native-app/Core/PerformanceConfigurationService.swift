@@ -5,6 +5,13 @@ import CoreFoundation
 /// CFPreferences is authoritative; writes require a stopped, publisher-verified FX.
 enum PerformanceDomain {
     static let name = "es.fxgam.steamac"
+    static func domain(app: URL) throws -> String {
+        guard let identity = FXDiscoveryService.identity(of: app.path), identity.valid,
+              [FXDiscoveryService.officialBundleIdentifier, FXDiscoveryService.localTestBundleIdentifier].contains(identity.bundleIdentifier) else {
+            throw CoreError("PERF_VERSION")
+        }
+        return identity.bundleIdentifier
+    }
     static let keys = ["cpus", "memMiB", "vulkanDriver", "metalHUD", "superResolution"]
     static let pinned194 = "0db013e9766b77e1c40f588c5f02ce1bab5937ec88cc17d6a8ade6c53e00b0cb"
 }
@@ -29,7 +36,6 @@ struct CFPreferencesStore: PreferencesStore {
             guard let name = key as? String else { continue }
             result[name] = CoreJSON.value(value)
         }
-        if result.isEmpty { throw CoreError("PERF_FORMAT") }
         return result
     }
 
@@ -107,7 +113,7 @@ enum PerformanceConfigurationService {
     static func capabilities(app: URL) throws -> PerformanceRules {
         guard let identity = FXDiscoveryService.identity(of: app.path), identity.valid else { throw CoreError("PERF_VERSION") }
         let integrity = FXDiscoveryService.integrity(app: app)
-        let trusted = integrity["state"]?.text == "verified"
+        let trusted = FXDiscoveryService.launchAllowed(integrity)
         let pinned = try? CoreHash.sha256File(identity.executable) == PerformanceDomain.pinned194
         guard trusted || pinned == true else { throw CoreError("PERF_VERSION") }
         let memoryMiB = (SystemProbe.memoryBytes() ?? 0) / 1_048_576
@@ -128,7 +134,7 @@ enum PerformanceConfigurationService {
     static func validate(_ values: [String: JSONValue], rules: PerformanceRules, restore: Bool) throws {
         guard Set(values.keys) == Set(PerformanceDomain.keys) else { throw CoreError("PERF_PARAMETER") }
         for (key, value) in values {
-            if restore, case .null = value { continue }
+            if case .null = value, restore || !rules.writable.contains(key) { continue }
             switch key {
             case "cpus":
                 guard let number = value.integer, (rules.cpuMin...rules.cpuMax).contains(number) else { throw CoreError("PERF_RANGE") }
@@ -172,8 +178,12 @@ enum PerformanceConfigurationService {
         ["body": .object(body), "sha256": .string(CoreHash.sha256(Data(CoreJSON.encode(.object(body)).utf8)))]
     }
 
-    static func receipt() throws -> [String: JSONValue] {
-        let path = directory.appendingPathComponent("last.json")
+    static func receiptPath(store: PreferencesStore) -> URL {
+        let file = store.label == PerformanceDomain.name ? "last.json" : "last-" + CoreHash.sha256(Data(store.label.utf8)) + ".json"
+        return directory.appendingPathComponent(file)
+    }
+    static func receipt(store: PreferencesStore) throws -> [String: JSONValue] {
+        let path = receiptPath(store: store)
         if FileManager.default.isSymbolicLink(atPath: path.path) { throw CoreError("PERF_BACKUP") }
         guard let data = try? Data(contentsOf: path), data.count <= CoreLimits.maxSmallFile,
               let envelope = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -181,19 +191,23 @@ enum PerformanceConfigurationService {
         let value = CoreJSON.value(body)
         guard digest == CoreHash.sha256(Data(CoreJSON.encode(value).utf8)) else { throw CoreError("PERF_BACKUP") }
         guard let version = value.object["version"]?.text, !version.isEmpty,
-              value.object["domain"]?.text == PerformanceDomain.name else { throw CoreError("PERF_BACKUP") }
+              value.object["domain"]?.text == store.label else { throw CoreError("PERF_BACKUP") }
         return value.object
     }
 
     static func snapshot(store: PreferencesStore, rules: PerformanceRules) throws -> [String: JSONValue] {
         let data = try store.read()
         let current = selected(data)
-        guard !current.values.contains(where: { if case .null = $0 { return true }; return false }) else { throw CoreError("PERF_FORMAT") }
-        try validate(current, rules: rules, restore: false)
+        try validate(current, rules: rules, restore: true)
+        let defaults: [String: JSONValue] = ["cpus": .number(Double(min(8, rules.cpuMax))),
+            "memMiB": .number(Double(min(8192, rules.memoryMax))),
+            "vulkanDriver": .string(rules.drivers.contains("kosmickrisp") ? "kosmickrisp" : rules.drivers.first ?? ""),
+            "metalHUD": .bool(false), "superResolution": .null]
+        let draft = current.merging(defaults) { actual, proposed in if case .null = actual { return proposed }; return actual }
         var backup: [String: JSONValue]?
-        if let receipt = try? receipt() { backup = receipt }
+        if let receipt = try? receipt(store: store) { backup = receipt }
         let canRestore = backup?["status"]?.text == "saved" && backup?["after_revision"]?.text == digest(data)
-        return ["current": .object(current), "revision": .string(digest(data)),
+        return ["current": .object(current), "draft": .object(draft), "revision": .string(digest(data)),
                 "capabilities": .object(rules.json), "effective": .string("unverified"),
                 "last_applied": backup?["after"] ?? .null,
                 "backup": backup?["before"] ?? .null,
@@ -210,7 +224,7 @@ enum PerformanceConfigurationService {
         guard current["revision"]?.text == revision else { throw CoreError("PERF_CONFLICT") }
         var values = rawValues ?? [:]
         if restore {
-            let receipt = try receipt()
+            let receipt = try receipt(store: store)
             guard current["can_restore"]?.boolean == true else { throw CoreError("PERF_CONFLICT") }
             values = receipt["before"]?.object ?? [:]
         }
@@ -242,7 +256,7 @@ enum PerformanceConfigurationService {
             let before = try store.read()
             let after = preview["plan"]?.object["after"]?.object ?? [:]
             emit("backing_up")
-            let body: [String: JSONValue] = ["domain": .string(PerformanceDomain.name),
+            let body: [String: JSONValue] = ["domain": .string(store.label),
                                              "version": .string(rules.version),
                                              "created": .number(Date().timeIntervalSince1970),
                                              "source": .string("native_performance_v3"),
@@ -288,7 +302,7 @@ enum PerformanceConfigurationService {
             updated["status"] = .string(restore ? "restored" : "saved")
             updated["after_revision"] = .string(digest(try store.read()))
             try save(envelope(updated), to: backup)
-            try save(envelope(updated), to: directory.appendingPathComponent("last.json"))
+            try save(envelope(updated), to: receiptPath(store: store))
             var result = try snapshot(store: store, rules: rules)
             result["status"] = updated["status"]
             result["restart_required"] = .bool(true)

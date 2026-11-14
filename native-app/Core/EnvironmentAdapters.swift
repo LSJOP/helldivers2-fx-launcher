@@ -174,7 +174,7 @@ final class SSHEnvironmentBackend: DeploymentBackend {
         }
         for (key, value) in fields where key.hasPrefix("net6_") { values["ipv6." + key.dropFirst(5)] = value }
         facts["network"] = "UNKNOWN" // A default route is not Steam/game reachability.
-        let pref = try? CFPreferencesStore(domain: PerformanceDomain.name).read()
+        let pref = try? CFPreferencesStore(domain: try PerformanceDomain.domain(app: fx)).read()
         for key in ["cpus", "memMiB", "gpuMemMiB", "graphicsPath", "vulkanDriver", "metalHUD", "superResolution"] {
             facts["fx_" + key] = pref?[key].map { CoreJSON.encode($0) } ?? "UNKNOWN"
         }
@@ -204,7 +204,7 @@ final class SSHEnvironmentBackend: DeploymentBackend {
             _ = try hostIdentity()
             let result = try transport.run(script, timeout: 750, context: context)
             if result.status != 0 {
-                let reasons = ["ARTIFACT_HASH", "STEAM_ROOT_CONFLICT", "INSUFFICIENT_SPACE", "GAME_RUNNING", "TARGET_CHANGED", "EXTERNAL_DRIFT", "UNSAFE_PATH"]
+                let reasons = ["ARTIFACT_DOWNLOAD_FAILED", "DEPLOYMENT_BUSY", "ARTIFACT_HASH", "STEAM_ROOT_CONFLICT", "INSUFFICIENT_SPACE", "GAME_RUNNING", "TARGET_CHANGED", "EXTERNAL_DRIFT", "UNSAFE_PATH"]
                 throw CoreError(reasons.first { result.stderr.contains($0) } ?? "COMPONENT_INSTALL_FAILED")
             }
             return
@@ -363,13 +363,13 @@ fi
 enum GraphicsConfigurationAdapter {
     static func inspect(app: URL) throws -> [String: JSONValue] {
         let rules = try PerformanceConfigurationService.capabilities(app: app)
-        var result = try PerformanceConfigurationService.snapshot(store: CFPreferencesStore(domain: PerformanceDomain.name), rules: rules)
+        var result = try PerformanceConfigurationService.snapshot(store: CFPreferencesStore(domain: try PerformanceDomain.domain(app: app)), rules: rules)
         result["hardware"] = .object(SystemProbe.hardware()); return result
     }
     static func apply(app: URL, values: [String: JSONValue], revision: String, token: String) throws -> [String: JSONValue] {
         let rules = try PerformanceConfigurationService.capabilities(app: app)
         return try PerformanceConfigurationService.commit(values: values, revision: revision, token: token, restore: false,
-            store: CFPreferencesStore(domain: PerformanceDomain.name), rules: rules) { _ in }
+            store: CFPreferencesStore(domain: try PerformanceDomain.domain(app: app)), rules: rules) { _ in }
     }
 }
 
@@ -850,5 +850,63 @@ enum SetupVMReboot {
             try save("attention_required")
             throw error
         }
+    }
+}
+
+
+extension NativeCoreService {
+    /// Only the selected, authenticated FX Guest can receive one graceful lifecycle request.
+    /// A timeout/cancel never escalates to killing processes or repeats the request.
+    static func lifecycle(_ method: String, params: [String: JSONValue], context: CoreContext,
+                          emit: @escaping (String, String, [String: JSONValue]) -> Void) throws -> [String: JSONValue] {
+        let request = try launchRequest(params, context: context, emit: emit, confirmed: true)
+        let fx = try LaunchService.selectedFX(request)
+        guard FXDiscoveryService.launchAllowed(FXDiscoveryService.integrity(app: fx, context: context)) else { throw CoreError("FX_IDENTITY_UNVERIFIED") }
+        let transport = SSHTransport.isolatedSetup(request.configuration)
+        defer { transport.closeMaster() }
+        _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
+        transport.setSecret(password: request.password, passphrase: request.passphrase)
+        try transport.connectOnce(context: context, forwarding: true)
+        let backend = try SSHEnvironmentBackend(fx: fx, transport: transport, context: context, revision: ConfigurationService.read().revision)
+        backend.expectedGuestBoot = params["credential_guest_boot"]?.text
+        backend.sudoPassword = request.sudoPassword
+        let before = try backend.snapshot()
+        try EnvironmentDeploymentService.idle(before, requiresStoppedSteam: false)
+        if transport.passwordWasSent {
+            emit("INFO", "SSH authenticated", ["kind": .string("credential_status"), "credential_kind": .string("ssh"), "status": .string("authenticated")])
+        }
+        let ticket = UUID()
+        if method == "restart_fx" {
+            let next = try SetupVMReboot.run(backend: backend, old: before, request: request, ticket: ticket) { state in
+                emit("INFO", state.rawValue, ["deployment_state": .string(state.rawValue)])
+            }
+            let snapshot = try next.snapshot()
+            defer { next.transport.closeMaster() }
+            try SetupVMReboot.validateTransition(old: before, new: snapshot)
+            return ["fx_host_running": .bool(true), "ssh_connected": .bool(true), "guest_ready": .bool(true),
+                    "steam_running": .bool(snapshot.steamRunning), "guest_boot": .string(snapshot.boot),
+                    "reboot_transition": .object(["from": .string(before.boot), "to": .string(snapshot.boot)])]
+        }
+        guard method == "stop_fx", let machine = before.facts["machine_id"] else { throw CoreError("INVALID_ARGUMENT") }
+        let folder = CoreFS.nativeData().appendingPathComponent("fx-lifecycle", isDirectory: true)
+        try CoreFS.ensurePrivateDirectory(folder)
+        let receipt = folder.appendingPathComponent(ticket.uuidString + ".json")
+        var record: [String: JSONValue] = ["fx_path": .string(fx.path), "boot": .string(before.boot), "state": .string("prepared")]
+        try CoreFS.atomicWrite(try JSONEncoder().encode(record), to: receipt)
+        _ = try GuestPrivilegedExecutor.run(transport, operation: .poweroff(boot: before.boot, machine: machine, ticket: ticket),
+                password: request.sudoPassword, approved: true, context: context) {
+            let current = try backend.snapshot()
+            guard EnvironmentDeploymentService.identity(current, before), current.facts["machine_id"] == machine else { throw CoreError("TARGET_CHANGED") }
+            try EnvironmentDeploymentService.idle(current, requiresStoppedSteam: false)
+        }
+        record["state"] = .string("poweroff_scheduled")
+        try CoreFS.atomicWrite(try JSONEncoder().encode(record), to: receipt)
+        emit("INFO", "VM poweroff scheduled", ["status": .string("waiting_for_stop")])
+        try SetupVMReboot.wait(context: context, seconds: 90) {
+            try LaunchService.fxState(request: request, fx: fx)["fx_host_running"]?.boolean == false
+        }
+        record["state"] = .string("stopped")
+        try CoreFS.atomicWrite(try JSONEncoder().encode(record), to: receipt)
+        return ["fx_host_running": .bool(false), "ssh_connected": .bool(false), "guest_ready": .bool(false), "steam_running": .bool(false), "game_process_detected": .bool(false)]
     }
 }

@@ -20,20 +20,28 @@ struct LogsView: View {
     private var lines: [SessionLogLine] {
         let swift = state.sessionLogs.enumerated().map { index, text in
             let parts = text.components(separatedBy: "  ")
-            return SessionLogLine(id: "swift-\(index)", time: parts.count > 1 ? parts[0] : "—", source: "App", message: state.credentials.redactor.text(parts.count > 1 ? parts.dropFirst().joined(separator: "  ") : text), level: "UNCLASSIFIED")
+            return SessionLogLine(id: "swift-\(index)", time: parts.count > 1 ? parts[0] : "—", source: "App", message: state.credentials.redactor.text(parts.count > 1 ? parts.dropFirst().joined(separator: "  ") : text), level: "INFO")
         }
         let bridge = state.rows("get_logs", "entries").enumerated().map { index, row in
-            let raw = row["level"]?.text?.uppercased() ?? "UNCLASSIFIED"
-            let severity = ["INFO", "SUCCESS", "WARNING", "ERROR", "DEBUG"].contains(raw) ? raw : "UNCLASSIFIED"
+            let raw = row["level"]?.text?.uppercased() ?? "DEBUG"
+            let severity = ["INFO", "WARNING", "ERROR", "DEBUG"].contains(raw) ? raw : raw == "SUCCESS" ? "INFO" : raw == "WARN" ? "WARNING" : "DEBUG"
             return SessionLogLine(id: "core-\(index)", time: row["at"]?.text ?? "—", source: "Core", message: state.credentials.redactor.text(row["message"]?.text ?? ""), level: severity)
         }
         let runtime = state.runtimeLogs.enumerated().map { index, row in
-            SessionLogLine(id: "runtime-\(index)", time: row["at"]?.text ?? "—", source: row["source"]?.text ?? "Core", message: state.credentials.redactor.text((row["message"]?.text ?? "") + " " + (row["status"]?.text ?? "")), level: row["level"]?.text ?? "UNCLASSIFIED")
+            SessionLogLine(id: "runtime-\(index)", time: row["at"]?.text ?? "—", source: row["source"]?.text ?? "Core", message: state.credentials.redactor.text((row["message"]?.text ?? "") + " " + (row["status"]?.text ?? "")), level: normalized(row["level"]?.text))
         }
         return swift + bridge + runtime
     }
+    private func normalized(_ level: String?) -> String {
+        switch level?.uppercased() {
+        case "ERROR": return "ERROR"
+        case "WARNING", "WARN": return "WARNING"
+        case "INFO", "SUCCESS": return "INFO"
+        default: return "DEBUG"
+        }
+    }
     private var filtered: [SessionLogLine] {
-        lines.filter { (level == "ALL" || $0.level == level) && (search.isEmpty || ($0.time + $0.source + $0.message).localizedCaseInsensitiveContains(search)) }
+        lines.filter { (level == "ALL" ? $0.level != "DEBUG" : $0.level == level) && (search.isEmpty || ($0.time + $0.source + $0.message).localizedCaseInsensitiveContains(search)) }
     }
     var body: some View {
         let c = TacticalColors(scheme: scheme)
@@ -76,8 +84,7 @@ struct LogsView: View {
     private var filters: some View {
         Picker(state.t("ui.182"), selection: $level) {
             Text(state.t("ui.010")).tag("ALL")
-            Text(state.t("ui.364")).tag("UNCLASSIFIED")
-            ForEach(["INFO", "SUCCESS", "WARNING", "ERROR", "DEBUG"], id: \.self) { Text($0).tag($0) }
+            ForEach(["INFO", "WARNING", "ERROR", "DEBUG"], id: \.self) { Text($0).tag($0) }
         }.frame(maxWidth: 210)
     }
     private var searchField: some View {

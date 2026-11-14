@@ -51,7 +51,7 @@ struct PerformanceConfigurationState {
     var backup: [String: JSONValue] { snapshot["backup"]?.object ?? [:] }
     var effectiveVerified: Bool { false } // No live Guest adoption probe in this editor.
     mutating func acceptSnapshot(_ result: [String: JSONValue]) {
-        snapshot = result; edited = current; preview = [:]
+        snapshot = result; edited = result["draft"]?.object ?? current; preview = [:]
     }
     mutating func acceptPreview(_ result: [String: JSONValue]) {
         guard let plan = result["plan"]?.object,

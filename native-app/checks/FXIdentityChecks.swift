@@ -86,6 +86,22 @@ struct FXIdentityChecks {
         catch { ok(false, "unsigned diagnostic network unexpected error") }
         try? FileManager.default.removeItem(at: spoof)
 
+        // Same pinned bytes may live in an older launcher build; ancestry remains required.
+        do {
+            let temp = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("hd2-network-identity-" + UUID().uuidString)
+            try FileManager.default.createDirectory(at: temp, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: temp) }
+            let payload = temp.appendingPathComponent("gvproxy-eim")
+            let bundled = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("Resources/launch/gvproxy-eim")
+            try FileManager.default.copyItem(at: bundled, to: payload)
+            let expected = temp.appendingPathComponent("new-build/gvproxy-eim")
+            let tree = [80: row(80, 1, fxExe), 81: row(81, 80, payload.path)]
+            ok(try LaunchService.pinnedNetwork(rows: tree, supervisor: 80, expected: expected) == payload.path, "pinned network survives launcher build path change")
+            ok(try LaunchService.pinnedNetwork(rows: tree, supervisor: 999, expected: expected) == nil, "pinned bytes without FX ancestry are rejected")
+            try Data("unapproved-network".utf8).write(to: payload)
+            do { _ = try LaunchService.pinnedNetwork(rows: tree, supervisor: 80, expected: expected); ok(false, "unapproved network rejected") }
+            catch { ok(true, "unapproved network rejected despite matching filename and ancestry") }
+        } catch { ok(false, "network identity fixture: \(error)") }
         print("TOTAL \(passed) passed, \(failed) failed")
         exit(failed == 0 ? 0 : 1)
     }

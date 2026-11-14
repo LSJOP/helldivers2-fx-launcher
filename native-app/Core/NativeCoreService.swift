@@ -28,10 +28,13 @@ actor NativeCoreService {
         Operation(method: "inspect_network", scope: "environment", confirmation: false, external: false),
         Operation(method: "test_network", scope: "environment", confirmation: false, external: false),
         Operation(method: "test_ssh", scope: "environment", confirmation: true, external: true),
+        Operation(method: "test_vm_credentials", scope: "settings", confirmation: true, external: true),
         Operation(method: "test_guest_sudo", scope: "settings", confirmation: true, external: true),
         Operation(method: "connect_fx", scope: "environment", confirmation: true, external: true),
         Operation(method: "inspect_guest_environment", scope: "environment", confirmation: true, external: true),
         Operation(method: "check_fx_state", scope: "fx", confirmation: false, external: false),
+        Operation(method: "stop_fx", scope: "fx", confirmation: true, external: true),
+        Operation(method: "restart_fx", scope: "fx", confirmation: true, external: true),
         Operation(method: "start_fx", scope: "fx", confirmation: true, external: true),
         Operation(method: "start_steam", scope: "fx", confirmation: true, external: true),
         Operation(method: "inspect_guest", scope: "environment", confirmation: true, external: true),
@@ -254,12 +257,18 @@ actor NativeCoreService {
             return try NetworkProfileService.toggleCheck()
         case "test_ssh":
             return try testSSH(params, context: context, emit: emit)
+        case "test_vm_credentials":
+            let ssh = try testSSH(params, context: context, emit: emit)
+            let sudo = try testSudo(params, context: context, emit: emit)
+            return ssh.merging(sudo) { _, new in new }
         case "test_guest_sudo":
             return try testSudo(params, context: context, emit: emit)
         case "check_fx_state":
             let request = try launchRequest(params, context: context, emit: emit, confirmed: false)
             let fx = try LaunchService.selectedFX(request)
             return try LaunchService.fxState(request: request, fx: fx)
+        case "stop_fx", "restart_fx":
+            return try lifecycle(method, params: params, context: context, emit: emit)
         case "start_fx":
             let request = try launchRequest(params, context: context, emit: emit, confirmed: true)
             let fx = try LaunchService.selectedFX(request)
@@ -326,7 +335,7 @@ actor NativeCoreService {
             throw CoreError("FX_UNAVAILABLE")
         }
         let rules = try PerformanceConfigurationService.capabilities(app: URL(fileURLWithPath: identity.path))
-        return (CFPreferencesStore(domain: PerformanceDomain.name), rules, URL(fileURLWithPath: identity.path))
+        return (CFPreferencesStore(domain: try PerformanceDomain.domain(app: fx)), rules, URL(fileURLWithPath: identity.path))
     }
 
     static func readPerformance() -> [String: JSONValue] {

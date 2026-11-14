@@ -206,6 +206,18 @@ func runChecks() {
                                                         store: store, rules: rules, probe: {})
     }
 
+    let emptyStore = MemoryPreferencesStore([:])
+    let emptySnapshot = try! PerformanceConfigurationService.snapshot(store: emptyStore, rules: rules)
+    check(emptySnapshot["current"]?.object["cpus"] == .null && emptySnapshot["draft"]?.object["cpus"]?.integer == 8,
+          "missing preferences remain unknown; editor proposal is separate")
+    let initialDraft = emptySnapshot["draft"]!.object
+    let initialPreview = try! PerformanceConfigurationService.preview(values: initialDraft, revision: emptySnapshot["revision"]!.text!, restore: false, store: emptyStore, rules: rules, probe: {})
+    let initialApply = try! PerformanceConfigurationService.commit(values: initialDraft, revision: emptySnapshot["revision"]!.text!, token: initialPreview["token"]!.text!, restore: false, store: emptyStore, rules: rules, probe: {}, emit: { _ in })
+    let initialRestore = try! PerformanceConfigurationService.preview(values: nil, revision: initialApply["revision"]!.text!, restore: true, store: emptyStore, rules: rules, probe: {})
+    _ = try! PerformanceConfigurationService.commit(values: nil, revision: initialApply["revision"]!.text!, token: initialRestore["token"]!.text!, restore: true, store: emptyStore, rules: rules, probe: {}, emit: { _ in })
+    check(try! emptyStore.read().isEmpty, "restoring previously absent preferences removes only owned keys")
+    check(PerformanceConfigurationService.receiptPath(store: CFPreferencesStore(domain: FXDiscoveryService.localTestBundleIdentifier)) != PerformanceConfigurationService.receiptPath(store: CFPreferencesStore(domain: FXDiscoveryService.officialBundleIdentifier)), "test and official FX recovery receipts are isolated")
+
     // MARK: Guest protocol parsing
     let guestFixture = #"{"boot":"abc","marker":true,"ipv6":{"all":"1","default":"1","eth0":"1","lo":"1"},"proxy":"none","service":"stopped","game_count":0,"steam_count":0,"steam_logged_on":false,"apps":"","vulkan":true,"fex":"h","ntdll":"n","tool":"proton-je-11.0-20261014-3","launch":"","wine_core":{},"uid":1000}"#
     let guest = try! GuestService.parse(guestFixture, expected: "GUEST_INSPECTION_FAILED")

@@ -2,6 +2,19 @@ import SwiftUI
 
 struct EnvironmentView: View {
     @ObservedObject var state: AppState
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            TacticalPageHeader(title: state.t("ui.108"))
+            FirstRunSetupView(state: state, tasks: state.tasks, credentials: state.credentials)
+            DisclosureGroup(state.t("ui.setup.details")) {
+                EnvironmentDiagnosticsView(state: state)
+            }
+        }
+    }
+}
+
+private struct EnvironmentDiagnosticsView: View {
+    @ObservedObject var state: AppState
     private func snapshotStatus(_ method: String, fact: InspectionStatus = .uncertain) -> InspectionStatus {
         if state.refreshing { return .checking }
         if state.error?.method == method { return .failed }
@@ -11,9 +24,7 @@ struct EnvironmentView: View {
     private func badge(_ status: InspectionStatus) -> some View {
         TacticalStatusBadge(text: status.title(state), tone: status.tone)
     }
-    private var actionEvidence: [String: JSONValue] {
-        state.guiRecords.values.filter { $0.target == state.runtimeRoot && $0.status == .succeeded && state.guiSnapshots[$0.method] != nil }.max { $0.startedAt < $1.startedAt }.flatMap { state.guiSnapshots[$0.method] } ?? [:]
-    }
+    private var actionEvidence: [String: JSONValue] { state.latestGUIEvidence }
     private func chainStatus(_ name: String) -> InspectionStatus {
         switch name {
         case "FX": return actionEvidence["fx_host_running"]?.boolean == true ? .normal : actionEvidence["fx_host_running"]?.boolean == false ? .action : .unchecked
@@ -25,11 +36,6 @@ struct EnvironmentView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            TacticalPageHeader(title: state.t("ui.108"), refreshState: state)
-            GUIOperationsPanel(state: state, tasks: state.tasks)
-            TacticalButton(title: state.t("ui.ssh.test"), symbol: "network", disabledReason: state.tasks.busy ? state.t("ui.016") : nil) {
-                state.operationSelection = NativeOperation(method: "test_ssh")
-            }
             SteamOSNetworkPanel(state: state, tasks: state.tasks, credentials: state.credentials)
             TacticalAdaptiveLayout(minimumWidth: 140, maximumColumns: 4) {
                 TacticalMetric(title: "macOS", value: state.value("get_system_info", "os_version"), symbol: "apple.logo")
@@ -203,7 +209,7 @@ private struct SteamOSNetworkPanel: View {
                 ForEach((state.networkPlan["before"]?.object ?? [:]).keys.sorted(), id: \.self) { key in
                     TacticalInfoRow(title: key, value: (state.networkPlan["before"]?.object[key]?.text ?? "?") + " → " + (state.networkPlan["after"]?.object[key]?.text ?? "?"))
                 }
-                SecureField(state.t("ui.session.sudo"), text: $credentials.sudoPassword)
+                Button(state.t("ui.credentials.openSettings")) { state.selection = .settings }
                 Text(state.t("ui.session.policy")).font(TacticalTypography.caption).foregroundStyle(.secondary)
                 HStack {
                     Button(state.t("ui.net.cancel")) { state.networkPlan = [:]; state.networkShowConfirmation = false }

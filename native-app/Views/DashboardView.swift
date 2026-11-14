@@ -28,10 +28,8 @@ struct DashboardView: View {
             if state.stale {
                 TacticalWarningBanner(text: state.t("ui.309"))
             }
-            TacticalStatusLayout {
-                runtimeCard
-                environmentCard
-                report
+            DisclosureGroup(state.t("ui.setup.details")) {
+                TacticalStatusLayout { runtimeCard; environmentCard; report }
             }
         }.foregroundStyle(c.text).font(TacticalTypography.body)
     }
@@ -61,7 +59,7 @@ struct DashboardView: View {
                     HStack(spacing: 10) { launchButton; inspectButton }
                     VStack(alignment: .leading, spacing: 10) { launchButton; inspectButton }
                 }
-                TacticalWarningBanner(text: launchReason)
+                DisclosureGroup(state.t("ui.setup.details")) { Text(launchReason).font(TacticalTypography.caption) }
             }.padding(16)
         }
         .background(c.panel).overlay(Rectangle().stroke(c.line, lineWidth: 1))
@@ -74,7 +72,7 @@ struct DashboardView: View {
     }
     private var inspectButton: some View {
         TacticalButton(title: tasks.busy ? state.t("ui.055") : state.t("ui.049"),
-                       symbol: "arrow.clockwise", primary: false, loading: tasks.busy) { state.refresh() }
+                       symbol: "arrow.clockwise", primary: false, loading: tasks.busy) { state.selection = .environment }
             .accessibilityIdentifier("dashboard.inspect")
     }
     private var runtimeCard: some View {

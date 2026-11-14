@@ -29,7 +29,7 @@ class ProtonReleaseChecks(unittest.TestCase):
  def test_install_with_running_steam_verify_and_recover(self):
   r=self.run_script('install');self.assertEqual(r.returncode,0,r.stderr);self.assertEqual(os.readlink(self.p/'alias'),'proton')
   self.assertIn(self.manifest['archiveSHA256'],self.run_script('probe').stdout)
-  self.assertNotEqual(self.run_script('install').returncode,0)
+  self.assertEqual(self.run_script('install').returncode,0)
   r=self.run_script('recover');self.assertEqual(r.returncode,0,r.stderr);self.assertFalse(self.p.exists());self.assertEqual(len(list(self.p.parent.glob(self.version+'.hd2-recovered-*'))),1)
  def test_corrupt_tree_not_overwritten_or_recovered(self):
   self.assertEqual(self.run_script('install').returncode,0)
@@ -59,6 +59,28 @@ class ProtonReleaseChecks(unittest.TestCase):
  def test_published_checksum_mismatch_never_installs(self):
   self.checksum.write_text('0'*128+'  '+self.version+'.tar.xz\n')
   self.assertNotEqual(self.run_script('install').returncode,0);self.assertFalse(self.p.exists())
+ def test_verified_cache_reused_without_network(self):
+  self.assertEqual(self.run_script('install').returncode,0)
+  self.assertEqual(self.run_script('recover').returncode,0)
+  (self.bin/'curl').write_text('#!/bin/sh\nexit 99\n')
+  r=self.run_script('install');self.assertEqual(r.returncode,0,r.stderr)
+  self.assertTrue(self.p.exists())
+ def test_corrupt_cache_not_reused(self):
+  self.assertEqual(self.run_script('install').returncode,0)
+  self.assertEqual(self.run_script('recover').returncode,0)
+  cache=self.home/'.cache/hd2-native/proton'/self.manifest['archiveSHA256']/'payload.tar.xz'
+  cache.write_text('damaged cache')
+  (self.bin/'curl').write_text('#!/bin/sh\nexit 99\n')
+  r=self.run_script('install');self.assertNotEqual(r.returncode,0)
+  self.assertFalse(self.p.exists());self.assertIn('ARTIFACT_DOWNLOAD_FAILED',r.stderr)
+ def test_interrupted_download_retained_and_resumed(self):
+  (self.bin/'curl').write_text('#!/bin/sh\nwhile [ "$#" -gt 0 ]; do case "$1" in --output) shift; out="$1";; esac; shift; done\nprintf partial > "$out"\nexit 18\n')
+  r=self.run_script('install');self.assertNotEqual(r.returncode,0)
+  part=self.home/'.cache/hd2-native/proton'/self.manifest['archiveSHA256']/'payload.partial'
+  self.assertEqual(part.read_text(),'partial');self.assertFalse(self.p.exists())
+  (self.bin/'curl').write_text('#!/bin/sh\nwhile [ "$#" -gt 0 ]; do case "$1" in --continue-at) touch "$HOME/resume-used";; --output) shift; out="$1";; https://*) url="$1";; esac; shift; done\ncase "$url" in *.sha512sum) cp "$FIXTURE_CHECKSUM" "$out";; *) cp "$FIXTURE_ARCHIVE" "$out";; esac\n')
+  r=self.run_script('install');self.assertEqual(r.returncode,0,r.stderr)
+  self.assertTrue((self.home/'resume-used').exists())
  def test_approved_metadata(self):
   m=json.loads((ROOT/'Resources/proton-je-approved.json').read_text())
   self.assertEqual(m['version'],'proton-je-11.0-20261014-3');self.assertEqual(m['archiveSHA256'],'aa5430696ca39451299e2f007ef652bc030e6419242776343d48947e21827485')

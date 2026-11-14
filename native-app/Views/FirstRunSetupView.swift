@@ -21,31 +21,22 @@ struct FirstRunSetupView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            TacticalPageHeader(title: state.t("ui.setup.title"))
-            Text(state.t("ui.setup.scope"))
-            TacticalPanel(number: "1", title: state.t("ui.setup.fx"), symbol: "shippingbox") {
-                HStack {
-                    Button(state.t("ui.fx.rescan")) { state.scanFX() }
-                    Button(state.t("ui.setup.choose")) { state.selection = .fx }
-                }
-                Text(state.fxVersion + " · " + (state.fxSelection.selectedPath ?? state.t("ui.368"))).textSelection(.enabled)
-                Text(plan?.snapshot.facts["os_version"] ?? state.t("ui.368"))
-            }
+            Text(state.t("ui.setup.state." + state.firstRunState.rawValue))
+            if let failure = state.firstRunFailure { Text(failure).font(.caption.monospaced()).foregroundStyle(.orange) }
             TacticalPanel(number: "2", title: state.t("ui.setup.connect"), symbol: "key") {
-                SecureField(state.t("ui.305"), text: $credentials.password)
-                SecureField(state.t("ui.304"), text: $credentials.sudoPassword)
-                Text(state.t("ui.setup.credentials")).font(.caption)
-                HStack {
-                    Button(state.t("ui.setup.detect")) { state.firstRunAction("first_run_detect") }
-                    Button(state.t("ui.setup.sudo")) { state.operationSelection = NativeOperation(method: "test_guest_sudo") }
+                Button(state.t("ui.setup.detect")) { state.firstRunAction("first_run_detect") }
+                if credentials.isEmpty {
+                    Button(state.t("ui.credentials.openSettings")) { state.selection = .settings }
                 }
                 if let snapshot = plan?.snapshot {
-                    Text(state.t("ui.setup.identity") + " · " + String(snapshot.boot.prefix(8)) + " · " + snapshot.architecture)
+                    DisclosureGroup(state.t("ui.setup.details")) {
+                        Text(state.t("ui.setup.identity") + " · " + String(snapshot.boot.prefix(8)) + " · " + snapshot.architecture)
+                    }
                 }
             }
             if let plan {
                 TacticalPanel(number: "3–4", title: state.t("ui.setup.plan"), symbol: "list.bullet.clipboard") {
-                    Text(plan.profileID + " / " + String(plan.profileVersion)).font(.caption.monospaced())
+
                     ForEach(plan.operations) { operation in
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
@@ -54,10 +45,11 @@ struct FirstRunSetupView: View {
                                 Text(state.t(statusKey(operation)))
                                     .foregroundStyle(operation.detectionPassed ? .green : operation.warning ? .orange : .secondary)
                             }
-                            Text(operation.component == "proton" && operation.detectionPassed ? operation.targetVersion : operation.changes.isEmpty ? operation.currentVersion : operation.currentVersion + " → " + operation.targetVersion).font(.caption.monospaced())
                             if operation.component == "fex", operation.blocked != nil { Text(state.t("ui.setup.artifactUnavailable")).font(.caption) }
                             if operation.blocked == "COMPONENT_CONFLICT" { Text(state.t("ui.setup.blocked") + " / COMPONENT_CONFLICT").font(.caption) }
                             DisclosureGroup(state.t("ui.setup.details")) {
+                            Text(operation.component == "proton" && operation.detectionPassed ? operation.targetVersion : operation.changes.isEmpty ? operation.currentVersion : operation.currentVersion + " → " + operation.targetVersion).font(.caption.monospaced())
+
                                 if !operation.changes.isEmpty {
                                     Text(operation.permission + " · " + String(operation.estimatedBytes))
                                 }
@@ -96,15 +88,12 @@ struct FirstRunSetupView: View {
                     if plan.snapshot.gameRunning { Text(state.t("ui.setup.closeSteam")).foregroundStyle(.orange) }
                     if plan.snapshot.steamRunning && plan.snapshot.facts["steam_api"] != "available" {
                         Text(state.t("ui.setup.steamManual"))
-                        Button(state.t("ui.setup.detect")) { state.firstRunAction("first_run_detect") }
                     }
                     if plan.executable.isEmpty { Text(state.t("ui.setup.noExecutable")) }
                     Button(state.t("ui.setup.graphics")) { state.selection = .performance }
                 }
             }
             TacticalPanel(number: "6", title: state.t("ui.setup.result"), symbol: "checkmark.shield") {
-                Text(state.t("ui.setup.state." + state.firstRunState.rawValue))
-                if let failure = state.firstRunFailure { Text(failure).font(.caption.monospaced()).foregroundStyle(.orange) }
                 if let receipt = state.firstRunReceipt {
                     Text(receipt.id.uuidString).font(.caption.monospaced())
                     Text(state.t("ui.setup.applied") + ": " + receipt.applied.map { state.t("ui.setup.component." + $0) }.joined(separator: ", "))
@@ -115,7 +104,7 @@ struct FirstRunSetupView: View {
                 Text(state.t("ui.setup.acceptance"))
                 Button(state.t("ui.setup.launch")) { state.selection = .dashboard }
             }
-            TacticalPanel(number: "R", title: state.t("ui.setup.recovery"), symbol: "arrow.uturn.backward") {
+            DisclosureGroup(state.t("ui.setup.recovery")) {
                 Button(state.t("ui.setup.records")) { state.firstRunAction("first_run_receipts") }
                 ForEach(state.firstRunReceipts) { receipt in
                     DisclosureGroup(receipt.id.uuidString) {

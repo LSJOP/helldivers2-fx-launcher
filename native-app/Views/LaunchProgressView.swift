@@ -6,6 +6,7 @@ struct LaunchProgressView: View {
     var body: some View {
         TacticalPanel(number: "L", title: state.t("ui.088"), symbol: "play.rectangle") {
             Text(state.launchSession.current.title(state.languageCode)).font(TacticalTypography.module)
+            DisclosureGroup(state.t("ui.setup.details")) {
             ForEach([LaunchStage.checkingEnvironment, .checkingFXEntry, .startingFX, .waitingForFXReady, .verifyingFXIdentity, .waitingForGuest, .checkingCompatibility, .startingSteam, .launchingGame, .waitingForGame, .gameProcessDetected, .checkingEAC]) { stage in
                 let value = state.launchSession.evidence[stage] ?? "unverified"
                 HStack {
@@ -15,11 +16,13 @@ struct LaunchProgressView: View {
                     Text(value == "done" || value == "passed" ? state.t("ui.220") : value == "running" ? state.t("ui.157") : value == "failed" ? state.t("ui.125") : state.t("ui.368"))
                 }.font(TacticalTypography.caption)
             }
+            }
             if let failure = state.launchSession.failure {
                 let stage = failure.details["stage"]?.text.flatMap(LaunchStage.init(rawValue:))
                 TacticalWarningBanner(text: (stage?.title(state.languageCode) ?? state.t("ui.175")) + " · " + failure.message(state.languageCode) + " [" + failure.code + "]", isError: true)
                 if let detail = failure.details["summary"]?.text { Text(detail).font(TacticalTypography.log).textSelection(.enabled) }
             }
+            DisclosureGroup(state.t("ui.setup.acceptance")) {
             TacticalInfoRow(title: state.t("ui.188"), value: state.launchSession.mainMenuConfirmedAt.map { state.t("ui.376") + $0 } ?? state.t("ui.033"))
             TacticalInfoRow(title: state.t("ui.310"), value: state.launchSession.singlePlayerConfirmedAt.map { state.t("ui.376") + $0 } ?? state.t("ui.033"))
             Text(state.t("ui.236"))
@@ -29,7 +32,8 @@ struct LaunchProgressView: View {
             Button(state.t("ui.154")) { state.confirmSinglePlayer() }
                 .disabled(tasks.busy || !state.launchSession.processDetected || state.launchSession.mainMenuConfirmedAt == nil || state.launchSession.singlePlayerConfirmedAt != nil)
             Button(state.t("ui.259")) { state.runOperation("observe_launch", params: ["confirmed": .bool(true)]) }
-                .disabled(tasks.busy || state.fxSelection.selected == nil)
+                .disabled(tasks.busy || state.fxSelection.selected == nil)            }
+
         }
     }
 }

@@ -80,6 +80,9 @@ struct GamePerformanceView: View {
                     state.runOperation("performance_read")
                 }
                 if !configuration.isEmpty {
+                    if current.values.contains(where: { if case .null = $0 { return true }; return false }) {
+                        Text(l("ui.performance.unsavedDefaults")).foregroundStyle(.orange)
+                    }
                     Stepper(value: integer("cpus", fallback: 8), in: (rules["cpu_min"]?.integer ?? 1)...max(1, rules["cpu_max"]?.integer ?? 1)) {
                         Text(label("cpus") + ": " + GamePerformanceInferenceService.render(state.editedPerformance["cpus"]))
                     }

@@ -16,6 +16,8 @@ final class AppState: ObservableObject {
         get { languageCode.hasPrefix("zh") }
         set { languageCode = newValue ? "zh-CN" : "en" }
     }
+    private var credentialContinuation: (() -> Void)?
+    @Published private(set) var pendingCredentialMethod: String?
     @Published var operationSelection: NativeOperation?
     @Published var networkIPv6: [String: JSONValue] = [:]
     @Published var networkPlan: [String: JSONValue] = [:]
@@ -28,7 +30,7 @@ final class AppState: ObservableObject {
     @Published var networkShowConfirmation = false
     @Published var guestRestorePath = ""
     @Published var pendingAction: GUIAction?
-    let credentials = SessionCredentialManager()
+    let credentials = SessionCredentialManager(store: NativeLocalization.isolatedUXSmoke ? nil : LocalCredentialStore.production())
     @Published var firstRunPlan: DeploymentPlan?
     @Published var firstRunState: DeploymentState = .NotChecked
     @Published var firstRunReceipt: DeploymentReceipt?
@@ -48,20 +50,7 @@ final class AppState: ObservableObject {
                 var input = launch
                 input["confirmed"] = .bool(true)
                 if method != "first_run_receipts" {
-                    let metadata = try await self.core.request("read_configuration")
-                    let revision = metadata.result["revision"]?.text ?? ""
-                    let binding = try await self.core.request("credential_target", timeout: 45, params: launch)
-                    guard let identity = binding.result["identity"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
-                    let target = root + "|" + revision + "|" + identity
-                    if let scope = self.credentials.scope, scope != target { self.clearSessionCredentials() }
-                    await self.credentials.prepare(for: target)
-                    // Setup owns an isolated SSH master; host-only metadata can omit a
-                    // boot ID. Keep the prior expected boot for the newly authenticated
-                    // backend to verify, rather than treating omission as identity loss.
-                    if let boot = binding.result["guest_boot"]?.text { try self.credentials.bindGuest(boot) }
-                    input.merge(try self.credentials.parameters(for: target)) { _, value in value }
-                    input["credential_revision"] = .string(revision)
-                    input["credential_host_identity"] = .string(identity)
+                    input.merge(try await self.credentialParameters(launch: launch, root: root)) { _, new in new }
                 }
                 if method == "first_run_deploy", let plan {
                     input["deployment_plan"] = try JSONDecoder().decode(JSONValue.self, from: JSONEncoder().encode(plan))
@@ -99,6 +88,11 @@ final class AppState: ObservableObject {
                     let plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(value))
                     try self.credentials.bindGuest(plan.snapshot.boot)
                     self.firstRunPlan = plan
+                    var record = GUIOperationRecord(method: method, target: root); record.finish()
+                    self.guiRecords[method] = record
+                    self.guiSnapshots[method] = ["fx_host_running": .bool(true), "ssh_connected": .bool(true),
+                        "guest_ready": .bool(true), "steam_running": .bool(plan.snapshot.steamRunning),
+                        "game_process_detected": .bool(plan.snapshot.gameRunning), "guest_boot": .string(plan.snapshot.boot)]
                     self.firstRunState = plan.detectionState
                 }
                 if let value = reply.result["receipt"] {
@@ -120,6 +114,9 @@ final class AppState: ObservableObject {
                 if ["CREDENTIAL_SCOPE_CHANGED", "TARGET_CHANGED", "FX_IDENTITY_UNVERIFIED", "FX_ENTRY_MISMATCH"].contains(code) { self.clearSessionCredentials(); self.firstRunPlan = nil }
                 if code == "SSH_AUTH_FAILED" { self.credentials.reject(.ssh) }
                 if code == "SUDO_AUTH_FAILED" { self.credentials.reject(.sudo) }
+                if ["AUTH_REQUIRED", "SSH_AUTH_FAILED", "SUDO_AUTH_FAILED"].contains(code) {
+                    self.requireSettings(method: method) { [weak self] in self?.firstRunAction(method, receipt: receipt, selected: selected) }
+                }
             }
         }
     }
@@ -165,7 +162,11 @@ final class AppState: ObservableObject {
                 }
                 if openingLaunch {
                     if self.fxSelection.selected == nil { self.selection = .fx }
-                    else { self.operationSelection = NativeOperation(method: "launch_game") }
+                    else {
+                        self.tasks.afterCurrent { [weak self] in
+                            self?.runOperation("launch_game", params: ["confirmed": .bool(true)])
+                        }
+                    }
                 }
             } catch {
                 self.operationError = error as? ErrorState ?? ErrorState("CORE_UNAVAILABLE")
@@ -175,6 +176,7 @@ final class AppState: ObservableObject {
     @Published var runtimeRoot = "" {
         didSet {
             if oldValue != runtimeRoot {
+                cancelCredentialContinuation()
                 clearSessionCredentials(); clearNetworkState(); guiSnapshots = [:]; performanceConfigurationState = PerformanceConfigurationState(); targetInspection = [:]; targetInspectionError = nil; inspectedTarget = nil
                 if !runtimeRoot.isEmpty, !NativeLocalization.isolatedUXSmoke {
                     UserDefaults.standard.set(runtimeRoot, forKey: "NativeRememberedRuntimeRoot")
@@ -253,7 +255,6 @@ final class AppState: ObservableObject {
         if method == "launch_game" { launchSession.begin(root: selectedRoot); recordLaunch() }
         if method == "observe_launch", selectedRoot != launchSession.root { launchSession.begin(root: selectedRoot) }
         guiRecords[method] = GUIOperationRecord(method: method, target: selectedRoot)
-        if GUIAction(rawValue: method) != nil { guiSnapshots = [:] }
         operationError = nil; operationResult = [:]; operationEvents = []
         if method.hasPrefix("performance_") { performanceConfigurationState.preview = [:] }
         tasks.start { [weak self] in
@@ -261,35 +262,21 @@ final class AppState: ObservableObject {
             do {
                 var input = params.filter { !["password","passphrase","sudo_password"].contains($0.key) }
                 if !selectedRoot.isEmpty { input["runtime_root"] = .string(selectedRoot) }
+                if method.hasPrefix("performance_") { input.merge(launchParameters) { _, selected in selected } }
                 if ["launch_game", "preflight_launch", "observe_launch", "connect_fx", "inspect_guest_environment", "check_fx_state", "start_fx", "start_steam", "test_ssh", "test_guest_sudo", "restore_guest_ipv6", "read_steamos_ipv6", "preview_steamos_ipv6", "apply_steamos_ipv6", "run_network_diagnostics"].contains(method) {
                     input.merge(launchParameters) { _, selected in selected }
                 }
                 if let note = input["note"]?.text { input["note"] = .string(redactor.text(note)) }
                 if method == "save_configuration", let value = input["configuration"], redactor.containsSecret(value) { throw ErrorState("SENSITIVE_CONFIGURATION") }
-                if ["launch_game","test_ssh","test_guest_sudo","restore_guest_ipv6","connect_fx","inspect_guest_environment","start_steam","inspect_guest","apply_performance","save_network_snapshot","apply_steamos_ipv6"].contains(method) {
+                if ["stop_fx","restart_fx","launch_game","observe_launch","read_steamos_ipv6","preview_steamos_ipv6","run_network_diagnostics","test_vm_credentials","test_ssh","test_guest_sudo","restore_guest_ipv6","connect_fx","inspect_guest_environment","start_steam","inspect_guest","apply_performance","save_network_snapshot","apply_steamos_ipv6"].contains(method) {
                     input.merge(launchParameters) { _, selected in selected }
-                    let metadata = try await self.core.request("read_configuration")
-                    guard let revision = metadata.result["revision"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
-                    if method == "test_ssh" {
-                        let ssh = metadata.result["configuration"]?.object["ssh"]?.object ?? [:]
-                        self.sshConnectionTarget = ["host": ssh["host"] ?? .null, "port": ssh["port"] ?? .null,
-                                                    "username": ssh["username"] ?? .null]
-                    }
-                    let binding = try await self.core.request("credential_target", timeout: 45, params: launchParameters)
-                    guard let identity = binding.result["identity"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
-                    let target = selectedRoot + "|" + revision + "|" + identity
-                    if let scope = self.credentials.scope, scope != target { self.clearSessionCredentials() }
-                    await self.credentials.prepare(for: target)
-                    try self.credentials.bindGuest(binding.result["guest_boot"]?.text)
-                    input.merge(try self.credentials.parameters(for: target)) { _, new in new }
-                    input["credential_host_identity"] = .string(identity)
+                    input.merge(try await self.credentialParameters(launch: launchParameters, root: selectedRoot)) { _, new in new }
                     redactor = self.credentials.redactor
-                    input["credential_revision"] = .string(revision)
                 }
                 let eventRedactor = redactor
                 let authInput = input
                 let credentialTarget = selectedRoot + "|" + (input["credential_revision"]?.text ?? "") + "|" + (input["credential_host_identity"]?.text ?? "")
-                let reply = try await self.core.request(method, timeout: method == "launch_game" || method == "performance_apply" || method == "performance_restore" ? 900 : 90, params: input) { [weak self] event in
+                let reply = try await self.core.request(method, timeout: method == "restart_fx" || method == "stop_fx" || method == "launch_game" || method == "performance_apply" || method == "performance_restore" ? 900 : 90, params: input) { [weak self] event in
                     Task { @MainActor in
                         guard let self, self.operationGeneration == generation else { return }
                         if method == "launch_game" { self.launchSession.consume(event) }
@@ -314,14 +301,26 @@ final class AppState: ObservableObject {
                 }
                 if let action = GUIAction(rawValue: method), !action.accepts(reply.result) { throw ErrorState("PROTOCOL_ERROR", method: method) }
                 if reply.result["fx_host_running"]?.boolean == false { self.guiSnapshots = [:] }
+                if ["stop_fx", "restart_fx"].contains(method) {
+                    self.firstRunPlan = nil; self.firstRunState = .NotChecked
+                }
+                if method == "restart_fx", let transition = reply.result["reboot_transition"]?.object,
+                   let old = transition["from"]?.text, let new = transition["to"]?.text {
+                    try self.credentials.bindGuest(old)
+                    try self.credentials.acceptExpectedReboot(from: old, to: new, target: credentialTarget)
+                }
                 if let boot = reply.result["guest_boot"]?.text { try self.credentials.bindGuest(boot) }
                 for role in CredentialKind.allCases {
                     if reply.result[role.rawValue + "_password_verified"]?.boolean == true, let value = authInput[role.bridgeField]?.text {
                         await self.credentials.authenticated(role, value: value, target: credentialTarget)
                     }
                 }
-                if method == "read_configuration" { self.sshConfiguration = reply.result }
+                if method == "read_configuration" {
+                    self.sshConfiguration = reply.result
+                    await self.prepareCredentials()
+                }
                 if ["save_configuration", "restore_configuration"].contains(method) {
+                    self.cancelCredentialContinuation()
                     self.clearSessionCredentials()
                     self.guiSnapshots = [:]; self.sshConnectionTarget = [:]
                     self.networkPlan = [:]; self.networkIPv6 = [:]; self.networkRows = []
@@ -346,6 +345,15 @@ final class AppState: ObservableObject {
                 self.guiRecords[method]?.finish()
                 self.recordGUIOperation(method)
                 if method == "launch_game" || method == "observe_launch" { self.launchSession.complete(reply.result, at: reply.observedAt); self.recordLaunch() }
+                if method == "test_vm_credentials", self.credentials.reusable(.ssh), self.credentials.reusable(.sudo),
+                   let continuation = self.credentialContinuation {
+                    self.tasks.afterCurrent { [weak self] in
+                        guard let self, self.credentialContinuation != nil else { return }
+                        self.cancelCredentialContinuation()
+                        continuation()
+                    }
+                }
+
                 self.appendLog(method + ": COMPLETED")
                 if method == "launch_game", reply.result["game_process_detected"]?.boolean == true,
                    !Task.isCancelled, self.operationGeneration == generation,
@@ -379,9 +387,10 @@ final class AppState: ObservableObject {
                 }
                 self.guiRecords[method]?.finish(self.operationError)
                 self.recordGUIOperation(method)
-                if GUIAction(rawValue: method) != nil, ["AUTH_REQUIRED","SSH_AUTH_FAILED","SUDO_AUTH_FAILED","CREDENTIAL_SCOPE_CHANGED","CHANGE_CONFIRMATION_REQUIRED","RUNTIME_ROOT_REQUIRED"].contains(failure.code), self.operationSelection == nil {
-                    self.operationSelection = NativeOperation(method: method)
+                if method != "test_vm_credentials", ["AUTH_REQUIRED", "SSH_AUTH_FAILED", "SUDO_AUTH_FAILED"].contains(failure.code) {
+                    self.requireSettings(method: method) { [weak self] in self?.runOperation(method, params: params) }
                 }
+
                 self.appendLog(method + ": " + (self.operationError?.code ?? "UNKNOWN"))
             }
         }
@@ -422,8 +431,22 @@ final class AppState: ObservableObject {
         else { runOperation(action.rawValue, params: ["confirmed": .bool(true)]) }
     }
     var latestGUIEvidence: [String: JSONValue] {
-        guiRecords.values.filter { $0.target == runtimeRoot && $0.status == .succeeded && guiSnapshots[$0.method] != nil }
-            .max { $0.startedAt < $1.startedAt }.flatMap { guiSnapshots[$0.method] } ?? [:]
+        let records = guiRecords.values.filter {
+            $0.target == runtimeRoot && $0.status == .succeeded && guiSnapshots[$0.method] != nil
+        }.sorted { $0.startedAt < $1.startedAt }
+        var evidence: [String: JSONValue] = [:]
+        for record in records {
+            guard var snapshot = guiSnapshots[record.method] else { continue }
+            if ["check_fx_state", "start_fx"].contains(record.method), snapshot["fx_host_running"]?.boolean == true {
+                for key in ["ssh_connected", "guest_ready", "steam_running", "game_process_detected", "guest_boot"] { snapshot.removeValue(forKey: key) }
+            }
+            if let newBoot = snapshot["guest_boot"]?.text,
+               let oldBoot = evidence["guest_boot"]?.text, oldBoot != newBoot { evidence = [:] }
+            evidence.merge(snapshot) { _, new in new }
+            evidence["observed_at"] = .string(ISO8601DateFormatter().string(from: record.endedAt ?? record.startedAt))
+            evidence["source"] = .string(record.method)
+        }
+        return evidence
     }
     func confirmPendingAction(_ action: GUIAction) {
         pendingAction = nil
@@ -439,6 +462,37 @@ final class AppState: ObservableObject {
             if runtimeLogs.count > 500 { runtimeLogs.removeFirst(runtimeLogs.count - 500) }
         }
     }
+    /// All authenticated operations share the same target binding and restored input.
+    /// A restored password is input only; each backend still verifies live authorization.
+    private func credentialParameters(launch: [String: JSONValue], root: String) async throws -> [String: JSONValue] {
+        let metadata = try await core.request("read_configuration")
+        guard let revision = metadata.result["revision"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
+        let ssh = metadata.result["configuration"]?.object["ssh"]?.object ?? [:]
+        sshConnectionTarget = ["host": ssh["host"] ?? .null, "port": ssh["port"] ?? .null, "username": ssh["username"] ?? .null]
+        let binding = try await core.request("credential_target", timeout: 45, params: launch)
+        guard let identity = binding.result["identity"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
+        let target = root + "|" + revision + "|" + identity
+        if let scope = credentials.scope, scope != target { clearSessionCredentials() }
+        await credentials.prepare(for: target, savedTarget: binding.result["persistence_identity"]?.text)
+        if let boot = binding.result["guest_boot"]?.text { try credentials.bindGuest(boot) }
+        var input = try credentials.parameters(for: target)
+        input["credential_host_identity"] = .string(identity)
+        input["credential_revision"] = .string(revision)
+        return input
+    }
+    private func requireSettings(method: String, continuation: @escaping () -> Void) {
+        if credentialContinuation == nil { credentialContinuation = continuation; pendingCredentialMethod = method }
+        operationSelection = nil
+        selection = .settings
+    }
+    func cancelCredentialContinuation() {
+        credentialContinuation = nil; pendingCredentialMethod = nil
+    }
+    func verifyVirtualMachinePassword() {
+        guard !tasks.busy else { return }
+        credentials.setVirtualMachinePassword(credentials.password)
+        runOperation("test_vm_credentials", params: ["confirmed": .bool(true)])
+    }
     func prepareCredentials() async {
         guard !NativeLocalization.isolatedUXSmoke, let selected = fxSelection.selectedPath else { return }
         do {
@@ -446,9 +500,14 @@ final class AppState: ObservableObject {
             guard let revision = binding.result["revision"]?.text, let identity = binding.result["identity"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
             let target = runtimeRoot + "|" + revision + "|" + identity
             if let scope = credentials.scope, scope != target { clearSessionCredentials() }
-            await credentials.prepare(for: target)
-            try credentials.bindGuest(binding.result["guest_boot"]?.text)
-        } catch { clearSessionCredentials(); appendLog("credential target unavailable") }
+            await credentials.prepare(for: target, savedTarget: binding.result["persistence_identity"]?.text)
+            if let boot = binding.result["guest_boot"]?.text { try credentials.bindGuest(boot) }
+        } catch {
+            clearSessionCredentials()
+            let failure = error as? ErrorState ?? ErrorState("PROTOCOL_ERROR", method: "credential_target")
+            operationError = failure
+            appendLog("credential_target: " + failure.code)
+        }
     }
     private func recordLaunch() {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
@@ -463,9 +522,9 @@ final class AppState: ObservableObject {
     }
     func confirmMainMenu() { launchSession.confirmMainMenu(); recordLaunch() }
     func confirmSinglePlayer() { launchSession.confirmSinglePlayer(); recordLaunch() }
-    func forgetSavedCredentials() { clearSessionCredentials() }
+    func forgetSavedCredentials() { cancelCredentialContinuation(); credentials.forgetSaved(); SSHTransport.closeOwnedMasters() }
     func clearSessionCredentials() { credentials.clear(); SSHTransport.closeOwnedMasters() }
-    func endSession() { networkLaunchPending = false; tasks.cancel(); clearSessionCredentials() }
+    func endSession() { cancelCredentialContinuation(); networkLaunchPending = false; tasks.cancel(); clearSessionCredentials() }
     func value(_ method: String, _ key: String) -> String { results[method]?[key]?.text ?? t("ui.366") }
     func rows(_ method: String, _ key: String) -> [[String: JSONValue]] { results[method]?[key]?.array.map(\.object) ?? [] }
     func refresh() {

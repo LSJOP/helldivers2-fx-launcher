@@ -132,6 +132,22 @@ enum LaunchService {
         return false
     }
 
+    /// A VM may outlive the launcher build that started it. Reuse only the exact
+    /// pinned gvproxy bytes in the selected FX ancestry; a matching filename is insufficient.
+    static func pinnedNetwork(rows: [Int: ProcessRow], supervisor: Int, expected: URL) throws -> String? {
+        let expectedPath = normalizedCommand(expected.path)
+        let candidates = Set(rows.values.filter {
+            descendant($0.pid, of: supervisor, rows: rows) &&
+            (normalizedCommand($0.command) == expectedPath || URL(fileURLWithPath: $0.command).lastPathComponent == "gvproxy-eim")
+        }.map { normalizedCommand($0.command) })
+        guard !candidates.isEmpty else { return nil }
+        guard candidates.count == 1, let path = candidates.first else { throw CoreError("FX_IDENTITY_UNVERIFIED") }
+        let url = URL(fileURLWithPath: path)
+        guard CoreFS.isRegularExecutable(url), try CoreHash.sha256File(url) == LaunchResources.gvproxySHA256,
+              try CoreHash.sha256File(url) == LaunchResources.gvproxySHA256 else { throw CoreError("GVPROXY_UNAVAILABLE") }
+        return path
+    }
+
     /// Identity of the local endpoint before any password may be transmitted.
     static func endpointIdentity(fx: URL, gvproxy: URL, transport: SSHTransport, context: CoreContext?) throws -> String {
         guard SSHTransport.localHost(transport.settings.host) else { throw CoreError("LOCAL_FX_REQUIRED") }
@@ -139,10 +155,8 @@ enum LaunchService {
         let executable = normalizedExecutable(fx)
         guard foreignProcesses(rows: rows, executable: executable).isEmpty else { throw CoreError("FX_INSTANCE_MISMATCH") }
         let supervisor = try fxSupervisorPID(rows: rows, executable: executable)
-        var networkPath = normalizedCommand(gvproxy.path)
-        if !rows.values.contains(where: { normalizedCommand($0.command) == networkPath && descendant($0.pid, of: supervisor, rows: rows) }) {
-            networkPath = try diagnosticNetworkExecutable(fx: fx, context: context)
-        }
+        let networkPath = try pinnedNetwork(rows: rows, supervisor: supervisor, expected: gvproxy)
+            ?? diagnosticNetworkExecutable(fx: fx, context: context)
         let network = rows.values.filter { normalizedCommand($0.command) == networkPath && descendant($0.pid, of: supervisor, rows: rows) }
         guard !network.isEmpty else { throw CoreError("FX_IDENTITY_UNVERIFIED") }
         let listeners = try fileDescriptors(arguments: ["-nP", "-iTCP:\(transport.settings.port)", "-sTCP:LISTEN", "-Fpn"], context: context)
@@ -156,11 +170,10 @@ enum LaunchService {
         let executable = normalizedExecutable(fx)
         let fxPID = try fxSupervisorPID(rows: rows, executable: executable)
         func belongs(_ pid: Int) -> Bool { descendant(pid, of: fxPID, rows: rows) }
-        var networkExecutable = normalizedCommand(gvproxy.path)
-        if allowPublisherNetwork,
-           !rows.values.contains(where: { normalizedCommand($0.command) == networkExecutable && belongs($0.pid) }) {
-            networkExecutable = try diagnosticNetworkExecutable(fx: fx, context: context)
-        }
+        let networkExecutable: String
+        if let pinned = try pinnedNetwork(rows: rows, supervisor: fxPID, expected: gvproxy) { networkExecutable = pinned }
+        else if allowPublisherNetwork { networkExecutable = try diagnosticNetworkExecutable(fx: fx, context: context) }
+        else { throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("pinned_gvproxy_not_child_of_fx")]) }
         let network = rows.values.filter { normalizedCommand($0.command) == networkExecutable && belongs($0.pid) }
         guard !network.isEmpty else { throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("gvproxy_not_child_of_fx")]) }
         let listeners = try fileDescriptors(arguments: ["-nP", "-iTCP:\(transport.settings.port)", "-sTCP:LISTEN", "-Fpn"], context: context)
@@ -260,8 +273,9 @@ enum LaunchService {
 
     // MARK: - Launch arguments
 
-    static func launchArguments(transport: SSHTransport) -> [String] {
-        let values = (try? CFPreferencesStore(domain: PerformanceDomain.name).read()) ?? [:]
+    static func launchArguments(transport: SSHTransport, fx: URL) throws -> [String] {
+        let domain = try PerformanceDomain.domain(app: fx)
+        let values = (try? CFPreferencesStore(domain: domain).read()) ?? [:]
         let cores = SystemProbe.physicalCores() ?? 8
         let cpus = min(max(values["cpus"]?.integer ?? 8, 1), max(1, cores))
         let memory = values["memMiB"]?.integer ?? 8192
@@ -288,7 +302,7 @@ enum LaunchService {
         }
         _ = try LaunchResources.verifiedForLaunch()
         let transport = SSHTransport.make(request.configuration)
-        let arguments = launchArguments(transport: transport)
+        let arguments = try launchArguments(transport: transport, fx: fx)
         guard !arguments.isEmpty else { throw CoreError("GVPROXY_UNAVAILABLE") }
         request.emit("StartingFX", "running", [:])
         let open = try CoreProcess.run("/usr/bin/open", [fx.path, "--args"] + arguments, timeout: 20, context: request.context)
@@ -429,6 +443,7 @@ enum GuestPrivilegedExecutor {
     enum Operation {
         case verify
         case reboot(boot: String, machine: String, ticket: UUID)
+        case poweroff(boot: String, machine: String, ticket: UUID)
         case ipv6(boot: String, values: [String: String])
         case networkIPv6(boot: String, before: [String: String], after: [String: String])
     }
@@ -437,6 +452,11 @@ enum GuestPrivilegedExecutor {
     static func script(_ operation: Operation) throws -> String {
         switch operation {
         case .verify: return "exec </dev/null\nid -u\n"
+        case .poweroff(let boot, let machine, let ticket):
+            return try script(.reboot(boot: boot, machine: machine, ticket: ticket))
+                .replacingOccurrences(of: "hd2-native-reboot-", with: "hd2-native-poweroff-")
+                .replacingOccurrences(of: "/usr/bin/systemctl reboot", with: "/usr/bin/systemctl poweroff")
+                .replacingOccurrences(of: "HD2FX_REBOOT_SCHEDULED", with: "HD2FX_POWEROFF_SCHEDULED")
         case .reboot(let boot, let machine, let ticket):
             guard UUID(uuidString: boot) != nil, machine.range(of: "^[a-f0-9]{32}$", options: .regularExpression) != nil else { throw CoreError("INVALID_ARGUMENT") }
             return """
@@ -516,13 +536,15 @@ enum GuestPrivilegedExecutor {
         }
         // A scheduled reboot intentionally invalidates the old connection; the dedicated
         // workflow must observe the new boot and reauthenticate before reporting success.
-        if case .reboot = operation {} else { try verifyTarget() }
+        switch operation { case .reboot, .poweroff: break; default: try verifyTarget() }
         let output = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
         switch operation {
         case .verify:
             guard output == "0" else { throw CoreError("SUDO_COMMAND_FAILED") }
         case .reboot:
             guard output == "HD2FX_REBOOT_SCHEDULED" else { throw CoreError("VM_REBOOT_UNCONFIRMED") }
+        case .poweroff:
+            guard output == "HD2FX_POWEROFF_SCHEDULED" else { throw CoreError("VM_STOP_UNCONFIRMED") }
         case .ipv6, .networkIPv6:
             guard output == "HD2FX_IPV6_OK" else { throw CoreError("COMPATIBILITY_CHECK_FAILED") }
         }

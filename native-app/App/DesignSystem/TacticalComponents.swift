@@ -502,8 +502,8 @@ struct GUIOperationsPanel: View {
             } else {
                 TacticalAdaptiveLayout(minimumWidth: 245, maximumColumns: 2) {
                     actionCard(.startFX, description: state.t("ui.375"))
-                    unavailableCard(state.t("ui.323"), symbol: "stop.fill")
-                    unavailableCard(state.t("ui.272"), symbol: "arrow.clockwise")
+                    actionCard(.stopFX, description: state.t("ui.setup.closeSteam"))
+                    actionCard(.restartFX, description: state.t("ui.setup.autoReboot"))
                     actionCard(.steam, description: state.t("ui.077"))
                 }
             }
