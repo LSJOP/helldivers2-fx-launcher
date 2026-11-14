@@ -261,7 +261,10 @@ final class AppState: ObservableObject {
     @Published private(set) var runtimeLogs: [[String: JSONValue]] = []
     @Published private(set) var launchSession = LaunchSession()
     private var operationGeneration = UUID()
-    @Published var appearance: Appearance = .dark
+    @Published var appearance = UserDefaults.standard.string(forKey: "NativeAppearance")
+        .flatMap(Appearance.init(rawValue:)) ?? .dark {
+        didSet { UserDefaults.standard.set(appearance.rawValue, forKey: "NativeAppearance") }
+    }
     @Published private(set) var results: [String: [String: JSONValue]] = [:]
     @Published private(set) var observedAt: String?
     @Published private(set) var error: ErrorState?
