@@ -1,16 +1,16 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.24** · Updated: **2026-11-14**.
-Change: limit worktree creation and require safe completion review. Instruction version is independent of App version.
+Instruction version: **v1.2.25** · Updated: **2026-11-14**.
+Change: define GitHub delivery and version release gates. Instruction version is independent of App version.
 
 ## Authority and task lifecycle
 
 - GitHub main source, this file, [DEVELOPMENT_STATUS](docs/DEVELOPMENT_STATUS.md) and [NATIVE_APP_DEVELOPMENT_HANDOFF](docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md) are authoritative. Consult status and handoff when relevant; inspect current source for behavior. Chats, memory, old branches and historical reports are supporting evidence, never proof of current behavior.
 - Use `bash script/git_delivery.sh preflight` for Git inventory and `bash script/git_delivery.sh verify BRANCH` for remote containment after push. Begin with `git status --short --branch`, `git branch -a -vv`, `git remote -v`, `git log -5 --oneline`, `git worktree list --porcelain` and fetch. Inspect related worktrees for staged, unstaged, untracked and unpushed work. Preserve it with recoverable backups before integration. On network failure distinguish local main from last-known origin/main.
 - Use a task branch and reuse a clean worktree; create a worktree only for parallel development, high-risk isolation or a concrete need. Do not create purposeless temporary branches. Never develop directly on main. At completion check whether the worktree can be safely removed after protecting unique commits, changes and important ignored files. Reuse existing services and verified branch implementations; compare by feature, never overwrite newer code with an old branch tree. Work serially unless explicitly authorized otherwise.
-- At task end run necessary checks; update status and handoff only when their current guidance materially changes. Commit task files only, using feat/fix/ui/docs/refactor/test/chore. Review diff, `git diff --check` and secret scan. Commit verified work by default.
+- At task end run necessary checks; update status and handoff only when their current guidance materially changes. Commit task files only, using feat/fix/ui/docs/refactor/test/chore. Review diff, `git diff --check` and secret scan. Commit verified work, push its branch, update the corresponding PR when applicable, and verify the remote commit SHA. Emergency fixes still require necessary tests; ordinary changes do not require a Release.
 - Automatically integrate completed verified work into main and ordinary-push when repository requirements allow; prefer PRs where required. Fetch latest main, verify isolated merge/tests/build proportionate to changes, respect branch protection and verify remote containment. Never force-push, bypass checks or claim a failed push succeeded. Incomplete/high-risk work remains on its branch with blockers recorded. Documentation-only changes require documentation checks, not an unrelated App rebuild.
-- No reset --hard, clean -fd, deletion of unsaved worktrees, unmerged branches or historical tags. Do not modify legacy-script or silently advance CoreSnapshot. Remove a worktree only after checking its purpose, cleanliness, containment and dependencies; preserve uncertain or unmerged work. Do not publish Releases, change repository settings or configure automations without authorization.
+- No reset --hard, clean -fd, deletion of unsaved worktrees, unmerged branches or historical tags. Do not modify legacy-script or silently advance CoreSnapshot. Remove a worktree only after checking its purpose, cleanliness, containment and dependencies; preserve uncertain or unmerged work. Do not create a formal Stable Release without explicit authorization; repository settings and automations also require authorization.
 - Both status documents are current progress/resume references when needed. `.codex/progress.md`, task-queue and historical reports retain stage evidence only. Obtain document/merge SHA with git log/rev-parse; do not repeatedly commit to embed a commit's own SHA.
 
 ## Architecture and safety
@@ -21,7 +21,7 @@ Change: limit worktree creation and require safe completion review. Instruction 
 - Use isolated fixtures/Mocks for development. No real FX/FEX/FEXRootFS/Proton/Steam or macOS network changes, game launch or destructive cleanup unless explicitly authorized. Never replace unknown components, weaken host keys/sudoers or use forced VM termination as safe stop/restart.
 - FEX readiness requires helper/integration/integrity and runtime capability evidence, not existence alone. Preserve official FX FEX. Restore only identity-bound owned changes with integrity receipts and conflict checks.
 - SessionCredentialManager owns independent SSH/sudo secrets. Main includes optional AES-GCM persistence alongside session memory; this does not authorize Keychain access. Persistent storage uses installation-random authenticated encryption, per-target/per-role binding, private directories/files, durable rejected/forgotten markers and visible errors. Never store secrets in source, bundle, defaults, argv, environment or logs; actual challenge plus verified identity is required before saving. No automatic legacy credential migration/deletion.
-- Launcher updates use pinned Sparkle and project-trusted Ed25519/SHA-256 verification, HTTPS, safe archive paths, verified metadata binding and worker-aware relaunch. No FX/Guest/game updates through Sparkle. Unconfigured service stays visibly unconfigured, never “up to date.” Do not disable verification to make installation work. Developer ID/notarization and project signature trust are separate concerns.
+- Launcher updates retain the independent Update Helper, project-trusted Ed25519/SHA-256 verification, HTTPS, safe archive paths, verified metadata binding and worker-aware relaunch. Do not update FX/Guest/game through the launcher updater. Unconfigured service stays visibly unconfigured, never “up to date.” Do not disable verification to make installation work. Developer ID/notarization and project signature trust are separate concerns.
 
 ## UI, localization and documentation
 
@@ -29,6 +29,13 @@ Change: limit worktree creation and require safe completion review. Instruction 
 - Every user-visible text change must maintain zh-CN, en, ja, ko, ru, es, de, fr, pt-BR and zh-TW resources. No hardcoded prose, placeholders or silent English fallback counted as translation. Check static localization and negative fixtures; manually assess dynamic strings and naturalness. Menu/bundle localization uses system resources/App-only preference, not global language changes.
 - Maintain paired README.md/README.zh-CN.md and CHANGELOG.md/CHANGELOG.zh-CN.md for affected behavior/install/version/compatibility changes. Keep unfinished delivery under Unreleased. No invented release version/date or capability claim. Pure internal/docs changes record why UI resources/screenshots are unchanged.
 - Actual screenshots only: English under docs/images/en, Chinese under docs/images/zh-CN, with source/build/time/hash provenance. Recapture affected UI and review language, clipping and secrets. Never update a fingerprint or PASS marker without review. Mark unavailable captures pending; do not present old captures as current.
+
+## Versioning and releases
+
+- Use MAJOR.MINOR.PATCH: PATCH for fixes, UI or small compatibility changes; MINOR for backward-compatible features; MAJOR for breaking changes. Group changes as appropriate and never reuse a published tag.
+- Ordinary delivery is development, necessary tests, push and, when eligible, merge to main. Automatically create/update PRs and merge ordinary PRs only after required checks and repository rules pass. Preserve other work; high-risk or unaccepted changes remain separate.
+- A release requires an unused version and increasing build number, paired changelogs and READMEs, ten-language checks, arm64 Release build, signing and update security checks, DMG/ZIP, SHA-256 and Ed25519-signed update metadata. Review artifacts and perform required acceptance before publication; verify the App detects the published version. Formal Stable Release creation requires explicit user authorization. See [release procedure](docs/NATIVE_UPDATES.md#current-release-policy--发布规则).
+- Keep Stable separate from prereleases, verify signatures and download URLs, test safe recovery on failure, keep signing private keys out of GitHub, and preserve the independent Update Helper. Never claim production upgrade or recovery acceptance from fixtures alone.
 
 ## Verification and reporting
 

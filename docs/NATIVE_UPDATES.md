@@ -1,5 +1,23 @@
 # Launcher updates / 启动器更新
 
+## Current release policy / 发布规则
+
+Development changes require proportionate tests, a commit and push, a corresponding PR update when applicable, and remote SHA verification. Ordinary verified PRs may be merged under repository rules; emergency fixes still require necessary tests. A Release is not required for each change. Preserve other work. Stable Release creation requires explicit user authorization.
+
+Use semantic versions MAJOR.MINOR.PATCH: PATCH for fixes, UI and small compatibility changes; MINOR for backward-compatible features; MAJOR for breaking changes. Several changes may share a release. Check existing local and remote tags and Releases; never reuse a published tag. Set the App marketing version and a strictly increasing build number, and update both CHANGELOGs and both READMEs.
+
+Before a formal release, validate ten-language resources, build a fresh arm64 Release from clean committed source, validate signing, archive and updater security, and prepare DMG, ZIP, SHA-256 checksums and Ed25519-signed update metadata with the authorized signing method. Review artifacts and complete required installation, upgrade and failure-recovery acceptance before publishing. After publication verify public download URLs, signatures, channel and App detection of the new version. Keep prereleases out of Stable. Never commit signing private keys. If a required acceptance or artifact is unavailable, the release is blocked; isolated tests do not establish production readiness.
+
+Preserve the independent Update Helper and its verification, transactional replacement and recovery boundaries. Historical Sparkle packaging and feed material below is context, not authority to replace the Helper or a claim that production updates work. The `docs/ci/native-release-check.yml` file is an inactive manual readiness template, not an active GitHub Actions workflow or a publishing pipeline. Validate the current signing and distribution procedure before use; old Keychain/Developer ID commands below are historical and not a mandate to use them.
+
+开发修改按范围测试、提交并推送；有对应 PR 时同步更新并验证远程 SHA。普通 PR 通过必要检查和仓库规则后可合并；紧急修复也须测试，每次修改不必发布。正式 Stable Release 仍需用户明确授权。
+
+版本采用 MAJOR.MINOR.PATCH：修复、UI 和小型兼容性修改使用 PATCH，向后兼容的新功能使用 MINOR，不兼容变更使用 MAJOR。可合并多个修改发布；核查远程标签，禁止复用已发布标签。发布时更新 App 版本及递增构建号、中英文 CHANGELOG 和 README，检查十语言，构建 arm64 Release，验证签名与更新安全，准备 DMG、ZIP、SHA-256 和 Ed25519 签名更新清单。完成必要安装、升级和失败恢复验收后方可发布，并验证公开地址、签名、渠道及 App 识别新版本。Stable 不得收到预发布版本，私钥不得提交 GitHub。保留独立 Update Helper；缺少必要验收或产物时发布受阻。
+
+## Historical update design and audit / 历史设计与审计
+
+The following dated sections record earlier states and may be superseded by current code, the policy above and later sections. Verify live configuration and actual release status rather than treating historical statements as current.
+
 HD2_NATIVE_APP_UPDATE_SYSTEM_V1 **v1.0.0**, 2026-11-03. **Partially complete: manual release checking and verified-download implementation are available; live signed distribution and end-to-end installation are not ready.**
 
 ## Current audit
@@ -61,7 +79,7 @@ native-app/script/prepare_native_release.sh \
 
 It requires explicit version/global positive build and stable vs prerelease consistency, builds a Developer ID Release archive, checks the actual Bundle identity/feed/key, verifies code signatures, notarizes/staples/assesses, creates the symlink-preserving ZIP, generates/signs the manifest and uses pinned official `sign_update` / `generate_appcast`. It freezes the supplied historical Appcast into staging and verifies that snapshot with the matching Sparkle signing identity before reusing or re-signing any history. Unsigned/tampered/wrong-key history, mixed channels, duplicate/non-increasing builds, foreign or mismatched archive URLs, package installers and missing archive signatures stop preparation. Even an initial empty bootstrap Appcast must be explicitly signed by the trusted key. The final enclosure URL must exactly match the requested version and ZIP. It verifies archive/feed/manifest signatures, sizes and retained monotonically increasing feed history. Delta generation is disabled. Initial feed bootstrapping also requires a signed, verified service; local empty feed scaffolding is not an online update source. The script has been syntax/helper tested; full preparation remains blocked by missing signing/notarization/service credentials.
 
-The inactive template [`docs/ci/native-release-check.yml`](ci/native-release-check.yml) is **workflow_dispatch only**, main-only, read-only repository permission and no secrets/publication commands. It validates explicit release identity, selects an available Xcode 26 on an Apple Silicon macOS runner, builds Debug and runs isolated/secret checks. It records readiness, never signs or publishes. The workflow is source-reviewed/local-checked, **not remotely executed**; it is not registered under `.github/workflows/`. Activation requires a separate reviewed change with workflow-capable authorization; current OAuth credentials lack that scope. Signing/notarization remain operator steps until a protected signing environment is configured. No scheduled workflow, Release trigger or automatic publication is added.
+The inactive template [`docs/ci/native-release-check.yml`](ci/native-release-check.yml) is **workflow_dispatch only**, main-only, read-only repository permission and no secrets/publication commands. It validates explicit release identity, selects an available Xcode 26 on an Apple Silicon macOS runner, builds Debug and runs isolated/secret checks. It records readiness, never signs or publishes. The workflow is source-reviewed/local-checked, **not remotely executed**; it is not registered under `.github/workflows/`. Activation requires a separate reviewed change with workflow-capable authorization; activation requires current workflow-capable credentials. Signing/notarization remain operator steps until a protected signing environment is configured. No scheduled workflow, Release trigger or automatic publication is added.
 
 Publication order after explicit owner approval:
 
@@ -87,7 +105,7 @@ Secret gates retain index/Release App/ZIP/feed scanning via `check_release_secre
 
 真实发布需同时提供 JSON 更新清单、其 Ed25519 签名和 Native ZIP。未配置可信公钥时不允许下载；通过签名、大小和 SHA-256 验证的包只进入私有缓存，不解压、不执行、不替换 App。只有可信 Developer ID 分发包、签名 Appcast、实际公钥、分发就绪配置及写入权限等条件均通过时才交由 Sparkle 安装；不请求管理员权限。原配置／日志、性能设置、FX、Guest、Steam、游戏及 EAC 均不修改。
 
-保留手动触发、只读权限的 Actions 构建检查模板于 `docs/ci/native-release-check.yml`，未注册为可执行工作流。当前 OAuth 缺少 workflow 权限，后续启用需要单独审阅和相应授权；模板不签名、不发布、不创建定时任务。原发布准备脚本已扩展清单生成与签名；历史 Appcast 先冻结并使用匹配密钥验签，再校验渠道、构建顺序及精确资源地址，未签名／篡改／错误密钥均中止，首次空白源也必须明确签名。仍需操作者主动运行、Developer ID、公证配置和正式更新源。GitHub Release 必须先草稿审阅并获得批准，再发布附件，最后发布签名 Appcast；本次没有执行这些发布步骤。更新下载成功、安装完成、重新启动和新版本运行须独立验收。十语言文案已同步，真实生产升级仍未验证。
+保留手动触发、只读权限的 Actions 构建检查模板于 `docs/ci/native-release-check.yml`，未注册为可执行工作流。后续启用需要单独审阅和具备 workflow 权限的凭据；模板不签名、不发布、不创建定时任务。原发布准备脚本已扩展清单生成与签名；历史 Appcast 先冻结并使用匹配密钥验签，再校验渠道、构建顺序及精确资源地址，未签名／篡改／错误密钥均中止，首次空白源也必须明确签名。仍需操作者主动运行、Developer ID、公证配置和正式更新源。GitHub Release 必须先草稿审阅并获得批准，再发布附件，最后发布签名 Appcast；本次没有执行这些发布步骤。更新下载成功、安装完成、重新启动和新版本运行须独立验收。十语言文案已同步，真实生产升级仍未验证。
 
 References: [official Sparkle setup](https://sparkle-project.org/documentation/), [publishing and signatures](https://sparkle-project.org/documentation/publishing/), [security configuration](https://sparkle-project.org/documentation/customization/), [GitHub runner requirements](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
 
