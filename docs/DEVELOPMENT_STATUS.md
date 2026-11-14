@@ -88,3 +88,10 @@ GitHub main 的源码、AGENTS.md 和本文件/交接文档是权威。聊天不
 补充验收：未跳过任何门禁的 `native-app/script/run_checks.sh` 退出 0，共 547 项 Swift 功能检查通过，另含脚本内静态和 Python 检查。十语言各捕获 10 张真实窗口，已浏览页面布局及语言；[捕获清单及哈希](development/NATIVE_UI_CAPTURE_20261114.json)，原图保存在本机候选工作树 `native-app/evidence/resume-current`。长侧栏标题在部分语言会换行；FX 管理和设置图有滚动下方的内容。菜单/Finder、狭窄窗口、错误状态和翻译自然度仍未完成全部验收。
 
 本机 full-audit 的未跟踪加密存储源码与候选字节一致，其凭据测试已被候选的扩展版本覆盖。独有的任务队列续接测试依赖仅该工作树有的 API；候选使用统一环境流程，未搬入旧任务续接。保留该工作树中的 Guest 停机/重启、Proton Guest 缓存续传及 FX 独立性能域实现：分别待隔离生命周期、下载并发/缓存和配置恢复审核，不直接启用。其余旧机未推送文件仍不可在本机核对。Release 候选的生产更新配置为关闭；不通过启用生产源来做故障测试。
+
+## FX 1.9.9 测试机实机验收（2026-11-14）
+
+- 测试 FX 实际路径为 `/Applications/FX Steam Launcher测试用.app`，Bundle ID `es.fxgam.steamtc`，live 进程打开 `steamos_test.img` 并经候选自带 gvproxy 监听 `127.0.0.1:2223`。正式 1.9.12 的 Bundle ID 为 `es.fxgam.steamac`，配置指向独立 inode 的 `steamos.img`，检测时未被打开。
+- 已创建测试盘 APFS 写时复制备份和测试偏好导出，位置 `/Volumes/Thunderbolt2TB/FX199-acceptance.Hf7i5ujA`。测试 VM 在比较期间启动，cmp 报原盘与备份不同，备份未达到恢复验证标准。历史清理回执仅用于识别范围，本次没有执行删除或还原，也没有更改 IPv6。
+- 通过候选 GUI 启动 FX，已看到启动成功、SteamOS SSH 连接成功、首次配置检测。沿用已有加密凭据，未覆盖或清空凭据，因此尚未验收真正新用户的首次保存或重启后恢复。FEX 通过文件与架构检查，来源未验证，App 出示指纹并请求一次显式同意，停在兼容性执行探针之前。sudo、环境部署、Steam、游戏进程、主菜单、单人任务及多人均未验证。现场截图和进程证据保留在备份目录。
+- 在源码 `6a518f09ce7ffb29b744f8d89d14634a0f5a6fdf` 重跑完整检查及更新专项成功，构建独立 arm64 ad hoc App `HD2-App-Builds/Candidates/FX199-20261114-6a518f0/Products/HD2FXNative.app`，版本 0.1.0 (2026111401)，资源、架构和签名校验通过。现场 GUI 使用上一份 `8f4c396` 构建，二者 native-app 源码无差异。此次无 App 源码或十语言资源变更。
