@@ -53,3 +53,5 @@ Build 2026110410: real isolated Debug windows for zh-CN/en First-Run Setup, Dash
 2026-11-14 整合审核：两种语言各七页已从真实整合 Debug 构建重拍（08e58e4 加随后提交为 34fff90 的 FEX 改动），逐对检查语言。未操作 Guest 或自动加载凭据。正式 Release 截图仍待完成。
 
 2026-11-14 LED integration: only the two Dashboard images are presented in README and visually reviewed for language, clipping, sensitive data and honest unknown indicators. Captured from isolated Debug build 2026111401, base 58df1a8 plus the documented LED priority and title sizing edits; no Guest actions or credential autoload. Other page images remain historical and are not presented pending review. Fingerprint applies to the current source for the displayed Dashboard scope only.
+
+2026-11-14 live logging: English and Simplified Chinese log and first-run captures were refreshed and reviewed from the isolated Debug candidate. Other images retain their original provenance; the shared snapshot footer now renders in local time. Active launch and failure screens were not captured.
