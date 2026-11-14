@@ -1,5 +1,5 @@
 """Exercise the real installer with isolated signed macOS AppKit bundles."""
-import base64, hashlib, json, plistlib, shutil, subprocess, tempfile, time
+import base64, hashlib, json, os, plistlib, shutil, signal, subprocess, tempfile, time
 from pathlib import Path
 repo = Path(__file__).resolve().parents[2]
 root = Path(tempfile.mkdtemp(prefix='hd2-helper-acceptance-', dir='/private/tmp'))
@@ -31,6 +31,22 @@ final class Delegate: NSObject, NSApplicationDelegate {
             FileHandle.standardOutput.write(Data("HD2_UPDATE_READY \\(args[2])\\n".utf8))
             if failure == "receipt-crash" { exit(43) }
             DispatchQueue.main.asyncAfter(deadline: .now() + 4) { NSApp.terminate(nil) }
+        } else if args.count == 2 && args[1] == "--recover-fixture" {
+            let bundle = Bundle.main.bundleURL
+            let token = UUID().uuidString
+            let process = Process()
+            process.executableURL = bundle.appendingPathComponent("Contents/MacOS/HD2UpdateInstaller")
+            process.arguments = ["--recover", String(getpid()), token]
+            process.standardError = FileHandle.standardError
+            do { try process.run() } catch { exit(20) }
+            helper = process
+            let ready = bundle.deletingLastPathComponent().appendingPathComponent(".HD2FXNative-update/recover-" + token)
+            Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
+                if FileManager.default.fileExists(atPath: ready.path) || !process.isRunning {
+                    timer.invalidate()
+                    NSApp.terminate(nil)
+                }
+            }
         } else if args.count == 2 {
             let process = Process()
             process.executableURL = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/HD2UpdateInstaller")
@@ -42,6 +58,7 @@ final class Delegate: NSObject, NSApplicationDelegate {
             do {
                 try process.run()
                 helper = process
+                try String(process.processIdentifier).write(toFile: args[1] + "/helper-pid", atomically: true, encoding: .utf8)
                 Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
                     if FileManager.default.fileExists(atPath: args[1] + "/prepared") {
                         timer.invalidate()
@@ -103,3 +120,44 @@ for mode in ('success', 'crash', 'receipt-crash', 'timeout'):
     assert plistlib.loads((installed/'Contents/Info.plist').read_bytes())['CFBundleVersion']==('2' if mode=='success' else '1')
     expected='old version restored and confirmed' if mode!='success' else ': confirmed'
     assert expected in logs[0].read_text()
+
+# Force the installing helper to exit after the atomic exchange, while the
+# new process is still unconfirmed. Relaunching that bundle takes over.
+location = root / 'interrupted-after-exchange'
+installed = location / 'Installed Launcher.app'
+app(installed, '1.0.1', 1, 'success')
+shutil.copytree(root / 'timeout/request', location / 'request', ignore=shutil.ignore_patterns('prepared', 'helper-pid'))
+request = location / 'request'
+transaction = location / '.HD2FXNative-update'
+old = subprocess.Popen([installed/'Contents/MacOS/HD2FXNative', str(request)])
+try:
+    for _ in range(200):
+        state = transaction / 'state.json'
+        if state.exists() and json.loads(state.read_text())['phase'] == 'awaitingStartup':
+            os.kill(int((request/'helper-pid').read_text()), signal.SIGKILL)
+            break
+        time.sleep(.05)
+    else:
+        raise RuntimeError('No exchange before interrupt')
+    old.wait(timeout=5)
+    # The unconfirmed process is a fixture on this exact installation.
+    # Capture its PID from ps by exact executable and fixture startup flag.
+    executable = str(installed/'Contents/MacOS/HD2FXNative')
+    for line in run('ps','-axo','pid=,command=').decode().splitlines():
+        pid, _, command = line.strip().partition(' ')
+        if command.startswith(executable + ' --confirm-update-startup '):
+            os.kill(int(pid), signal.SIGTERM)
+    recovery = subprocess.Popen([executable, '--recover-fixture'])
+    recovery.wait(timeout=10)
+    for _ in range(200):
+        logs = list(location.glob('.HD2FXNative-update-*/journal.log'))
+        if logs:
+            assert 'interrupted exchange rolled back and original confirmed' in logs[0].read_text()
+            break
+        time.sleep(.05)
+    else:
+        raise RuntimeError('Recovery did not finalize')
+    assert plistlib.loads((installed/'Contents/Info.plist').read_bytes())['CFBundleVersion'] == '1'
+    print('PASS interrupted exchange recovery', flush=True)
+finally:
+    if old.poll() is None: old.terminate()

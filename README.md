@@ -75,3 +75,5 @@ User and developer guides, architecture notes and historical reports are availab
 Development resumes from [current status](docs/DEVELOPMENT_STATUS.md) and [handoff](docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md), with main source and AGENTS.md as authority. Unmerged candidates and live acceptance are tracked separately.
 
 Update development: v1.0.1 candidate pins a stable Ed25519 public key, with the private key stored outside the repository and App. Production update service remains disabled. The installer candidate uses the already downloaded and verified ZIP. Signed fixture apps exercise actual replacement and startup confirmation. Full launcher UI upgrade and recovery from an interrupted Helper remain pending.
+
+Interrupted native update transactions can be recovered on the next App launch. The production feed remains disabled pending full upgrade acceptance.

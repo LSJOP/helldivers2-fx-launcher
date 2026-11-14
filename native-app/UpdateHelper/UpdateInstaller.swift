@@ -3,13 +3,129 @@ import CryptoKit
 import Darwin
 import Security
 
+private let recoveryBusyExit: Int32 = 75
+
 @main
 enum UpdateInstaller {
     static func main() {
-        do { try install() }
+        do {
+            if CommandLine.arguments.dropFirst().first == "--recover" { try recover() }
+            else { try install() }
+        }
         catch {
             fputs("Update failed: \(error)\n", stderr)
             exit(1)
+        }
+    }
+
+    private enum Phase: String, Codable { case preparing, exchangePending, awaitingStartup, confirmed, rollingBack }
+    private struct BundleIdentity: Codable, Equatable {
+        let device: dev_t
+        let inode: ino_t
+        init(_ pair: (dev_t, ino_t)) { (device, inode) = pair }
+    }
+    private struct Transaction: Codable {
+        var phase: Phase
+        let target: String
+        let old: BundleIdentity
+        let oldVersion: String
+        let oldBuild: String
+        let key: String
+        var new: BundleIdentity?
+        var newVersion: String?
+        var newBuild: String?
+    }
+
+    private static var installedBundle: URL {
+        URL(fileURLWithPath: CommandLine.arguments[0])
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+    }
+
+    private static func persist(_ state: Transaction, in directory: URL, fd: Int32) throws {
+        let url = directory.appendingPathComponent("state.json")
+        try JSONEncoder().encode(state).write(to: url, options: .atomic)
+        let file = try FileHandle(forWritingTo: url)
+        defer { try? file.close() }
+        try file.synchronize()
+        guard fsync(fd) == 0 else { throw POSIXError(.EIO) }
+    }
+
+    private static func recover() throws {
+        let args = CommandLine.arguments
+        guard args.count == 4, let pid = Int32(args[2]), pid == getppid(),
+              let token = UUID(uuidString: args[3]), let running = NSRunningApplication(processIdentifier: pid)
+        else { throw NativeUpdateFailure.integrity }
+        let installed = installedBundle
+        guard installed.resolvingSymlinksInPath().path == installed.path,
+              running.bundleURL?.resolvingSymlinksInPath() == installed else { throw NativeUpdateFailure.integrity }
+        let parent = installed.deletingLastPathComponent()
+        let directory = parent.appendingPathComponent(".HD2FXNative-update", isDirectory: true)
+        let parentFD = open(parent.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+        guard parentFD >= 0 else { throw NativeUpdateFailure.integrity }
+        defer { close(parentFD) }
+        let fd = openat(parentFD, directory.lastPathComponent, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+        if fd < 0 && errno == ENOENT { return }
+        guard fd >= 0 else { throw NativeUpdateFailure.integrity }
+        defer { close(fd) }
+        var workspace = stat()
+        guard fstat(fd, &workspace) == 0, workspace.st_uid == getuid(),
+              workspace.st_mode & 0o777 == 0o700 else { throw NativeUpdateFailure.integrity }
+        if flock(fd, LOCK_EX | LOCK_NB) != 0 {
+            if errno == EWOULDBLOCK { exit(recoveryBusyExit) }
+            throw POSIXError(.EIO)
+        }
+
+        var state = try JSONDecoder().decode(Transaction.self, from: readRegularFile(directory.appendingPathComponent("state.json"), limit: 16_384))
+        guard state.target == installed.path,
+              Bundle(url: installed)?.infoDictionary?["SUPublicEDKey"] as? String == state.key
+        else { throw NativeUpdateFailure.integrity }
+        let name = installed.lastPathComponent
+        let staged = directory.appendingPathComponent("HD2FXNative.app")
+        let installedIdentity = try identity(parentFD, name)
+        if BundleIdentity(installedIdentity) == state.old {
+            _ = try validate(installed, version: state.oldVersion, build: state.oldBuild, key: state.key)
+            guard state.phase != .confirmed else { throw NativeUpdateFailure.integrity }
+            try archiveTransaction(directory, parent: parent, message: "interrupted transaction recovered with original bundle")
+            return
+        }
+
+        guard let new = state.new, BundleIdentity(installedIdentity) == new,
+              let version = state.newVersion, let build = state.newBuild, state.phase != .preparing,
+              BundleIdentity(try identity(fd, staged.lastPathComponent)) == state.old else { throw NativeUpdateFailure.integrity }
+        _ = try validate(installed, version: version, build: build, key: state.key)
+        let oldExecutable = try validate(staged, version: state.oldVersion, build: state.oldBuild, key: state.key)
+        if state.phase == .confirmed {
+            try archiveTransaction(directory, parent: parent, message: "confirmed transaction cleaned up")
+            return
+        }
+        let oldIdentity = try identity(fd, staged.lastPathComponent)
+        let ready = directory.appendingPathComponent("recover-\(token.uuidString)")
+        try Data().write(to: ready, options: .withoutOverwriting)
+        guard wait(seconds: 30, until: { kill(pid, 0) == -1 && errno == ESRCH }),
+              !runningAt(installed) else { throw POSIXError(.ETIMEDOUT) }
+        state.phase = .rollingBack
+        try persist(state, in: directory, fd: fd)
+        try exchange(parentFD, name, fd, staged.lastPathComponent, installedIdentity, oldIdentity)
+        try launchAndConfirm(installed.appendingPathComponent(oldExecutable), directory: directory)
+        try archiveTransaction(directory, parent: parent, message: "interrupted exchange rolled back and original confirmed")
+    }
+
+    private static func runningAt(_ installed: URL) -> Bool {
+        NSRunningApplication.runningApplications(withBundleIdentifier: NativeReleaseService.bundleID).contains {
+            !$0.isTerminated && $0.bundleURL?.resolvingSymlinksInPath() == installed
+        }
+    }
+
+    private static func archiveTransaction(_ directory: URL, parent: URL, message: String) throws {
+        let log = try FileHandle(forWritingTo: directory.appendingPathComponent("journal.log"))
+        defer { try? log.close() }
+        try log.seekToEnd()
+        try log.write(contentsOf: Data("\(Date()): \(message)\n".utf8))
+        try log.synchronize()
+        let history = parent.appendingPathComponent(".HD2FXNative-update-" + UUID().uuidString)
+        try FileManager.default.moveItem(at: directory, to: history)
+        for name in ["archive.zip", "HD2FXNative.app"] {
+            try? FileManager.default.removeItem(at: history.appendingPathComponent(name))
         }
     }
 
@@ -40,7 +156,7 @@ enum UpdateInstaller {
         defer { close(transactionFD) }
         var workspace = stat()
         guard fstat(transactionFD, &workspace) == 0, workspace.st_uid == getuid(),
-              workspace.st_mode & 0o777 == 0o700 else { throw NativeUpdateFailure.integrity }
+              workspace.st_mode & 0o777 == 0o700, flock(transactionFD, LOCK_EX | LOCK_NB) == 0 else { throw NativeUpdateFailure.integrity }
         let log = transaction.appendingPathComponent("journal.log")
         let staged = transaction.appendingPathComponent("HD2FXNative.app", isDirectory: true)
         var swapped = false
@@ -68,6 +184,11 @@ enum UpdateInstaller {
             }
         }
         try record("transaction started")
+        _ = try validate(installed, version: currentVersion, build: currentBuild, key: encoded)
+        let old = try identity(parentFD, installed.lastPathComponent)
+        var state = Transaction(phase: .preparing, target: installed.path, old: BundleIdentity(old),
+                                oldVersion: currentVersion, oldBuild: currentBuild, key: encoded)
+        try persist(state, in: transaction, fd: transactionFD)
         defer { if !finished { try? record("transaction ended with error") } }
         let request = URL(fileURLWithPath: arguments[1], isDirectory: true)
         let manifestBytes = try readRegularFile(request.appendingPathComponent("manifest.json"), limit: 65_536)
@@ -90,15 +211,24 @@ enum UpdateInstaller {
         let oldExecutable = try validate(installed, version: currentVersion, build: currentBuild, key: encoded)
         let installedIdentity = try identity(parentFD, installed.lastPathComponent)
         let stagedIdentity = try identity(transactionFD, staged.lastPathComponent)
+        guard installedIdentity == old else { throw NativeUpdateFailure.integrity }
+        state.new = BundleIdentity(stagedIdentity)
+        state.newVersion = manifest.version
+        state.newBuild = String(manifest.build)
+        state.phase = .exchangePending
+        try persist(state, in: transaction, fd: transactionFD)
         try record("prepared")
         try Data().write(to: request.appendingPathComponent("prepared"), options: .withoutOverwriting)
         guard wait(seconds: 30, until: { kill(pid, 0) == -1 && errno == ESRCH }) else {
             throw POSIXError(.ETIMEDOUT)
         }
         do {
+            guard !runningAt(installed) else { throw NativeUpdateFailure.integrity }
             try record("exchange pending")
             try exchange(parentFD, installed.lastPathComponent, transactionFD, staged.lastPathComponent, installedIdentity, stagedIdentity)
             swapped = true
+            state.phase = .awaitingStartup
+            try persist(state, in: transaction, fd: transactionFD)
             try record("awaiting startup confirmation")
             try launchAndConfirm(installed.appendingPathComponent(newExecutable), directory: transaction)
 
@@ -106,6 +236,8 @@ enum UpdateInstaller {
             let failure = error
             do {
                 if swapped {
+                    state.phase = .rollingBack
+                    try persist(state, in: transaction, fd: transactionFD)
                     try exchange(parentFD, installed.lastPathComponent, transactionFD, staged.lastPathComponent, stagedIdentity, installedIdentity)
                     swapped = false
                 }
@@ -124,6 +256,8 @@ enum UpdateInstaller {
         }
         // Once the new app is confirmed, a journal failure must not replace
         // the bundle underneath that now-running process.
+        state.phase = .confirmed
+        try persist(state, in: transaction, fd: transactionFD)
         try record("confirmed")
         swapped = false
         finished = true
