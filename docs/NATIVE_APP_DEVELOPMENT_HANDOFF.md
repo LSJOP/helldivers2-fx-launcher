@@ -137,3 +137,5 @@ bash native-app/script/build_local_release.sh /absolute/new/output-directory
 ## FX 1.9.9 实机进度（2026-11-14）
 
 候选已通过 GUI 启动测试 FX 并通过 SSH，停在 App 的现有 FEX 来源确认，具体证据见[开发状态](DEVELOPMENT_STATUS.md#fx-199-测试机实机验收2026-11-14)。恢复严格的新用户测试需先正常关停测试 Guest，重新建立并验证冷态备份，再核对历史项目的当前归属，随后从 GUI 执行部署。保留兼容性探针的目标绑定和显式同意。Steam、游戏进程、主菜单、单人和多人继续独立取证。
+
+FEX 核验现以同一文件树指纹串起预检、审核与实际探针。下一步需要针对测试 Guest 的可信 FEX 文件清单或经过审核的替换件，再继续 GUI 实机。此修复没有 UI 或本地化变更。
