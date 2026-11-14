@@ -34,3 +34,10 @@ Guest Steam 路径以前缀 /home/steamos/.local/share/Steam 为基准。
 Steam App ID 553850 清单存在，installdir 为 Helldivers 2，StateFlags 为 1026，buildid 为 0。游戏 EXE 存在，大小为 28743256 字节。清单状态无法证明 Steam 已完成安装或验证 depot 完整性。检查时没有发现 helldivers2.exe 进程。Guest 未发现 ~/.local/share/HD2FXLauncher，宿主 App 的首次配置状态未确认。
 
 此镜像已经表现出与历史 RF 加 Proton-JE 环境不同的目录和工具链。后续对比应复用上述镜像路径、系统构建号、Proton 与 Runtime 版本、Steam 清单字段及 EXE 哈希。实际启动、窗口、EAC 和联机未测试。
+
+## 同日只读复查
+
+- **安装状态更新。** Steam 现报告 StateFlags=4、buildid=26568081、TargetBuildID=26568081、SizeOnDisk=24128523743 字节，下载计数与目标均为 23489946144，暂存计数与目标均为 26772292857。目录实测约 23 GiB。content_log.txt 记录 Guest 时间 00:34:39 从 downloading/553850 提交到安装目录，完成构建 26568081，随后显示 Fully Installed 和 No Error。三个 depot 与 manifest 分别为 553851/9093193760403568622、553853/6029796651416306804、553854/70283813008461964。首次记录的 buildid=0 是提交前的清单观测，之后由 Steam 写入实际构建号。未找到明确说明 Steam 为何使用 0 的内部证据。完整安装状态来自 Steam，未独立逐文件比对 depot。
+- **库与选择。** Steam 的 libraryfolders.vdf 只列出默认库 /home/steamos/.local/share/Steam。限定深度搜索 /run/media、/mnt、~/.config 和默认库，只找到该游戏清单，没有找到额外 compatibilitytools.d 或 RootFS 命名路径。检查的 config.vdf 和 localconfig.vdf 未输出该游戏的专用兼容工具映射或启动参数条目。历史运行工具和游戏实际将选择的 Proton、Runtime 未能确认。
+- **FEX 文件。** /usr/bin/FEXBash 为 631 字节，SHA-256 为 `8a907f46e455bf26d6bf2f2c09cf28e4aed6e2105a74c870a3d61c49b554e2d1`。默认库 `steamapps/common/Proton 11.0 (ARM64)/files/lib/wine/aarch64-unix/` 下，libarm64ecfex.so 为 `dc8f21f75ee11c3829b346d5a8d60ee87d24091f5e6ed901b5c36c739832ac53`，libwow64fex.so 为 `257041413ae02eb5e2ba31fd16d991478f3a3b53f8ed48b3cc356e42f77649be`。这些为在盘文件，未确认实际加载、独立 FEX 版本或 RF 补丁。Steam 进程的检查未返回 FEX_ROOTFS 或 FEX_PORTABLE，不能据此确认后续容器中的变量或 RootFS 注册。
+- **历史差异。** 历史成功测试使用独立 RF FEX-Emu、FEX 主程序哈希以 ce93cada 开头，容器注册 FEX_ROOTFS=/，使用 Proton-JE 11.0-20261014-3 和 SteamLinuxRuntime_4。本次库中看到的是 ARM64 Proton 内的 FEX 库、Proton 11.0 (ARM64) 及 SteamLinuxRuntime_4-arm64。未确认独立注册或实际 RootFS，因此不能将两条链路视为等价。
