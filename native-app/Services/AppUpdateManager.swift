@@ -74,7 +74,8 @@ struct UpdateConfiguration {
     }
     var isValid: Bool {
         guard enabled, let feed, feed.scheme == "https", feed.user == nil, feed.password == nil, feed.port == nil,
-              feed.host == "lsjop.github.io", feed.path == "/helldivers2-fx-launcher/updates/stable/appcast.xml",
+              ((feed.host == "lsjop.github.io" && feed.path == "/helldivers2-fx-launcher/updates/stable/appcast.xml") ||
+               (feed.host == "github.com" && feed.path == "/LSJOP/helldivers2-fx-launcher/releases/latest/download/appcast.xml")),
               feed.query == nil, feed.fragment == nil, Data(base64Encoded: publicKey)?.count == 32 else { return false }
         return true
     }
@@ -82,13 +83,12 @@ struct UpdateConfiguration {
         var code: SecStaticCode?
         guard SecStaticCodeCreateWithPath(Bundle.main.bundleURL as CFURL, [], &code) == errSecSuccess, let code else { return false }
         var requirement: SecRequirement?
-        let rule = "anchor apple generic and certificate leaf[field.1.2.840.113635.100.6.1.13] exists and identifier \"\(NativeReleaseService.bundleID)\""
+        let rule = "identifier \"\(NativeReleaseService.bundleID)\""
         guard SecRequirementCreateWithString(rule as CFString, [], &requirement) == errSecSuccess,
-              SecStaticCodeCheckValidity(code, SecCSFlags(rawValue: kSecCSStrictValidate), requirement) == errSecSuccess else { return false }
-        var info: CFDictionary?
-        guard SecCodeCopySigningInformation(code, SecCSFlags(rawValue: kSecCSSigningInformation), &info) == errSecSuccess,
-              let flags = (info as? [String: Any])?[kSecCodeInfoFlags as String] as? NSNumber else { return false }
-        return flags.uint32Value & 0x10000 != 0 // CS_RUNTIME; ad-hoc builds never enable installation.
+              SecStaticCodeCheckValidity(code, SecCSFlags(rawValue: kSecCSStrictValidate | kSecCSCheckNestedCode), requirement) == errSecSuccess else { return false }
+        // Ed25519 verifies publisher authority. This gate checks local code structure.
+        // Stable ad hoc builds are supported without a Developer ID requirement.
+        return Bundle.main.bundleIdentifier == NativeReleaseService.bundleID
     }
 }
 
@@ -101,15 +101,22 @@ struct UpdateConfiguration {
     @Published private(set) var lastCheck: Date?
     @Published private(set) var candidate: NativeUpdateCandidate?
     @Published private(set) var cachedArchive: URL?
+    @Published private(set) var downloadProgress: Double?
     @Published private(set) var channel = "stable"
     let configuration = UpdateConfiguration(info: Bundle.main.infoDictionary ?? [:])
     private var controller: SPUStandardUpdaterController!
     private var subscriptions = Set<AnyCancellable>()
     private var operation: Task<Void, Never>?
+    private var automaticTask: Task<Void, Never>?
     private let preferences: UserDefaults
     var isConfigured: Bool { configuration.isValid && configuration.distributionReady && UpdateConfiguration.trustedDistribution() }
-    var canDownload: Bool { candidate?.signatureVerified == true && canCheck }
-    var canInstall: Bool { isConfigured && canCheck && !CoreWorkerStatus.isActive && FileManager.default.isWritableFile(atPath: Bundle.main.bundleURL.deletingLastPathComponent().path) }
+    var canDownload: Bool { candidate?.signatureVerified == true && cachedArchive == nil && canCheck }
+    var canInstall: Bool {
+        guard candidate?.manifest.schema == 2, let cachedArchive,
+              FileManager.default.fileExists(atPath: cachedArchive.path),
+              isConfigured, canCheck, !CoreWorkerStatus.isActive else { return false }
+        return FileManager.default.isWritableFile(atPath: Bundle.main.bundleURL.deletingLastPathComponent().path)
+    }
     var version: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?" }
     var build: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?" }
     var service: NativeReleaseService { NativeReleaseService(publicKey: Data(base64Encoded: configuration.publicKey).flatMap { $0.count == 32 ? $0 : nil }) }
@@ -121,15 +128,15 @@ struct UpdateConfiguration {
         controller = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: self, userDriverDelegate: nil)
         guard isConfigured else { return }
         controller.updater.publisher(for: \.canCheckForUpdates).sink { [weak self] in self?.canCheck = $0 }.store(in: &subscriptions)
-        controller.updater.publisher(for: \.automaticallyChecksForUpdates).sink { [weak self] in self?.automaticChecks = $0 }.store(in: &subscriptions)
         status = .ready
-        controller.startUpdater() // Sparkle retains automatic-check consent ownership.
+        controller.startUpdater()
+        controller.updater.automaticallyChecksForUpdates = false
+        setAutomaticChecks(preferences.bool(forKey: "NativeAutomaticUpdateChecks"))
     }
     func checkForUpdates() {
         guard canCheck, operation == nil else { return }
         candidate = nil; cachedArchive = nil; errorCode = nil; status = .checking
         lastCheck = Date(); preferences.set(lastCheck, forKey: "NativeUpdateLastCheck")
-        if isConfigured { controller.checkForUpdates(nil); return }
         canCheck = false
         operation = Task { [weak self] in
             guard let self else { return }
@@ -159,18 +166,36 @@ struct UpdateConfiguration {
     }
     func setAutomaticChecks(_ enabled: Bool) {
         guard isConfigured else { return }
-        controller.updater.automaticallyChecksForUpdates = enabled
+        automaticChecks = enabled
+        preferences.set(enabled, forKey: "NativeAutomaticUpdateChecks")
+        automaticTask?.cancel()
+        automaticTask = nil
+        guard enabled else { return }
+        automaticTask = Task { [weak self] in
+            while !Task.isCancelled {
+                self?.checkForUpdates()
+                do { try await Task.sleep(nanoseconds: 21_600_000_000_000) }
+                catch { return }
+                if self == nil { return }
+            }
+        }
     }
     func downloadVerifiedArchive() {
         guard canDownload, let candidate, operation == nil else { return }
-        canCheck = false; status = .downloading; errorCode = nil
+        canCheck = false; status = .downloading; errorCode = nil; downloadProgress = nil
         operation = Task { [weak self] in
             guard let self else { return }
             defer { self.operation = nil; self.canCheck = true }
             do {
                 let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
                     .appendingPathComponent("Helldivers2FXLauncher/VerifiedUpdates", isDirectory: true)
-                self.cachedArchive = try await self.service.download(candidate, to: base)
+                self.cachedArchive = try await self.service.download(candidate, to: base) { [weak self] received, total in
+                    Task { @MainActor [weak self] in
+                        guard let self, self.status == .downloading, total > 0,
+                              received >= 0, total == candidate.manifest.length else { return }
+                        self.downloadProgress = min(1, Double(received) / Double(total))
+                    }
+                }
                 self.status = .downloaded
             } catch { self.record(error) }
         }
@@ -229,7 +254,13 @@ struct UpdateConfiguration {
         "https://lsjop.github.io/helldivers2-fx-launcher/updates/" + (channel == "preview" && configuration.previewEnabled ? "preview" : "stable") + "/appcast.xml"
     }
     func updater(_ updater: SPUUpdater, shouldProceedWithUpdate updateItem: SUAppcastItem, updateCheck: SPUUpdateCheck) throws {
-        guard isConfigured, !CoreWorkerStatus.isActive,
+        guard isConfigured, let candidate, candidate.manifest.schema == 2, cachedArchive != nil,
+              let enclosure = updateItem.propertiesDictionary["enclosure"] as? [String: Any],
+              enclosure["sparkle:edSignature"] as? String == candidate.manifest.archiveEdSignature,
+              updateItem.fileURL == candidate.archive.browser_download_url,
+              updateItem.versionString == String(candidate.manifest.build),
+              updateItem.displayVersionString == candidate.manifest.version,
+              !CoreWorkerStatus.isActive,
               FileManager.default.isWritableFile(atPath: Bundle.main.bundleURL.deletingLastPathComponent().path),
               let url = updateItem.fileURL, NativeUpdateHTTP.trusted(url), url.pathExtension == "zip",
               updateItem.installationType == "application", updateItem.isMacOsUpdate,

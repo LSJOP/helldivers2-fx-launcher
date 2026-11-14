@@ -27,6 +27,10 @@ import Darwin
         }
         let transport = SSHTransport.make(["ssh": .object(["host": .string("127.0.0.1"),
             "port": .number(2222), "username": .string("steamos"), "auth": .string("password")])])
+        check(SSHTransport.make([:]).settings.cdpLocalPort == SSHTransport.make([:]).settings.cdpLocalPort,
+              "automatic tunnel port is stable within this App process")
+        let customPort = SSHTransport.make(["ssh": .object(["cdp_local_port": .number(19094)])])
+        check(customPort.settings.cdpLocalPort == 19094, "explicit custom tunnel port is retained")
         let isolatedA = SSHTransport.isolatedSetup([:]), isolatedB = SSHTransport.isolatedSetup([:])
         check(isolatedA.settings.socketPath != isolatedB.settings.socketPath, "setup actions own distinct SSH masters")
         check(isolatedA.settings.socketPath != transport.settings.socketPath, "setup never occupies the launch tunnel socket")

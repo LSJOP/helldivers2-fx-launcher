@@ -8,6 +8,7 @@ struct LaunchRequest {
     var password: String?
     var passphrase: String?
     var sudoPassword: String?
+    var fexApprovals: [String] = []
     var approvedChanges: [JSONValue]
     var context: CoreContext
     var emit: (String, String, [String: JSONValue]) -> Void
@@ -132,6 +133,16 @@ enum LaunchService {
         return false
     }
 
+    static func verifiedBundledNetworkPath(rows: [Int: ProcessRow], supervisor: Int? = nil) -> String? {
+        let paths = Set(rows.values.filter { row in
+            guard URL(fileURLWithPath: row.command).lastPathComponent == "gvproxy-eim" else { return false }
+            if let supervisor { return descendant(row.pid, of: supervisor, rows: rows) }
+            return true
+        }.map { normalizedCommand($0.command) })
+        let verified = paths.filter { (try? CoreHash.sha256File(URL(fileURLWithPath: $0))) == LaunchResources.gvproxySHA256 }
+        return verified.count == 1 ? verified.first : nil
+    }
+
     /// Identity of the local endpoint before any password may be transmitted.
     static func endpointIdentity(fx: URL, gvproxy: URL, transport: SSHTransport, context: CoreContext?) throws -> String {
         guard SSHTransport.localHost(transport.settings.host) else { throw CoreError("LOCAL_FX_REQUIRED") }
@@ -139,14 +150,15 @@ enum LaunchService {
         let executable = normalizedExecutable(fx)
         guard foreignProcesses(rows: rows, executable: executable).isEmpty else { throw CoreError("FX_INSTANCE_MISMATCH") }
         let supervisor = try fxSupervisorPID(rows: rows, executable: executable)
-        var networkPath = normalizedCommand(gvproxy.path)
+        let listeners = try fileDescriptors(arguments: ["-nP", "-iTCP:\(transport.settings.port)", "-sTCP:LISTEN", "-Fpn"], context: context)
+        guard !listeners.isEmpty else { throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("ssh_listener_not_ready")]) }
+        var networkPath = verifiedBundledNetworkPath(rows: rows, supervisor: supervisor) ?? normalizedCommand(gvproxy.path)
         if !rows.values.contains(where: { normalizedCommand($0.command) == networkPath && descendant($0.pid, of: supervisor, rows: rows) }) {
             networkPath = try diagnosticNetworkExecutable(fx: fx, context: context)
         }
         let network = rows.values.filter { normalizedCommand($0.command) == networkPath && descendant($0.pid, of: supervisor, rows: rows) }
-        guard !network.isEmpty else { throw CoreError("FX_IDENTITY_UNVERIFIED") }
-        let listeners = try fileDescriptors(arguments: ["-nP", "-iTCP:\(transport.settings.port)", "-sTCP:LISTEN", "-Fpn"], context: context)
-        guard !listeners.isEmpty, Set(listeners.keys).isSubset(of: Set(network.map(\.pid))) else { throw CoreError("FX_IDENTITY_UNVERIFIED") }
+        guard !network.isEmpty else { throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("network_not_ready")]) }
+        guard Set(listeners.keys).isSubset(of: Set(network.map(\.pid))) else { throw CoreError("FX_IDENTITY_UNVERIFIED", ["reason": .string("ssh_listener_not_owned_by_fx")]) }
         return "\(supervisor)|\(rows[supervisor]?.start ?? "")|\(network.map(\.pid).sorted())"
     }
 
@@ -156,7 +168,7 @@ enum LaunchService {
         let executable = normalizedExecutable(fx)
         let fxPID = try fxSupervisorPID(rows: rows, executable: executable)
         func belongs(_ pid: Int) -> Bool { descendant(pid, of: fxPID, rows: rows) }
-        var networkExecutable = normalizedCommand(gvproxy.path)
+        var networkExecutable = verifiedBundledNetworkPath(rows: rows, supervisor: fxPID) ?? normalizedCommand(gvproxy.path)
         if allowPublisherNetwork,
            !rows.values.contains(where: { normalizedCommand($0.command) == networkExecutable && belongs($0.pid) }) {
             networkExecutable = try diagnosticNetworkExecutable(fx: fx, context: context)
@@ -237,12 +249,11 @@ enum LaunchService {
     }
 
     static func networkReady(context: CoreContext?) -> Bool {
-        guard let binary = LaunchResources.gvproxyBinary else { return false }
+        guard LaunchResources.gvproxyBinary != nil else { return false }
         let state = LaunchResources.gvproxyState()
         guard state.state == "ready" else { return false }
-        guard let rows = try? CoreProcess.run("/bin/ps", ["-axo", "command="], timeout: 8, context: context).stdout else { return false }
-        let prefix = binary.path + " -listen-vfkit "
-        return rows.split(separator: "\n").contains { $0.hasPrefix(prefix) }
+        guard let rows = try? processTable(context: context) else { return false }
+        return verifiedBundledNetworkPath(rows: rows) != nil
     }
 
     static func fxState(request: LaunchRequest, fx: URL) throws -> [String: JSONValue] {
@@ -364,9 +375,6 @@ enum LaunchService {
         }
         guard state["tool"]?.text == verifiedTool else {
             throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("compat_tool_mismatch")])
-        }
-        guard state["fex"]?.text == verifiedFEX else {
-            throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("fex_hash_mismatch")])
         }
         guard state["ntdll"]?.text == verifiedNTDLL else {
             throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("ntdll_hash_mismatch")])

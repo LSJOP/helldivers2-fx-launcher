@@ -68,7 +68,7 @@ actor NativeCoreService {
         "fx_path", "confirmed", "runtime_root", "password", "passphrase", "sudo_password",
         "credential_guest_boot", "credential_host_identity", "credential_revision", "approved_changes", "configuration", "expected_revision",
         "channel", "match_result", "note", "values", "preview_token", "backup_path",
-        "selected_paths", "ipv6_enabled", "network_plan", "deployment_plan", "approved_steps", "receipt_id", "restart_vm_approved"]
+        "fex_approvals", "selected_paths", "ipv6_enabled", "network_plan", "deployment_plan", "approved_steps", "receipt_id", "restart_vm_approved"]
 
     func request(_ method: String, timeout: TimeInterval = 5,
                  params: [String: JSONValue] = [:],
@@ -395,6 +395,7 @@ actor NativeCoreService {
         return LaunchRequest(configuration: configuration, fxPath: fxPath,
                              password: params["password"]?.text, passphrase: params["passphrase"]?.text,
                              sudoPassword: params["sudo_password"]?.text,
+                             fexApprovals: params["fex_approvals"]?.array.compactMap { $0.text } ?? [],
                              approvedChanges: params["approved_changes"]?.array ?? [],
                              context: context, emit: emit)
     }
@@ -421,6 +422,7 @@ actor NativeCoreService {
         do {
             let host = try LaunchService.fxState(request: request, fx: fx)
             result["fx_host_running"] = host["fx_host_running"] ?? .bool(false)
+            guard host["fx_host_running"]?.boolean == true else { throw CoreError("FX_NOT_RUNNING") }
             progress("CheckingSSHPort")
             _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
             // OpenSSH supplies bounded port/protocol errors; avoid a second divergent socket implementation.
@@ -471,9 +473,12 @@ actor NativeCoreService {
         let request = try launchRequest(params, context: context, emit: emit, confirmed: true)
         let fx = try LaunchService.selectedFX(request)
         let transport = SSHTransport.make(request.configuration)
-        guard LaunchService.networkReady(context: context) else { throw CoreError("FX_NOT_RUNNING") }
-        _ = try LaunchService.checkFXEntry(request: request, fx: fx, requireRunning: true)
-        _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
+        // Read-only sudo verification can use the same publisher-verified FX network
+        // as SSH diagnostics. endpointIdentity checks the selected process tree and
+        // SSH listener before credentials leave the host; the game launch guard remains stricter.
+        _ = try LaunchService.checkFXEntry(request: request, fx: fx, requireRunning: false)
+        guard let gvproxy = LaunchResources.gvproxyBinary else { throw CoreError("GVPROXY_UNAVAILABLE") }
+        _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: gvproxy, transport: transport, context: context)
         let session = try GuestService.connect(transport, password: request.password, passphrase: request.passphrase,
                                                context: context) {
             try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!,
@@ -647,6 +652,11 @@ printf '{"guest_os":"%s","guest_arch":"%s","components":{"steam_files":%s,"game_
             value["multiplayer"] = .string("unverified")
             return value
         }
+        let backend = try SSHEnvironmentBackend(fx: fx, transport: transport, context: context, revision: ConfigurationService.read().revision)
+        backend.expectedGuestBoot = session.boot
+        backend.fexApprovals = request.fexApprovals
+        let fexSnapshot = try backend.snapshot()
+        try FEXWorkflow.requireCompatible(fexSnapshot)
         try LaunchService.compatibility(state)
         guard LaunchService.checkProxyPort() else {
             throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("host_proxy_7890_unavailable")])
@@ -691,6 +701,9 @@ printf '{"guest_os":"%s","guest_arch":"%s","components":{"steam_files":%s,"game_
         guard (before["game_count"]?.integer ?? 0) == 0 else {
             throw CoreError("GAME_START_FAILED", ["reason": .string("game_appeared_during_preparation")])
         }
+        let dispatchSnapshot = try backend.snapshot()
+        try FEXWorkflow.requireCompatible(dispatchSnapshot)
+        guard dispatchSnapshot.facts["fex_fingerprint"] == fexSnapshot.facts["fex_fingerprint"] else { throw CoreError("FEX_CHANGED") }
         let launch = try GuestService.launchGame(transport, session: session, context: context)
         _ = launch
         let count = try GuestService.waitForGame(transport, attempts: 90, context: context)

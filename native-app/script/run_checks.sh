@@ -5,6 +5,7 @@ cd "$ROOT_DIR"
 mkdir -p build evidence
 SDK="$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
 
+/usr/bin/python3 -I -B checks/fex_runtime_checks.py >evidence/fex-runtime-checks.txt 2>&1
 /usr/bin/python3 -I -B checks/fex_pipeline_checks.py >evidence/fex-pipeline-checks.txt 2>&1
 /usr/bin/python3 -I -B script/check_localization.py >evidence/localization-checks.json
 /usr/bin/python3 -I -B checks/localization_checks.py >evidence/localization-negative-checks.txt 2>&1
@@ -55,8 +56,10 @@ SDK="$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
 
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Models/LaunchSession.swift checks/LaunchChecks.swift -o build/LaunchChecks >evidence/launch-compile.txt 2>&1
 ./build/LaunchChecks >evidence/launch-checks.txt 2>&1
-/usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Services/SessionCredentialManager.swift checks/CredentialChecks.swift -o build/CredentialChecks >evidence/credential-compile.txt 2>&1
+/usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Services/LocalCredentialStore.swift Services/SessionCredentialManager.swift checks/CredentialChecks.swift -o build/CredentialChecks >evidence/credential-compile.txt 2>&1
 ./build/CredentialChecks >evidence/credential-swift-checks.txt 2>&1
+/usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Services/LocalCredentialStore.swift Services/SessionCredentialManager.swift checks/PersistentCredentialChecks.swift -o build/PersistentCredentialChecks >evidence/encrypted-persistence-compile.txt 2>&1
+./build/PersistentCredentialChecks >evidence/encrypted-persistence-checks.txt 2>&1
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Services/GamePerformanceInferenceService.swift checks/PerformanceChecks.swift -o build/PerformanceChecks >evidence/performance-compile.txt 2>&1
 ./build/PerformanceChecks >evidence/performance-checks.txt 2>&1
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Services/FXSelectionManager.swift checks/FXSelectionChecks.swift -o build/FXSelectionChecks >evidence/fx-selection-compile.txt 2>&1

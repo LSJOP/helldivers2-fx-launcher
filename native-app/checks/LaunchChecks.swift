@@ -25,6 +25,14 @@ import Foundation
         session.consume(["stage":.string("GameProcessDetected"),"status":.string("done"),"sequence":.number(99)])
         try check(!session.processDetected && session.current == .failed, "late progress cannot revive a process after final exit")
         session.begin(root: "fixture")
+        session.consume(["stage": .string("GameProcessDetected"), "status": .string("done"), "sequence": .number(3)])
+        session.fail(ErrorState("TIMEOUT"))
+        session.consume(["stage": .string("GameProcessDetected"), "status": .string("done"), "sequence": .number(4)])
+        session.confirmMainMenu()
+        try check(!session.processDetected && session.mainMenuConfirmedAt == nil && session.current == .failed, "failure clears process evidence and ignores late progress")
+        session.complete(["game_process_detected": .bool(true)], at: "fresh-observation")
+        try check(session.processDetected && session.failure == nil && session.mainMenuConfirmedAt == nil, "fresh observation clears stale failure without inferring menu success")
+        session.begin(root: "fixture")
         session.consume(["kind": .string("launch_context"), "fx_path": .string("fixture.app"), "fx_version": .string("1.9.4")])
         let initial = session.diagnostic(appVersion: "fixture-version")
         try check(initial["fx_path"]?.text == "fixture.app" && initial["started_at"]?.text != nil && initial["app_version"]?.text == "fixture-version", "diagnostics bind actual target and start/version metadata")
@@ -48,6 +56,12 @@ import Foundation
         session.consume(["stage": .string("StartingFX"), "status": .string("done"), "sequence": .number(1)])
         session.complete(["fx_host_running": .bool(true), "game_process_detected": .bool(false)], at: "fixture")
         try check(!session.processDetected && session.mainMenuConfirmedAt == nil && session.current == .waitingForGame, "opened FX without a game is never game launch success")
-        print("18 launch and GUI state checks PASS")
+        var workflow = EnvironmentWorkflow(phase: .detecting, completedSteps: 2, launchesGame: true)
+        try check(workflow.totalSteps == 6 && workflow.active && workflow.fraction < 1, "launch workflow reports completed steps")
+        workflow.phase = .failed
+        try check(!workflow.active && workflow.fraction < 1, "failed workflow stops animation below 100 percent")
+        workflow = EnvironmentWorkflow(phase: .completed, completedSteps: 5, launchesGame: false)
+        try check(workflow.totalSteps == 5 && workflow.fraction == 1, "setup-only workflow completes without a game stage")
+        print("23 launch and GUI state checks PASS")
     }
 }

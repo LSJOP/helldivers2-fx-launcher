@@ -46,6 +46,7 @@ struct LaunchSession {
     var processDetected: Bool { evidence[.gameProcessDetected] == "done" || evidence[.gameProcessDetected] == "passed" }
     mutating func begin(root: String) { self = LaunchSession(); self.root = root; startedAt = ISO8601DateFormatter().string(from: Date()); current = .checkingEnvironment; running = true }
     mutating func consume(_ event: [String: JSONValue]) {
+        guard running else { return }
         if event["kind"]?.text == "launch_context" {
             fxPath = event["fx_path"]?.text; fxVersion = event["fx_version"]?.text
         }
@@ -56,7 +57,7 @@ struct LaunchSession {
         if running && order > sequence { sequence = order; current = stage }
     }
     mutating func complete(_ result: [String: JSONValue], at: String) {
-        running = false; observedAt = at
+        running = false; observedAt = at; failure = nil
         if result["game_process_detected"]?.boolean == true {
             evidence[.gameProcessDetected] = "done"; current = .gameProcessDetected
         } else if result["game_process_detected"]?.boolean == false {
@@ -68,10 +69,10 @@ struct LaunchSession {
     mutating func fail(_ error: ErrorState) {
         running = false; failure = error; current = .failed
         if let raw = error.details["stage"]?.text, let stage = LaunchStage(rawValue: raw) { evidence[stage] = "failed" }
-        if error.code == "GAME_EXITED" {
-            evidence[.gameProcessDetected] = "unverified"; stageSequences[.gameProcessDetected] = Int.max
-            mainMenuConfirmedAt = nil; singlePlayerConfirmedAt = nil
-        }
+        // A failed or cancelled attempt cannot establish the current process state.
+        // A later explicit observation can supply fresh evidence.
+        evidence[.gameProcessDetected] = "unverified"; stageSequences[.gameProcessDetected] = Int.max
+        mainMenuConfirmedAt = nil; singlePlayerConfirmedAt = nil
     }
     // A structured record, never evidence of a menu/window merely from process presence.
     func diagnostic(appVersion: String) -> [String: JSONValue] {
@@ -93,4 +94,37 @@ struct LaunchSession {
         guard !running, processDetected, mainMenuConfirmedAt != nil else { return }
         singlePlayerConfirmedAt = ISO8601DateFormatter().string(from: Date())
     }
+}
+
+
+enum EnvironmentWorkflowDestination { case setup, game }
+
+enum EnvironmentWorkflowPhase: String {
+    case idle, startingFX, connecting, detecting, deploying, verifying, launching, completed, failed, cancelled
+    var titleKey: String {
+        switch self {
+        case .idle: return "ui.workflow.idle"
+        case .startingFX: return "ui.workflow.startingFX"
+        case .connecting: return "ui.workflow.connecting"
+        case .detecting: return "ui.workflow.detecting"
+        case .deploying: return "ui.workflow.deploying"
+        case .verifying: return "ui.workflow.verifying"
+        case .launching: return "ui.workflow.launching"
+        case .completed: return "ui.workflow.completed"
+        case .failed: return "ui.workflow.failed"
+        case .cancelled: return "ui.workflow.cancelled"
+        }
+    }
+}
+struct EnvironmentWorkflow {
+    var phase: EnvironmentWorkflowPhase = .idle
+    var completedSteps = 0
+    var launchesGame = false
+    var failure: ErrorState?
+    var needsRestartApproval = false
+    var deploymentStage: String?
+    var evidence: [String: JSONValue] = [:]
+    var totalSteps: Int { launchesGame ? 6 : 5 }
+    var active: Bool { ![.idle, .completed, .failed, .cancelled].contains(phase) }
+    var fraction: Double { phase == .completed ? 1 : min(Double(completedSteps) / Double(totalSteps), 0.99) }
 }

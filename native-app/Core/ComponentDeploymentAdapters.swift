@@ -210,16 +210,17 @@ enum ProtonJERelease {
               object["archiveSHA256"] as? String == digest, object["version"] as? String == version else { throw CoreError("ARTIFACT_UNAPPROVED") }
         return data
     }
-    static func script(mode: String, manifest: Data, boot: String = "", suffix: String = UUID().uuidString) throws -> String {
+    static func script(mode: String, manifest: Data, boot: String = "", suffix: String = UUID().uuidString, useHostProxy: Bool = false) throws -> String {
         guard ["probe", "install", "recover"].contains(mode), mode == "probe" || UUID(uuidString: boot) != nil,
               UUID(uuidString: suffix) != nil else { throw CoreError("INVALID_ARGUMENT") }
         let prefix = "MANIFEST=" + CoreJSON.encode(.string(manifest.base64EncodedString())) + "\nMODE=" + CoreJSON.encode(.string(mode)) + "\nBOOT=" + CoreJSON.encode(.string(boot)) + "\nSUFFIX=" + CoreJSON.encode(.string(suffix)) + "\n"
-        return "python3 - <<'HD2_PROTON_PY'\n" + prefix + python + "\nHD2_PROTON_PY\n"
+        return "python3 - <<'HD2_PROTON_PY'\n" + prefix + "USE_HOST_PROXY=" + (useHostProxy ? "1" : "0") + "\n" + python + "\nHD2_PROTON_PY\n"
     }
     static let python = #"""
-import os,sys,json,base64,hashlib,pathlib,stat,subprocess,tempfile,tarfile,shutil,posixpath
+import os,sys,json,base64,hashlib,pathlib,stat,subprocess,tempfile,tarfile,shutil,posixpath,re
 m=json.loads(base64.b64decode(MANIFEST))
 mode=MODE
+curl=['curl'] + (['--proxy','http://192.168.127.254:7890'] if USE_HOST_PROXY else [])
 steam=pathlib.Path.home()/'.local/share/Steam'
 alias=pathlib.Path.home()/'.steam/root'
 if os.path.lexists(alias) and alias.resolve()!=steam.resolve():raise RuntimeError('STEAM_ROOT_CONFLICT')
@@ -233,13 +234,29 @@ def digest(path):
 def safe_parents(path):
  for part in [path,*path.parents]:
   if part.is_symlink():raise RuntimeError('UNSAFE_PATH')
-def verified(path):
+def verified(path,allow_runtime_cache=True):
  if not path.is_dir() or path.is_symlink():return False
  expected=set(m['files'])|set(m['links'])|set(m['directories'])
  actual=set()
  for d,dirs,files in os.walk(path,followlinks=False):
   for name in dirs+files:actual.add(str((pathlib.Path(d)/name).relative_to(path)))
- if actual!=expected:return False
+ if expected-actual:return False
+ extras=actual-expected
+ if extras and not allow_runtime_cache:return False
+ # CPython writes derived caches during ordinary Steam tool discovery.
+ # Every distributed file is still hashed below; other additions remain conflicts.
+ for name in extras:
+  f=path/name
+  if f.is_symlink() or f.lstat().st_mode&0o7000:return False
+  if f.is_dir() and f.name=='__pycache__':continue
+  match=re.fullmatch(r'([A-Za-z_][A-Za-z0-9_]*)\.cpython-[0-9]{2,3}(?:\.opt-[12])?\.pyc',f.name)
+  if not match or f.parent.name!='__pycache__' or not f.is_file() or f.stat().st_nlink!=1 or f.stat().st_size>4*1024*1024:return False
+  source=f.parent.parent/(match.group(1)+'.py')
+  if str(source.relative_to(path)) not in m['files']:return False
+  with f.open('rb') as stream:header=stream.read(16)
+  source_stat=source.stat()
+  if len(header)!=16 or header[2:4]!=b'\r\n' or int.from_bytes(header[4:8],'little')!=0:return False
+  if int.from_bytes(header[8:12],'little')!=int(source_stat.st_mtime)&0xffffffff or int.from_bytes(header[12:16],'little')!=source_stat.st_size:return False
  for name,(sha,permissions) in m['files'].items():
   f=path/name
   if not stat.S_ISREG(f.lstat().st_mode) or f.is_symlink() or digest(f)!=sha or (f.stat().st_mode&0o111)!=(permissions&0o111):return False
@@ -277,10 +294,15 @@ try:
  stage=pathlib.Path(tempfile.mkdtemp(prefix='.hd2-proton-stage-',dir=root))
  try:
   archive=stage/'payload.tar.xz'
-  subprocess.run(['curl','--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','600','--max-filesize',str(m['archiveBytes']),'--output',str(archive),m['url']],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=610)
+  cache=pathlib.Path.home()/'.cache/hd2fx-native/artifacts'/(m['archiveSHA256']+'.tar.xz')
+  safe_parents(cache)
+  if cache.is_file() and cache.stat().st_nlink==1 and cache.stat().st_size==m['archiveBytes'] and digest(cache)==m['archiveSHA256']:
+   shutil.copyfile(cache,archive)
+  else:
+   subprocess.run(curl+['--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','600','--max-filesize',str(m['archiveBytes']),'--output',str(archive),m['url']],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=610)
   if archive.stat().st_size!=m['archiveBytes'] or digest(archive)!=m['archiveSHA256']:raise RuntimeError('ARTIFACT_HASH')
   checksum=stage/'payload.sha512sum'
-  subprocess.run(['curl','--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','30','--max-filesize','4096','--output',str(checksum),m['url'].replace('.tar.xz','.sha512sum')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=40)
+  subprocess.run(curl+['--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','30','--max-filesize','4096','--output',str(checksum),m['url'].replace('.tar.xz','.sha512sum')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=40)
   published=checksum.read_text().split()
   if len(published)!=2 or published[0]!=m['archiveSHA512'] or published[1] not in [m['version']+'.tar.xz','*'+m['version']+'.tar.xz']:raise RuntimeError('ARTIFACT_HASH')
   sha512=hashlib.sha512()
@@ -306,7 +328,7 @@ try:
      if str(parent) in names and not names[str(parent)].isdir():raise RuntimeError('UNSAFE_PATH')
    t.extractall(unpack,members=members)
   candidate=unpack/m['version']
-  if not verified(candidate):raise RuntimeError('ARTIFACT_HASH')
+  if not verified(candidate,allow_runtime_cache=False):raise RuntimeError('ARTIFACT_HASH')
   idle();safe_parents(p)
   if os.path.lexists(p):raise RuntimeError('EXTERNAL_DRIFT')
   candidate.rename(p)
@@ -318,14 +340,90 @@ finally:
 """#
 }
 
-/// Fixed-source candidate build and identity-bound review. An unmatched historical
-/// executable is reported for review and can never enable installation.
+/// Pinned-source build review and independent installed-runtime compatibility probes.
 enum FEXWorkflow {
+    /// Recompute the full installed tree for every action. Consent never certifies provenance.
+    static func observe(_ backend: SSHEnvironmentBackend, snapshot: inout DeploymentSnapshot, approvals: [String]) throws {
+        let helpers = pipeline.components(separatedBy: "work=pathlib.Path.home()")[0]
+        func probe(_ expected: String = "") throws -> [String: JSONValue] {
+            let script = "python3 - <<'HD2_FEX_PROBE'\n" + helpers + "\nEXPECTED_BOOT=" + CoreJSON.encode(.string(snapshot.boot)) + "\nEXPECTED_TREE=" + CoreJSON.encode(.string(expected)) + "\n" + runtimeProbe + "\nHD2_FEX_PROBE\n"
+            let result = try backend.transport.run(script, timeout: 150, context: backend.context)
+            guard result.status == 0, let bytes = result.stdout.data(using: .utf8),
+                  let value = try? JSONDecoder().decode([String: JSONValue].self, from: bytes) else { throw CoreError("FEX_RUNTIME_FAILED") }
+            return value
+        }
+        let staticResult = try probe()
+        snapshot.facts["fex_status"] = "repair"
+        snapshot.facts["fex_reason"] = staticResult["reason"]?.text ?? "FEX_RUNTIME_FAILED"
+        guard staticResult["preflight"]?.boolean == true, let tree = staticResult["tree"]?.text else { return }
+        let binding = ["fx_path", "machine_id", "fx_executable_sha256", "ssh_connection"].map { snapshot.facts[$0] ?? "UNKNOWN" }
+        let approval = CoreHash.sha256(Data((binding.joined(separator: "|") + "|" + tree).utf8))
+        snapshot.facts["fex_fingerprint"] = approval
+        snapshot.facts["fex_tree"] = tree
+        snapshot.facts["fex_provenance"] = "unverified"
+        let reviewed = try verifyInstalled(backend, snapshot: snapshot)
+        if reviewed { snapshot.facts["fex_provenance"] = "verified" }
+        guard reviewed || approvals.contains(approval) else {
+            snapshot.facts["fex_status"] = "confirmation"
+            snapshot.facts["fex_reason"] = "FEX_CONFIRMATION_REQUIRED"
+            return
+        }
+        let runtime = try probe(tree)
+        guard runtime["runtime"]?.boolean == true else {
+            snapshot.facts["fex_reason"] = runtime["reason"]?.text ?? "FEX_RUNTIME_FAILED"
+            return
+        }
+        snapshot.facts["fex_status"] = reviewed ? "normal" : "compatible"
+        snapshot.facts["fex_runtime"] = "ready"
+        snapshot.facts["fex_reason"] = ""
+    }
+    static func requireCompatible(_ snapshot: DeploymentSnapshot) throws {
+        guard ["normal", "compatible"].contains(snapshot.facts["fex_status"] ?? "") else {
+            throw CoreError(snapshot.facts["fex_reason"] ?? "FEX_RUNTIME_FAILED")
+        }
+    }
+    static let runtimeProbe = #"""
+import struct,tempfile,platform
+root=pathlib.Path.home()/'.local/share/Steam/steamapps/common/FEX-Emu'
+exe=root/'usr/bin/FEX'
+def check():
+ if pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip()!=EXPECTED_BOOT:return {'reason':'TARGET_CHANGED'}
+ if not exe.is_file():return {'reason':'FEX_MISSING'}
+ if not os.access(exe,os.X_OK):return {'reason':'FEX_NOT_EXECUTABLE'}
+ if platform.machine() not in ['aarch64','arm64'] or not elf_arm64(exe):return {'reason':'FEX_ARCHITECTURE'}
+ if not (root/'emulator.json').is_file():return {'reason':'FEX_INTEGRATION_MISSING'}
+ tree=fingerprint(inventory(root))
+ result={'preflight':True,'tree':tree}
+ if not EXPECTED_TREE:return result
+ if tree!=EXPECTED_TREE:return {'reason':'FEX_CHANGED'}
+ # Static x86-64 ELF with one load segment and exit(42), requiring no x86 libc.
+ code=bytes.fromhex('b83c000000bf2a0000000f05')
+ ident=b'\x7fELF\x02\x01\x01'+bytes(9)
+ header=struct.pack('<16sHHIQQQIHHHHHH',ident,2,62,1,0x400078,64,0,0,64,56,1,0,0,0)
+ segment=struct.pack('<IIQQQQQQ',1,5,0,0x400000,0x400000,120+len(code),120+len(code),4096)
+ with tempfile.TemporaryDirectory(prefix='hd2-fex-probe-') as d:
+  test=pathlib.Path(d)/'probe';test.write_bytes(header+segment+code);test.chmod(0o700)
+  env=dict(os.environ,FEX_DISKCACHE='0',FEX_SILENTLOG='1')
+  try:
+   with open(os.devnull,'wb') as sink:
+    process=subprocess.Popen([str(exe),str(test)],stdout=sink,stderr=sink,env=env,start_new_session=True)
+    try:status=process.wait(timeout=12)
+    except subprocess.TimeoutExpired:
+     os.killpg(process.pid,signal.SIGKILL);process.wait();return {'reason':'FEX_TIMEOUT'}
+  except OSError:return {'reason':'FEX_DEPENDENCY_FAILED'}
+ if fingerprint(inventory(root))!=tree:return {'reason':'FEX_CHANGED'}
+ if pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip()!=EXPECTED_BOOT:return {'reason':'TARGET_CHANGED'}
+ if status!=42:return {'reason':'FEX_RUNTIME_FAILED'}
+ result['runtime']=True
+ return result
+try:print(json.dumps(check()))
+except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
+"""#
     static func installedDigest(_ record: [String: JSONValue], snapshot: DeploymentSnapshot) -> String? {
         guard record["built"]?.boolean == true, record["audit"]?.object["ready"]?.boolean == true,
               record["audit"]?.object["source"]?.text == "87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8",
               record["audit"]?.object["patch"]?.text == "85999c4f3a82063c66095d5315a661f0eed8369ed7b4b03191ed5dc8521d7926",
-              record["audit"]?.object["executable_sha256"]?.text == LaunchService.verifiedFEX,
+              let executable = record["audit"]?.object["executable_sha256"]?.text, ApprovedArtifact.hash(executable),
               record["installation"]?.object["verified"]?.boolean == true,
               let digest = record["installation"]?.object["installed_manifest"]?.text, ApprovedArtifact.hash(digest) else { return nil }
         for key in ["fx_path", "machine_id", "fx_executable_sha256", "ssh_connection"] {
@@ -443,6 +541,9 @@ def digest(p):
  with open(p,'rb') as f:
   for b in iter(lambda:f.read(1048576),b''):h.update(b)
  return h.hexdigest()
+def elf_arm64(p):
+ with p.open("rb") as f:h=f.read(64)
+ return len(h)==64 and h[:6]==b"\x7fELF\x02\x01" and int.from_bytes(h[18:20],"little")==183
 def safe(p):
  for x in [p,*p.parents]:
   if x.is_symlink():fail('UNSAFE_PATH')
@@ -591,8 +692,8 @@ try:
    if verified:build=p.get('build',{})
   exe=stage/'usr/bin/FEX'
   actual=digest(exe) if exe.is_file() and not exe.is_symlink() else ''
-  # An unfamiliar build is an audit failure, never an automatically approved replacement.
-  ready=verified and actual==EXPECTED and bool(tree) and bool(exe.stat().st_mode&0o111)
+  # Review the pinned build provenance, complete inventory and ELF architecture.
+  ready=verified and bool(actual) and bool(tree) and bool(exe.stat().st_mode&0o111) and elf_arm64(exe)
   tail=''
   log=work/'build.log';safe(log)
   if log.is_file():

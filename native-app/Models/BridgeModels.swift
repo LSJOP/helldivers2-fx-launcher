@@ -46,11 +46,15 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
     func message(_ zh: Bool) -> String { message(zh ? "zh-CN" : "en") }
     func message(_ language: String) -> String {
         switch code {
+        case "FEX_CONFIRMATION_REQUIRED": return NativeStrings.text("ui.fex.unverified", language: language)
+        case "FEX_MISSING", "FEX_NOT_EXECUTABLE", "FEX_ARCHITECTURE", "FEX_INTEGRATION_MISSING", "FEX_CHANGED", "FEX_RUNTIME_FAILED", "FEX_DEPENDENCY_FAILED", "FEX_TIMEOUT", "FEX_INTEGRITY_FAILED":
+            return NativeStrings.text("ui.fex.repair", language: language)
         case "TIMEOUT": return NativeStrings.text("ui.344", language: language)
         case "CANCELLED": return NativeStrings.text("ui.345", language: language)
         case "PYTHON_UNAVAILABLE": return NativeStrings.text("ui.240", language: language)
         case "BRIDGE_EXITED": return NativeStrings.text("ui.336", language: language)
         case "PROTOCOL_ERROR", "PROTOCOL_MISMATCH": return NativeStrings.text("ui.347", language: language)
+        case "CONFIG_CHANGED": return NativeStrings.text("ui.integrated.027", language: language)
         case "CORE_UNAVAILABLE": return NativeStrings.text("ui.082", language: language)
         case "OUTPUT_LIMIT": return NativeStrings.text("ui.350", language: language)
         case "NOT_IMPLEMENTED": return NativeStrings.text("ui.356", language: language)

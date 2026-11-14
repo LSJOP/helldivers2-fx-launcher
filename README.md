@@ -12,7 +12,7 @@ HD2FXNative is an unofficial community launcher and management tool for Apple Si
 
 ### Screenshots
 
-These are real windows from different historical Debug builds, **not final v1.0.0 screenshots**. Final captures must be taken, reviewed and replaced after the final build; see [capture provenance](docs/images/README.md).
+These are real windows from the integration Debug build, **not final v1.0.0 screenshots**. Final captures must be taken, reviewed and replaced after the final build; see [capture provenance](docs/images/README.md).
 
 | Dashboard | First-Run Setup |
 | --- | --- |
@@ -26,7 +26,7 @@ These are real windows from different historical Debug builds, **not final v1.0.
 
 ### Download and installation
 
-**Release target: HD2FXNative v1.0.0.** GitHub has no published release. The inspected local App is version `0.1.0`, arm64 and ad hoc signed without a Developer ID. It has no verified Apple notarization. Gatekeeper may block a downloaded copy. The public DMG and its SHA-256 are pending. [GitHub Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**Release target: HD2FXNative v1.0.0.** GitHub has no published release. The local arm64 acceptance candidate is version `1.0.0` (build `2026111401`), ad hoc signed without Developer ID or Apple notarization. Game and complete upgrade acceptance remain pending. Gatekeeper may block a downloaded copy. The public DMG and its SHA-256 are pending. [GitHub Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
 
 After publication, install on an Apple Silicon Mac running macOS 14 or later.
 
@@ -43,14 +43,18 @@ For source builds, see the [development guide](docs/NATIVE_DEVELOPMENT.md).
 
 - Dashboard starts the guarded HELLDIVERS 2 launch workflow. FX Manager inspects the selected FX installation and exposes supported FX/Steam actions.
 - First-Run Setup checks Guest identity, runtime capabilities and component integrity. Approved configuration can install the pinned Proton-JE package, select a verified Steam compatibility tool and merge launch options while retaining custom arguments. Detection is read-only. Deployment and recovery require their own checks.
-- Environment reports FEX and Proton-JE evidence. SSH and sudo credentials can be reused separately in process memory within the verified target/session.
+- Environment reports FEX and Proton-JE evidence. SSH and sudo credentials are independently reused for a verified target/session, with installation-local encrypted storage for restart reuse.
 - The Swift App provides seven native pages, logs, scoped performance controls and ten interface languages. Optional SteamOS installation steps require Python 3.
-- Settings includes Sparkle update integration. Published update service and end-to-end installation have yet to be verified.
+- Settings provides signed update checks and verified downloads. The integration candidate binds archive SHA-256, Ed25519 and ZIP path checks to the installation target. Public service configuration and real upgrade/recovery acceptance remain pending.
+
+The v1.0.0 integration candidate checks installed FEX files, execute permission, arm64 architecture and a bounded x86-64 execution probe. Unknown provenance requires confirmation tied to the current installation and file-tree fingerprint. A different fixed hash alone does not reject the candidate. This workflow has passed isolated checks; live acceptance remains pending.
 
 ### Known Issues
 
+- Current integration live acceptance passed setup checks but game startup failed. Steam starts a wrapper that exits before the game process appears. RootFS warnings were observed, but changing that setting did not fix launch and was rolled back. Isolated Wine execution passed. The Proton/EAC launch failure is still under diagnosis.
+
 - FX and SteamOS compatibility depends on the selected build and runtime evidence. The current launch path has a recorded proxy mismatch. Safe FX stop/restart remains unavailable.
-- A real Guest built an experimental FEX candidate. Its executable hash failed deployment review. Candidate installation, recovery and game compatibility remain unverified. Alternate Proton-JE builds and fresh SteamOS deployment require validation.
+- A real Guest built an experimental FEX candidate. Its executable hash failed deployment review. The historical fixed-hash deployment rejection is being replaced in the integration candidate. Candidate installation, recovery and game compatibility remain unverified. Alternate Proton-JE builds and fresh SteamOS deployment require validation.
 - A historical Native build reached the game menu/ship on November 5. Final-package launch, single-player missions, EAC and multiplayer remain separately unverified.
 - Public distribution, Gatekeeper handling and signed automatic updates are pending. The inspected local App uses ad hoc signing, without verified notarization.
 - [Acceptance report](docs/acceptance/RELEASE_READINESS_REPORT.md) · [Known issues detail](docs/acceptance/KNOWN_ISSUES.md) · [First-run acceptance](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md) · [Update integration](docs/NATIVE_UPDATES.md) · [Performance limits](docs/GAME_PERFORMANCE.md)

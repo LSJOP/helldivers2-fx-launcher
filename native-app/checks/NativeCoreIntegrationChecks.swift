@@ -77,6 +77,12 @@ struct NativeCoreIntegrationChecks {
 
         let config = run("read_configuration")
         ok(config.result["revision"]?.text != nil, "read_configuration revision")
+        ok(config.result["credential_policy"]?.text == "verified_local_encrypted", "credential policy describes verified local encrypted storage")
+
+        // Sudo diagnostics must reject a fixture FX that has no matching owned
+        // process/listener before attempting any SSH or sudo authentication.
+        let unownedSudo = run("test_guest_sudo", ["confirmed": .bool(true), "fx_path": .string(fixture.path)])
+        ok(["FX_INSTANCE_MISMATCH", "FX_IDENTITY_UNVERIFIED"].contains(unownedSudo.error ?? ""), "sudo diagnostic rejects unowned FX before authentication")
 
         // Launch orchestration fails closed without a selection (does not start anything).
         let launchNoFX = run("launch_game", ["confirmed": .bool(true), "fx_path": .string("")])

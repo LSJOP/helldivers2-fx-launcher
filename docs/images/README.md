@@ -45,3 +45,7 @@ Build 2026110410: real isolated Debug windows for zh-CN/en First-Run Setup, Dash
 2026-11-14 provenance gate update: referenced screenshots require App version, build, capture bundle identifier, timezone-aware capture time and a source commit (per-image or manifest baseline). Missing provenance fails validation. Final v1.0.0 captures remain pending.
 
 2026-11-14 来源门禁更新：README 引用截图必须包含 App 版本、构建号、采集包标识、带时区的时间和来源提交（逐图记录或清单基线）。缺失即校验失败。v1.0.0 正式构建截图仍待采集。
+
+2026-11-14 integration review: seven pages per language were recaptured from the real integration Debug build (08e58e4 plus FEX changes subsequently committed as 34fff90). Correct-language page pairs were reviewed together. No Guest action or credential autoload occurred. Final v1.0.0 Release captures remain pending.
+
+2026-11-14 整合审核：两种语言各七页已从真实整合 Debug 构建重拍（08e58e4 加随后提交为 34fff90 的 FEX 改动），逐对检查语言。未操作 Guest 或自动加载凭据。正式 Release 截图仍待完成。

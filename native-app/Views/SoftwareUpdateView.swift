@@ -32,6 +32,12 @@ struct SoftwareUpdateView: View {
                     TacticalButton(title: text(.downloadInstall), symbol: "arrow.down.app", disabledReason: manager.canInstall ? nil : text(.trustBlocked)) { manager.installWithSparkle() }
                 }
             }
+            if manager.status == .downloading {
+                ProgressView(value: manager.downloadProgress)
+                if let progress = manager.downloadProgress {
+                    Text(progress, format: .percent.precision(.fractionLength(0)))
+                }
+            }
             if manager.cachedArchive != nil { Text(text(.downloaded)) }
             if !manager.isConfigured { TacticalWarningBanner(text: text(.trustBlocked)) }
             if let code = manager.errorCode { DisclosureGroup(text(.failed)) { Text(code).font(TacticalTypography.log) } }

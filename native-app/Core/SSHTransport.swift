@@ -6,6 +6,29 @@ import Darwin
 final class SSHTransport {
     // Multiplexed authorization belongs to this App process, never another copy/restart.
     private static let namespace = "\(getpid())-" + String(UUID().uuidString.prefix(8))
+    // Keep each App process's Steam API tunnel separate from other running copies.
+    // OpenSSH still rejects a bind race and endpointIdentity verifies its ownership.
+    private static let automaticCDPPort: Int = {
+        let fd = socket(AF_INET, SOCK_STREAM, 0)
+        guard fd >= 0 else { return 18094 }
+        defer { close(fd) }
+        var address = sockaddr_in()
+        address.sin_family = sa_family_t(AF_INET)
+        address.sin_addr.s_addr = inet_addr("127.0.0.1")
+        let bound = withUnsafePointer(to: &address) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                bind(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        guard bound == 0 else { return 18094 }
+        var length = socklen_t(MemoryLayout<sockaddr_in>.size)
+        let result = withUnsafeMutablePointer(to: &address) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                getsockname(fd, $0, &length)
+            }
+        }
+        return result == 0 ? Int(UInt16(bigEndian: address.sin_port)) : 18094
+    }()
     private static let ownershipLock = NSLock()
     private static var owned: Set<String> = []
     private static var reconnected: [String: Settings] = [:]
@@ -39,7 +62,8 @@ final class SSHTransport {
         let host = ssh["host"]?.text ?? "127.0.0.1"
         let port = ssh["port"]?.integer ?? 2222
         let username = ssh["username"]?.text ?? "steamos"
-        let cdp = ssh["cdp_local_port"]?.integer ?? 18094
+        let configuredCDP = ssh["cdp_local_port"]?.integer ?? 18094
+        let cdp = configuredCDP == 18094 ? automaticCDPPort : configuredCDP
         let encoded = CoreJSON.encode(.object(["branch": .number(2), "host": .string(host),
                                                "port": .number(Double(port)), "user": .string(username),
                                                "cdp": .number(Double(cdp))]))
