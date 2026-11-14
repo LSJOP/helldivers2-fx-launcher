@@ -1,7 +1,7 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.20** · Updated: **2026-11-14**.
-Change: consolidate permanent rules and remove contradictory historical task instructions. Instruction version is independent of App version.
+Instruction version: **v1.2.21** · Updated: **2026-11-14**.
+Change: record main integration of AES-GCM credential persistence; retain existing authentication and storage safeguards. Instruction version is independent of App version.
 
 ## Authority and task lifecycle
 
@@ -20,7 +20,7 @@ Change: consolidate permanent rules and remove contradictory historical task ins
 - Preserve allowlists, canonical executable/signature/hash checks, configuration revision, process/Guest boot identity binding, duplicate-task guards, cancellation and bounded/redacted logs. Unknown or file-present is never success. Refresh remains read-only. Credentials, sudo, Guest/game/network writes require the appropriate explicit user action and reviewed target/change consent, backup and recovery.
 - Use isolated fixtures/Mocks for development. No real FX/FEX/FEXRootFS/Proton/Steam or macOS network changes, game launch or destructive cleanup unless explicitly authorized. Never replace unknown components, weaken host keys/sudoers or use forced VM termination as safe stop/restart.
 - FEX readiness requires helper/integration/integrity and runtime capability evidence, not existence alone. Preserve official FX FEX. Restore only identity-bound owned changes with integrity receipts and conflict checks.
-- SessionCredentialManager owns independent SSH/sudo secrets. Main currently uses memory; AES-GCM persistence is an unmerged candidate, not a reason to add Keychain access. Candidate storage uses installation-random authenticated encryption, per-target/per-role binding, private directories/files, durable rejected/forgotten markers and visible errors. Never store secrets in source, bundle, defaults, argv, environment or logs; actual challenge plus verified identity is required before saving. No automatic legacy credential migration/deletion.
+- SessionCredentialManager owns independent SSH/sudo secrets. Main includes optional AES-GCM persistence alongside session memory; this does not authorize Keychain access. Persistent storage uses installation-random authenticated encryption, per-target/per-role binding, private directories/files, durable rejected/forgotten markers and visible errors. Never store secrets in source, bundle, defaults, argv, environment or logs; actual challenge plus verified identity is required before saving. No automatic legacy credential migration/deletion.
 - Launcher updates use pinned Sparkle and project-trusted Ed25519/SHA-256 verification, HTTPS, safe archive paths, verified metadata binding and worker-aware relaunch. No FX/Guest/game updates through Sparkle. Unconfigured service stays visibly unconfigured, never “up to date.” Do not disable verification to make installation work. Developer ID/notarization and project signature trust are separate concerns.
 
 ## UI, localization and documentation

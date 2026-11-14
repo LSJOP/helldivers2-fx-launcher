@@ -6,6 +6,12 @@
 
 [简体中文](README.zh-CN.md) | [English](README.md)
 
+### [🟨 ⬇️ Download HD2FXNative — Latest Stable](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)
+
+**🟨 Stable Release · v1.0.0** · **macOS · Apple Silicon / arm64**
+
+**[⬇️ Download DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)** · [All Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+
 ## English
 
 HD2FXNative is an unofficial community launcher and management tool for Apple Silicon Macs. Built with SwiftUI and a native core, it helps users inspect FX, configure the runtime environment and manage game performance settings.
@@ -14,7 +20,7 @@ FX 1.9.9 test-Guest repair now reaches the game through the GUI with the histori
 
 ### Screenshots
 
-These are real windows from the integration Debug build, **not final v1.0.0 screenshots**. Final captures must be taken, reviewed and replaced after the final build; see [capture provenance](docs/images/README.md).
+These are real windows from different historical Debug builds, **not final v1.0.0 screenshots**. Final captures must be taken, reviewed and replaced after the final build; see [capture provenance](docs/images/README.md).
 
 | Dashboard | First-Run Setup |
 | --- | --- |
@@ -26,11 +32,17 @@ These are real windows from the integration Debug build, **not final v1.0.0 scre
 | Logs | |
 | ![Logs](docs/images/en/logs.png) | |
 
-### Download and installation
+### Features
 
-**Release target: HD2FXNative v1.0.0.** GitHub has no published release. The local arm64 acceptance candidate is version `1.0.0` (build `2026111403`), ad hoc signed without Developer ID or Apple notarization. Game and complete upgrade acceptance remain pending. Gatekeeper may block a downloaded copy. The public DMG and its SHA-256 are pending. [GitHub Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+- Dashboard starts the guarded HELLDIVERS 2 launch workflow. FX Manager inspects the selected FX installation and exposes supported FX/Steam actions.
+- First-Run Setup checks Guest identity, runtime capabilities and component integrity. Approved configuration can install the pinned Proton-JE package, select a verified Steam compatibility tool and merge launch options while retaining custom arguments. Detection is read-only. Deployment and recovery require their own checks.
+- Environment reports FEX and Proton-JE evidence. SSH and sudo credentials can be stored separately in encrypted local storage for a verified target; reuse after restart still requires real-world acceptance.
+- The Swift App provides seven native pages, logs, scoped performance controls and ten interface languages. Optional SteamOS installation steps require Python 3.
+- Settings includes Sparkle update integration. Published update service and end-to-end installation have yet to be verified.
 
-After publication, install on an Apple Silicon Mac running macOS 14 or later.
+### Installation
+
+Current App: `1.0.0` (build `2026111403`), macOS 14+ Apple Silicon arm64. Ad-hoc signed; no Apple Developer ID signature or Apple notarization. Gatekeeper may block the download. Verify the [SHA-256 file](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg.sha256) before opening. If blocked, use Privacy & Security → Open Anyway for the verified App.
 
 1. Download the macOS arm64 DMG from the published release.
 2. Run `shasum -a 256 <downloaded-dmg>` and compare the result with the SHA-256 in the release notes. Open the DMG after they match.
@@ -41,27 +53,20 @@ After publication, install on an Apple Silicon Mac running macOS 14 or later.
 
 For source builds, see the [development guide](docs/NATIVE_DEVELOPMENT.md).
 
-### Features
-
-- Dashboard starts the guarded HELLDIVERS 2 launch workflow. FX Manager inspects the selected FX installation and exposes supported FX/Steam actions.
-- First-Run Setup checks Guest identity, runtime capabilities and component integrity. Approved configuration can install the pinned Proton-JE package, select a verified Steam compatibility tool and merge launch options while retaining custom arguments. Detection is read-only. Deployment and recovery require their own checks.
-- Environment reports FEX and Proton-JE evidence. SSH and sudo credentials are independently reused for a verified target/session, with installation-local encrypted storage for restart reuse.
-- The Swift App provides seven native pages, logs, scoped performance controls and ten interface languages. Optional SteamOS installation steps require Python 3.
-- Settings provides signed update checks and verified downloads. The integration candidate binds archive SHA-256, Ed25519 and ZIP path checks to the installation target. Public service configuration and real upgrade/recovery acceptance remain pending.
-
-The v1.0.0 integration candidate checks installed FEX files, execute permission, arm64 architecture and a bounded x86-64 execution probe. Unknown provenance requires confirmation tied to the current installation and file-tree fingerprint. A different fixed hash alone does not reject the candidate. This workflow has passed isolated checks; live acceptance remains pending.
-
 ### Known Issues
 
-- Current integration live acceptance passed setup checks but game startup failed. Steam starts a wrapper that exits before the game process appears. RootFS warnings were observed, but changing that setting did not fix launch and was rolled back. Isolated Wine execution passed. The Proton/EAC launch failure is still under diagnosis.
+Release scope: shared launch/retry fixes and local encrypted SSH/sudo storage are included in this artifact. FX 1.9.9 test GUI launch and user-confirmed menu/ship are recorded. Single-player, EAC/multiplayer, fresh deployments and full Sparkle installation/rollback remain unverified. The bundled public updater is disabled/unconfigured; use the Release DMG for manual installation. Production FX 1.9.12 was only inspected offline.
+
 
 - FX and SteamOS compatibility depends on the selected build and runtime evidence. The current launch path has a recorded proxy mismatch. Safe FX stop/restart remains unavailable.
-- A real Guest built an experimental FEX candidate. Its executable hash failed deployment review. The historical fixed-hash deployment rejection is being replaced in the integration candidate. Candidate installation, recovery and game compatibility remain unverified. Alternate Proton-JE builds and fresh SteamOS deployment require validation.
+- A real Guest built an experimental FEX candidate. Its executable hash failed deployment review. Candidate installation, recovery and game compatibility remain unverified. Alternate Proton-JE builds and fresh SteamOS deployment require validation.
 - A historical Native build reached the game menu/ship on November 5. Final-package launch, single-player missions, EAC and multiplayer remain separately unverified.
-- Public distribution, Gatekeeper handling and signed automatic updates are pending. The inspected local App uses ad hoc signing, without verified notarization.
+- Gatekeeper handling and signed automatic updates remain pending. The inspected local App uses ad hoc signing, without verified notarization.
 - [Acceptance report](docs/acceptance/RELEASE_READINESS_REPORT.md) · [Known issues detail](docs/acceptance/KNOWN_ISSUES.md) · [First-run acceptance](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md) · [Update integration](docs/NATIVE_UPDATES.md) · [Performance limits](docs/GAME_PERFORMANCE.md)
 
 ### Changelog
+
+[v1.0.0 — 2026-11-14](https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/v1.0.0) · Stable release, build `2026111403`. See [release notes](CHANGELOG.md).
 
 Unreleased changes include Dashboard launch, first-run Proton-JE verification and Steam configuration, experimental FEX review and recovery, and SSH authentication fixes. See the [changelog](CHANGELOG.md) and [original launcher history](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script).
 
@@ -73,8 +78,4 @@ This community project is not affiliated with the makers of HELLDIVERS 2; names 
 
 User and developer guides, architecture notes and historical reports are available in the [documentation index](docs/README.md).
 
-Consolidation candidate: shared launch/recovery, encrypted role-separated credentials, localized branding and consistent update feeds are integrated on `integration/native-app-consolidation`. Screenshot provenance and live acceptance remain pending.
-
 Development resumes from [current status](docs/DEVELOPMENT_STATUS.md) and [handoff](docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md), with main source and AGENTS.md as authority. Unmerged candidates and live acceptance are tracked separately.
-
-The consolidation candidate revalidates cached update integrity at installation. Screenshot acceptance and isolated installer rollback/relaunch acceptance remain incomplete.
