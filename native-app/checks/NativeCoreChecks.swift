@@ -38,6 +38,13 @@ func runChecks() {
     fexRecord["audit"] = .object(["ready": .bool(true), "source": .string("87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8"), "patch": .string("85999c4f3a82063c66095d5315a661f0eed8369ed7b4b03191ed5dc8521d7926"), "executable_sha256": .string(LaunchService.verifiedFEX)])
     fexRecord["installation"] = .object(["verified": .bool(true), "installed_manifest": .string(String(repeating: "d", count: 64))])
     check(FEXWorkflow.installedDigest(fexRecord, snapshot: fexSnapshot) != nil, "FEX full installed manifest has bound build approval")
+    let reviews = CoreFS.nativeData().appendingPathComponent("fex-reviews", isDirectory: true)
+    try! CoreFS.ensurePrivateDirectory(reviews)
+    try! JSONEncoder().encode(fexRecord).write(to: reviews.appendingPathComponent("review.json"))
+    check(FEXWorkflow.verifyInstalled(tree: String(repeating: "d", count: 64), snapshot: fexSnapshot),
+          "review matches the exact tree selected for the runtime probe")
+    check(!FEXWorkflow.verifyInstalled(tree: String(repeating: "e", count: 64), snapshot: fexSnapshot),
+          "a different preflight tree cannot inherit an installed review")
     var wrongFEXRecord = fexRecord; wrongFEXRecord["machine_id"] = .string(String(repeating: "e", count: 32))
     check(FEXWorkflow.installedDigest(wrongFEXRecord, snapshot: fexSnapshot) == nil, "FEX approval never crosses Guest identity")
     wrongFEXRecord = fexRecord; wrongFEXRecord["built"] = .bool(false)
