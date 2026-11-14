@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import CryptoKit
 
@@ -199,6 +200,12 @@ final class ProgressRecorder: @unchecked Sendable {
         try await failure(.integrity, "install cache symlink is rejected") {
             try service.verifyForInstallation(install, archive: installCache)
         }
+        let fifo = directory.appendingPathComponent("install-cache-fifo")
+        guard mkfifo(fifo.path, 0o600) == 0 else { throw POSIXError(.EIO) }
+        try await failure(.integrity, "install cache FIFO is rejected without waiting for a writer") {
+            try service.verifyForInstallation(install, archive: fifo)
+        }
+
         try FileManager.default.removeItem(at: installCache)
         try check(true, "signed schema 2 archive passes digest, archive signature and path preflight")
         let unsafeZIP = Data(base64Encoded: "UEsDBBQAAAAIANYWbl3uQOUFCQAAAAcAAAAcAAAASEQyRlhOYXRpdmUuYXBwLy4uLy4uL2VzY2FwZUvLrCgpLUoFAFBLAQIUAxQAAAAIANYWbl3uQOUFCQAAAAcAAAAcAAAAAAAAAAAAAACAAQAAAABIRDJGWE5hdGl2ZS5hcHAvLi4vLi4vZXNjYXBlUEsFBgAAAAABAAEASgAAAEMAAAAAAA==")!

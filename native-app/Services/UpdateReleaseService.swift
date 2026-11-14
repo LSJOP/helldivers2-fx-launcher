@@ -220,7 +220,7 @@ struct NativeReleaseService {
     func verifyForInstallation(_ candidate: NativeUpdateCandidate, archive: URL) throws {
         guard candidate.signatureVerified, candidate.manifest.schema == 2,
               let publicKey, publicKey.count == 32 else { throw NativeUpdateFailure.unconfigured }
-        let fd = open(archive.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+        let fd = open(archive.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK)
         guard fd >= 0 else { throw NativeUpdateFailure.integrity }
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
         defer { try? handle.close() }
@@ -229,7 +229,7 @@ struct NativeReleaseService {
               info.st_size == candidate.manifest.length, info.st_size <= 536_870_912 else {
             throw NativeUpdateFailure.integrity
         }
-        let bytes = try handle.readToEnd() ?? Data()
+        let bytes = try handle.read(upToCount: Int(info.st_size) + 1) ?? Data()
         guard bytes.count == candidate.manifest.length,
               SHA256.hash(data: bytes).map({ String(format: "%02x", $0) }).joined() == candidate.manifest.sha256 else {
             throw NativeUpdateFailure.integrity
@@ -258,7 +258,7 @@ struct NativeReleaseService {
         // Pin source and destination with file descriptors. Never follow a transport-supplied
         // symlink or rename an unchecked path after hashing. The installer must reverify its
         // own private copy: returning a path cannot protect it against later replacement.
-        let sourceFD = open(file.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+        let sourceFD = open(file.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK)
         guard sourceFD >= 0 else { throw NativeUpdateFailure.integrity }
         let source = FileHandle(fileDescriptor: sourceFD, closeOnDealloc: true)
         defer { try? source.close() }
