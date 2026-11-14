@@ -128,3 +128,34 @@ struct EnvironmentWorkflow {
     var active: Bool { ![.idle, .completed, .failed, .cancelled].contains(phase) }
     var fraction: Double { phase == .completed ? 1 : min(Double(completedSteps) / Double(totalSteps), 0.99) }
 }
+
+// Scope each LED to the fact it actually observes. No EAC/multiplayer success probe exists.
+struct DashboardStatus: Equatable {
+    enum Tone { case success, working, failed, unknown }
+    let tone: Tone
+    let textKey: String
+    static func resolve(key: String, stage: LaunchStage?, session: LaunchSession,
+                        workflow: EnvironmentWorkflow, evidence: [String: JSONValue], stale: Bool) -> Self {
+        let stages: [LaunchStage] = key == "fx_host_running"
+            ? [.startingFX, .checkingFXEntry, .waitingForFXReady, .verifyingFXIdentity]
+            : stage.map { [$0] } ?? []
+        let processing = session.running && stages.contains(session.current)
+            || (key == "fx_host_running" && workflow.phase == .startingFX)
+            || (key == "ssh_connected" && workflow.phase == .connecting)
+        if processing { return Self(tone: .working, textKey: "ui.157") }
+        guard !stale else { return Self(tone: .unknown, textKey: "ui.368") }
+        if stages.contains(where: { session.evidence[$0] == "failed" }) {
+            return Self(tone: .failed, textKey: "ui.125")
+        }
+        switch key {
+        case "ssh_connected" where evidence[key]?.boolean == true && evidence["guest_ready"]?.boolean == true:
+            return Self(tone: .success, textKey: "ui.dashboard.connected")
+        case "fx_host_running" where evidence[key]?.boolean == true:
+            return Self(tone: .success, textKey: "ui.dashboard.process")
+        case "steam_running" where evidence[key]?.boolean == true || (evidence["steam_process_count"]?.integer ?? 0) > 0:
+            return Self(tone: .success, textKey: "ui.dashboard.process")
+        default:
+            return Self(tone: .unknown, textKey: "ui.368")
+        }
+    }
+}

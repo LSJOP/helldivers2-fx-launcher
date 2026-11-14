@@ -10,7 +10,7 @@ v1.0.0 (2026111403) is published. Game and complete update acceptance remain lim
 
 - Align the displayed app name with system language: Simplified and Traditional Chinese use their respective names, and other languages use HD2 FX Launcher. The internal project and data identities remain unchanged.
 
-- Refine dashboard status indicators and show completed-step progress, with details folded by default. Final screenshot and runtime acceptance remain pending.
+- Retain the five Dashboard cards with evidence-bound green/yellow/red/gray indicators and completed-step progress, with details folded by default. Verify the isolated status matrix and refresh reviewed English/Chinese Debug screenshots. EAC/multiplayer success remains unverified; no Release or DMG replacement.
 
 The development entries below retain earlier stage evidence; the published release status is recorded in v1.0.0.
 

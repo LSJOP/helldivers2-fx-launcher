@@ -594,7 +594,6 @@
   "ui.fex.unverified": "FEX origin unverified",
   "ui.brand.name": "HD2 FX Launcher",
   "ui.dashboard.connected": "Connected",
-  "ui.dashboard.loaded": "Loaded",
   "ui.dashboard.process": "Process found"
  },
  "zh-CN": {
@@ -1192,7 +1191,6 @@
   "ui.fex.unverified": "FEX 来源未验证",
   "ui.brand.name": "绝地潜兵2 FX启动器",
   "ui.dashboard.connected": "已连接",
-  "ui.dashboard.loaded": "已加载",
   "ui.dashboard.process": "已发现进程"
  },
  "ja": {
@@ -1790,7 +1788,6 @@
   "ui.fex.unverified": "FEX の出所は未検証",
   "ui.brand.name": "HD2 FX Launcher",
   "ui.dashboard.connected": "接続済み",
-  "ui.dashboard.loaded": "読み込み済み",
   "ui.dashboard.process": "プロセス検出"
  },
  "ko": {
@@ -2388,7 +2385,6 @@
   "ui.fex.unverified": "FEX 출처 미확인",
   "ui.brand.name": "HD2 FX Launcher",
   "ui.dashboard.connected": "연결됨",
-  "ui.dashboard.loaded": "로드됨",
   "ui.dashboard.process": "프로세스 발견"
  },
  "ru": {
@@ -2986,7 +2982,6 @@
   "ui.fex.unverified": "Источник FEX не проверен",
   "ui.brand.name": "HD2 FX Launcher",
   "ui.dashboard.connected": "Подключено",
-  "ui.dashboard.loaded": "Загружено",
   "ui.dashboard.process": "Процесс найден"
  },
  "es": {
@@ -3584,7 +3579,6 @@
   "ui.fex.unverified": "Origen de FEX sin verificar",
   "ui.brand.name": "HD2 FX Launcher",
   "ui.dashboard.connected": "Conectado",
-  "ui.dashboard.loaded": "Cargado",
   "ui.dashboard.process": "Proceso detectado"
  },
  "de": {
@@ -4182,7 +4176,6 @@
   "ui.fex.unverified": "FEX-Herkunft ungeprüft",
   "ui.brand.name": "HD2 FX Launcher",
   "ui.dashboard.connected": "Verbunden",
-  "ui.dashboard.loaded": "Geladen",
   "ui.dashboard.process": "Prozess gefunden"
  },
  "fr": {
@@ -4780,7 +4773,6 @@
   "ui.fex.unverified": "Provenance FEX non vérifiée",
   "ui.brand.name": "HD2 FX Launcher",
   "ui.dashboard.connected": "Connecté",
-  "ui.dashboard.loaded": "Chargé",
   "ui.dashboard.process": "Processus détecté"
  },
  "pt-BR": {
@@ -5378,7 +5370,6 @@
   "ui.fex.unverified": "Origem do FEX não verificada",
   "ui.brand.name": "HD2 FX Launcher",
   "ui.dashboard.connected": "Conectado",
-  "ui.dashboard.loaded": "Carregado",
   "ui.dashboard.process": "Processo encontrado"
  },
  "zh-TW": {
@@ -5976,7 +5967,6 @@
   "ui.fex.unverified": "FEX 來源未驗證",
   "ui.brand.name": "絕地潛兵2 FX啟動器",
   "ui.dashboard.connected": "已連線",
-  "ui.dashboard.loaded": "已載入",
   "ui.dashboard.process": "已發現行程"
  }
 }

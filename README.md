@@ -20,9 +20,9 @@ FX 1.9.9 test-Guest repair now reaches the game through the GUI with the histori
 
 ### Screenshots
 
-Dashboard screenshot update for the status indicators is pending; the images below are historical Debug captures.
+These real bilingual windows were captured from the integrated Debug source on 2026-11-14 and visually reviewed. They show development changes under Unreleased, **not the published v1.0.0 DMG**; see [capture provenance](docs/images/README.md).
 
-These are real windows from different historical Debug builds, **not final v1.0.0 screenshots**. Final captures must be taken, reviewed and replaced after the final build; see [capture provenance](docs/images/README.md).
+The Dashboard retains five cards: FX, virtual machine, Steam, EAC and multiplayer. Green identifies an observed FX/Steam process or a verified Guest SSH connection; yellow means an active check, red an explicit stage failure, and gray missing or stale evidence. Process detection, completed checks and menu/single-player confirmation do not establish EAC loading or multiplayer success. The isolated status matrix validates display logic; it does not establish live game readiness.
 
 | Dashboard | First-Run Setup |
 | --- | --- |

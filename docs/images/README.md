@@ -1,8 +1,10 @@
 # Localized Native screenshots / 本地化原生截图
 
-The **en/** and **zh-CN/** directories contain real screenshots from historical Debug builds. They predate the localized app-name changes and must not be presented as the current interface. New bilingual captures and visual review are pending. Existing flat PNG names are older historical captures.
+The **en/** and **zh-CN/** directories now contain reviewed real windows from the integrated brand/LED Debug source on 2026-11-14. The capture copy uses a separate bundle identifier, empty runtime and disabled credential autoload. These are Unreleased development screenshots, not screenshots of the published v1.0.0 DMG. Existing flat PNG names remain historical.
 
-The images were captured at different points in development. Individual source, timestamp, build, dimensions and SHA-256 are recorded in [manifest.json](manifest.json); the following notes describe historical sessions, not the current candidate. The manifest retains its previous UI fingerprint until the new screenshots have been captured and reviewed.
+**en/** 与 **zh-CN/** 目录现为 2026-11-14 品牌／状态灯最终整合源码的真实 Debug 窗口，已复核语言、标题换行、五张卡片和敏感信息。采集副本使用独立包标识、空运行目录并禁用凭据自动加载；未执行 Guest 操作。这些图展示未发布开发改动，不代表正式 v1.0.0 DMG。
+
+Individual source baseline, dirty-source marker, capture timestamp, build, dimensions and SHA-256 are recorded in [manifest.json](manifest.json). The reviewed UI fingerprint identifies the exact UI source used for capture. The model matrix is isolated test evidence; the real captured homepage has no verified runtime and correctly displays gray indicators.
 
 Capture uses macOS `screencapture -x -o -l <this App window ID>` after selecting the actual target language/page. PNG bytes are copied unchanged: no AI-generated UI, text overlays, compositing, cropping or resizing. Generated illustration assets are rendered by the real application itself. Visual inspection checked language, primary labels/buttons, sensitive data and viewport boundaries. Scrollable content naturally extends outside the viewport; supplemental captures show the lower performance and update controls.
 
