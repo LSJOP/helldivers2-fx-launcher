@@ -6,9 +6,23 @@
 
 [简体中文](README.zh-CN.md) | [English](README.md)
 
+### [🟨 ⬇️ 下载 HD2FXNative 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)
+
+**🟨 Stable Release · v1.0.0** · **macOS · Apple Silicon / arm64**
+
+**[⬇️ 立即下载 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)** · [查看所有版本](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+
 ## 简体中文
 
 HD2FXNative 是面向 Apple Silicon Mac 的第三方社区启动与管理工具，使用 SwiftUI 和原生核心，帮助用户检查 FX 环境、配置运行环境和管理游戏性能设置。
+
+### 主要功能
+
+- 从总览发起带保护检查的 HELLDIVERS 2 启动流程。FX 管理检查所选 FX 安装并提供受支持的 FX／Steam 操作。
+- 首次运行环境配置检查 Guest 身份、运行能力和组件完整性。经确认后可安装固定版本的 Proton-JE、选择已验证的 Steam 兼容工具，并合并启动参数以保留自定义参数。检测为只读，部署与恢复各有检查条件。
+- 运行环境页面报告 FEX 和 Proton-JE 的检测依据。SSH 和 sudo 凭据可分别在已验证目标及会话的进程内存中复用。
+- Swift App 提供七个原生页面、日志、限定范围的性能设置和十种界面语言。SteamOS 内的可选安装步骤需要 Python 3。
+- 设置集成 Sparkle 更新功能。公开更新服务和端到端安装仍待验证。
 
 ### 软件截图
 
@@ -24,9 +38,7 @@ HD2FXNative 是面向 Apple Silicon Mac 的第三方社区启动与管理工具�
 | 日志 | |
 | ![日志](docs/images/zh-CN/logs.png) | |
 
-### 下载与安装
-
-**[下载 HD2FXNative v1.0.0 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)** · [正式稳定版 Release](https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/v1.0.0)
+### 安装说明
 
 当前 App：`1.0.0`（构建 `2026111403`），适用于 macOS 14+ Apple Silicon arm64。采用 ad-hoc 签名，无 Apple Developer ID 签名，未经 Apple 公证。Gatekeeper 可能拦截下载副本；打开前核对 [SHA-256 文件](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg.sha256)。若被拦截，对已核验 App 使用「隐私与安全性 → 仍要打开」。
 
@@ -38,14 +50,6 @@ HD2FXNative 是面向 Apple Silicon Mac 的第三方社区启动与管理工具�
 6. 在总览点击「启动 HELLDIVERS 2」。
 
 从源码构建请参阅[开发指南](docs/NATIVE_DEVELOPMENT.md)。
-
-### 主要功能
-
-- 从总览发起带保护检查的 HELLDIVERS 2 启动流程。FX 管理检查所选 FX 安装并提供受支持的 FX／Steam 操作。
-- 首次运行环境配置检查 Guest 身份、运行能力和组件完整性。经确认后可安装固定版本的 Proton-JE、选择已验证的 Steam 兼容工具，并合并启动参数以保留自定义参数。检测为只读，部署与恢复各有检查条件。
-- 运行环境页面报告 FEX 和 Proton-JE 的检测依据。SSH 和 sudo 凭据可分别在已验证目标及会话的进程内存中复用。
-- Swift App 提供七个原生页面、日志、限定范围的性能设置和十种界面语言。SteamOS 内的可选安装步骤需要 Python 3。
-- 设置集成 Sparkle 更新功能。公开更新服务和端到端安装仍待验证。
 
 ### 已知问题
 

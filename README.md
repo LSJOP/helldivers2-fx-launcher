@@ -6,9 +6,23 @@
 
 [简体中文](README.zh-CN.md) | [English](README.md)
 
+### [🟨 ⬇️ Download HD2FXNative — Latest Stable Release](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)
+
+**🟨 Stable Release · v1.0.0** · **macOS · Apple Silicon / arm64**
+
+**[⬇️ Download DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)** · [All Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+
 ## English
 
 HD2FXNative is an unofficial community launcher and management tool for Apple Silicon Macs. Built with SwiftUI and a native core, it helps users inspect FX, configure the runtime environment and manage game performance settings.
+
+### Features
+
+- Dashboard starts the guarded HELLDIVERS 2 launch workflow. FX Manager inspects the selected FX installation and exposes supported FX/Steam actions.
+- First-Run Setup checks Guest identity, runtime capabilities and component integrity. Approved configuration can install the pinned Proton-JE package, select a verified Steam compatibility tool and merge launch options while retaining custom arguments. Detection is read-only. Deployment and recovery require their own checks.
+- Environment reports FEX and Proton-JE evidence. SSH and sudo credentials can be reused separately in process memory within the verified target/session.
+- The Swift App provides seven native pages, logs, scoped performance controls and ten interface languages. Optional SteamOS installation steps require Python 3.
+- Settings includes Sparkle update integration. Published update service and end-to-end installation have yet to be verified.
 
 ### Screenshots
 
@@ -24,9 +38,7 @@ These are real windows from different historical Debug builds, **not final v1.0.
 | Logs | |
 | ![Logs](docs/images/en/logs.png) | |
 
-### Download and installation
-
-**[Download HD2FXNative v1.0.0 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)** · [Stable Release](https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/v1.0.0)
+### Installation
 
 Current App: `1.0.0` (build `2026111403`), macOS 14+ Apple Silicon arm64. Ad-hoc signed; no Apple Developer ID signature or Apple notarization. Gatekeeper may block the download. Verify the [SHA-256 file](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg.sha256) before opening. If blocked, use Privacy & Security → Open Anyway for the verified App.
 
@@ -38,14 +50,6 @@ Current App: `1.0.0` (build `2026111403`), macOS 14+ Apple Silicon arm64. Ad-hoc
 6. Choose **Launch HELLDIVERS 2** on Dashboard.
 
 For source builds, see the [development guide](docs/NATIVE_DEVELOPMENT.md).
-
-### Features
-
-- Dashboard starts the guarded HELLDIVERS 2 launch workflow. FX Manager inspects the selected FX installation and exposes supported FX/Steam actions.
-- First-Run Setup checks Guest identity, runtime capabilities and component integrity. Approved configuration can install the pinned Proton-JE package, select a verified Steam compatibility tool and merge launch options while retaining custom arguments. Detection is read-only. Deployment and recovery require their own checks.
-- Environment reports FEX and Proton-JE evidence. SSH and sudo credentials can be reused separately in process memory within the verified target/session.
-- The Swift App provides seven native pages, logs, scoped performance controls and ten interface languages. Optional SteamOS installation steps require Python 3.
-- Settings includes Sparkle update integration. Published update service and end-to-end installation have yet to be verified.
 
 ### Known Issues
 
