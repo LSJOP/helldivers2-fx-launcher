@@ -101,3 +101,8 @@ GitHub main 的源码、AGENTS.md 和本文件/交接文档是权威。聊天不
 实机重新核对了 FX 1.9.9 的测试盘和 2223 监听，正式盘未打开。代码改用预检返回的同一份文件树指纹匹配安装审核回执，并在运行探针之前重新计算和比对，避免两次独立读取得到不同文件树时错误继承信任。回归用例分别验证匹配与不匹配。现有 FEX 尚无已验证的对应回执，仍需可信上游完整安装清单或经审核的替换件，不能将当前指纹直接加入信任。未重置测试盘或配置，后续 sudo、部署和游戏阶段均未执行。
 
 独立 arm64 ad hoc 候选位于 `HD2-App-Builds/Candidates/FX199-provenance-20261114/Products/HD2FXNative.app`，源码 `d40975e2dbde9ec2803cf43240df1be70cc2da6a`。可执行文件 SHA-256 为 `db3e927fed60a38a81f1b19ca61dc8b18c4d8be797d84e4cbcb995c11ded61cf`。此构建用于验证来源逻辑修订，正式验收交付与构建号升级待完成。
+
+
+### FX 1.9.9 RootFS 启动排查
+
+13:39 启动已生成指向 /usr/share/guestos/fex-mesa 的配置。测试 Guest 证实该目录的 provider 文件与 x86-64 loader 存在。失败子进程在 pressure-vessel 后报告 RootFS 为空。新增 Guest 侧先决条件检查及缺失 loader 回归测试，未改变真实 Guest 配置。下一步使用同一次启动中的容器内环境和实际 FEX 配置定位丢失点，完整游戏验收仍阻塞。此检查仅覆盖 SteamOS 默认 provider，不建立容器内就绪证据。

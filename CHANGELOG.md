@@ -8,6 +8,8 @@ v1.0.0 is the release target. The inspected local arm64 App is `0.1.0` and ad ho
 
 ## Unreleased
 
+- Check the SteamOS FEX graphics provider and x86-64 loader during environment preflight. The effective RootFS inside the game runtime remains pending verification.
+
 - Show dashboard refresh times in Shanghai time even when the snapshot timestamp has no fractional seconds.
 
 - Revalidate cached update SHA-256, Ed25519 and archive paths at installation; reject post-download changes and symlinks.
