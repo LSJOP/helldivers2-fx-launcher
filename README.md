@@ -77,3 +77,5 @@ Development resumes from [current status](docs/DEVELOPMENT_STATUS.md) and [hando
 Update development: v1.0.1 candidate pins a stable Ed25519 public key, with the private key stored outside the repository and App. Production update service remains disabled. The installer candidate uses the already downloaded and verified ZIP. Signed fixture apps exercise actual replacement and startup confirmation. Full launcher UI upgrade and recovery from an interrupted Helper remain pending.
 
 Interrupted native update transactions can be recovered on the next App launch. The production feed remains disabled pending full upgrade acceptance.
+
+PR #4 uses a separate GitHub pre-release channel with its own signing key, App identity, preferences and data. These ad-hoc builds may be subject to macOS Gatekeeper. The stable updater remains disabled.

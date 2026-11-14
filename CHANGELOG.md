@@ -8,6 +8,8 @@ v1.0.0 (2026111403) is published. Game and complete update acceptance remain lim
 
 ## Unreleased
 
+- Added an isolated, signed GitHub pre-release update channel for acceptance testing. Appearance preferences now persist across App restarts.
+
 - On next startup, the update helper resumes cleanup or rolls back an interrupted atomic swap after validating the saved bundle identities. Production rollout is pending end-to-end acceptance.
 
 - The update candidate hands the verified ZIP to a separate installer instead of starting a second download. The installer waits for the launcher to quit, atomically swaps bundles, and requires a per-run startup receipt. An unconfirmed launch triggers a swap back and a fresh launch of the old version.
