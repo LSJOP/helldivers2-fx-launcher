@@ -76,9 +76,9 @@ struct UpdateConfiguration {
             return enabled && previewEnabled && Data(base64Encoded: publicKey)?.count == 32
         }
         guard enabled, let feed, feed.scheme == "https", feed.user == nil, feed.password == nil, feed.port == nil,
-              ((feed.host == "lsjop.github.io" && feed.path == "/helldivers2-fx-launcher/updates/stable/appcast.xml") ||
+              (feed == NativeReleaseService.api || (feed.host == "lsjop.github.io" && feed.path == "/helldivers2-fx-launcher/updates/stable/appcast.xml") ||
                (feed.host == "github.com" && feed.path == "/LSJOP/helldivers2-fx-launcher/releases/latest/download/appcast.xml")),
-              feed.query == nil, feed.fragment == nil, Data(base64Encoded: publicKey)?.count == 32 else { return false }
+              (feed == NativeReleaseService.api || feed.query == nil), feed.fragment == nil, Data(base64Encoded: publicKey)?.count == 32 else { return false }
         return true
     }
     func resolvedFeed(channel: String) -> URL? {

@@ -244,7 +244,8 @@ struct NativeReleaseService {
         try Self.verifyArchive(candidate.manifest, publicKey: publicKey, archive: archive)
     }
 
-    static func verifyArchive(_ manifest: NativeUpdateManifest, publicKey: Data, archive: URL) throws {
+    @discardableResult
+    static func verifyArchive(_ manifest: NativeUpdateManifest, publicKey: Data, archive: URL) throws -> Int {
         guard manifest.schema == 2, manifest.length > 0, manifest.length <= 536_870_912 else {
             throw NativeUpdateFailure.integrity
         }
@@ -265,7 +266,7 @@ struct NativeReleaseService {
         guard let encoded = manifest.archiveEdSignature, let signature = Data(base64Encoded: encoded),
               let key = try? Curve25519.Signing.PublicKey(rawRepresentation: publicKey),
               key.isValidSignature(signature, for: bytes) else { throw NativeUpdateFailure.signature }
-        try UpdateZIPPreflight.validate(archive)
+        return try UpdateZIPPreflight.validate(archive)
     }
 
     func download(_ candidate: NativeUpdateCandidate, to directory: URL, progress: @escaping @Sendable (Int64, Int64) -> Void = { _, _ in }) async throws -> URL {

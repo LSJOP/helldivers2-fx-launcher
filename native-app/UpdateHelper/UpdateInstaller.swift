@@ -205,8 +205,16 @@ enum UpdateInstaller {
         guard manifest.bundleID == identifier, manifest.build > build,
               try NativeVersion(manifest.version) >= NativeVersion(currentVersion) else { throw NativeUpdateFailure.incompatible }
         let archive = transaction.appendingPathComponent("archive.zip")
+        func requireSpace(_ bytes: Int64) throws {
+            var volume = statfs()
+            guard statfs(transaction.path, &volume) == 0 else { throw POSIXError(.EIO) }
+            let available = UInt64(volume.f_bavail) * UInt64(volume.f_bsize)
+            guard available > UInt64(bytes) + 1_048_576 else { throw NativeUpdateFailure.diskSpace }
+        }
+        try requireSpace(manifest.length)
         try copyArchive(request.appendingPathComponent("archive.zip"), to: archive, length: manifest.length)
-        try NativeReleaseService.verifyArchive(manifest, publicKey: publicBytes, archive: archive)
+        let expanded = try NativeReleaseService.verifyArchive(manifest, publicKey: publicBytes, archive: archive)
+        try requireSpace(Int64(expanded))
         try record("verified")
         let extractor = try spawn("/usr/bin/ditto", ["-x", "-k", archive.path, transaction.path])
         extractor.waitUntilExit()
