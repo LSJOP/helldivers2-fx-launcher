@@ -38,7 +38,7 @@ These are real windows from different historical Debug builds, **not final v1.0.
 - First-Run Setup checks Guest identity, runtime capabilities and component integrity. Approved configuration can install the pinned Proton-JE package, select a verified Steam compatibility tool and merge launch options while retaining custom arguments. Detection is read-only. Deployment and recovery require their own checks.
 - Environment reports FEX and Proton-JE evidence. SSH and sudo credentials can be stored separately in encrypted local storage for a verified target; reuse after restart still requires real-world acceptance.
 - The Swift App provides seven native pages, logs, scoped performance controls and ten interface languages. Optional SteamOS installation steps require Python 3.
-- Settings includes Sparkle update integration. Published update service and end-to-end installation have yet to be verified.
+- Settings includes Sparkle update integration. The v1.0.0 bundle has no configured update key or service; a trusted manual installation is required to bootstrap a future updater. End-to-end installation and recovery remain unverified.
 
 ### Installation
 

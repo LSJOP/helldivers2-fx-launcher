@@ -115,6 +115,7 @@ struct UpdateConfiguration {
     private var controller: SPUStandardUpdaterController!
     private var subscriptions = Set<AnyCancellable>()
     private var operation: Task<Void, Never>?
+    var canCancelOperation: Bool { operation != nil }
     private var automaticTask: Task<Void, Never>?
     private let preferences: UserDefaults
     var isConfigured: Bool { configuration.isValid && configuration.distributionReady && UpdateConfiguration.trustedDistribution() }
@@ -123,6 +124,11 @@ struct UpdateConfiguration {
         guard candidate?.manifest.schema == 2, let cachedArchive,
               FileManager.default.fileExists(atPath: cachedArchive.path),
               isConfigured, canCheck, !CoreWorkerStatus.isActive else { return false }
+        return FileManager.default.isWritableFile(atPath: Bundle.main.bundleURL.deletingLastPathComponent().path)
+    }
+    var canStartInstall: Bool {
+        guard candidate?.signatureVerified == true, candidate?.manifest.schema == 2,
+              isConfigured, canCheck, operation == nil, !CoreWorkerStatus.isActive else { return false }
         return FileManager.default.isWritableFile(atPath: Bundle.main.bundleURL.deletingLastPathComponent().path)
     }
     var version: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?" }
@@ -188,12 +194,12 @@ struct UpdateConfiguration {
             }
         }
     }
-    func downloadVerifiedArchive() {
+    func downloadVerifiedArchive(installAfterDownload: Bool = false) {
         guard canDownload, let candidate, operation == nil else { return }
         canCheck = false; status = .downloading; errorCode = nil; downloadProgress = nil
         operation = Task { [weak self] in
             guard let self else { return }
-            defer { self.operation = nil; self.canCheck = true }
+            var readyToInstall = false
             do {
                 let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
                     .appendingPathComponent("Helldivers2FXLauncher/VerifiedUpdates", isDirectory: true)
@@ -204,9 +210,18 @@ struct UpdateConfiguration {
                         self.downloadProgress = min(1, Double(received) / Double(total))
                     }
                 }
+                try Task.checkCancellation()
                 self.status = .downloaded
+                readyToInstall = installAfterDownload
             } catch { self.record(error) }
+            self.operation = nil; self.canCheck = true
+            if readyToInstall { self.installWithSparkle() }
         }
+    }
+    func downloadAndInstall() {
+        guard canStartInstall else { return }
+        if cachedArchive != nil { installWithSparkle() }
+        else { downloadVerifiedArchive(installAfterDownload: true) }
     }
     func installWithSparkle() {
         guard canInstall, let candidate, let cachedArchive else { return }

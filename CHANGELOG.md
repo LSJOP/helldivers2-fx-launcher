@@ -8,6 +8,8 @@ v1.0.0 (2026111403) is published. Game and complete update acceptance remain lim
 
 ## Unreleased
 
+- Update candidate: connect the install action to verified download and expose cancellation during the native operation. Sparkle may still show its own confirmation and download again; installation and rollback are not yet accepted. v1.0.0 requires a trusted manual bootstrap because it contains no update key.
+
 The development entries below retain earlier stage evidence; the published release status is recorded in v1.0.0.
 
 - Simplify Dashboard to the brand banner, environment summary and one launch area with real completed-step progress. Restore reviewed historical RF components only in the authorized FX 1.9.9 test Guest; GUI launch and user-confirmed menu/ship pass, single-player/multiplayer and full updating remain untested.

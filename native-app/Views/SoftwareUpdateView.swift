@@ -20,7 +20,7 @@ struct SoftwareUpdateView: View {
             HStack {
                 TacticalButton(title: text(.checkNow), symbol: "arrow.clockwise", disabledReason: manager.canCheck ? nil : text(.checking)) { manager.checkForUpdates() }
                     .accessibilityIdentifier("updates.check")
-                if !manager.canCheck && !manager.isConfigured { Button(text(.cancel)) { manager.cancel() } }
+                if manager.canCancelOperation { Button(text(.cancel)) { manager.cancel() } }
             }
             Text(text(manager.status)).accessibilityIdentifier("updates.status")
             if let candidate = manager.candidate {
@@ -29,7 +29,7 @@ struct SoftwareUpdateView: View {
                 Link(text(.releaseNotes), destination: candidate.release.html_url)
                 HStack {
                     TacticalButton(title: text(.downloadOnly), symbol: "arrow.down.circle", disabledReason: manager.canDownload ? nil : text(manager.canCheck ? .trustBlocked : .downloading)) { manager.downloadVerifiedArchive() }
-                    TacticalButton(title: text(.downloadInstall), symbol: "arrow.down.app", disabledReason: manager.canInstall ? nil : text(.trustBlocked)) { manager.installWithSparkle() }
+                    TacticalButton(title: text(.downloadInstall), symbol: "arrow.down.app", disabledReason: manager.canStartInstall ? nil : text(.trustBlocked)) { manager.downloadAndInstall() }
                 }
             }
             if manager.status == .downloading {
