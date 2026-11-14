@@ -9,7 +9,7 @@ class RuntimeChecks(unittest.TestCase):
   self.temp=tempfile.TemporaryDirectory();self.home=pathlib.Path(self.temp.name).resolve()
   self.root=self.home/'.local/share/Steam/steamapps/common/FEX-Emu';self.exe=self.root/'usr/bin/FEX'
   self.exe.parent.mkdir(parents=True);self.exe.write_bytes(b'\x7fELF\x02\x01'+bytes(12)+b'\xb7\x00'+bytes(44));self.exe.chmod(0o700)
-  (self.root/'emulator.json').write_text('{}')
+  (self.root/'emulator.json').write_text(json.dumps({'emulator_v0':{'argv':'./usr/bin/FEX'}}))
   self.ns={};tree=ast.parse(pipeline)
   exec(compile(ast.Module(body=[n for n in tree.body if isinstance(n,(ast.Import,ast.ImportFrom,ast.FunctionDef))],type_ignores=[]),'helpers','exec'),self.ns)
  def tearDown(self):self.temp.cleanup()

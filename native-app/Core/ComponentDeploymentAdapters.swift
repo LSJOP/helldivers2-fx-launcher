@@ -392,6 +392,15 @@ def check():
  if not os.access(exe,os.X_OK):return {'reason':'FEX_NOT_EXECUTABLE'}
  if platform.machine() not in ['aarch64','arm64'] or not elf_arm64(exe):return {'reason':'FEX_ARCHITECTURE'}
  if not (root/'emulator.json').is_file():return {'reason':'FEX_INTEGRATION_MISSING'}
+ registration=json.loads((root/'emulator.json').read_text()).get('emulator_v0',{})
+ if registration.get('argv') not in ['./usr/bin/FEX','usr/bin/FEX']:return {'reason':'FEX_INTEGRATION_MISSING'}
+ for key in ['main_argv','server_argv']:
+  command=registration.get(key)
+  if command:
+   parts=shlex.split(command)
+   if len(parts)!=1:return {'reason':'FEX_INTEGRATION_MISSING'}
+   component=root/parts[0]
+   if not component.resolve().is_relative_to(root.resolve()) or not component.is_file() or not os.access(component,os.X_OK):return {'reason':'FEX_INTEGRATION_MISSING'}
  tree=fingerprint(inventory(root))
  result={'preflight':True,'tree':tree}
  if not EXPECTED_TREE:return result

@@ -30,6 +30,10 @@ import Sparkle
         try check(UpdateConfiguration(info:valid).isValid,"official HTTPS feed and correctly sized public key accepted")
         try check(UpdateConfiguration(info: valid.merging(["SUFeedURL": "https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/appcast.xml"]) { _, value in value }).isValid,
                   "official stable GitHub Release appcast accepted")
+        let github = "https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/appcast.xml"
+        let githubConfig = UpdateConfiguration(info: valid.merging(["SUFeedURL": github]) { _, value in value })
+        try check(githubConfig.resolvedFeed(channel: "stable")?.absoluteString == github, "delegate retains configured GitHub feed")
+        try check(githubConfig.resolvedFeed(channel: "preview") == nil, "unconfigured preview fails closed")
         for feed in ["http://lsjop.github.io/helldivers2-fx-launcher/updates/stable/appcast.xml","https://evil.example/appcast.xml","https://lsjop.github.io/helldivers2-fx-launcher/updates/stable/appcast.xml?override=1"] {
             try check(!UpdateConfiguration(info:valid.merging(["SUFeedURL":feed]) { _,new in new }).isValid,"unsafe feed rejected")
         }

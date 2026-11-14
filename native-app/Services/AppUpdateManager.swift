@@ -79,6 +79,14 @@ struct UpdateConfiguration {
               feed.query == nil, feed.fragment == nil, Data(base64Encoded: publicKey)?.count == 32 else { return false }
         return true
     }
+    func resolvedFeed(channel: String) -> URL? {
+        guard isValid else { return nil }
+        if channel == "preview" {
+            guard previewEnabled else { return nil }
+            return URL(string: "https://lsjop.github.io/helldivers2-fx-launcher/updates/preview/appcast.xml")
+        }
+        return feed
+    }
     static func trustedDistribution() -> Bool {
         var code: SecStaticCode?
         guard SecStaticCodeCreateWithPath(Bundle.main.bundleURL as CFURL, [], &code) == errSecSuccess, let code else { return false }
@@ -251,7 +259,7 @@ struct UpdateConfiguration {
     func userDidCancelDownload(_ updater: SPUUpdater) { status = .cancelled }
     func updater(_ updater: SPUUpdater, willInstallUpdate item: SUAppcastItem) { status = .installing }
     func feedURLString(for updater: SPUUpdater) -> String? {
-        "https://lsjop.github.io/helldivers2-fx-launcher/updates/" + (channel == "preview" && configuration.previewEnabled ? "preview" : "stable") + "/appcast.xml"
+        configuration.resolvedFeed(channel: channel)?.absoluteString
     }
     func updater(_ updater: SPUUpdater, shouldProceedWithUpdate updateItem: SUAppcastItem, updateCheck: SPUUpdateCheck) throws {
         guard isConfigured, let candidate, candidate.manifest.schema == 2, cachedArchive != nil,
