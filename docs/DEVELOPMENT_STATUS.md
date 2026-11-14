@@ -74,3 +74,13 @@ GitHub main 的源码、AGENTS.md 和本文件/交接文档是权威。聊天不
 最新 Release 源码 `4e104b7936fc20e2e7a5ef763f9ea4af6163525c`，0.1.0 (2026111401)，arm64，source_dirty=false。输出：`绝地潜兵脚本/APP 版本/Consolidation-20261114-4e104b79/HD2FXNative.app`，ad-hoc/资源/来源检查通过；不是 cd27baa 旧包，也不是已合入 main 的包。此前“未产生请求”的说明只适用于首次英文尝试：中文随后捕获成功，原图在候选 worktree `native-app/evidence/capture-resume-zh`，dashboard/settings 已视觉查看，其他图片及英文/其余语言尚未完成审阅。未改写截图 manifest。完整截图门禁依旧失败。
 
 本轮更新测试已通过，不等于 Sparkle 安装/回滚/重启闭环通过。main 仍保持 50f3eca，整合尚未结束；候选已合入 main 的规则，AGENTS v1.2.20 本轮无需规则变更。下一步先解决英文捕获/全语言审阅，再完成真正隔离安装闭环和独有分支差异审查，不能继续以补文档代替这三项工作。
+
+## 跨机器接续检查点（2026-11-14）
+
+已 fetch：main 为 `50f3ecae9fd545bc6aacbda6c4665f089db64feb`，整合基线 `78a9eca99f4475598b77bce0a2de35e93c693197`。新工作树 `Worktrees/HD2-Native-consolidation-resume`；24 个注册工作树中仅 full-audit 有修改，原地保留并将 HEAD、暂存/未暂存二进制补丁及未跟踪文件归档到项目目录 `HD2-native-resume-backup.cTKVBdE4`（私有权限）。旧交付路径位于另一台电脑。
+
+本机源码 `8f4c39601ccc680606bb8b77916f2e952a9b15ce`：隔离捕获工具支持十语言，修复首页整秒时间戳未转换为上海时间。英文及简体中文各七张 README 图来自同一源码的本机 Debug 0.1.0 (2026111401)，完成视图审查和哈希门禁。其余语言的截图、菜单/Finder、窄窗口及动态错误文案仍需审阅。十语言静态资源均为 620/620。新 arm64 ad hoc Release 候选在 `HD2-App-Builds/Candidates/Consolidation-20261114-8f4c396/Products/HD2FXNative.app`，资源、签名、架构与来源核对通过；没有替换已安装 App。
+
+已对照四个未成为祖先的远端 Native 分支：品牌分支的 InfoPlist 本地化文件与候选字节一致；recovery 核心 FEX/Proton 与候选一致，候选另有 SSH 进程隔离、流程重置和性能范围保护，保留较简洁的 FX 卡片，未合入 recovery 固定版本/内存展示。release 分支与候选核心差异为候选额外的 FEX helper 注册检查、启动前能力重验及更长的首次启动等待。release-preparation 的早期更新预检保留在候选，候选新增缓存边界重验、加密凭据和共享首次配置。旧分支与另一台机器的脏成果继续保留；本机 full-audit 未提交差异及异机未跟踪文件仍需逐项处置。
+
+更新服务 39 项、管理器 23 项、资源 5 项、发布历史 10 项、ZIP 7 项通过隔离检查。仍需用独立签名测试 feed 和临时 App 路径验证 Sparkle 自身下载、解压、替换、故障回滚与重启；当前没有完整安装验收。main 不晋级，真实 FX/FEX、Steam、EAC 和联机均未执行。

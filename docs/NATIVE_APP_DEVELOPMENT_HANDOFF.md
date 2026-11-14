@@ -125,3 +125,9 @@ bash native-app/script/build_local_release.sh /absolute/new/output-directory
 最新 Release 源码 `4e104b7936fc20e2e7a5ef763f9ea4af6163525c`，0.1.0 (2026111401)，arm64，source_dirty=false。输出：`绝地潜兵脚本/APP 版本/Consolidation-20261114-4e104b79/HD2FXNative.app`，ad-hoc/资源/来源检查通过；不是 cd27baa 旧包，也不是已合入 main 的包。此前“未产生请求”的说明只适用于首次英文尝试：中文随后捕获成功，原图在候选 worktree `native-app/evidence/capture-resume-zh`，dashboard/settings 已视觉查看，其他图片及英文/其余语言尚未完成审阅。未改写截图 manifest。完整截图门禁依旧失败。
 
 本轮更新测试已通过，不等于 Sparkle 安装/回滚/重启闭环通过。main 仍保持 50f3eca，整合尚未结束；候选已合入 main 的规则，AGENTS v1.2.20 本轮无需规则变更。下一步先解决英文捕获/全语言审阅，再完成真正隔离安装闭环和独有分支差异审查，不能继续以补文档代替这三项工作。
+
+## 跨机器接续（2026-11-14）
+
+以[跨机器接续检查点](DEVELOPMENT_STATUS.md#跨机器接续检查点2026-11-14)为本机最新证据。上一台电脑的 App/截图和未推送文件不位于本机；本机使用基线 `78a9eca` 的独立工作树。当前构建及 README 图片源码为 `8f4c396`，图片是实际隔离 Debug 窗口，Release 候选另行签名验包。
+
+下一步：完成其余语言及 Finder/菜单/动态错误的目视审阅，逐项处置本机 full-audit 补丁并核对旧机独有未提交内容，再用只作用于临时 App 的签名 fixture 演练 Sparkle 替换、故障回滚和重启。确认这些门禁及完整运行检查后才能晋级 main。
