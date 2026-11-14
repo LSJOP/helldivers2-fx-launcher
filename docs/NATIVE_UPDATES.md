@@ -108,3 +108,9 @@ Schema 2 integration requires archiveEdSignature in the signed manifest. The ver
 已整合包含品牌及 LED 的 main b789642；保留既有更新签名和 ZIP 检查。候选版本 1.0.1/build 2026111404，公钥固定在 Updates.xcconfig。独立 update_signing.swift 以仓库外 0600 文件管理私钥，不访问 Keychain，不打包到 App。原 prepare_native_release.sh 为历史 Keychain/Developer ID 路线，本轮未执行，不适用于本次无 Keychain 交付。
 
 未完成：重复下载/确认消除、独立安装和健康确认/回滚协议、真实 1.0.1→1.0.2 升级及故障矩阵。仅配置公钥不代表服务就绪，保留服务关闭。未发布 Release、未晋级 main。截图与真实安装仍需完成，草稿 PR 必须保持未合并。
+
+## 独立安装助手候选 · 2026-11-14
+
+Swift 服务保留签名清单原始字节和签名，将已经下载的 ZIP 交给单一 Helper。Helper 从当前 App 读取固定公钥，用复制到私有事务目录的归档复验 SHA-256、Ed25519 和 ZIP 结构，然后提取并校验 App 签名、版本、Bundle ID 和公钥连续性。旧 App 在 Helper 提示准备就绪后正常退出。Helper 使用同卷原子交换保留旧包，新 App 主窗口可见后写出本次启动令牌。未收到令牌或进程提前退出时恢复旧包并确认其启动。事务日志保存在安装目录旁。Sparkle 运行时的安装入口移除，历史打包和框架依赖保留。
+
+隔离测试使用临时密钥和实际 ad-hoc 签名的 AppKit 测试包，不读取正式私钥或用户数据。Helper 若被强制终止，现场、日志及交换后的旧包会保留在 .HD2FXNative-update，后续安装会拒绝覆盖。自动接管中断事务、真实启动器单击跨版本升级和用户配置保留验收仍待完成。生产服务继续关闭。

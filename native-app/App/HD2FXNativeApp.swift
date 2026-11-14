@@ -31,6 +31,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @MainActor enum NativeLifecycle {
+    private static var didConfirmUpdate = false
+    static func confirmUpdateStartup() async {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard !didConfirmUpdate, let index = arguments.firstIndex(of: "--confirm-update-startup"),
+              arguments.indices.contains(index + 1),
+              let token = UUID(uuidString: arguments[index + 1]) else { return }
+        // The main scene has mounted. Give immediate startup crashes time to surface.
+        do { try await Task.sleep(for: .seconds(2)) } catch { return }
+        guard !didConfirmUpdate, NSApp.windows.contains(where: { $0.isVisible }) else { return }
+        didConfirmUpdate = true
+        FileHandle.standardOutput.write(Data("HD2_UPDATE_READY \(token.uuidString)\n".utf8))
+    }
     static var cancel: (() -> Void)?
     #if DEBUG
     static var event: ((String) -> Void)?
@@ -49,6 +61,7 @@ struct HD2FXNativeApp: App {
                 .task {
                     NativeLifecycle.cancel = { state.endSession() }
                     if !state.hasLoaded { state.refresh() }
+                    await NativeLifecycle.confirmUpdateStartup()
                     #if DEBUG
                     await SmokeRunner.runIfRequested(state: state)
                     #endif

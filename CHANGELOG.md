@@ -8,6 +8,8 @@ v1.0.0 (2026111403) is published. Game and complete update acceptance remain lim
 
 ## Unreleased
 
+- The update candidate hands the verified ZIP to a separate installer instead of starting a second download. The installer waits for the launcher to quit, atomically swaps bundles, and requires a per-run startup receipt. An unconfirmed launch triggers a swap back and a fresh launch of the old version.
+
 - v1.0.1 development candidate pins the stable Ed25519 public key and adds an operator-only file signer with no Keychain access. The update service remains disabled pending single-download installation and rollback acceptance; no v1.0.1 Release is published.
 
 - Update candidate: connect the install action to verified download and expose cancellation during the native operation. Sparkle may still show its own confirmation and download again; installation and rollback are not yet accepted. v1.0.0 requires a trusted manual bootstrap because it contains no update key.
