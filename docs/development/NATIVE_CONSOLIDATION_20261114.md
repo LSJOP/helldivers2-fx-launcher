@@ -51,3 +51,11 @@ All non-ancestor branches, active worktree branches, integration branch, main an
 - origin/main: ancestor of current main; review later
 - origin/release/v1.0.0-integration: retain; not fully integrated
 - origin/ui/remove-global-fx-bar-20261104: ancestor of current main; review later
+
+## Verified checkpoint results
+
+arm64 Debug and Release builds PASS. Release ad-hoc signature, metadata, arm64 architecture, resources and no-Python-runtime gates PASS. Delivery source cd27baa378f3fedb09153c1468bc6a03bbdefb26, directory: APP 版本/Consolidation-20261114-cd27baa.
+
+SSH 37, privilege 30, network 66, native Core 100, integration 27, identity 19, launch 23, credential session 29, encrypted credential 31, performance 15, selection 20, deployment 150, update service 36 and update manager 23 isolated checks PASS. Ten language static and bundle-name gates PASS; FEX runtime 9 fixtures PASS; update ZIP 7 fixtures PASS; docs 15 checks PASS. Functional script was run separately past the failing screenshot gate; full gate remains FAILED. Its temporary-runner cleanup reported FileNotFoundError after all functional checks completed because the temporary file had been removed for clean Release metadata; test evidence remains available under native-app/evidence.
+
+Tracked secret scan flags two credential test fixtures (generated fake values), not real credentials. No unknown password was copied into source. Screenshot visual review remains unresolved, so no main merge. GitHub push failed with network low-speed timeout; local integration commits are preserved, remote publication is NOT confirmed.
