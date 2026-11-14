@@ -1,7 +1,7 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.24** · Updated: **2026-11-14**.
-Change: limit worktree creation and require safe completion review. Instruction version is independent of App version.
+Instruction version: **v1.2.25** · Updated: **2026-11-14**.
+Change: establish shared UI design standards and review requirements. Instruction version is independent of App version.
 
 ## Authority and task lifecycle
 
@@ -37,3 +37,15 @@ Change: limit worktree creation and require safe completion review. Instruction 
 - Typical commands are in the handoff; `script/check_docs.py`, Native localization and screenshot provenance gates apply where affected. Release requires clean committed source, fresh arm64 build, resources/icon/locales, ad-hoc or authorized signing, package validation and separate artifact hashes. Never relabel an old build as new.
 - Distinguish main implementation, branch candidate, automated PASS, blocked/incomplete and pending user hardware acceptance. Compilation/Mock/process detection never proves current game menu, single-player, EAC or multiplayer success. Report command/source/results honestly, including failed gates and unverified installation/rollback/relaunch.
 - Finish with a concise report of changes, tests, commit, remote branch/push, main integration and unresolved issues. Mark COMPLETED only after required tests, commit, push, remote containment, main decision and required live acceptance; otherwise use PARTIAL or BLOCKED with the reason. Continue independent work when blocked. Default to no extra reports or screenshots unless needed for evidence, investigation, audit or release. Existing successful historical records remain historical. Update this instruction version for rule changes, without accumulating entire old prompts.
+
+## UI Design Standards
+
+All subsequent UI work must first follow `docs/UI_DESIGN_GUIDELINES.md`: read the rules, reuse existing components, implement, review consistency and all ten languages, then verify and commit. This section supersedes older instructions requiring controls beside page titles.
+
+- Maintain the dark, yellow-accented HELLDIVERS 2 tactical style, consistent hierarchy, cards, spacing and restrained decoration. Titles and necessary explanations belong in headers; place actions in the content area.
+- Reuse shared buttons and cards. Review idle, hover, pressed, disabled, loading and, when applicable, success and failure states. Do not duplicate an operation or introduce unstyled default buttons.
+- Before adding refresh, consider an existing action or event-driven updates. A necessary independent refresh belongs at the right of a content toolbar and uses the shared refresh component; prevent duplicate requests and show progress.
+- Preserve consistent margins, button heights, card spacing, icon sizes, alignment and action placement. Adapt to narrow windows and long text.
+- Localize all visible additions in zh-CN, en, ja, ko, ru, es, de, fr, pt-BR and zh-TW; do not hardcode UI prose. Check long translations for clipping.
+- Preserve the SwiftUI + AppKit hybrid: SwiftUI owns presentation and normal interactions, AppKit native macOS capabilities, and the existing Swift Service Layer business state. Components must not create a duplicate business state system.
+- Review changed pages for visual consistency, action placement and duplication, clipping, loading, errors, accessibility and ten-language adaptation. Provide real App screenshots for substantial visual changes; routine code changes do not require screenshots.

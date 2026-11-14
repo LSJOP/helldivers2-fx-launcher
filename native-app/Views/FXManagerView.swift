@@ -6,7 +6,8 @@ struct FXManagerView: View {
     @State private var locatingFX = false
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            TacticalPageHeader(title: state.t("ui.124"), refreshState: state)
+            TacticalPageHeader(title: state.t("ui.124"))
+            TacticalRefreshButton(state: state, tasks: state.tasks)
             if state.results["list_fx_versions"]?["scan_incomplete"]?.boolean == true {
                 TacticalWarningBanner(text: scanWarning + " " + state.t("ui.357"))
             }

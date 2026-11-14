@@ -25,7 +25,8 @@ struct EnvironmentView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            TacticalPageHeader(title: state.t("ui.108"), refreshState: state)
+            TacticalPageHeader(title: state.t("ui.108"))
+            TacticalRefreshButton(state: state, tasks: state.tasks)
             GUIOperationsPanel(state: state, tasks: state.tasks)
             TacticalButton(title: state.t("ui.ssh.test"), symbol: "network", disabledReason: state.tasks.busy ? state.t("ui.016") : nil) {
                 state.operationSelection = NativeOperation(method: "test_ssh")

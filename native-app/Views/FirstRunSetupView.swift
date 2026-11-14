@@ -45,7 +45,7 @@ struct FirstRunSetupView: View {
             DisclosureGroup(state.t("ui.workflow.advanced")) {
             TacticalPanel(number: "1", title: state.t("ui.setup.fx"), symbol: "shippingbox") {
                 HStack {
-                    Button(state.t("ui.fx.rescan")) { state.scanFX() }
+                    Button(state.t("ui.fx.rescan")) { state.scanFX() }.disabled(tasks.busy)
                     Button(state.t("ui.setup.choose")) { state.selection = .fx }
                 }
                 Text(state.fxVersion + " · " + (state.fxSelection.selectedPath ?? state.t("ui.368"))).textSelection(.enabled)
