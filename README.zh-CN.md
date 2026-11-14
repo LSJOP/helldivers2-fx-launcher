@@ -73,3 +73,5 @@ FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游�
 使用与开发指南、架构说明和历史报告见[文档索引](docs/README.md)。
 
 接续开发请读取[当前状态](docs/DEVELOPMENT_STATUS.md)和[交接文档](docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md)，以 main 源码与 AGENTS.md 为准，未合并候选及实机验收单独记录。
+
+自动更新开发：v1.0.1 候选固定稳定版 Ed25519 公钥，私钥保存在仓库和 App 外。生产更新服务保持关闭；单次下载安装、启动失败回滚和真实 1.0.1 → 1.0.2 验收尚未完成。

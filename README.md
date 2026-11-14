@@ -73,3 +73,5 @@ This community project is not affiliated with the makers of HELLDIVERS 2; names 
 User and developer guides, architecture notes and historical reports are available in the [documentation index](docs/README.md).
 
 Development resumes from [current status](docs/DEVELOPMENT_STATUS.md) and [handoff](docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md), with main source and AGENTS.md as authority. Unmerged candidates and live acceptance are tracked separately.
+
+Update development: v1.0.1 candidate pins a stable Ed25519 public key, with the private key stored outside the repository and App. Production update service remains disabled; single-download install, post-launch rollback and real 1.0.1 → 1.0.2 acceptance are incomplete.
