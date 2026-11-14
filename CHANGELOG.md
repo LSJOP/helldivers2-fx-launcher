@@ -8,6 +8,19 @@ v1.0.0 is the release target. The inspected local arm64 App is `0.1.0` and ad ho
 
 ## Unreleased
 
+### v1.0.0 — 2026-11-14
+
+Stable release: App version `1.0.0`, build `2026111403`, macOS 14+ arm64. Reuses the existing Release DMG built from `4119d65e64468afaa763cf8ffc134a34786bb83f`; no rebuild or version change.
+
+- Added: Native SwiftUI dashboard, shared guarded launch/setup workflow, environment and FX management, logs, scoped performance controls and ten interface languages. Target-bound SSH/sudo roles and encrypted local credential storage are included in this artifact.
+- Fixed: Launch retry after completion/cancellation, unified launch progress, loopback Steam API forwarding conflicts and update archive integrity revalidation. Reviewed historical RF components were restored only in the authorized FX 1.9.9 test Guest.
+- Compatibility: Ad-hoc signing; no Apple Developer ID signature or Apple notarization. Gatekeeper may block downloaded copies. Download the DMG, compare its SHA-256, open it and drag the App into Applications. If blocked, use macOS Privacy & Security → Open Anyway for the verified download.
+- Evidence: Existing package reports record arm64 Release validation, DMG mount/install-copy and independent installed-process startup. GUI launch and user-confirmed menu/ship were recorded for the FX 1.9.9 test environment; this is not a general compatibility guarantee.
+- Known limitations: Single-player, EAC/multiplayer, fresh SteamOS/FEX/Proton deployment, credential restart/identity matrices and complete Sparkle installation/rollback/relaunch remain unverified. The bundled public update service is disabled/unconfigured. Production FX 1.9.12 was only inspected offline. Safe FX stop/restart remains unavailable. Existing bilingual screenshots are historical Debug captures, not final release captures. No functional tests, live environment changes or new screenshots were performed for this publication.
+
+DMG SHA-256: `59730d98f3a4c358ca335da481d170f57c452d075728441147aa38723c50a478`
+
+
 - Establish repository-owned development status and handoff, distinguishing main implementation, branch candidates and live acceptance.
 
 - Require screenshot App/build identity, source commit and capture timestamp in addition to language paths and reviewed hashes.

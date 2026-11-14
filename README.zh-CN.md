@@ -26,9 +26,9 @@ HD2FXNative 是面向 Apple Silicon Mac 的第三方社区启动与管理工具�
 
 ### 下载与安装
 
-**发布目标：HD2FXNative v1.0.0。** GitHub 尚无已发布版本。已检查的本地 App 为 `0.1.0`、arm64，采用 ad hoc 签名，无 Developer ID，Apple 公证未获验证。Gatekeeper 可能拦截下载的副本。公开 DMG 及其 SHA-256 待发布。[GitHub Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**[下载 HD2FXNative v1.0.0 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)** · [正式稳定版 Release](https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/v1.0.0)
 
-发布后，可在运行 macOS 14 或更高版本的 Apple Silicon Mac 上安装。
+当前 App：`1.0.0`（构建 `2026111403`），适用于 macOS 14+ Apple Silicon arm64。采用 ad-hoc 签名，无 Apple Developer ID 签名，未经 Apple 公证。Gatekeeper 可能拦截下载副本；打开前核对 [SHA-256 文件](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg.sha256)。若被拦截，对已核验 App 使用「隐私与安全性 → 仍要打开」。
 
 1. 从正式 Release 下载 macOS arm64 DMG。
 2. 运行 `shasum -a 256 <下载的 DMG>`，与发布说明中的 SHA-256 比对。匹配后打开 DMG。
@@ -49,6 +49,9 @@ HD2FXNative 是面向 Apple Silicon Mac 的第三方社区启动与管理工具�
 
 ### 已知问题
 
+发布范围：本产物包含共享启动／重试修复和本地加密 SSH/sudo 存储。FX 1.9.9 测试环境记录 GUI 启动及用户确认的菜单／飞船；单人、EAC／多人、全新部署与完整 Sparkle 安装／回滚仍未验证。包内公开自动更新关闭／未配置，请使用 Release DMG 手动安装。正式 FX 1.9.12 仅离线调查。
+
+
 - FX 和 SteamOS 兼容性取决于所选构建和实测能力。当前启动路径有已记录的代理不匹配问题。安全停止或重启 FX 暂不可用。
 - 实验性 FEX 候选曾在真实 Guest 中构建成功，但可执行文件的哈希未通过部署审核。候选的安装、恢复和游戏兼容性均待验证。其他 Proton-JE 构建和全新 SteamOS 部署仍需验收。
 - 11 月 5 日的历史 Native 构建曾进入游戏主菜单／舰桥。正式包启动、单人任务、EAC 和多人联机仍需分别验证。
@@ -56,6 +59,8 @@ HD2FXNative 是面向 Apple Silicon Mac 的第三方社区启动与管理工具�
 - [验收报告](docs/acceptance/RELEASE_READINESS_REPORT.md) · [已知问题详情](docs/acceptance/KNOWN_ISSUES.md) · [首次运行验收](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md) · [更新机制](docs/NATIVE_UPDATES.md) · [性能设置限制](docs/GAME_PERFORMANCE.md)
 
 ### 更新日志
+
+[v1.0.0 — 2026-11-14](https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/v1.0.0) · 正式稳定版，构建 `2026111403`。见[发布说明](CHANGELOG.zh-CN.md)。
 
 未发布变更包括总览启动、首次运行 Proton-JE 校验及 Steam 配置、实验性 FEX 审核及恢复，以及 SSH 认证修复。参见[更新日志](CHANGELOG.zh-CN.md)和[原版启动器历史](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script)。
 

@@ -26,9 +26,9 @@ These are real windows from different historical Debug builds, **not final v1.0.
 
 ### Download and installation
 
-**Release target: HD2FXNative v1.0.0.** GitHub has no published release. The inspected local App is version `0.1.0`, arm64 and ad hoc signed without a Developer ID. It has no verified Apple notarization. Gatekeeper may block a downloaded copy. The public DMG and its SHA-256 are pending. [GitHub Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**[Download HD2FXNative v1.0.0 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg)** · [Stable Release](https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/v1.0.0)
 
-After publication, install on an Apple Silicon Mac running macOS 14 or later.
+Current App: `1.0.0` (build `2026111403`), macOS 14+ Apple Silicon arm64. Ad-hoc signed; no Apple Developer ID signature or Apple notarization. Gatekeeper may block the download. Verify the [SHA-256 file](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.0/HD2FXNative-v1.0.0-macOS-arm64.dmg.sha256) before opening. If blocked, use Privacy & Security → Open Anyway for the verified App.
 
 1. Download the macOS arm64 DMG from the published release.
 2. Run `shasum -a 256 <downloaded-dmg>` and compare the result with the SHA-256 in the release notes. Open the DMG after they match.
@@ -49,13 +49,18 @@ For source builds, see the [development guide](docs/NATIVE_DEVELOPMENT.md).
 
 ### Known Issues
 
+Release scope: shared launch/retry fixes and local encrypted SSH/sudo storage are included in this artifact. FX 1.9.9 test GUI launch and user-confirmed menu/ship are recorded. Single-player, EAC/multiplayer, fresh deployments and full Sparkle installation/rollback remain unverified. The bundled public updater is disabled/unconfigured; use the Release DMG for manual installation. Production FX 1.9.12 was only inspected offline.
+
+
 - FX and SteamOS compatibility depends on the selected build and runtime evidence. The current launch path has a recorded proxy mismatch. Safe FX stop/restart remains unavailable.
 - A real Guest built an experimental FEX candidate. Its executable hash failed deployment review. Candidate installation, recovery and game compatibility remain unverified. Alternate Proton-JE builds and fresh SteamOS deployment require validation.
 - A historical Native build reached the game menu/ship on November 5. Final-package launch, single-player missions, EAC and multiplayer remain separately unverified.
-- Public distribution, Gatekeeper handling and signed automatic updates are pending. The inspected local App uses ad hoc signing, without verified notarization.
+- Gatekeeper handling and signed automatic updates remain pending. The inspected local App uses ad hoc signing, without verified notarization.
 - [Acceptance report](docs/acceptance/RELEASE_READINESS_REPORT.md) · [Known issues detail](docs/acceptance/KNOWN_ISSUES.md) · [First-run acceptance](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md) · [Update integration](docs/NATIVE_UPDATES.md) · [Performance limits](docs/GAME_PERFORMANCE.md)
 
 ### Changelog
+
+[v1.0.0 — 2026-11-14](https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/v1.0.0) · Stable release, build `2026111403`. See [release notes](CHANGELOG.md).
 
 Unreleased changes include Dashboard launch, first-run Proton-JE verification and Steam configuration, experimental FEX review and recovery, and SSH authentication fixes. See the [changelog](CHANGELOG.md) and [original launcher history](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script).
 
