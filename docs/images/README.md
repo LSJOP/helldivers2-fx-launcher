@@ -1,8 +1,8 @@
 # Localized Native screenshots / 本地化原生截图
 
-The **en/** and **zh-CN/** directories now contain reviewed real windows from the integrated brand/LED Debug source on 2026-11-14. The capture copy uses a separate bundle identifier, empty runtime and disabled credential autoload. These are Unreleased development screenshots, not screenshots of the published v1.0.0 DMG. Existing flat PNG names remain historical.
+The **en/** and **zh-CN/** directories contain reviewed real windows from the MOTR7 placement Debug candidate on 2026-11-14. Captures use a separate bundle identifier and no selected runtime; the README capture mode disables credential access. These are Unreleased development screenshots, not screenshots of the published v1.0.0 DMG. Existing flat PNG names remain historical.
 
-**en/** 与 **zh-CN/** 目录现为 2026-11-14 品牌／状态灯最终整合源码的真实 Debug 窗口，已复核语言、标题换行、五张卡片和敏感信息。采集副本使用独立包标识、空运行目录并禁用凭据自动加载；未执行 Guest 操作。这些图展示未发布开发改动，不代表正式 v1.0.0 DMG。
+**en/** 与 **zh-CN/** 目录现为 2026-11-14 MOTR7 布局候选的真实 Debug 窗口。采集副本使用独立包标识且未选择运行目录；README 采集模式禁用凭据访问，未执行 Guest 操作。这些图展示未发布开发改动，不代表正式 v1.0.0 DMG。
 
 Individual source baseline, dirty-source marker, capture timestamp, build, dimensions and SHA-256 are recorded in [manifest.json](manifest.json). The reviewed UI fingerprint identifies the exact UI source used for capture. The model matrix is isolated test evidence; the real captured homepage has no verified runtime and correctly displays gray indicators.
 
@@ -55,3 +55,22 @@ Build 2026110410: real isolated Debug windows for zh-CN/en First-Run Setup, Dash
 2026-11-14 LED integration: only the two Dashboard images are presented in README and visually reviewed for language, clipping, sensitive data and honest unknown indicators. Captured from isolated Debug build 2026111401, base 58df1a8 plus the documented LED priority and title sizing edits; no Guest actions or credential autoload. Other page images remain historical and are not presented pending review. Fingerprint applies to the current source for the displayed Dashboard scope only.
 
 2026-11-14 live logging: English and Simplified Chinese log and first-run captures were refreshed and reviewed from the isolated Debug candidate. Other images retain their original provenance; the shared snapshot footer now renders in local time. Active launch and failure screens were not captured.
+
+
+## MOTR7 workflow artwork - 2026-11-14
+
+The seven English and seven Simplified Chinese README viewports were recaptured from the isolated Debug App (build 2026111401, dirty source based on `ada4e03`). Supplemental original-window PNGs show [settings attribution](zh-CN/motr7-settings-credit.png), [light welcome](zh-CN/motr7-welcome-light.png), [narrow dark welcome](zh-CN/motr7-welcome-narrow-dark.png), and [narrow light welcome](zh-CN/motr7-welcome-narrow-light.png). All captured PNG bytes are unmodified. The Dashboard hero and shared header implementation match the source base.
+
+Ten language welcome windows and ten settings credit windows were visually reviewed on the preceding candidate with the same visible idle layouts; the subsequent change restricted only the completion-state target binding. The final Chinese and English page captures use the final source. The fingerprint covers the captured idle viewports; it does not certify unobserved states.
+
+**NOT_TESTED:** actual successful setup, live game-launch preparation and their requested screenshots. No FX, SSH, Guest write or game launch was initiated for capture. The manually navigated supplemental windows used a separate bundle ID and no selected FX target; the credential preparation guard therefore returned without loading saved credentials. The completion and progress fixture checks do not replace those live reviews.
+
+## MOTR7 visual review update · 2026-11-15
+
+The fourteen README page images were recaptured from isolated Debug build 2026111401, dirty source based on `5f7c77e`; their original PNG bytes and per-image provenance are recorded in the manifest. The Chinese and English idle windows were reviewed for language, the preserved dashboard artwork and Earth header, and the updated first-run layout. The captures do not establish Guest readiness, successful setup, or game launch. No Guest, FX, SSH, or game action was initiated.
+
+2026-11-15：中英文各七张 README 截图来自隔离 Debug 版本，来源与 SHA-256 见清单。审核覆盖空闲状态的语言、首页主视觉、顶部地球横幅和首次运行布局；截图不证明真实配置或游戏启动成功，也未执行 FX、Guest、SSH 或游戏操作。
+
+2026-11-15 merge review: seven idle pages and the software-update viewport per language were recaptured and visually reviewed from the 1.0.2 / 2026111501 isolated Debug candidate (base `afc1158`, integrating main `b967ccd`). Performance screenshots contain read-only hardware and preference values. Setup completion and game launch remain unverified; no FX, SSH, Guest or game action was performed.
+
+2026-11-15 合并审核：中英文各七页和软件更新视口均从 1.0.2 / 2026111501 隔离 Debug 候选重拍并审核（基于 `afc1158`，整合 main `b967ccd`）。性能截图含只读硬件和偏好值；真实配置完成及游戏启动未验证，采集未执行 FX、SSH、Guest 或游戏操作。

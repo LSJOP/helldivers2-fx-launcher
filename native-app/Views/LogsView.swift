@@ -55,7 +55,8 @@ struct LogsView: View {
     var body: some View {
         let c = TacticalColors(scheme: scheme)
         VStack(alignment: .leading, spacing: 18) {
-            TacticalPageHeader(title: state.t("ui.306"), refreshState: state)
+            TacticalPageHeader(title: state.t("ui.306"))
+            TacticalRefreshButton(state: state, tasks: state.tasks)
             TacticalWarningBanner(text: state.t("ui.017"))
             if exportFailed { TacticalWarningBanner(text: state.t("ui.logs.exportFailed"), isError: true) }
             DisclosureGroup(state.t("ui.096")) { LegacyOperationsView(state: state, scope: "logs") }
@@ -101,7 +102,7 @@ struct LogsView: View {
                 .accessibilityIdentifier("logs.content")
         }
         .fileExporter(isPresented: $showExporter, document: LogExportDocument(text: exportText), contentType: .plainText,
-                      defaultFilename: "HD2FXNative-logs") { result in
+                      defaultFilename: state.t("ui.brand.name") + "-" + state.t("ui.187")) { result in
             if case .failure = result { exportFailed = true }
         }
     }

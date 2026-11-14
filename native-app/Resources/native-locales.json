@@ -593,7 +593,7 @@
   "ui.fex.compatible": "FEX compatibility mode",
   "ui.fex.repair": "FEX needs repair",
   "ui.fex.unverified": "FEX origin unverified",
-  "ui.brand.name": "HD2 FX Launcher",
+  "ui.brand.name": "HELLDIVERS 2 FX Launcher",
   "ui.dashboard.connected": "Connected",
   "ui.dashboard.process": "Process found",
   "ui.logs.autoScroll": "Auto-scroll",
@@ -607,7 +607,12 @@
   "ui.logs.started": "Started",
   "ui.logs.commandSucceeded": "Steam launch command returned successfully",
   "ui.logs.alreadyRunning": "Game process already running; no new request",
-  "ui.logs.processOnly": "Game process detected; window, EAC and gameplay remain unverified"
+  "ui.logs.processOnly": "Game process detected; window, EAC and gameplay remain unverified",
+  "ui.art.creditTitle": "Artwork credits",
+  "ui.art.permission": "Artwork used with permission.",
+  "ui.art.welcomeTitle": "Welcome to HELLDIVERS 2 FX Launcher",
+  "ui.art.welcomeDetail": "Prepare the selected FX environment, check game components and verify the result.",
+  "ui.art.completedTitle": "Environment setup completed"
  },
  "zh-CN": {
   "ui.workflow.environment": "环境状态",
@@ -1203,7 +1208,7 @@
   "ui.fex.compatible": "FEX 兼容模式",
   "ui.fex.repair": "FEX 需要修复",
   "ui.fex.unverified": "FEX 来源未验证",
-  "ui.brand.name": "绝地潜兵2 FX启动器",
+  "ui.brand.name": "绝地潜兵 2 FX 启动器",
   "ui.dashboard.connected": "已连接",
   "ui.dashboard.process": "已发现进程",
   "ui.logs.autoScroll": "自动滚动",
@@ -1217,7 +1222,12 @@
   "ui.logs.started": "已开始",
   "ui.logs.commandSucceeded": "Steam 启动命令已成功返回",
   "ui.logs.alreadyRunning": "游戏进程已运行，未发送新请求",
-  "ui.logs.processOnly": "已检测到游戏进程；窗口、EAC 和实际进入游戏仍待验证"
+  "ui.logs.processOnly": "已检测到游戏进程；窗口、EAC 和实际进入游戏仍待验证",
+  "ui.art.creditTitle": "美术作品鸣谢",
+  "ui.art.permission": "经作者授权使用",
+  "ui.art.welcomeTitle": "欢迎使用绝地潜兵 2 FX 启动器",
+  "ui.art.welcomeDetail": "准备所选 FX 环境，检查游戏组件并验证配置结果。",
+  "ui.art.completedTitle": "环境配置流程已完成"
  },
  "ja": {
   "ui.workflow.environment": "環境の状態",
@@ -1813,7 +1823,7 @@
   "ui.fex.compatible": "FEX 互換モード",
   "ui.fex.repair": "FEX の修復が必要",
   "ui.fex.unverified": "FEX の出所は未検証",
-  "ui.brand.name": "HD2 FX Launcher",
+  "ui.brand.name": "HELLDIVERS 2 FX Launcher",
   "ui.dashboard.connected": "接続済み",
   "ui.dashboard.process": "プロセス検出",
   "ui.logs.autoScroll": "自動スクロール",
@@ -1827,7 +1837,12 @@
   "ui.logs.started": "開始",
   "ui.logs.commandSucceeded": "Steam 起動コマンドが正常に終了",
   "ui.logs.alreadyRunning": "ゲームプロセスは実行中のため新規要求なし",
-  "ui.logs.processOnly": "ゲームプロセスを検出。ウインドウ、EAC、ゲーム内到達は未確認"
+  "ui.logs.processOnly": "ゲームプロセスを検出。ウインドウ、EAC、ゲーム内到達は未確認",
+  "ui.art.creditTitle": "アートワークのクレジット",
+  "ui.art.permission": "作者の許可を得て使用しています。",
+  "ui.art.welcomeTitle": "HELLDIVERS 2 FX Launcher へようこそ",
+  "ui.art.welcomeDetail": "選択した FX 環境を準備し、ゲームコンポーネントを確認して結果を検証します。",
+  "ui.art.completedTitle": "環境設定が完了しました"
  },
  "ko": {
   "ui.workflow.environment": "환경 상태",
@@ -2423,7 +2438,7 @@
   "ui.fex.compatible": "FEX 호환 모드",
   "ui.fex.repair": "FEX 복구 필요",
   "ui.fex.unverified": "FEX 출처 미확인",
-  "ui.brand.name": "HD2 FX Launcher",
+  "ui.brand.name": "HELLDIVERS 2 FX Launcher",
   "ui.dashboard.connected": "연결됨",
   "ui.dashboard.process": "프로세스 발견",
   "ui.logs.autoScroll": "자동 스크롤",
@@ -2437,7 +2452,12 @@
   "ui.logs.started": "시작됨",
   "ui.logs.commandSucceeded": "Steam 실행 명령이 정상 반환됨",
   "ui.logs.alreadyRunning": "게임 프로세스가 이미 실행 중이므로 새 요청 없음",
-  "ui.logs.processOnly": "게임 프로세스가 감지됨. 창, EAC 및 게임 진입은 확인되지 않음"
+  "ui.logs.processOnly": "게임 프로세스가 감지됨. 창, EAC 및 게임 진입은 확인되지 않음",
+  "ui.art.creditTitle": "아트워크 크레딧",
+  "ui.art.permission": "작가의 허가를 받아 사용했습니다.",
+  "ui.art.welcomeTitle": "HELLDIVERS 2 FX Launcher에 오신 것을 환영합니다",
+  "ui.art.welcomeDetail": "선택한 FX 환경을 준비하고 게임 구성 요소와 설정 결과를 확인합니다.",
+  "ui.art.completedTitle": "환경 설정이 완료되었습니다"
  },
  "ru": {
   "ui.workflow.environment": "Состояние среды",
@@ -3033,7 +3053,7 @@
   "ui.fex.compatible": "Режим совместимости FEX",
   "ui.fex.repair": "Требуется исправление FEX",
   "ui.fex.unverified": "Источник FEX не проверен",
-  "ui.brand.name": "HD2 FX Launcher",
+  "ui.brand.name": "HELLDIVERS 2 FX Launcher",
   "ui.dashboard.connected": "Подключено",
   "ui.dashboard.process": "Процесс найден",
   "ui.logs.autoScroll": "Автопрокрутка",
@@ -3047,7 +3067,12 @@
   "ui.logs.started": "Начато",
   "ui.logs.commandSucceeded": "Команда запуска Steam успешно завершилась",
   "ui.logs.alreadyRunning": "Процесс игры уже запущен; новый запрос не отправлен",
-  "ui.logs.processOnly": "Процесс игры обнаружен; окно, EAC и вход в игру не проверены"
+  "ui.logs.processOnly": "Процесс игры обнаружен; окно, EAC и вход в игру не проверены",
+  "ui.art.creditTitle": "Авторы иллюстраций",
+  "ui.art.permission": "Работа используется с разрешения автора.",
+  "ui.art.welcomeTitle": "Добро пожаловать в HELLDIVERS 2 FX Launcher",
+  "ui.art.welcomeDetail": "Подготовьте выбранную среду FX, проверьте компоненты игры и результат настройки.",
+  "ui.art.completedTitle": "Настройка среды завершена"
  },
  "es": {
   "ui.workflow.environment": "Estado del entorno",
@@ -3643,7 +3668,7 @@
   "ui.fex.compatible": "Modo de compatibilidad FEX",
   "ui.fex.repair": "FEX requiere reparación",
   "ui.fex.unverified": "Origen de FEX sin verificar",
-  "ui.brand.name": "HD2 FX Launcher",
+  "ui.brand.name": "HELLDIVERS 2 FX Launcher",
   "ui.dashboard.connected": "Conectado",
   "ui.dashboard.process": "Proceso detectado",
   "ui.logs.autoScroll": "Desplazamiento automático",
@@ -3657,7 +3682,12 @@
   "ui.logs.started": "Iniciado",
   "ui.logs.commandSucceeded": "El comando de inicio de Steam terminó correctamente",
   "ui.logs.alreadyRunning": "El proceso del juego ya está activo; no se envió otra solicitud",
-  "ui.logs.processOnly": "Proceso del juego detectado; ventana, EAC y acceso al juego sin verificar"
+  "ui.logs.processOnly": "Proceso del juego detectado; ventana, EAC y acceso al juego sin verificar",
+  "ui.art.creditTitle": "Créditos de ilustración",
+  "ui.art.permission": "Obra utilizada con permiso del autor.",
+  "ui.art.welcomeTitle": "Te damos la bienvenida a HELLDIVERS 2 FX Launcher",
+  "ui.art.welcomeDetail": "Prepara el entorno FX seleccionado, comprueba los componentes del juego y verifica el resultado.",
+  "ui.art.completedTitle": "Configuración del entorno completada"
  },
  "de": {
   "ui.workflow.environment": "Umgebungsstatus",
@@ -4253,7 +4283,7 @@
   "ui.fex.compatible": "FEX-Kompatibilitätsmodus",
   "ui.fex.repair": "FEX reparieren",
   "ui.fex.unverified": "FEX-Herkunft ungeprüft",
-  "ui.brand.name": "HD2 FX Launcher",
+  "ui.brand.name": "HELLDIVERS 2 FX Launcher",
   "ui.dashboard.connected": "Verbunden",
   "ui.dashboard.process": "Prozess gefunden",
   "ui.logs.autoScroll": "Automatisch scrollen",
@@ -4267,7 +4297,12 @@
   "ui.logs.started": "Gestartet",
   "ui.logs.commandSucceeded": "Steam-Startbefehl erfolgreich beendet",
   "ui.logs.alreadyRunning": "Spielprozess läuft bereits; keine neue Anfrage",
-  "ui.logs.processOnly": "Spielprozess erkannt; Fenster, EAC und Spielbeitritt nicht geprüft"
+  "ui.logs.processOnly": "Spielprozess erkannt; Fenster, EAC und Spielbeitritt nicht geprüft",
+  "ui.art.creditTitle": "Bildnachweis",
+  "ui.art.permission": "Das Kunstwerk wird mit Genehmigung verwendet.",
+  "ui.art.welcomeTitle": "Willkommen bei HELLDIVERS 2 FX Launcher",
+  "ui.art.welcomeDetail": "Bereite die gewählte FX-Umgebung vor, prüfe die Spielkomponenten und das Ergebnis.",
+  "ui.art.completedTitle": "Einrichtung der Umgebung abgeschlossen"
  },
  "fr": {
   "ui.workflow.environment": "État de l’environnement",
@@ -4863,7 +4898,7 @@
   "ui.fex.compatible": "Mode de compatibilité FEX",
   "ui.fex.repair": "FEX à réparer",
   "ui.fex.unverified": "Provenance FEX non vérifiée",
-  "ui.brand.name": "HD2 FX Launcher",
+  "ui.brand.name": "HELLDIVERS 2 FX Launcher",
   "ui.dashboard.connected": "Connecté",
   "ui.dashboard.process": "Processus détecté",
   "ui.logs.autoScroll": "Défilement automatique",
@@ -4877,7 +4912,12 @@
   "ui.logs.started": "Démarré",
   "ui.logs.commandSucceeded": "La commande de lancement Steam a réussi",
   "ui.logs.alreadyRunning": "Le processus du jeu est déjà actif ; aucune nouvelle demande",
-  "ui.logs.processOnly": "Processus du jeu détecté ; fenêtre, EAC et accès au jeu non vérifiés"
+  "ui.logs.processOnly": "Processus du jeu détecté ; fenêtre, EAC et accès au jeu non vérifiés",
+  "ui.art.creditTitle": "Crédits artistiques",
+  "ui.art.permission": "Œuvre utilisée avec l’autorisation de son auteur.",
+  "ui.art.welcomeTitle": "Bienvenue dans HELLDIVERS 2 FX Launcher",
+  "ui.art.welcomeDetail": "Préparez l’environnement FX sélectionné, vérifiez les composants du jeu et le résultat.",
+  "ui.art.completedTitle": "Configuration de l’environnement terminée"
  },
  "pt-BR": {
   "ui.workflow.environment": "Estado do ambiente",
@@ -5473,7 +5513,7 @@
   "ui.fex.compatible": "Modo de compatibilidade FEX",
   "ui.fex.repair": "FEX precisa de reparo",
   "ui.fex.unverified": "Origem do FEX não verificada",
-  "ui.brand.name": "HD2 FX Launcher",
+  "ui.brand.name": "HELLDIVERS 2 FX Launcher",
   "ui.dashboard.connected": "Conectado",
   "ui.dashboard.process": "Processo encontrado",
   "ui.logs.autoScroll": "Rolagem automática",
@@ -5487,7 +5527,12 @@
   "ui.logs.started": "Iniciado",
   "ui.logs.commandSucceeded": "O comando de inicialização do Steam retornou com sucesso",
   "ui.logs.alreadyRunning": "O processo do jogo já está ativo; nenhuma nova solicitação",
-  "ui.logs.processOnly": "Processo do jogo detectado; janela, EAC e entrada no jogo não verificados"
+  "ui.logs.processOnly": "Processo do jogo detectado; janela, EAC e entrada no jogo não verificados",
+  "ui.art.creditTitle": "Créditos da arte",
+  "ui.art.permission": "Obra usada com autorização do autor.",
+  "ui.art.welcomeTitle": "Boas-vindas ao HELLDIVERS 2 FX Launcher",
+  "ui.art.welcomeDetail": "Prepare o ambiente FX selecionado, confira os componentes do jogo e verifique o resultado.",
+  "ui.art.completedTitle": "Configuração do ambiente concluída"
  },
  "zh-TW": {
   "ui.workflow.environment": "環境狀態",
@@ -6083,7 +6128,7 @@
   "ui.fex.compatible": "FEX 相容模式",
   "ui.fex.repair": "FEX 需要修復",
   "ui.fex.unverified": "FEX 來源未驗證",
-  "ui.brand.name": "絕地潛兵2 FX啟動器",
+  "ui.brand.name": "絕地潛兵 2 FX 啟動器",
   "ui.dashboard.connected": "已連線",
   "ui.dashboard.process": "已發現行程",
   "ui.logs.autoScroll": "自動捲動",
@@ -6097,6 +6142,11 @@
   "ui.logs.started": "已開始",
   "ui.logs.commandSucceeded": "Steam 啟動命令已成功返回",
   "ui.logs.alreadyRunning": "遊戲行程已執行，未傳送新請求",
-  "ui.logs.processOnly": "已偵測到遊戲行程；視窗、EAC 與實際進入遊戲仍待驗證"
+  "ui.logs.processOnly": "已偵測到遊戲行程；視窗、EAC 與實際進入遊戲仍待驗證",
+  "ui.art.creditTitle": "美術作品鳴謝",
+  "ui.art.permission": "經作者授權使用",
+  "ui.art.welcomeTitle": "歡迎使用絕地潛兵 2 FX 啟動器",
+  "ui.art.welcomeDetail": "準備所選 FX 環境，檢查遊戲元件並驗證設定結果。",
+  "ui.art.completedTitle": "環境設定流程已完成"
  }
 }

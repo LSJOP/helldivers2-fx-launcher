@@ -9,9 +9,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 NAMES = {
-    'en': 'HD2 FX Launcher', 'zh-Hans': '绝地潜兵2 FX启动器',
-    'zh-Hant': '絕地潛兵2 FX啟動器',
-    **{language: 'HD2 FX Launcher' for language in ('ja', 'ko', 'ru', 'es', 'de', 'fr', 'pt-BR')},
+    'en': 'HELLDIVERS 2 FX Launcher', 'zh-Hans': '绝地潜兵 2 FX 启动器',
+    'zh-Hant': '絕地潛兵 2 FX 啟動器',
+    **{language: 'HELLDIVERS 2 FX Launcher' for language in ('ja', 'ko', 'ru', 'es', 'de', 'fr', 'pt-BR')},
 }
 
 def strings(path):
@@ -45,6 +45,8 @@ def check_in_app_names():
     for language, entries in catalog.items():
         locale = {'zh-CN': 'zh-Hans', 'zh-TW': 'zh-Hant'}.get(language, language)
         assert entries.get('ui.brand.name') == NAMES[locale], language
+        assert NAMES[locale] in entries.get('ui.art.welcomeTitle', ''), language
+        assert 'HD2FXNative' not in entries['ui.art.welcomeTitle'], language
     assert len(catalog) == len(NAMES)
     print(f'PASS: {len(catalog)} in-app brand names match bundle translations')
 

@@ -31,6 +31,10 @@ struct SettingsView: View {
             CredentialManagementView(state: state, credentials: state.credentials, tasks: state.tasks)
             SoftwareUpdateView(manager: state.updates, language: state.languageCode)
             DisclosureGroup(state.t("ui.008")) { LegacyOperationsView(state: state, scope: "settings") }
+            TacticalPanel(number: "", title: state.t("ui.art.creditTitle"), symbol: "paintpalette") {
+                Text(verbatim: "MOTR7").font(TacticalTypography.body.weight(.semibold))
+                Text(state.t("ui.art.permission")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+            }
 
         }
     }

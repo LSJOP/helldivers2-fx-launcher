@@ -1,12 +1,12 @@
 <div align="center">
-  <img src="docs/assets/app-icon.png" width="128" alt="绝地潜兵2 FX启动器 icon">
-  <h1>绝地潜兵2 FX启动器</h1>
+  <img src="docs/assets/app-icon.png" width="128" alt="绝地潜兵 2 FX 启动器 icon">
+  <h1>绝地潜兵 2 FX 启动器</h1>
   <p>HELLDIVERS 2 FX Launcher · Apple Silicon macOS</p>
 </div>
 
 [简体中文](README.zh-CN.md) | [English](README.md)
 
-### [🟨 ⬇️ 下载 绝地潜兵2 FX启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.1/HD2FXNative-v1.0.1-macOS-arm64.dmg)
+### [🟨 ⬇️ 下载 绝地潜兵 2 FX 启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.1/HD2FXNative-v1.0.1-macOS-arm64.dmg)
 
 **🟨 Stable Release · v1.0.1** · **macOS · Apple Silicon / arm64**
 
@@ -14,7 +14,7 @@
 
 ## 简体中文
 
-绝地潜兵2 FX启动器是面向 Apple Silicon Mac 的第三方社区启动与管理工具，使用 SwiftUI 和原生核心，帮助用户检查 FX 环境、配置运行环境和管理游戏性能设置。
+绝地潜兵 2 FX 启动器是面向 Apple Silicon Mac 的第三方社区启动与管理工具，使用 SwiftUI 和原生核心，帮助用户检查 FX 环境、配置运行环境和管理游戏性能设置。
 
 FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游戏，主菜单／飞船获用户确认；单人、多人及自动更新完整闭环仍未测试。正式 FX 1.9.12 仅离线只读调查。见[修复证据](docs/environment/FX199_RF_REPAIR_20261114.md)。
 
@@ -35,6 +35,10 @@ FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游�
 | ![日志](docs/images/zh-CN/logs.png) | |
 
 ### 主要功能
+
+未发布的配置与启动流程美术作品由 **MOTR7** 创作，经作者授权使用（由用户提供）；首页主视觉和统一页面横幅保持不变。
+
+**未发布的界面更新：**运行环境、FX 管理和日志页使用统一的内容区快照刷新；FX 详情复用检测结果，避免界面重绘时反复计算哈希。
 
 日志页使用系统本地时间，实时显示有容量限制的任务事件，支持自动滚动和导出脱敏的原始 ISO 8601 时间戳。启动命令成功、游戏进程、窗口和实际进入游戏分别记录；窗口及游戏内状态不会自动推断。
 

@@ -1,6 +1,6 @@
 <div align="center">
   <img src="docs/assets/app-icon.png" width="128" alt="HD2 FX Launcher icon">
-  <h1>HD2 FX Launcher</h1>
+  <h1>HELLDIVERS 2 FX Launcher</h1>
   <p>HELLDIVERS 2 FX Launcher · Apple Silicon macOS</p>
 </div>
 
@@ -14,7 +14,7 @@
 
 ## English
 
-HD2 FX Launcher is an unofficial community launcher and management tool for Apple Silicon Macs. Built with SwiftUI and a native core, it helps users inspect FX, configure the runtime environment and manage game performance settings.
+HELLDIVERS 2 FX Launcher is an unofficial community launcher and management tool for Apple Silicon Macs. Built with SwiftUI and a native core, it helps users inspect FX, configure the runtime environment and manage game performance settings.
 
 FX 1.9.9 test-Guest repair now reaches the game through the GUI with the historically verified RF FEX components. Main menu/ship was confirmed by the user; single-player, multiplayer and end-to-end updating remain untested. Production FX 1.9.12 was inspected offline without writes. See [repair evidence](docs/environment/FX199_RF_REPAIR_20261114.md).
 
@@ -35,6 +35,10 @@ The Dashboard retains five cards: FX, virtual machine, Steam, EAC and multiplaye
 | ![Logs](docs/images/en/logs.png) | |
 
 ### Features
+
+Unreleased setup and launch workflow artwork is by **MOTR7**, used with the artist’s permission as supplied by the user. The Dashboard hero and shared page header are unchanged.
+
+**Unreleased UI:** Environment, FX Manager and Logs use a shared content-area snapshot refresh. The FX details view reuses inspection evidence to avoid repeated hashing during redraw.
 
 The Logs page displays local system time, streams bounded task events, supports auto-scroll and exports redacted raw ISO 8601 timestamps. Launch command success, process detection, window and gameplay remain separate; game-window and gameplay evidence are not automatic.
 

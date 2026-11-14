@@ -59,17 +59,9 @@ struct FXTechnicalDetails: View {
     @ObservedObject var tasks: TaskManager
     private var selected: [String: JSONValue] { state.fxSelection.selected ?? [:] }
 
+    // Use the existing inspection result; hashing bundle resources in body blocks the main thread.
     private var resourceRows: [JSONValue] {
-        state.targetInspection["resource_files"]?.array ?? LaunchResources.report()["resource_files"]?.array ?? []
-    }
-    private var resourceState: String {
-        let stateText = LaunchResources.gvproxyState().state
-        switch stateText {
-        case "ready": return state.t("ui.130")
-        case "missing": return state.t("ui.209")
-        case "hash_mismatch": return state.t("ui.fx.statusFailed")
-        default: return state.t("ui.041")
-        }
+        state.targetInspection["resource_files"]?.array ?? []
     }
     private var preflightText: String {
         if let error = state.targetInspectionError { return error.code }
@@ -96,6 +88,9 @@ struct FXTechnicalDetails: View {
             }
             TacticalDivider()
             TacticalSectionHeader(number: "B", title: state.t("ui.fx.details.resources"), symbol: "shippingbox")
+            if resourceRows.isEmpty {
+                Text(state.t("ui.208")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+            }
             ForEach(Array(resourceRows.enumerated()), id: \.offset) { _, row in
                 let name = row.object["file"]?.text ?? "—"
                 let actual = row.object["actual_sha256"]?.text ?? ""
@@ -244,6 +239,7 @@ struct TacticalButton: View {
     var primary = false
     var loading = false
     var disabledReason: String? = nil
+    var fillsWidth = false
     let action: () -> Void
     var body: some View {
         Button(action: action) {
@@ -252,6 +248,7 @@ struct TacticalButton: View {
                 else { Image(systemName: symbol).accessibilityHidden(true) }
                 Text(title)
             }
+            .frame(maxWidth: fillsWidth ? .infinity : nil)
         }
         .buttonStyle(TacticalButtonStyle(primary: primary))
         .disabled(loading || disabledReason != nil)
@@ -295,7 +292,6 @@ struct TacticalNavigationItem: View {
 // One shared secondary-page banner. Artwork is bundled, decorative and noninteractive.
 struct TacticalPageHeader: View {
     let title: String
-    var refreshState: AppState? = nil
     private let height: CGFloat = 160
     var body: some View {
         GeometryReader { geometry in
@@ -320,13 +316,9 @@ struct TacticalPageHeader: View {
                         Text(title).font(TacticalTypography.page).foregroundStyle(.white)
                             .fixedSize(horizontal: false, vertical: true)
                             .accessibilityIdentifier("page.title").accessibilityAddTraits(.isHeader)
-                        if let refreshState {
-                            TacticalRefreshButton(state: refreshState, tasks: refreshState.tasks)
-                                .fixedSize()
-                        }
                     }
                 }
-                // Reserve the right-hand emblem region so neither title nor button covers it.
+                // Reserve the right-hand emblem region for the artwork.
                 .frame(width: max(1, geometry.size.width - 230), alignment: .leading)
                 .padding(.leading, 20)
             }
@@ -336,6 +328,69 @@ struct TacticalPageHeader: View {
             }
         }
         .frame(height: height)
+    }
+}
+
+// Workflow illustrations never compete with controls in a narrow content area.
+struct TacticalFlowArtwork<Content: View>: View {
+    let asset: String
+    @ViewBuilder let content: Content
+    @State private var availableWidth: CGFloat = 0
+    var body: some View {
+        HStack(alignment: .top, spacing: 20) {
+            content.fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .topLeading)
+            if availableWidth >= 860 {
+                Image(asset)
+                    .resizable().scaledToFit()
+                    .frame(width: 320)
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.4)))
+                    .accessibilityHidden(true)
+                    .allowsHitTesting(false)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            GeometryReader { geometry in
+                Color.clear
+                    .onAppear { availableWidth = geometry.size.width }
+                    .onChange(of: geometry.size.width) { _, width in availableWidth = width }
+            }
+        }
+    }
+}
+
+// Decorative marks are independent of the workflow's actual state.
+struct TacticalFlowMark: View {
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        let c = TacticalColors(scheme: scheme)
+        HStack(spacing: 5) {
+            ForEach(0..<3, id: \.self) { _ in
+                Rectangle().fill(c.accent).frame(width: 12, height: 5).rotationEffect(.degrees(-25))
+            }
+            Rectangle().fill(c.line).frame(height: 1)
+            Image(systemName: "shield.lefthalf.filled").font(.system(size: 11)).foregroundStyle(c.accent)
+        }
+        .frame(maxWidth: 180)
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
+    }
+}
+
+struct TacticalFlowStep: View {
+    let number: String
+    let title: String
+    let symbol: String
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        let c = TacticalColors(scheme: scheme)
+        HStack(spacing: 12) {
+            Text(verbatim: number).font(TacticalTypography.log).foregroundStyle(c.accent).accessibilityHidden(true)
+            Image(systemName: symbol).frame(width: 22).foregroundStyle(c.accent).accessibilityHidden(true)
+            Text(title).fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 5)
     }
 }
 
@@ -426,21 +481,16 @@ struct TacticalRefreshButton: View {
     @ObservedObject var state: AppState
     @ObservedObject var tasks: TaskManager
     var body: some View {
-        Button { state.refresh() } label: {
-            HStack(spacing: 6) {
-                if state.refreshing { ProgressView().controlSize(.mini) }
-                else { Image(systemName: "arrow.clockwise") }
-                Text(state.t("ui.262"))
-            }.font(TacticalTypography.caption).padding(.horizontal, 9).padding(.vertical, 7)
+        HStack {
+            Spacer(minLength: 0)
+            TacticalButton(title: state.t("ui.262"), symbol: "arrow.clockwise",
+                           loading: state.refreshing,
+                           disabledReason: tasks.busy ? state.t("ui.016") : nil) {
+                state.refresh()
+            }
+            .help(state.t("ui.263"))
+            .accessibilityIdentifier("refresh")
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(Color(white: 0.92))
-        .background(Color(white: 0.14))
-        .overlay(Rectangle().stroke(Color(white: 0.38), lineWidth: 1))
-        .opacity(tasks.busy ? 0.55 : 1)
-        .disabled(tasks.busy)
-        .help(state.t("ui.263"))
-        .accessibilityIdentifier("refresh")
     }
 }
 
