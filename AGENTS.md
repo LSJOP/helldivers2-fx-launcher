@@ -1,13 +1,13 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.23** · Updated: **2026-11-14**.
-Change: add bounded Swift fixture selection and explicit release checks. Instruction version is independent of App version.
+Instruction version: **v1.2.24** · Updated: **2026-11-14**.
+Change: limit worktree creation and require safe completion review. Instruction version is independent of App version.
 
 ## Authority and task lifecycle
 
 - GitHub main source, this file, [DEVELOPMENT_STATUS](docs/DEVELOPMENT_STATUS.md) and [NATIVE_APP_DEVELOPMENT_HANDOFF](docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md) are authoritative. Consult status and handoff when relevant; inspect current source for behavior. Chats, memory, old branches and historical reports are supporting evidence, never proof of current behavior.
 - Use `bash script/git_delivery.sh preflight` for Git inventory and `bash script/git_delivery.sh verify BRANCH` for remote containment after push. Begin with `git status --short --branch`, `git branch -a -vv`, `git remote -v`, `git log -5 --oneline`, `git worktree list --porcelain` and fetch. Inspect related worktrees for staged, unstaged, untracked and unpushed work. Preserve it with recoverable backups before integration. On network failure distinguish local main from last-known origin/main.
-- Use a task branch; reuse a clean worktree where safe, never develop directly on main. Reuse existing services and verified branch implementations; compare by feature, never overwrite newer code with an old branch tree. Work serially unless explicitly authorized otherwise.
+- Use a task branch and reuse a clean worktree; create a worktree only for parallel development, high-risk isolation or a concrete need. Do not create purposeless temporary branches. Never develop directly on main. At completion check whether the worktree can be safely removed after protecting unique commits, changes and important ignored files. Reuse existing services and verified branch implementations; compare by feature, never overwrite newer code with an old branch tree. Work serially unless explicitly authorized otherwise.
 - At task end run necessary checks; update status and handoff only when their current guidance materially changes. Commit task files only, using feat/fix/ui/docs/refactor/test/chore. Review diff, `git diff --check` and secret scan. Commit verified work by default.
 - Automatically integrate completed verified work into main and ordinary-push when repository requirements allow; prefer PRs where required. Fetch latest main, verify isolated merge/tests/build proportionate to changes, respect branch protection and verify remote containment. Never force-push, bypass checks or claim a failed push succeeded. Incomplete/high-risk work remains on its branch with blockers recorded. Documentation-only changes require documentation checks, not an unrelated App rebuild.
 - No reset --hard, clean -fd, deletion of unsaved worktrees, unmerged branches or historical tags. Do not modify legacy-script or silently advance CoreSnapshot. Remove a worktree only after checking its purpose, cleanliness, containment and dependencies; preserve uncertain or unmerged work. Do not publish Releases, change repository settings or configure automations without authorization.
