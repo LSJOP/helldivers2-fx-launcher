@@ -131,3 +131,5 @@ bash native-app/script/build_local_release.sh /absolute/new/output-directory
 以[跨机器接续检查点](DEVELOPMENT_STATUS.md#跨机器接续检查点2026-11-14)为本机最新证据。上一台电脑的 App/截图和未推送文件不位于本机；本机使用基线 `78a9eca` 的独立工作树。当前构建及 README 图片源码为 `8f4c396`，图片是实际隔离 Debug 窗口，Release 候选另行签名验包。
 
 下一步：完成其余语言及 Finder/菜单/动态错误的目视审阅，逐项处置本机 full-audit 补丁并核对旧机独有未提交内容，再用只作用于临时 App 的签名 fixture 演练 Sparkle 替换、故障回滚和重启。确认这些门禁及完整运行检查后才能晋级 main。
+
+最新验收增量：十语言大窗口常态页面截图已捕获并初审，原始全文检查退出 0；剩余视觉检查聚焦菜单/Finder、窄窗口、动态错误与翻译自然度。先以临时签名密钥和隔离 App 目录建立可重复的 Sparkle 成功/故障 fixture，明确目录保护和替换前后版本/进程证据；生产更新默认仍关闭。
