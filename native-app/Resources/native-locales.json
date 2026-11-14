@@ -592,7 +592,10 @@
   "ui.fex.compatible": "FEX compatibility mode",
   "ui.fex.repair": "FEX needs repair",
   "ui.fex.unverified": "FEX origin unverified",
-  "ui.brand.name": "HD2 FX Launcher"
+  "ui.brand.name": "HD2 FX Launcher",
+  "ui.dashboard.connected": "Connected",
+  "ui.dashboard.loaded": "Loaded",
+  "ui.dashboard.process": "Process found"
  },
  "zh-CN": {
   "ui.workflow.environment": "环境状态",
@@ -1187,7 +1190,10 @@
   "ui.fex.compatible": "FEX 兼容模式",
   "ui.fex.repair": "FEX 需要修复",
   "ui.fex.unverified": "FEX 来源未验证",
-  "ui.brand.name": "绝地潜兵2 FX启动器"
+  "ui.brand.name": "绝地潜兵2 FX启动器",
+  "ui.dashboard.connected": "已连接",
+  "ui.dashboard.loaded": "已加载",
+  "ui.dashboard.process": "已发现进程"
  },
  "ja": {
   "ui.workflow.environment": "環境の状態",
@@ -1782,7 +1788,10 @@
   "ui.fex.compatible": "FEX 互換モード",
   "ui.fex.repair": "FEX の修復が必要",
   "ui.fex.unverified": "FEX の出所は未検証",
-  "ui.brand.name": "HD2 FX Launcher"
+  "ui.brand.name": "HD2 FX Launcher",
+  "ui.dashboard.connected": "接続済み",
+  "ui.dashboard.loaded": "読み込み済み",
+  "ui.dashboard.process": "プロセス検出"
  },
  "ko": {
   "ui.workflow.environment": "환경 상태",
@@ -2377,7 +2386,10 @@
   "ui.fex.compatible": "FEX 호환 모드",
   "ui.fex.repair": "FEX 복구 필요",
   "ui.fex.unverified": "FEX 출처 미확인",
-  "ui.brand.name": "HD2 FX Launcher"
+  "ui.brand.name": "HD2 FX Launcher",
+  "ui.dashboard.connected": "연결됨",
+  "ui.dashboard.loaded": "로드됨",
+  "ui.dashboard.process": "프로세스 발견"
  },
  "ru": {
   "ui.workflow.environment": "Состояние среды",
@@ -2972,7 +2984,10 @@
   "ui.fex.compatible": "Режим совместимости FEX",
   "ui.fex.repair": "Требуется исправление FEX",
   "ui.fex.unverified": "Источник FEX не проверен",
-  "ui.brand.name": "HD2 FX Launcher"
+  "ui.brand.name": "HD2 FX Launcher",
+  "ui.dashboard.connected": "Подключено",
+  "ui.dashboard.loaded": "Загружено",
+  "ui.dashboard.process": "Процесс найден"
  },
  "es": {
   "ui.workflow.environment": "Estado del entorno",
@@ -3567,7 +3582,10 @@
   "ui.fex.compatible": "Modo de compatibilidad FEX",
   "ui.fex.repair": "FEX requiere reparación",
   "ui.fex.unverified": "Origen de FEX sin verificar",
-  "ui.brand.name": "HD2 FX Launcher"
+  "ui.brand.name": "HD2 FX Launcher",
+  "ui.dashboard.connected": "Conectado",
+  "ui.dashboard.loaded": "Cargado",
+  "ui.dashboard.process": "Proceso detectado"
  },
  "de": {
   "ui.workflow.environment": "Umgebungsstatus",
@@ -4162,7 +4180,10 @@
   "ui.fex.compatible": "FEX-Kompatibilitätsmodus",
   "ui.fex.repair": "FEX reparieren",
   "ui.fex.unverified": "FEX-Herkunft ungeprüft",
-  "ui.brand.name": "HD2 FX Launcher"
+  "ui.brand.name": "HD2 FX Launcher",
+  "ui.dashboard.connected": "Verbunden",
+  "ui.dashboard.loaded": "Geladen",
+  "ui.dashboard.process": "Prozess gefunden"
  },
  "fr": {
   "ui.workflow.environment": "État de l’environnement",
@@ -4757,7 +4778,10 @@
   "ui.fex.compatible": "Mode de compatibilité FEX",
   "ui.fex.repair": "FEX à réparer",
   "ui.fex.unverified": "Provenance FEX non vérifiée",
-  "ui.brand.name": "HD2 FX Launcher"
+  "ui.brand.name": "HD2 FX Launcher",
+  "ui.dashboard.connected": "Connecté",
+  "ui.dashboard.loaded": "Chargé",
+  "ui.dashboard.process": "Processus détecté"
  },
  "pt-BR": {
   "ui.workflow.environment": "Estado do ambiente",
@@ -5352,7 +5376,10 @@
   "ui.fex.compatible": "Modo de compatibilidade FEX",
   "ui.fex.repair": "FEX precisa de reparo",
   "ui.fex.unverified": "Origem do FEX não verificada",
-  "ui.brand.name": "HD2 FX Launcher"
+  "ui.brand.name": "HD2 FX Launcher",
+  "ui.dashboard.connected": "Conectado",
+  "ui.dashboard.loaded": "Carregado",
+  "ui.dashboard.process": "Processo encontrado"
  },
  "zh-TW": {
   "ui.workflow.environment": "環境狀態",
@@ -5947,6 +5974,9 @@
   "ui.fex.compatible": "FEX 相容模式",
   "ui.fex.repair": "FEX 需要修復",
   "ui.fex.unverified": "FEX 來源未驗證",
-  "ui.brand.name": "絕地潛兵2 FX啟動器"
+  "ui.brand.name": "絕地潛兵2 FX啟動器",
+  "ui.dashboard.connected": "已連線",
+  "ui.dashboard.loaded": "已載入",
+  "ui.dashboard.process": "已發現行程"
  }
 }

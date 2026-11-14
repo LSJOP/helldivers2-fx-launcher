@@ -20,6 +20,8 @@ FX 1.9.9 test-Guest repair now reaches the game through the GUI with the histori
 
 ### Screenshots
 
+Dashboard screenshot update for the status indicators is pending; the images below are historical Debug captures.
+
 These are real windows from different historical Debug builds, **not final v1.0.0 screenshots**. Final captures must be taken, reviewed and replaced after the final build; see [capture provenance](docs/images/README.md).
 
 | Dashboard | First-Run Setup |

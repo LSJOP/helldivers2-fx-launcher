@@ -206,23 +206,12 @@ struct EnvironmentWorkflowProgressView: View {
     var body: some View {
         if showIdle || workflow.phase != .idle {
             TacticalPanel(number: "", title: state.t(workflow.launchesGame ? "ui.176" : "ui.workflow.result"), symbol: workflow.launchesGame ? "play.rectangle" : "gearshape.2") {
-                Text(state.t(workflow.launchesGame && workflow.phase == .completed ? "ui.140" : workflow.phase.titleKey))
-                if workflow.phase == .launching { Text(state.launchSession.current.title(state.languageCode)) }
-                if workflow.phase == .deploying, let stage = workflow.deploymentStage {
-                    Text(state.t("ui.setup.state." + stage)).font(TacticalTypography.caption)
-                }
-                if let status = state.firstRunPlan?.snapshot.facts["fex_status"] {
-                    Text(state.t(status == "normal" ? "ui.fex.normal" : status == "compatible" ? "ui.fex.compatible" : status == "confirmation" ? "ui.fex.unverified" : "ui.fex.repair"))
-                }
-                if workflow.active {
-                    HStack {
-                        Text(state.t("ui.workflow.stepProgress"))
-                        Text("\(workflow.completedSteps)/\(workflow.totalSteps)")
-                    }
+                HStack {
+                    Text(workflow.phase == .launching ? state.launchSession.current.title(state.languageCode) : state.t(workflow.phase.titleKey))
+                    Spacer()
+                    Text(String(Int(workflow.fraction * 100)) + "%").monospacedDigit()
                 }
                 ProgressView(value: workflow.fraction).tint(.yellow)
-                    .animation(.easeInOut(duration: 0.2), value: workflow.completedSteps)
-                Text(state.t("ui.workflow.stepProgress") + " · " + String(Int(workflow.fraction * 100)) + "%")
                 if let failure = workflow.failure {
                     Text(failure.code == "ARTIFACT_UNAPPROVED" && failure.details["component"]?.text == "fex"
                          ? "FEX · " + state.t("ui.setup.artifactUnavailable")
@@ -238,6 +227,9 @@ struct EnvironmentWorkflowProgressView: View {
                     }
                 }
                 DisclosureGroup(state.t("ui.workflow.stepProgress")) {
+                    if let status = state.firstRunPlan?.snapshot.facts["fex_status"] {
+                        Text(state.t(status == "normal" ? "ui.fex.normal" : status == "compatible" ? "ui.fex.compatible" : status == "confirmation" ? "ui.fex.unverified" : "ui.fex.repair"))
+                    }
                     ForEach(Array([EnvironmentWorkflowPhase.startingFX, .connecting, .detecting, .deploying, .verifying, .launching].prefix(workflow.totalSteps).enumerated()), id: \.offset) { index, phase in
                         Label(state.t(phase.titleKey), systemImage: index < workflow.completedSteps ? "checkmark.circle" : "circle.dashed")
                             .font(TacticalTypography.caption)
