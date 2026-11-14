@@ -32,3 +32,16 @@ Sources: [fixed source commit](https://github.com/StonkGuy/FEX/commit/87c57f0a5f
 - The comparison held Proton-JE `11.0-20261014-3` and SteamLinuxRuntime_4 constant. It does not identify which individual RF files or Proton settings are necessary. The scope is the recorded aarch64 FX 1.9.9 SteamOS test environment, with no new compatibility claims for other versions.
 
 Deployment remains gated. The next evidence required is a reviewed, reproducible source-to-package mapping for the entire deployed group, followed by controlled stock-versus-candidate runs on a fresh isolated target and an observed rollback. No new VM deployment, rollback, game launch, EAC or multiplayer result was established in this recheck.
+
+## Matched source experiment
+
+PR #20's two commits descend from `9d0a260cbf03f2ebc48f4d70c92ba713a91c3d32`. The base branch tip reported by GitHub (`ac8b72bf1c89af993e54704a51a06ba844576cf7`) is 39 commits ahead of that fork point, so it is unsuitable as the matched control. The Steam depot binary remains a separate stock control. Do not label the source baseline as the FX depot build.
+
+`bash tools/build-fex-comparison.sh NEW_OUTPUT_DIRECTORY` uses pinned objects, one Linux arm64 build environment and the same CMake options for both source variants. It records dependency versions, submodule commits, build commands, staged hashes and symlinks. No staged output is installed. This is a build recipe, pending execution and dependency pinning after a successful build. On the Darwin arm64 host its platform guard rejected the run.
+
+| Variant | Original RootFS registration | RootFS `/` |
+| --- | --- | --- |
+| FX 1.9.9 stock depot | No fresh run | No fresh run. Recorded prior test failed with error 731 |
+| PR #20 head | Not run | Not run |
+
+The matched source baseline adds another control once built. Use the same verified test snapshot per run and keep Proton-JE and SteamLinuxRuntime_4 fixed. None of the fresh runs has been performed. The known historical copy was made while the guest could write and is not a verified restore point. An isolated Linux arm64 build environment and a verified restorable guest baseline are still required. No necessity claim or deployment approval follows from this experiment setup.
