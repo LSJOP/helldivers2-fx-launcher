@@ -7,7 +7,7 @@
   "timezone": "Asia/Shanghai",
   "fx_guest_actions": "none",
   "credential_autoload": "disabled by isolated capture arguments",
-  "reviewed_ui_source_sha256": "7f8db853259700957ea2a646664632258876f832849402ae5fb5c4b6719a739e",
+  "reviewed_ui_source_sha256": "5199df3c06d76c01158879031208df9db80cb720f7862a54196100c81a3d01e5",
   "screenshots": [
     {
       "path": "docs/images/en/dashboard.png",
@@ -261,5 +261,5 @@
   "steam_reboot_review_20261106": "First-run-only state/error/verified-package indicators and reboot confirmation changed in build 2026110602. Real deployment/reboot-state screenshot acceptance pending and stated in both READMEs. Existing Settings captures remain historical build 2026110601; no new Guest screenshot or live writes claimed.",
   "v1_integration_review": "2026-11-14 client date. Seven pages per language recaptured and visually reviewed from real Debug App. Supplemental detail images retain historical provenance.",
   "update_gate_review_20261114": "Update prerequisite wording and download-progress controls changed only in the offscreen update section. Seven referenced idle page screenshots retain their matching visible layout. Historical update-detail captures are not referenced by the current READMEs. Final Release update screenshots remain pending.",
-  "review_note": "2026-11-14: refreshed English and Simplified Chinese real windows; reviewed dashboard simplification and shared idle workflow details. Active/failure/narrow states remain separate acceptance. Removed 27 unused keys in every catalog; surviving translations and idle pixels unchanged. Steam status now prefers the actual completed login event over the earlier snapshot; dynamic status remains separate from idle captures."
+  "review_note": "2026-11-14: refreshed English and Simplified Chinese real windows; reviewed dashboard simplification and shared idle workflow details. Active/failure/narrow states remain separate acceptance. Removed 27 unused keys in every catalog; surviving translations and idle pixels unchanged. Steam status now prefers the actual completed login event over the earlier snapshot; dynamic status remains separate from idle captures. Final terminal-only retry button added inside the workflow panel; source reviewed, idle README captures unchanged. Terminal state visual acceptance remains pending."
 }

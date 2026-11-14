@@ -246,7 +246,13 @@ struct EnvironmentWorkflowProgressView: View {
                 if workflow.launchesGame && state.launchSession.current != .idle {
                     DisclosureGroup(state.t("ui.094")) { LaunchProgressView(state: state, tasks: tasks) }
                 }
-                if workflow.active { Button(state.t("ui.038")) { tasks.cancel() } }
+                if workflow.active {
+                    Button(state.t("ui.038")) { tasks.cancel() }
+                } else if workflow.phase != .idle && workflow.failure == nil {
+                    Button(state.t(workflow.launchesGame ? "ui.176" : "ui.workflow.retry")) {
+                        state.startEnvironmentWorkflow(launchGame: workflow.launchesGame)
+                    }.disabled(tasks.busy)
+                }
             }
             .sheet(isPresented: Binding(get: { state.pendingFEXApproval != nil && !tasks.busy }, set: { if !$0 { state.cancelFEXApproval() } })) {
                 VStack(alignment: .leading, spacing: 16) {
