@@ -70,3 +70,5 @@ This community project is not affiliated with the makers of HELLDIVERS 2; names 
 ### Documentation
 
 User and developer guides, architecture notes and historical reports are available in the [documentation index](docs/README.md).
+
+Consolidation candidate: shared launch/recovery, encrypted role-separated credentials, localized branding and consistent update feeds are integrated on `integration/native-app-consolidation`. Screenshot provenance and live acceptance remain pending.
