@@ -2,6 +2,10 @@
 
 更新：2026-11-14（Asia/Shanghai）。先读 [AGENTS](../AGENTS.md) 和 [当前状态](DEVELOPMENT_STATUS.md)。本文件是接续入口，不是另一套任务队列。
 
+> 最新远端核验：本轮 `git ls-remote origin refs/heads/main` 已确认 main 为 `954f88e500efc3f59630ccba2968c53cf0405cc4`，状态管理/交接规则已成功推送。此后本文件仅追加本次同步结果；最终文档提交 SHA 用 `git log -1 -- docs/DEVELOPMENT_STATUS.md docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md` 查询并核对远端，避免自身 SHA 循环。
+> `integration/native-app-consolidation` 的 `41af2ef890e10e7d636ef31205a4fc3c03845536` 也已普通推送 GitHub，作为候选备份，**尚未合并 main**。下文网络失败说明是先前尝试的历史记录，已被此次成功同步取代；其余截图/差异/更新闭环阻塞仍成立。
+
+
 ## Git 基线和接续位置
 
 最后已知 main Commit SHA：`478d2bfdf0b75b92aaaf7516e5ddcd10d03309af`。本次文档基于该提交，不含未验收的整合代码。main 后续 SHA 必须运行 `git fetch --all --prune`、`git rev-parse origin/main` 获取，失败则保留“最后已知”，不可当作最新远端。
