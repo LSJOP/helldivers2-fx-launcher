@@ -144,3 +144,5 @@ FEX 核验现以同一文件树指纹串起预检、审核与实际探针。下�
 ### FX 1.9.9 RootFS 启动排查
 
 13:39 启动已生成指向 /usr/share/guestos/fex-mesa 的配置。测试 Guest 证实该目录的 provider 文件与 x86-64 loader 存在。失败子进程在 pressure-vessel 后报告 RootFS 为空。新增 Guest 侧先决条件检查及缺失 loader 回归测试，未改变真实 Guest 配置。下一步使用同一次启动中的容器内环境和实际 FEX 配置定位丢失点，完整游戏验收仍阻塞。此检查仅覆盖 SteamOS 默认 provider，不建立容器内就绪证据。
+
+FX 1.9.9 的 RootFS 丢失点已在 Steam Runtime 内复现，当前测试 Guest 已备份并修正单项注册配置，动态 x86-64 探针通过。进入游戏仍需实测。接续开发应将此项作为有审核和回滚的部署变更，完整记录见开发状态。

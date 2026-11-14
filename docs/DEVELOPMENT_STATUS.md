@@ -106,3 +106,7 @@ GitHub main 的源码、AGENTS.md 和本文件/交接文档是权威。聊天不
 ### FX 1.9.9 RootFS 启动排查
 
 13:39 启动已生成指向 /usr/share/guestos/fex-mesa 的配置。测试 Guest 证实该目录的 provider 文件与 x86-64 loader 存在。失败子进程在 pressure-vessel 后报告 RootFS 为空。新增 Guest 侧先决条件检查及缺失 loader 回归测试，未改变真实 Guest 配置。下一步使用同一次启动中的容器内环境和实际 FEX 配置定位丢失点，完整游戏验收仍阻塞。此检查仅覆盖 SteamOS 默认 provider，不建立容器内就绪证据。
+
+### FX 1.9.9 容器 RootFS 对照实验
+
+在测试 Guest 用 Steam 的 FEX wrapper 与 Steam Linux Runtime 4 执行动态 x86-64 探针。原始 emulator.json 的 container_environment.FEX_ROOTFS 为空，进入容器后覆盖外层传入的值。只在临时 FEX 副本把该值设置为 /run/gfx/main，容器收到正确值并且动态探针退出 0。核对测试盘和 Guest machine ID 后同样修改测试 Guest 的 emulator.json，原件备份于 /home/steamos/.hd2-rootfs-backup-sfvym6ou，实装探针退出 0。游戏菜单仍需单独验证。文件变动会改变 FEX 文件树审核指纹。App 尚未自动应用此修复，后续需要版本与目标绑定的部署/回滚及容器内探针。
