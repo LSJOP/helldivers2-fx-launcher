@@ -17,6 +17,9 @@ SDK="$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
 
 /usr/bin/python3 -I -B checks/proton_release_checks.py >evidence/proton-release-checks.txt 2>&1
 
+# Dashboard status matrix uses the same resolver as the live view; no runtime actions.
+/usr/bin/python3 -I -B checks/dashboard_led_checks.py >evidence/dashboard-status-checks.txt 2>&1
+
 # SSH regression: arguments, controlling terminal, password echo, error classes.
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" \
   -module-cache-path "$ROOT_DIR/build/ModuleCache" \

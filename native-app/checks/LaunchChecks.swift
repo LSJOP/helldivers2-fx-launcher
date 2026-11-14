@@ -7,6 +7,18 @@ import Foundation
             print("PASS " + message)
         }
         var session = LaunchSession(); session.begin(root: "fixture")
+        let firstID = session.taskID
+        try check(firstID != nil && session.diagnostic(appVersion: "fixture")["task_id"]?.text == firstID?.uuidString, "launch task has a diagnostic identifier")
+        session.begin(root: "fixture")
+        try check(session.taskID != firstID, "retry creates a fresh launch task identifier")
+        let shanghai = TimeZone(identifier: "Asia/Shanghai")!
+        try check(LogTimestamp.display("2026-11-14T08:22:57Z", timeZone: shanghai) == "2026-11-14 16:22:57", "UTC log timestamps render in the chosen local time zone")
+        try check(LogTimestamp.display("2026-11-14T08:22:57.125Z", timeZone: shanghai) == "2026-11-14 16:22:57", "fractional UTC timestamps render locally")
+        try check(LogTimestamp.display("not-a-timestamp", timeZone: shanghai) == "not-a-timestamp", "unknown timestamps are preserved")
+        try check(LogTimestamp.displayTimestamps(in: "start=2026-11-14T08:22:57Z end=2026-11-14T08:23:57Z", timeZone: shanghai) == "start=2026-11-14 16:22:57 end=2026-11-14 16:23:57", "embedded UTC timestamps display locally")
+        session.consume(["kind": .string("launch_request"), "command_succeeded": .bool(true)])
+        try check(session.launchCommandSucceeded == true && !session.processDetected && session.mainMenuConfirmedAt == nil,
+                  "successful launch command is distinct from process and gameplay")
         session.confirmMainMenu(); session.confirmSinglePlayer()
         try check(session.mainMenuConfirmedAt == nil && session.singlePlayerConfirmedAt == nil, "confirmation requires observed process and completed operation")
         session.consume(["stage":.string("StartingSteam"), "status":.string("done"), "sequence":.number(5)])
@@ -59,7 +71,9 @@ import Foundation
         var workflow = EnvironmentWorkflow(phase: .detecting, completedSteps: 2, launchesGame: true)
         try check(workflow.totalSteps == 6 && workflow.active && workflow.fraction < 1, "launch workflow reports completed steps")
         workflow.phase = .failed
-        try check(!workflow.active && workflow.fraction < 1, "failed workflow stops animation below 100 percent")
+        try check(!workflow.active && !workflow.showsProgress && workflow.fraction < 1, "failed workflow ends without displaying a stale percentage")
+        workflow.phase = .cancelled
+        try check(!workflow.active && !workflow.showsProgress, "cancelled workflow ends without displaying a stale percentage")
         workflow = EnvironmentWorkflow(phase: .completed, completedSteps: 5, launchesGame: false)
         try check(workflow.totalSteps == 5 && workflow.fraction == 1, "setup-only workflow completes without a game stage")
         print("23 launch and GUI state checks PASS")

@@ -18,9 +18,11 @@ v1.0.0 (2026111403) is published. Game and complete update acceptance remain lim
 
 - Update candidate: connect the install action to verified download and expose cancellation during the native operation. Sparkle may still show its own confirmation and download again; installation and rollback are not yet accepted. v1.0.0 requires a trusted manual bootstrap because it contains no update key.
 
+- Stream bounded, redacted workflow and launch events with per-attempt IDs, component progress and elapsed times; display local timestamps while exporting original ISO 8601 timestamps. Bound Steam/game waiting and stop showing 83% after failure. Live full launch and end-to-end EAC/gameplay validation remain pending.
+
 - Align the displayed app name with system language: Simplified and Traditional Chinese use their respective names, and other languages use HD2 FX Launcher. The internal project and data identities remain unchanged.
 
-- Refine dashboard status indicators and show completed-step progress, with details folded by default. Final screenshot and runtime acceptance remain pending.
+- Retain the five Dashboard cards with evidence-bound green/yellow/red/gray indicators and completed-step progress, with details folded by default. Verify the isolated status matrix and refresh reviewed English/Chinese Debug screenshots. EAC/multiplayer success remains unverified; no Release or DMG replacement.
 
 The development entries below retain earlier stage evidence; the published release status is recorded in v1.0.0.
 

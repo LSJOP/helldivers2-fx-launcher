@@ -20,13 +20,23 @@ FX 1.9.9 test-Guest repair now reaches the game through the GUI with the histori
 
 ### Screenshots
 
-Dashboard screenshot update for the status indicators is pending; the images below are historical Debug captures.
+These real bilingual windows were captured from the integrated Debug source on 2026-11-14 and visually reviewed. They show development changes under Unreleased, **not the published v1.0.0 DMG**; see [capture provenance](docs/images/README.md).
 
-The Dashboard screenshot is from the current isolated Debug candidate; other page captures are pending review and are not shown here. It does not establish game or network readiness.
+The Dashboard retains five cards: FX, virtual machine, Steam, EAC and multiplayer. Green identifies an observed FX/Steam process or a verified Guest SSH connection; yellow means an active check, red an explicit stage failure, and gray missing or stale evidence. Process detection, completed checks and menu/single-player confirmation do not establish EAC loading or multiplayer success. The isolated status matrix validates display logic; it does not establish live game readiness.
 
-![Dashboard](docs/images/en/dashboard.png)
+| Dashboard | First-Run Setup |
+| --- | --- |
+| ![Dashboard](docs/images/en/dashboard.png) | ![First-Run Setup](docs/images/en/first-run-setup.png) |
+| Environment | FX Manager |
+| ![Environment](docs/images/en/environment.png) | ![FX Manager](docs/images/en/fx-manager.png) |
+| Game Performance | Settings |
+| ![Game Performance](docs/images/en/performance.png) | ![Settings](docs/images/en/settings.png) |
+| Logs | |
+| ![Logs](docs/images/en/logs.png) | |
 
 ### Features
+
+**Development candidate:** The Logs page displays local system time, streams bounded task events, supports auto-scroll and exports redacted raw ISO 8601 timestamps. Launch command success, process detection, window and gameplay remain separate; game-window and gameplay evidence are not automatic. This change is not included in the published v1.0.0 DMG.
 
 - Dashboard starts the guarded HELLDIVERS 2 launch workflow. FX Manager inspects the selected FX installation and exposes supported FX/Steam actions.
 - First-Run Setup checks Guest identity, runtime capabilities and component integrity. Approved configuration can install the pinned Proton-JE package, select a verified Steam compatibility tool and merge launch options while retaining custom arguments. Detection is read-only. Deployment and recovery require their own checks.

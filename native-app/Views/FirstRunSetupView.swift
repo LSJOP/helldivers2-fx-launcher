@@ -207,11 +207,22 @@ struct EnvironmentWorkflowProgressView: View {
         if showIdle || workflow.phase != .idle {
             TacticalPanel(number: "", title: state.t(workflow.launchesGame ? "ui.176" : "ui.workflow.result"), symbol: workflow.launchesGame ? "play.rectangle" : "gearshape.2") {
                 HStack {
-                    Text(workflow.phase == .launching ? state.launchSession.current.title(state.languageCode) : state.t(workflow.phase.titleKey))
+                    Text(workflow.phase == .launching ? state.launchSession.current.title(state.languageCode) :
+                         state.t(workflow.launchesGame && workflow.phase == .failed ? "ui.179" : workflow.phase.titleKey))
                     Spacer()
-                    Text(String(Int(workflow.fraction * 100)) + "%").monospacedDigit()
+                    if workflow.showsProgress {
+                        Text(String(Int(workflow.fraction * 100)) + "%").monospacedDigit()
+                    }
                 }
-                ProgressView(value: workflow.fraction).tint(.yellow)
+                if workflow.active {
+                    TimelineView(.periodic(from: workflow.startedAt, by: 1)) { context in
+                        Text(state.t("ui.logs.elapsed") + " \(max(0, Int(context.date.timeIntervalSince(workflow.startedAt))))s")
+                            .font(TacticalTypography.caption).monospacedDigit()
+                    }
+                }
+                if workflow.showsProgress {
+                    ProgressView(value: workflow.fraction).tint(.yellow)
+                }
                 if let failure = workflow.failure {
                     Text(failure.code == "ARTIFACT_UNAPPROVED" && failure.details["component"]?.text == "fex"
                          ? "FEX · " + state.t("ui.setup.artifactUnavailable")
@@ -230,6 +241,7 @@ struct EnvironmentWorkflowProgressView: View {
                     if let status = state.firstRunPlan?.snapshot.facts["fex_status"] {
                         Text(state.t(status == "normal" ? "ui.fex.normal" : status == "compatible" ? "ui.fex.compatible" : status == "confirmation" ? "ui.fex.unverified" : "ui.fex.repair"))
                     }
+                    Text(verbatim: "ID: " + workflow.taskID.uuidString).font(.caption.monospaced()).textSelection(.enabled)
                     ForEach(Array([EnvironmentWorkflowPhase.startingFX, .connecting, .detecting, .deploying, .verifying, .launching].prefix(workflow.totalSteps).enumerated()), id: \.offset) { index, phase in
                         Label(state.t(phase.titleKey), systemImage: index < workflow.completedSteps ? "checkmark.circle" : "circle.dashed")
                             .font(TacticalTypography.caption)

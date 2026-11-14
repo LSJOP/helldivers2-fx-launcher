@@ -1,27 +1,15 @@
 #!/usr/bin/env python3
-"""Exercise the exact Swift LED priority function with all input combinations."""
+"""Compile and exercise the same evidence resolver used by the actual Dashboard."""
 from pathlib import Path
-import re, subprocess, tempfile
-source = (Path(__file__).resolve().parents[1] / 'Views/DashboardView.swift').read_text()
-match = re.search(r'    static func resolve\(processing: Bool, failed: Bool, confirmed: Bool\) -> Tone \{.*?\n    \}', source, re.S)
-assert match
-assert 'let detectedEAC = false' in source
-assert 'statusCard(state.t("ui.191"), "person.2", "multiplayer", nil)' in source
-assert 'let tone = DashboardLED.resolve(processing: processing, failed: failed, confirmed: connected || detectedEAC)' in source
-swift = '''enum Tone { case success, working, failed, unknown }
-struct DashboardLED {
-''' + match.group(0) + '''
-}
-for processing in [false, true] {
- for failed in [false, true] {
-  for confirmed in [false, true] {
-   let expected: Tone = processing ? .working : failed ? .failed : confirmed ? .success : .unknown
-   precondition(DashboardLED.resolve(processing: processing, failed: failed, confirmed: confirmed) == expected)
-  }
- }
-}
-print("PASS: 8 LED priority combinations; EAC and multiplayer cannot imply success")
-'''
-with tempfile.TemporaryDirectory() as directory:
-    path=Path(directory)/'matrix.swift'; path.write_text(swift)
-    subprocess.run(['swift',str(path)],check=True)
+import subprocess
+import tempfile
+
+root = Path(__file__).resolve().parents[1]
+sdk = subprocess.check_output(['xcrun', '--sdk', 'macosx', '--show-sdk-path'], text=True).strip()
+with tempfile.TemporaryDirectory(prefix='hd2-dashboard-matrix-') as directory:
+    binary = Path(directory) / 'DashboardStatusChecks'
+    subprocess.run(['xcrun', 'swiftc', '-swift-version', '5', '-target', 'arm64-apple-macos14.0',
+                    '-sdk', sdk, '-module-cache-path', str(root / 'build/ModuleCache'),
+                    str(root / 'Models/BridgeModels.swift'), str(root / 'Models/LaunchSession.swift'),
+                    str(root / 'checks/DashboardStatusChecks.swift'), '-o', str(binary)], check=True)
+    subprocess.run([str(binary)], check=True)

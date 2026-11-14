@@ -20,13 +20,23 @@ FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游�
 
 ### 软件截图
 
-首页状态灯更新后的截图仍待补充；下图为历史 Debug 截图。
+以下中英文真实窗口来自 2026-11-14 最终整合源码的 Debug 构建，已完成视觉审核，展示 Unreleased 开发改动，**并非已发布的 v1.0.0 DMG**；来源见[截图记录](docs/images/README.md)。
 
-首页截图来自当前隔离 Debug 候选；其他页面截图待复核，暂不展示。截图不能证明游戏或网络就绪。
+首页保留 FX、虚拟机、Steam、EAC、联机五张卡片。绿色表示已观测到的 FX／Steam 进程或经 Guest 身份验证的 SSH 连接；黄色表示正在检查，红色表示明确的阶段失败，灰色表示缺少或过期证据。进程检测、检查完成以及菜单／单人确认均不能证明 EAC 加载或多人联机成功。隔离状态矩阵验证的是显示逻辑，不代表真实游戏已就绪。
 
-![总览](docs/images/zh-CN/dashboard.png)
+| 总览 | 首次运行环境配置 |
+| --- | --- |
+| ![总览](docs/images/zh-CN/dashboard.png) | ![首次运行环境配置](docs/images/zh-CN/first-run-setup.png) |
+| 运行环境 | FX 管理 |
+| ![运行环境](docs/images/zh-CN/environment.png) | ![FX 管理](docs/images/zh-CN/fx-manager.png) |
+| 游戏性能配置 | 设置 |
+| ![游戏性能配置](docs/images/zh-CN/performance.png) | ![设置](docs/images/zh-CN/settings.png) |
+| 日志 | |
+| ![日志](docs/images/zh-CN/logs.png) | |
 
 ### 主要功能
+
+**开发候选：**日志页使用系统本地时间，实时显示有容量限制的任务事件，支持自动滚动和导出脱敏的原始 ISO 8601 时间戳。启动命令成功、游戏进程、窗口和实际进入游戏分别记录；窗口及游戏内状态不会自动推断。该变更尚未包含在已发布的 v1.0.0 DMG 中。
 
 - 从总览发起带保护检查的 HELLDIVERS 2 启动流程。FX 管理检查所选 FX 安装并提供受支持的 FX／Steam 操作。
 - 首次运行环境配置检查 Guest 身份、运行能力和组件完整性。经确认后可安装固定版本的 Proton-JE、选择已验证的 Steam 兼容工具，并合并启动参数以保留自定义参数。检测为只读，部署与恢复各有检查条件。

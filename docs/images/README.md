@@ -1,8 +1,10 @@
 # Localized Native screenshots / 本地化原生截图
 
-The **en/** and **zh-CN/** directories contain real screenshots from historical Debug builds. They predate the localized app-name changes and must not be presented as the current interface. New bilingual captures and visual review are pending. Existing flat PNG names are older historical captures.
+The **en/** and **zh-CN/** directories now contain reviewed real windows from the integrated brand/LED Debug source on 2026-11-14. The capture copy uses a separate bundle identifier, empty runtime and disabled credential autoload. These are Unreleased development screenshots, not screenshots of the published v1.0.0 DMG. Existing flat PNG names remain historical.
 
-The images were captured at different points in development. Individual source, timestamp, build, dimensions and SHA-256 are recorded in [manifest.json](manifest.json); the following notes describe historical sessions, not the current candidate. The manifest retains its previous UI fingerprint until the new screenshots have been captured and reviewed.
+**en/** 与 **zh-CN/** 目录现为 2026-11-14 品牌／状态灯最终整合源码的真实 Debug 窗口，已复核语言、标题换行、五张卡片和敏感信息。采集副本使用独立包标识、空运行目录并禁用凭据自动加载；未执行 Guest 操作。这些图展示未发布开发改动，不代表正式 v1.0.0 DMG。
+
+Individual source baseline, dirty-source marker, capture timestamp, build, dimensions and SHA-256 are recorded in [manifest.json](manifest.json). The reviewed UI fingerprint identifies the exact UI source used for capture. The model matrix is isolated test evidence; the real captured homepage has no verified runtime and correctly displays gray indicators.
 
 Capture uses macOS `screencapture -x -o -l <this App window ID>` after selecting the actual target language/page. PNG bytes are copied unchanged: no AI-generated UI, text overlays, compositing, cropping or resizing. Generated illustration assets are rendered by the real application itself. Visual inspection checked language, primary labels/buttons, sensitive data and viewport boundaries. Scrollable content naturally extends outside the viewport; supplemental captures show the lower performance and update controls.
 
@@ -51,3 +53,5 @@ Build 2026110410: real isolated Debug windows for zh-CN/en First-Run Setup, Dash
 2026-11-14 整合审核：两种语言各七页已从真实整合 Debug 构建重拍（08e58e4 加随后提交为 34fff90 的 FEX 改动），逐对检查语言。未操作 Guest 或自动加载凭据。正式 Release 截图仍待完成。
 
 2026-11-14 LED integration: only the two Dashboard images are presented in README and visually reviewed for language, clipping, sensitive data and honest unknown indicators. Captured from isolated Debug build 2026111401, base 58df1a8 plus the documented LED priority and title sizing edits; no Guest actions or credential autoload. Other page images remain historical and are not presented pending review. Fingerprint applies to the current source for the displayed Dashboard scope only.
+
+2026-11-14 live logging: English and Simplified Chinese log and first-run captures were refreshed and reviewed from the isolated Debug candidate. Other images retain their original provenance; the shared snapshot footer now renders in local time. Active launch and failure screens were not captured.

@@ -271,7 +271,9 @@ final class EnvironmentDeploymentService {
         guard !live.gameRunning else { throw CoreError("GAME_RUNNING") }
         guard !requiresStoppedSteam || !live.steamRunning else { throw CoreError("STEAM_RUNNING") }
     }
-    func execute(_ plan: DeploymentPlan, approved: Set<String>, context: CoreContext, progress: (DeploymentState) -> Void = { _ in }) throws -> DeploymentReceipt {
+    func execute(_ plan: DeploymentPlan, approved: Set<String>, context: CoreContext,
+                 componentProgress: (String, String) -> Void = { _, _ in },
+                 progress: (DeploymentState) -> Void = { _ in }) throws -> DeploymentReceipt {
         guard !plan.executable.isEmpty, approved == Set(plan.executable.map(\.id)) else { throw CoreError("CONFIRMATION_REQUIRED") }
         let lock = try CoreFileLock.acquire(receipts.directory.appendingPathComponent(".deployment.lock")); defer { lock.release() }
         let live = try backend.snapshot()
@@ -299,15 +301,20 @@ final class EnvironmentDeploymentService {
         var receipt = DeploymentReceipt(id: plan.id, plan: plan, state: .Deploying, applied: [], pending: nil, failure: nil)
         progress(.Deploying)
         try receipts.save(receipt) // Durable original values precede every write.
+        var activeComponent: String?
         do {
             var expected = live
             var deferred = false
             for operation in plan.executable {
+                activeComponent = operation.component
+                componentProgress(operation.component, "running")
                 try context.check()
                 let current = try backend.snapshot()
                 guard Self.identity(current, expected), current.revision == expected.revision, current.values == expected.values else { throw CoreError("CONFIG_CHANGED") }
                 try Self.idle(current, requiresStoppedSteam: operation.requiresStoppedSteam)
                 if operation.component == "tool", current.steamRunning, operation.needsRestart {
+                    componentProgress(operation.component, "deferred")
+                    activeComponent = nil
                     deferred = true; continue // The confirmed workflow restarts the VM before applying tool selection.
                 }
                 guard operation.changes.keys.allSatisfy({ current.values[$0] == plan.snapshot.values[$0] }) else { throw CoreError("CONFIG_CHANGED") }
@@ -317,10 +324,13 @@ final class EnvironmentDeploymentService {
                 expected = try backend.snapshot()
                 guard Self.identity(expected, live), operation.changes.allSatisfy({ expected.values[$0.key] == $0.value }) else { throw CoreError("VERIFY_FAILED") }
                 receipt.applied.append(operation.id); receipt.pending = nil; receipt.state = .Deploying; try receipts.save(receipt)
+                componentProgress(operation.component, "done")
+                activeComponent = nil
             }
             receipt.state = deferred ? .NeedsConfiguration : .Completed
             progress(receipt.state); try receipts.save(receipt); return receipt
         } catch {
+            if let activeComponent { componentProgress(activeComponent, "failed") }
             receipt.failure = (error as? CoreError)?.code ?? "DEPLOYMENT_FAILED"
             receipt.state = .RecoveryRequired; try receipts.save(receipt)
             if receipt.failure == "STEAM_TOOL_UNCONFIRMED" { throw CoreError("RECOVERY_REQUIRED", ["receipt": .string(receipt.id.uuidString)]) }

@@ -70,6 +70,18 @@ final class FileDeploymentBackend: DeploymentBackend {
         func execute(_ service: EnvironmentDeploymentService, _ plan: DeploymentPlan) throws -> DeploymentReceipt {
             try service.execute(plan, approved: Set(plan.executable.map(\.id)), context: CoreContext(timeout: 10))
         }
+        do {
+            let (_, service, plan) = try fixture()
+            var events: [(String, String)] = []
+            let receipt = try service.execute(plan, approved: Set(plan.executable.map(\.id)), context: CoreContext(timeout: 10),
+                                              componentProgress: { events.append(($0, $1)) })
+            try check(receipt.state == .Completed && !events.isEmpty, "deployment emits component progress")
+            for operation in plan.executable {
+                try check(events.contains(where: { $0.0 == operation.component && $0.1 == "running" }) &&
+                          events.contains(where: { $0.0 == operation.component && $0.1 == "done" }),
+                          "component progress records start and completion: " + operation.component)
+            }
+        }
         let (b, s, p) = try fixture()
         var complete = p.snapshot
         for component in ["steam", "game", "vulkan", "kosmickrisp", "network", "gvproxy", "ipv4"] { complete.facts[component] = "available" }
@@ -288,8 +300,12 @@ final class FileDeploymentBackend: DeploymentBackend {
         }
         do {
             let (b, s, p) = try fixture(); b.failAfterWrite = true
-            let result = try execute(s, p)
+            var events: [(String, String)] = []
+            let result = try s.execute(p, approved: Set(p.executable.map(\.id)), context: CoreContext(timeout: 10),
+                                       componentProgress: { events.append(($0, $1)) })
             try check(result.state == .Failed && result.failure == "SSH_CONNECTION_TIMEOUT", "interrupted write reports failure")
+            try check(events.contains(where: { $0.1 == "running" }) && events.contains(where: { $0.1 == "failed" }),
+                      "failed deployment emits terminal component status")
             try check((try b.snapshot()).values["launch"] == "%command%", "pending write safely recovered")
         }
         do {

@@ -108,6 +108,7 @@ actor NativeCoreService {
                                             "level": .string(level), "message": .string(CoreRedaction.scrub(message, secrets: secrets))]
             for (key, value) in extra { row[key] = value }
             row["sequence"] = .number(Double(eventSequence))
+            row["request_id"] = .string(requestID)
             onEvent?(row)
         }
         do {
@@ -530,6 +531,7 @@ actor NativeCoreService {
                 }
             }
             _ = try LaunchService.checkFXEntry(request: request, fx: fx, requireRunning: true)
+            stageEmit("CheckingFXEntry", "done")
             if method == "check_fx_state" { return host }
             stageEmit("WaitingForGuest", "running")
             if let expected = params["credential_host_identity"]?.text {
@@ -537,6 +539,7 @@ actor NativeCoreService {
             }
             let (session, state, plan) = try LaunchService.connect(request, fx: fx, transport: transport)
             if let expected = params["credential_guest_boot"]?.text, expected != session.boot { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
+            stageEmit("WaitingForGuest", "done")
             if transport.passwordWasSent {
                 emit("INFO", "Guest identity verified", ["kind": .string("credential_status"),
                     "credential_kind": .string("ssh"), "status": .string("authenticated")])
@@ -636,7 +639,7 @@ printf '{"guest_os":"%s","guest_arch":"%s","components":{"steam_files":%s,"game_
 
     static func launchGame(_ request: LaunchRequest, fx: URL, transport: SSHTransport, session: GuestSession,
                            state: [String: JSONValue], connected: [String: JSONValue], context: CoreContext,
-                           emit: (String, String, [String: JSONValue]) -> Void, stage: inout String) throws -> [String: JSONValue] {
+                           emit: @escaping (String, String, [String: JSONValue]) -> Void, stage: inout String) throws -> [String: JSONValue] {
         func advance(_ name: String, _ status: String) {
             stage = name
             emit(status == "failed" ? "ERROR" : "INFO", name, ["stage": .string(name), "status": .string(status)])
@@ -676,7 +679,9 @@ printf '{"guest_os":"%s","guest_arch":"%s","components":{"steam_files":%s,"game_
         // Wait for Steam to finish network login before sending the launch request;
         // a reachable process is not a logged-in session.
         var loggedOn = false
-        for _ in 0..<120 {
+        let steamDeadline = CoreClock.monotonic + 120
+        var nextSteamNotice = CoreClock.monotonic + 15
+        while CoreClock.monotonic < steamDeadline {
             try context.check()
             Thread.sleep(forTimeInterval: 1)
             let current = try GuestService.state(transport, context: context)
@@ -690,6 +695,10 @@ printf '{"guest_os":"%s","guest_arch":"%s","components":{"steam_files":%s,"game_
                 value["eac"] = .string("unverified")
                 value["multiplayer"] = .string("unverified")
                 return value
+            }
+            if CoreClock.monotonic >= nextSteamNotice {
+                emit("INFO", "Waiting for Steam sign-in", ["stage": .string("StartingSteam"), "status": .string("waiting")])
+                nextSteamNotice = CoreClock.monotonic + 15
             }
         }
         guard loggedOn else {
@@ -708,9 +717,16 @@ printf '{"guest_os":"%s","guest_arch":"%s","components":{"steam_files":%s,"game_
         try FEXWorkflow.requireCompatible(dispatchSnapshot)
         guard dispatchSnapshot.facts["fex_fingerprint"] == fexSnapshot.facts["fex_fingerprint"] else { throw CoreError("FEX_CHANGED") }
         let launch = try GuestService.launchGame(transport, session: session, context: context)
-        _ = launch
-        let count = try GuestService.waitForGame(transport, attempts: 300, context: context)
+        emit("INFO", "Game launch request", ["kind": .string("launch_request"),
+                                                "command_succeeded": .bool(launch["started"]?.boolean == true)])
+        advance("LaunchingGame", "done")
+        advance("WaitingForGame", "running")
+        let count = try GuestService.waitForGame(transport, attempts: 300, timeout: 150, context: context) {
+            emit("INFO", "Waiting for game process", ["stage": .string("WaitingForGame"), "status": .string("waiting")])
+        }
+        advance("WaitingForGame", "done")
         var value = connected
+        value["game_launch_command_succeeded"] = .bool(launch["started"]?.boolean == true)
         value["game_process_detected"] = .bool(true)
         value["game_process_count"] = .number(Double(count))
         value["main_menu"] = .string("unverified")

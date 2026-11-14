@@ -5,13 +5,12 @@ struct DashboardView: View {
     @ObservedObject var tasks: TaskManager
     @Environment(\.colorScheme) private var scheme
     private var c: TacticalColors { TacticalColors(scheme: scheme) }
-    private var unverified: String { state.t("ui.368") }
     var body: some View {
         VStack(alignment: .leading, spacing: TacticalSpacing.panel) {
             hero
             TacticalAdaptiveLayout(minimumWidth: 120, maximumColumns: 5) {
                 statusCard("FX", "shippingbox", "fx_host_running", .startingFX)
-                statusCard(state.t("ui.144"), "link", "ssh_connected", .waitingForGuest)
+                statusCard(state.t("ui.net.vm"), "link", "ssh_connected", .waitingForGuest)
                 statusCard("Steam", "play.circle", "steam_running", .startingSteam)
                 statusCard("EAC", "shield.lefthalf.filled", "eac", .checkingEAC)
                 statusCard(state.t("ui.191"), "person.2", "multiplayer", nil)
@@ -35,19 +34,12 @@ struct DashboardView: View {
         }.foregroundStyle(c.text).font(TacticalTypography.body)
     }
     private func statusCard(_ title: String, _ symbol: String, _ key: String, _ stage: LaunchStage?) -> some View {
-        let evidence = stage.flatMap { state.launchSession.evidence[$0] }
-        let processing = state.launchSession.running && stage != nil && state.launchSession.current == stage
-            || (key == "fx_host_running" && state.environmentWorkflow.phase == .startingFX)
-            || (key == "ssh_connected" && state.environmentWorkflow.phase == .connecting)
-        let failed = evidence == "failed"
-        let connected = key == "ssh_connected" && state.latestGUIEvidence[key]?.boolean == true && !state.stale
-        let detectedEAC = false // A completed check does not by itself prove EAC loaded.
-        let detected = !state.stale && ((key == "fx_host_running" && state.latestGUIEvidence[key]?.boolean == true)
-            || (key == "steam_running" && (state.latestGUIEvidence[key]?.boolean == true || (state.latestGUIEvidence["steam_process_count"]?.integer ?? 0) > 0)))
-        let tone = DashboardLED.resolve(processing: processing, failed: failed, confirmed: connected || detectedEAC)
-        let text = processing ? state.t("ui.157") : failed ? state.t("ui.125") : connected ? state.t("ui.dashboard.connected") : detectedEAC ? state.t("ui.dashboard.loaded") : detected ? state.t("ui.dashboard.process") : unverified
-        return DashboardStatusCard(title: title, value: text, symbol: symbol, tone: tone)
+        let status = DashboardStatus.resolve(key: key, stage: stage, session: state.launchSession,
+                                             workflow: state.environmentWorkflow, evidence: state.latestGUIEvidence,
+                                             stale: state.stale)
+        return DashboardStatusCard(title: title, value: state.t(status.textKey), symbol: symbol, tone: status.tone)
     }
+
     private var hero: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 22) {
@@ -84,14 +76,14 @@ private struct DashboardStatusCard: View {
     let title: String
     let value: String
     let symbol: String
-    let tone: DashboardLED.Tone
+    let tone: DashboardStatus.Tone
     @Environment(\.colorScheme) private var scheme
     var body: some View {
         let c = TacticalColors(scheme: scheme)
         HStack(spacing: 8) {
             Image(systemName: symbol).font(.system(size: 19)).frame(width: 24).foregroundStyle(c.accent).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 5) {
-                Text(title).font(TacticalTypography.caption).foregroundStyle(c.muted).lineLimit(1).minimumScaleFactor(0.7)
+                Text(title).font(TacticalTypography.caption).foregroundStyle(c.muted).lineLimit(2).minimumScaleFactor(0.8)
                 Text(value).font(TacticalTypography.caption.weight(.semibold)).foregroundStyle(c.text).lineLimit(2).minimumScaleFactor(0.8)
             }
             Spacer(minLength: 0)
@@ -104,13 +96,7 @@ private struct DashboardStatusCard: View {
 }
 
 private struct DashboardLED: View {
-    enum Tone { case success, working, failed, unknown }
-    static func resolve(processing: Bool, failed: Bool, confirmed: Bool) -> Tone {
-        if processing { return .working }
-        if failed { return .failed }
-        return confirmed ? .success : .unknown
-    }
-    let tone: Tone
+    let tone: DashboardStatus.Tone
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var scheme
     @State private var pulse = false
