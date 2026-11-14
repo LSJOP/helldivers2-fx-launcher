@@ -760,10 +760,26 @@ try:
   if audit()!=current:fail('EXTERNAL_DRIFT')
   receipt={'ticket':token,'original':current['original'],'installed':fingerprint(expected),'had_original':current['installed'],'boot':REQUEST['boot'],'state':'prepared'}
   record=work/(token+'.json');save_record(record,receipt)
-  if installed.exists():installed.rename(backup)
-  prepared.rename(installed)
-  if inventory(installed)!=expected:fail('VERIFY_FAILED')
-  receipt['state']='completed';save_record(record,receipt);print(json.dumps({'ticket':token,'verified':True,'backup':backup.name,'installed_manifest':fingerprint(expected)}))
+  moved_original=False;activated=False
+  try:
+   if installed.exists():
+    installed.rename(backup);moved_original=True
+   prepared.rename(installed);activated=True
+   if inventory(installed)!=expected:fail('VERIFY_FAILED')
+   receipt['state']='completed';save_record(record,receipt)
+  except Exception:
+   idle()
+   if moved_original and fingerprint(inventory(backup))!=receipt['original']:fail('EXTERNAL_DRIFT')
+   if activated:
+    if inventory(installed)!=expected or os.path.lexists(prepared):fail('EXTERNAL_DRIFT')
+    installed.rename(prepared)
+   if moved_original:
+    if os.path.lexists(installed):fail('EXTERNAL_DRIFT')
+    backup.rename(installed)
+   if fingerprint(inventory(installed))!=receipt['original']:fail('VERIFY_FAILED')
+   receipt['state']='recovered';save_record(record,receipt)
+   raise
+  print(json.dumps({'ticket':token,'verified':True,'backup':backup.name,'installed_manifest':fingerprint(expected)}))
  elif mode=='recover':
   idle();token=REQUEST['ticket'];uuid.UUID(token);record=work/(token+'.json');safe(record)
   r=json.loads(record.read_text());backup=installed.with_name(installed.name+'.hd2-backup-'+token)
