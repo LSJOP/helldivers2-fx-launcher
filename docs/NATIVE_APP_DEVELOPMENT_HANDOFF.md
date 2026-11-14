@@ -1,5 +1,7 @@
 # HD2FXNative 接续开发交接
 
+> 2026-11-14：首页状态灯和进度展示候选已实现；隔离 Debug 构建与中文首页截图通过，真实状态矩阵及最终双语截图待验收。
+
 更新：2026-11-14（Asia/Shanghai）。先读 [AGENTS](../AGENTS.md) 和 [当前状态](DEVELOPMENT_STATUS.md)。本文件是接续入口，不是另一套任务队列。
 
 > 最新远端核验：本轮 `git ls-remote origin refs/heads/main` 已确认 main 为 `954f88e500efc3f59630ccba2968c53cf0405cc4`，状态管理/交接规则已成功推送。此后本文件仅追加本次同步结果；最终文档提交 SHA 用 `git log -1 -- docs/DEVELOPMENT_STATUS.md docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md` 查询并核对远端，避免自身 SHA 循环。
