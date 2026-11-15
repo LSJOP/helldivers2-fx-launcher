@@ -97,3 +97,5 @@ FX 1.9.9 environment observations are recorded in the [FEX baseline report](docs
 First-run detection distinguishes Proton-integrated FEX from a missing standalone runtime. It records the Proton version, config digest and library hashes, and reports compatibility as unverified until an approved plan is available.
 
 The recovery branch now installs the pinned Runtime through the isolated Debug replay (verified local archive or Valve HTTPS, SHA-256, SFTP, retained ARM64 Runtime, transaction recovery). Public one-click deployment remains blocked by RF binary provenance/redistribution review; the Debug replay requires explicitly supplied test image and resource paths. See [first-run acceptance](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md).
+
+Persistence candidate: Steam was observed updating its FEX depot after reboot. The recovery branch now stages RF in an App-owned directory and verifies the real Runtime container RootFS. Main-window launch/reopen and current bilingual idle screenshots are repaired; final repeated-setup/reboot acceptance and lawful complete RF distribution remain pending.

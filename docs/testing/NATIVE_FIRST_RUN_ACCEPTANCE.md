@@ -80,3 +80,56 @@ problem without downloading Proton again; the complete live failure/rollback
 matrix remains untested.
 
 Latest artifact: `HD2-App-Builds/Candidates/FirstRun-Recovery-20261115/HD2FXNative.app`, arm64 Debug with optimization enabled, ad-hoc deep signature validation and bundle secret scan pass. A fresh launch of this final artifact starts a process but currently exposes no main window; latest-artifact click acceptance is NOT VERIFIED. The real deployment/failure observations above came from the recovered RuntimeDebug2 App, not this final build. Do not conflate those versions. This startup issue and the pre-existing screenshot-source gate are additional open blockers. No final screenshots were fabricated or marked reviewed.
+
+
+## Persistence and window repair candidate · 2026-11-15
+
+The root cause is now confirmed by the actual Guest, not inferred from the reboot.
+`findmnt -T FEX-Emu` reports `/home`, `/dev/vda8`, ext4, read-write. Steam's
+`content_log.txt` records AppID 3127680 validating FEX-Emu at 23:01:05 and committing
+55 updated files from `steamapps/downloading/3127680` at 23:01:06, build 24136555,
+depots 3127681/6486428636716542397 and 3127682/8280186011641936150. That commit replaced
+the RF executable and emulator.json. No evidence of a volatile home/overlay
+reset or an FX startup script restoring the FEX directory was found.
+
+The candidate reuses the FEX transaction at
+`~/.local/share/HD2FXLauncher/compatibility/FEX-RF`, outside Steam's managed depot.
+The official FEX directory remains intact. Steam launch options use the existing
+compare-and-swap service to set `PRESSURE_VESSEL_EMULATOR` to that owned emulator
+manifest, whose container_environment sets FEX_ROOTFS=/.
+The installed Runtime binary exposes both PRESSURE_VESSEL_EMULATOR and
+STEAM_COMPAT_EMULATOR. A real container invocation selected the owned FEXCompatTool
+and FEXServer and checked FEX_ROOTFS=/ without launching the game. Initial probing
+also produced portable telemetry/server files in the owned install, causing the
+expected tree-drift rejection. That entire failed tree was retained under
+`FEX-RF.hd2-probe-retained-f5368b5d-942b-4e71-9d41-5716b2bf3ddc` after identity,
+receipt, original-file and generated-cache checks; the receipt records recovery.
+The corrected probe uses isolated per-app data and terminates its process group
+on timeout. No system startup unit, sudoers or original FEX files are changed.
+
+Runtime read-only integrity checks now permit content-identical hardlinks created
+by pressure-vessel in var/. Every distributed file is still hashed; FEX installs
+retain the strict no-hardlink rule. App resource catalogue lookup canonicalizes
+the bundle resource root, fixing validation when launched through /tmp aliases.
+First-run readiness now uses actual FEX runtime evidence consistently.
+
+The latest Debug opens its main window, navigates to first-run setup and accepts
+real clicks. AppDelegate now requests the existing SwiftUI main scene when launch
+or reopen restoration produces no visible main window, using the same AppState.
+Command-N also opens that scene. Twenty current real read-only en/zh-CN viewports
+were recaptured in an isolated screenshot bundle with credential autoload disabled;
+they are idle UI evidence, not successful-deployment screenshots.
+
+Live final deployment/reboot validation is still PENDING at this checkpoint:
+a separate production FX process appeared at 23:27:05. The existing foreign-FX
+instance guard refuses to continue. No production process was terminated and no
+instance check was weakened; a normal-exit decision was requested from the user.
+
+Distribution: the pinned upstream FEX source LICENSE is MIT:
+https://github.com/StonkGuy/FEX/blob/87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8/LICENSE
+The existing source-build service can fetch that pinned commit and apply the
+reviewed patch. This does not yet validate historical helper binaries or all
+vendored notices/reproducible outputs: BUILD_THUNKS is OFF in that service, whereas
+the local sample includes thunk libraries. No historical RF binary was added to
+the public bundle. Formal source-built distribution and fresh-user acceptance
+remain blocked until the full dependency/notice/build chain is reviewed.

@@ -135,7 +135,7 @@ struct DeploymentPlan: Codable {
     var detectionState: DeploymentState {
         let required = operations.filter { !$0.advisory }
         if !required.isEmpty && required.allSatisfy({ $0.blocked == "UNSUPPORTED" }) { return .Unsupported }
-        return required.allSatisfy { $0.blocked == nil && $0.changes.isEmpty && $0.detectionPassed } ? .Ready : .NeedsConfiguration
+        return required.allSatisfy { setupObservationVerified($0) } ? .Ready : .NeedsConfiguration
     }
 }
 enum DeploymentPlanBuilder {
@@ -168,10 +168,15 @@ enum DeploymentPlanBuilder {
         }
         do {
             let before = snapshot.values["launch"] ?? ""
-            let after = try LaunchOptionsAdapter.merge(before, managed: profile.launchOptions)
+            var managed = profile.launchOptions
+            if let emulator = snapshot.facts["fex_managed_emulator"], emulator.hasSuffix("/HD2FXLauncher/compatibility/FEX-RF/emulator.json") {
+                managed["PRESSURE_VESSEL_EMULATOR"] = emulator
+            }
+            let after = try LaunchOptionsAdapter.merge(before, managed: managed)
             var changes = before == after ? [:] : ["launch": after]
             if !changes.isEmpty, snapshot.values["launch_present"] != nil { changes["launch_present"] = "true" }
-            add("launch", target: "profile-v1", changes: changes, block: snapshot.values["launch"] == nil ? "USER_ACTION_REQUIRED" : snapshot.steamRunning && snapshot.facts["steam_api"] != "available" ? "STEAM_API_UNAVAILABLE" : nil, observed: snapshot.values["launch"] != nil && changes.isEmpty ? "configured" : nil)
+            add("launch", target: "profile-v1", changes: changes, block: snapshot.values["launch"] == nil ? "USER_ACTION_REQUIRED" : snapshot.steamRunning && snapshot.facts["steam_api"] != "available" ? "STEAM_API_UNAVAILABLE" : nil,
+                restart: !changes.isEmpty && snapshot.facts["fex_managed_emulator"] != nil, observed: snapshot.values["launch"] != nil && changes.isEmpty ? "configured" : nil)
         } catch { add("launch", target: "profile-v1", block: "LAUNCH_OPTIONS_CONFLICT") }
         if snapshot.values["tool"] != profile.protonVersion {
             var changes = ["tool": profile.protonVersion]

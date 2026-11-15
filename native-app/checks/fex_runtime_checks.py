@@ -17,15 +17,21 @@ class RuntimeChecks(unittest.TestCase):
   self.ns={};tree=ast.parse(pipeline)
   exec(compile(ast.Module(body=[n for n in tree.body if isinstance(n,(ast.Import,ast.ImportFrom,ast.FunctionDef))],type_ignores=[]),'helpers','exec'),self.ns)
  def tearDown(self):self.temp.cleanup()
- def run_probe(self,expected='',status=42):
+ def run_probe(self,expected='',status=42,container_status=0):
   output=io.StringIO();ns=dict(self.ns,EXPECTED_TREE=expected,EXPECTED_BOOT=pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip() if pathlib.Path('/proc').exists() else 'fixture')
   original_read=pathlib.Path.read_text
   def read(p,*a,**k):return 'fixture' if str(p)=='/proc/sys/kernel/random/boot_id' else original_read(p,*a,**k)
   with patch.object(pathlib.Path,'home',return_value=self.home),patch.object(pathlib.Path,'read_text',read),patch('platform.machine',return_value='aarch64'),patch('subprocess.Popen') as process,contextlib.redirect_stdout(output):
    process.return_value.wait.return_value=status
+   process.return_value.communicate.return_value=(b'HD2_ROOTFS_OK',b'')
+   process.return_value.returncode=container_status
    exec(probe.replace("/usr/share/guestos/fex-mesa",str(self.provider)),ns)
    self.calls=process.call_count
+   self.container_call=process.call_args
   return json.loads(output.getvalue())
+ def test_installer_probe_prefix_has_no_pipeline_import_dependency(self):
+  with patch.object(pathlib.Path,'home',return_value=self.home):
+   exec('import pathlib\n'+probe.split('try:print(json.dumps(check()))')[0],{})
  def test_unknown_hash_preflight_does_not_execute(self):
   self.assertTrue(self.run_probe()['preflight']);self.assertEqual(self.calls,0)
  def test_compatible_custom_build(self):
@@ -48,6 +54,20 @@ class RuntimeChecks(unittest.TestCase):
   self.assertEqual(result['reason'],'FEX_PROTON_INTEGRATED_UNVERIFIED')
   self.assertEqual(result['layout'],'proton-integrated');self.assertEqual(self.calls,0)
   self.assertEqual(result['version'],'fixture-arm64-proton')
+ def test_managed_emulator_requires_real_container_rootfs_probe(self):
+  import shutil
+  managed=self.home/'.local/share/HD2FXLauncher/compatibility/FEX-RF'
+  managed.parent.mkdir(parents=True)
+  shutil.move(self.root,managed)
+  metadata=managed/'emulator.json'
+  metadata.write_text(json.dumps({'emulator_v0':{'argv':'./usr/bin/FEX','container_environment':{'FEX_ROOTFS':'/'}}}))
+  tree=self.run_probe()['tree']
+  result=self.run_probe(tree)
+  self.assertTrue(result['runtime']);self.assertEqual(result['container_rootfs'],'/')
+  self.assertEqual(self.container_call.kwargs['env']['PRESSURE_VESSEL_EMULATOR'],str(metadata))
+  self.assertEqual(self.run_probe(tree,container_status=1)['reason'],'FEX_RUNTIME_FAILED')
+  metadata.write_text(json.dumps({'emulator_v0':{'argv':'./usr/bin/FEX','container_environment':{'FEX_ROOTFS':''}}}))
+  self.assertEqual(self.run_probe()['reason'],'FEX_ROOTFS_UNAVAILABLE')
  def test_no_execute_permission(self):
   self.exe.chmod(0o600);self.assertEqual(self.run_probe()['reason'],'FEX_NOT_EXECUTABLE')
  def test_wrong_architecture(self):

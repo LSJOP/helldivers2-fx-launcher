@@ -102,11 +102,11 @@ final class FileDeploymentBackend: DeploymentBackend {
         let (b, s, p) = try fixture()
         var complete = p.snapshot
         for component in ["steam", "game", "vulkan", "kosmickrisp", "network", "gvproxy", "ipv4"] { complete.facts[component] = "available" }
-        complete.facts["fex_manifest"] = "verified"; complete.facts["proton_manifest"] = "verified"
+        complete.facts["fex_manifest"] = "verified"; complete.facts["fex_status"] = "normal"; complete.facts["fex_runtime"] = "ready"; complete.facts["proton_manifest"] = "verified"
         complete.values["launch"] = try LaunchOptionsAdapter.merge("%command%", managed: profile.launchOptions)
         complete.values["tool"] = profile.protonVersion
         try check(DeploymentPlanBuilder.build(complete, profile: profile).detectionState == .Ready, "full plan is ready only with verified components and matching launch options")
-        complete.facts["fex_manifest"] = "UNKNOWN"
+        complete.facts["fex_manifest"] = "UNKNOWN"; complete.facts.removeValue(forKey: "fex_status"); complete.facts.removeValue(forKey: "fex_runtime")
         try check(DeploymentPlanBuilder.build(complete, profile: profile).detectionState != .Ready, "unverified FEX never claims readiness")
         complete.facts["fex_manifest"] = "verified"; complete.values.removeValue(forKey: "launch")
         try check(DeploymentPlanBuilder.build(complete, profile: profile).detectionState != .Ready, "unread launch options never claim readiness")

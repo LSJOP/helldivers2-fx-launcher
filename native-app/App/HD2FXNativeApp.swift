@@ -1,10 +1,20 @@
 import SwiftUI
 import AppKit
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+@MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        // Scene restoration can launch a process without restoring its primary window.
+        DispatchQueue.main.async { self.presentMainWindowIfNeeded() }
+    }
+    private func presentMainWindowIfNeeded() {
+        guard !NSApp.windows.contains(where: { $0.canBecomeMain && $0.isVisible }) else { return }
+        NativeLifecycle.presentMainWindow?()
+    }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag { presentMainWindowIfNeeded() }
+        return true
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -70,6 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    static var presentMainWindow: (() -> Void)?
     static var cancel: (() -> Void)?
     #if DEBUG
     static var event: ((String) -> Void)?
@@ -140,8 +151,16 @@ struct AppUpdateCommands: Commands {
 
 struct NavigationCommands: Commands {
     @ObservedObject var state: AppState
+    @Environment(\.openWindow) private var openWindow
+    private func registerMainWindowAction() {
+        NativeLifecycle.presentMainWindow = { openWindow(id: "main") }
+    }
     var body: some Commands {
-        CommandGroup(replacing: .newItem) {}
+        let _ = registerMainWindowAction()
+        CommandGroup(replacing: .newItem) {
+            Button(state.t("ui.brand.name")) { openWindow(id: "main") }
+                .keyboardShortcut("n", modifiers: .command)
+        }
         CommandMenu(state.t("ui.193")) {
             ForEach(Array(Page.allCases.enumerated()), id: \.element.id) { index, page in
                 Button(state.pageTitle(page)) { state.selection = page }

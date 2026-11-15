@@ -6,7 +6,8 @@ class PipelineChecks(unittest.TestCase):
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.home=pathlib.Path(self.tmp.name).resolve()
   self.work=self.home/'.local/share/HD2FXLauncher/fex-rf-v1';self.stage=self.work/'runtime'
-  self.installed=self.home/'.local/share/Steam/steamapps/common/FEX-Emu'
+  self.installed=self.home/'.local/share/HD2FXLauncher/compatibility/FEX-RF'
+  self.common=self.home/'.local/share/Steam/steamapps/common';self.common.mkdir(parents=True)
   (self.stage/'usr/bin').mkdir(parents=True);(self.installed/'usr/bin').mkdir(parents=True)
   (self.stage/'usr/bin/FEX').write_bytes((b'\x7fELF\x02\x01'+bytes(12)+b'\xb7\x00'+bytes(44)));(self.stage/'usr/bin/FEX').chmod(0o700)
   (self.installed/'usr/bin/FEX').write_bytes(b'original');(self.installed/'compatibilitytool.vdf').write_text('original metadata')
@@ -15,6 +16,7 @@ class PipelineChecks(unittest.TestCase):
   functions=[n for n in tree.body if isinstance(n,(ast.Import,ast.ImportFrom,ast.FunctionDef))]
   ns={'RUNTIME_NAME':'SteamLinuxRuntime_4','RUNTIME_VALVE':(0,'','official'),'RUNTIME_LOCAL':(0,'','local')}
   exec(compile(ast.Module(body=functions,type_ignores=[]),'helpers','exec'),ns);self.helpers=ns
+  ns['runtime_common']=lambda:self.common
   self.inventory=ns['inventory'];self.fingerprint=ns['fingerprint']
   self.original=self.inventory(self.installed)
   self.provenance()
@@ -113,12 +115,13 @@ class PipelineChecks(unittest.TestCase):
   self.helpers['identity']=lambda:None
   with patch.object(pathlib.Path,'read_text',read),patch.object(pathlib.Path,'is_file',is_file):
    self.assertFalse(self.helpers['local_replay_preflight'](self.installed))
-   (self.installed.parent/'SteamLinuxRuntime_4').mkdir()
+   (self.common/'SteamLinuxRuntime_4').mkdir()
    with self.assertRaisesRegex(RuntimeError,'COMPONENT_CONFLICT'):
     self.helpers['local_replay_preflight'](self.installed)
   self.assertFalse(self.installed.exists())
   self.assertFalse((self.work/(self.ticket+'.json')).exists())
  def test_local_replay_failed_runtime_probe_removes_candidate(self):
+  stock=self.common/'FEX-Emu';stock.mkdir();(stock/'stock').write_bytes(b'original Steam FEX')
   shutil.rmtree(self.installed)
   files=[]
   for path,data,mode in [('usr/bin/FEX',(self.stage/'usr/bin/FEX').read_bytes(),0o755),
@@ -129,6 +132,7 @@ class PipelineChecks(unittest.TestCase):
    self.run_pipeline('local_replay',files=files)
   self.assertFalse(self.installed.exists())
   self.assertEqual(json.loads((self.work/(self.ticket+'.json')).read_text())['state'],'recovered')
+  self.assertEqual((stock/'stock').read_bytes(),b'original Steam FEX')
  def test_runtime_upload_uses_same_ticket_spelling_as_extraction(self):
   incoming=self.work/('incoming-'+self.ticket.lower())
   incoming.mkdir()
@@ -146,7 +150,7 @@ class PipelineChecks(unittest.TestCase):
   self.assertEqual((stage/'runtime-file').read_bytes(),data)
   self.assertEqual(tree,expected)
  def test_runtime_recovery_leaves_arm64_and_checks_registered_data(self):
-  common=self.installed.parent
+  common=self.common
   runtime=common/'SteamLinuxRuntime_4';runtime.mkdir()
   arm64=common/'SteamLinuxRuntime_4-arm64';arm64.mkdir()
   (runtime/'file').write_text('managed')
@@ -190,6 +194,13 @@ class PipelineChecks(unittest.TestCase):
    with self.assertRaisesRegex(RuntimeError,'ARTIFACT_HASH'):
     self.helpers['stage_runtime'](self.installed.parent,self.ticket)
   self.assertFalse((self.work/('runtime-'+'0'*64+'.tar.xz')).exists())
+ def test_runtime_generated_hardlinks_are_readonly_but_fex_remains_strict(self):
+  import os
+  rt=self.common/'SteamLinuxRuntime_4';rt.mkdir()
+  (rt/'file').write_bytes(b'content')
+  cache=rt/'var';cache.mkdir();os.link(rt/'file',cache/'runtime-copy')
+  self.assertEqual(self.inventory(rt,omit_var=True)['file'][1],hashlib.sha256(b'content').hexdigest())
+  with self.assertRaisesRegex(RuntimeError,'ARTIFACT_FORMAT'):self.inventory(rt)
  def test_shared_work_directory_rejected(self):
   self.work.chmod(0o777)
   with self.assertRaisesRegex(RuntimeError,'UNSAFE_PATH'):self.run_pipeline('audit')

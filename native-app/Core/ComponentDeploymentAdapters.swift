@@ -223,7 +223,7 @@ enum ProtonJERelease {
                   name.range(of: "^[A-Za-z0-9_.-]+$", options: .regularExpression) != nil,
                   let size = entry["bytes"] as? Int, size <= CoreLimits.maxResourceFile,
                   let expected = entry["sha256"] as? String,
-                  let resource = Bundle.main.resourceURL?.appendingPathComponent(name),
+                  let resource = Bundle.main.resourceURL?.resolvingSymlinksInPath().appendingPathComponent(name),
                   resource.path == resource.resolvingSymlinksInPath().path else { throw CoreError("ARTIFACT_UNAPPROVED") }
             let bytes = try Data(contentsOf: resource)
             guard bytes.count == size,
@@ -403,6 +403,7 @@ enum FEXWorkflow {
         let approval = runtimeApproval(tree: tree, snapshot: snapshot)
         snapshot.facts["fex_fingerprint"] = approval
         snapshot.facts["fex_tree"] = tree
+        snapshot.facts["fex_managed_emulator"] = staticResult["managed_emulator"]?.text
         snapshot.facts["fex_provenance"] = "unverified"
         let reviewed = verifyInstalled(tree: tree, snapshot: snapshot)
         if reviewed { snapshot.facts["fex_provenance"] = "verified" }
@@ -418,6 +419,7 @@ enum FEXWorkflow {
         }
         snapshot.facts["fex_status"] = reviewed ? "normal" : "compatible"
         snapshot.facts["fex_runtime"] = "ready"
+        snapshot.facts["fex_container_rootfs"] = runtime["container_rootfs"]?.text
         snapshot.facts["fex_reason"] = ""
     }
     private static func runtimeApproval(tree: String, snapshot: DeploymentSnapshot) -> String {
@@ -432,7 +434,9 @@ enum FEXWorkflow {
     }
     static let runtimeProbe = #"""
 import struct,tempfile,platform
-root=pathlib.Path.home()/'.local/share/Steam/steamapps/common/FEX-Emu'
+root=pathlib.Path.home()/'.local/share/HD2FXLauncher/compatibility/FEX-RF'
+managed=root.exists() or root.is_symlink()
+if not managed:root=pathlib.Path.home()/'.local/share/Steam/steamapps/common/FEX-Emu'
 exe=root/'usr/bin/FEX'
 def check():
  if pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip()!=EXPECTED_BOOT:return {'reason':'TARGET_CHANGED'}
@@ -476,6 +480,9 @@ def check():
  if not entry or entry[0]!='file':return {'reason':'FEX_INTEGRITY_FAILED'}
  tree=fingerprint(files)
  result={'preflight':True,'tree':tree,'executable_sha256':entry[1]}
+ if managed:
+  if registration.get('container_environment',{}).get('FEX_ROOTFS')!='/':return {'reason':'FEX_ROOTFS_UNAVAILABLE'}
+  result['managed_emulator']=str(root/'emulator.json')
  if not EXPECTED_TREE:return result
  if tree!=EXPECTED_TREE:return {'reason':'FEX_CHANGED'}
  # Static x86-64 ELF with one load segment and exit(42), requiring no x86 libc.
@@ -496,6 +503,27 @@ def check():
  if fingerprint(inventory(root))!=tree:return {'reason':'FEX_CHANGED'}
  if pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip()!=EXPECTED_BOOT:return {'reason':'TARGET_CHANGED'}
  if status!=42:return {'reason':'FEX_RUNTIME_FAILED'}
+ if managed:
+  rt=pathlib.Path.home()/'.local/share/Steam/steamapps/common/SteamLinuxRuntime_4'
+  env=dict(os.environ,PRESSURE_VESSEL_EMULATOR=str(root/'emulator.json'),
+           STEAM_COMPAT_EMULATOR=str(rt.parent/'FEX-Emu/emulator.json'),
+           STEAM_COMPAT_GRAPHICS_PROVIDER=str(provider/'graphics_provider.json'),
+           STEAM_COMPAT_MACHINE_ARCHITECTURE='aarch64-linux-gnu',
+           PRESSURE_VESSEL_PREFIX=str(rt/'pressure-vessel-arm64'))
+  command=[str(rt/'_v2-entry-point'),'--verb=run','--','/bin/sh','-c',
+           'test "$FEX_ROOTFS" = / && printf HD2_ROOTFS_OK']
+  with tempfile.TemporaryDirectory(prefix='hd2-fex-container-') as data:
+   # Simulate Steam's per-app data contract without touching the game prefix.
+   env.update(STEAM_COMPAT_DATA_PATH=data,FEX_APP_DATA_LOCATION=data+'/fex-emu',FEX_DISABLETELEMETRY='1')
+   try:
+    container=subprocess.Popen(command,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True)
+    try:output,errors=container.communicate(timeout=90)
+    except subprocess.TimeoutExpired:
+     os.killpg(container.pid,signal.SIGKILL);container.communicate();return {'reason':'FEX_TIMEOUT'}
+   except OSError:return {'reason':'FEX_DEPENDENCY_FAILED'}
+   if container.returncode!=0 or b'HD2_ROOTFS_OK' not in output:return {'reason':'FEX_RUNTIME_FAILED'}
+  if fingerprint(inventory(root))!=tree:return {'reason':'FEX_CHANGED'}
+  result['container_rootfs']='/'
  result['runtime']=True
  return result
 try:print(json.dumps(check()))
@@ -559,7 +587,7 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
         let snapshot = try backend.snapshot()
         guard snapshot.fxVersion == "1.9.9", snapshot.osVersion == "0.4.5", snapshot.architecture == "aarch64",
               snapshot.facts["machine_id"].map({ CoreHash.sha256(Data($0.utf8)) }) == localGuestDigest,
-              snapshot.facts["fex_layout"] == "proton-integrated", !snapshot.gameRunning else {
+              !snapshot.gameRunning else {
             throw CoreError("TARGET_CHANGED")
         }
         let arguments = ProcessInfo.processInfo.arguments
@@ -840,7 +868,9 @@ def inventory(root, omit_var=False):
    elif stat.S_ISREG(s.st_mode):
     total+=s.st_size
     if total>2*1024**3:fail('ARTIFACT_FORMAT')
-    if s.st_size>256*1024*1024 or s.st_nlink!=1:fail('ARTIFACT_FORMAT')
+    # Runtime creates content-identical hardlinks in var/ for container copies.
+    # Only its read-only inventory permits these; FEX transactions remain strict.
+    if s.st_size>256*1024*1024 or (s.st_nlink!=1 and not omit_var):fail('ARTIFACT_FORMAT')
     result[r]=['file',digest(p),s.st_mode&0o777]
    elif stat.S_ISDIR(s.st_mode):result[r]=['dir']
    else:fail('ARTIFACT_FORMAT')
@@ -850,6 +880,10 @@ RUNTIME_NAME='SteamLinuxRuntime_4'
 RUNTIME_URL='https://repo.steampowered.com/steamrt4/images/4.0.20261021.265997/SteamLinuxRuntime_4.tar.xz'
 RUNTIME_VALVE=(175077288,'aa9dd1aab2173e65b631faae34b85e2c17fe323d941013154ddd2e1dce8a0910','db4b40a9b5c254582283b1876944f06dcdb78afea4aac90540c3b6a4f46cc9f0')
 RUNTIME_LOCAL=(717803520,'31a43e6e6ff78509eb1cdb762cfff8e9d89fc83c118d5d723bead42b9b18ca5c','11c51804ac7a94667d2bda95ba88fa21cbfdde6ada5f1e2fe6998c100cb3bfe7')
+def runtime_common():
+ return pathlib.Path.home()/'.local/share/Steam/steamapps/common'
+def replay_root():
+ return pathlib.Path.home()/'.local/share/HD2FXLauncher/compatibility/FEX-RF'
 def replay_work():
  return pathlib.Path.home()/'.local/share/HD2FXLauncher/fex-rf-v1'
 def local_replay_preflight(installed):
@@ -860,14 +894,14 @@ def local_replay_preflight(installed):
  if os.path.lexists(installed):fail('EXTERNAL_DRIFT')
  provider=pathlib.Path('/usr/share/guestos/fex-mesa')
  if not (provider/'graphics_provider.json').is_file() or not (provider/'usr/lib/ld-linux-x86-64.so.2').is_file():fail('FEX_ROOTFS_UNAVAILABLE')
- runtime=installed.parent/RUNTIME_NAME
+ runtime=runtime_common()/RUNTIME_NAME
  safe(runtime)
  ready=os.path.lexists(runtime)
  if ready and fingerprint(inventory(runtime,omit_var=True)) not in [RUNTIME_VALVE[2],RUNTIME_LOCAL[2]]:fail('COMPONENT_CONFLICT')
- if not ready and shutil.disk_usage(installed.parent).free<2*1024**3:fail('INSUFFICIENT_SPACE')
+ if not ready and shutil.disk_usage(runtime_common()).free<2*1024**3:fail('INSUFFICIENT_SPACE')
  return ready
 def local_replay_prepare(phase):
- installed=pathlib.Path.home()/'.local/share/Steam/steamapps/common/FEX-Emu'
+ installed=replay_root()
  if phase=='preflight':
   print(json.dumps({'runtime_ready':local_replay_preflight(installed)}));return
  identity()
@@ -968,9 +1002,9 @@ def recover_runtime(receipt,installed):
  tree=receipt.get('runtime_tree')
  if tree is None:return
  if tree not in [RUNTIME_LOCAL[2],RUNTIME_VALVE[2]]:fail('EXTERNAL_DRIFT')
- rt=installed.parent/RUNTIME_NAME
- rt_stage=installed.parent/('HD2-runtime-stage-'+str(uuid.UUID(receipt['ticket'])))
- rt_acf=installed.parent.parent/'appmanifest_4183110.acf'
+ rt=runtime_common()/RUNTIME_NAME
+ rt_stage=runtime_common()/('HD2-runtime-stage-'+str(uuid.UUID(receipt['ticket'])))
+ rt_acf=runtime_common().parent/'appmanifest_4183110.acf'
  for path in [rt,rt_stage,rt_acf]:safe(path)
  present=os.path.lexists(rt)
  if present and (os.path.lexists(rt_stage) or fingerprint(inventory(rt,omit_var=True))!=tree):fail('EXTERNAL_DRIFT')
@@ -986,7 +1020,7 @@ lockfd=os.open(lock,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
 fcntl.flock(lockfd,fcntl.LOCK_EX|fcntl.LOCK_NB)
 restart_steam=False
 try:
- identity();src=work/'source';stage=work/'runtime';installed=pathlib.Path.home()/'.local/share/Steam/steamapps/common/FEX-Emu'
+ identity();src=work/'source';stage=work/'runtime';installed=replay_root()
  mode=REQUEST['mode']
  if mode=='local_replay':
   def interrupted(signum,frame):fail('TIMEOUT')
@@ -1097,9 +1131,11 @@ try:
  elif mode in ['install','local_replay']:
   if mode=='local_replay':
    runtime_ready=local_replay_preflight(installed)
-   rt=installed.parent/RUNTIME_NAME
+   rt=runtime_common()/RUNTIME_NAME
    rt_stage=None;rt_tree=None
-   rt_acf=installed.parent.parent/'appmanifest_4183110.acf';safe(rt_acf)
+   rt_acf=runtime_common().parent/'appmanifest_4183110.acf';safe(rt_acf)
+   installed.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
+   safe(installed.parent)
    stage=work/('local-runtime-'+str(uuid.UUID(REQUEST['ticket'])))
    stage.mkdir(mode=0o700)
    import base64
@@ -1125,7 +1161,7 @@ try:
    registration.write_text(json.dumps(config,indent=2)+'\n')
    if not runtime_ready:
     if os.path.lexists(rt_acf):fail('COMPONENT_CONFLICT')
-    rt_stage,rt_tree=stage_runtime(installed.parent,REQUEST['ticket'])
+    rt_stage,rt_tree=stage_runtime(runtime_common(),REQUEST['ticket'])
    restart_steam=stop_replay_steam()
    runtime_smoke(rt_stage if rt_stage is not None else rt)
   idle();current=audit()
@@ -1170,6 +1206,7 @@ try:
    if inventory(installed)!=expected:fail('VERIFY_FAILED')
    if mode=='local_replay':
     EXPECTED_BOOT=REQUEST['boot'];EXPECTED_TREE=fingerprint(expected)
+    root=installed;exe=root/'usr/bin/FEX';managed=True
     runtime=check()
     if not runtime.get('runtime'):fail(runtime.get('reason','FEX_RUNTIME_FAILED'))
    receipt['state']='completed';save_record(record,receipt)

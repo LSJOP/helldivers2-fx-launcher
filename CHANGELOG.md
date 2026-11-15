@@ -8,6 +8,8 @@ v1.0.1 (2026111406) is the latest published stable release. Fresh SteamOS deploy
 
 ## Unreleased
 
+- Persistence candidate: keep the RF compatibility tree outside the Steam-managed FEX depot, verify RootFS inside a real Runtime container, and restore the shared main window on launch/reopen. Final reboot acceptance and distributable RF build remain pending.
+
 - Recovery continuation adds verified Runtime cache/retry, explicit Debug resource paths and a bundled component integrity catalogue. Real setup installed Proton and configured Steam, but failed final verification after reboot restored the incompatible stock FEX and empty container RootFS; public one-click setup remains blocked.
 
 - The isolated first-run replay can install the pinned Steam Linux Runtime 4.0 from a verified local archive or Valve HTTPS download. It preserves the existing ARM64-only Runtime.

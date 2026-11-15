@@ -681,7 +681,7 @@ final class AppState: ObservableObject {
                 guard var raw = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
                 var plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
                 #if DEBUG
-                if !launchGame, FEXWorkflow.localReplayEnabled, plan.snapshot.facts["fex_layout"] == "proton-integrated" {
+                if !launchGame, FEXWorkflow.localReplayEnabled, plan.snapshot.facts["fex_managed_emulator"] == nil {
                     self.firstRunPlan = plan
                     self.workflowLog(taskID, "FEX: local replay preflight")
                     input["credential_guest_boot"] = .string(boot)
@@ -791,7 +791,7 @@ final class AppState: ObservableObject {
             } catch {
                 let failure = error as? ErrorState ?? ErrorState(error is CancellationError ? "CANCELLED" : "PROTOCOL_ERROR")
                 self.environmentWorkflow.failure = ErrorState(failure.code, details: self.credentials.redactor.diagnostic(failure.details))
-                let reason = failure.details["reason"]?.text.flatMap { $0.range(of: "^[a-z0-9_]{1,80}$", options: .regularExpression) == nil ? nil : $0 }
+                let reason = self.environmentWorkflow.failure?.details["reason"]?.text.map { String($0.prefix(300)) }
                 self.workflowLog(taskID, "\(self.t(self.environmentWorkflow.phase.titleKey)): \(failure.code)\(reason.map { " / " + $0 } ?? "") (\(Int(max(0, ProcessInfo.processInfo.systemUptime - self.workflowPhaseStarted)))s)", level: "ERROR")
                 self.environmentWorkflow.phase = failure.code == "CANCELLED" ? .cancelled : .failed
                 self.workflowLog(taskID, "\(self.environmentWorkflow.phase.rawValue): \(failure.code) (\(Int(max(0, ProcessInfo.processInfo.systemUptime - self.workflowStarted)))s)", level: "ERROR")

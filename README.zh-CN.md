@@ -97,3 +97,5 @@ FX 1.9.9 环境实测记录见 [FEX 基线报告](docs/environment/FEX_BASELINE_
 首次配置会区分 Proton 内置 FEX 与独立运行时缺失，记录 Proton 版本、配置及库文件哈希；取得已审核方案之前明确显示兼容性未验证。
 
 恢复分支已接入固定版本 Runtime 的隔离 Debug 安装（已验证本地归档或 Valve HTTPS、SHA-256、SFTP、保留 ARM64 Runtime、事务恢复）。公开版一键配置仍受 RF 二进制来源／再分发许可审核阻塞；Debug 回放需明确传入测试镜像与资源目录。见[首次配置验收](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md)。
+
+持久部署候选：实测确认 Steam 在重启后更新自身 FEX depot。恢复分支改为 App 管理目录部署 RF，并验证真实 Runtime 容器中的 RootFS。主窗口启动／重新打开及当前中英文空闲界面截图已修复；最终重复配置、跨重启验收及完整 RF 合法分发仍待完成。
