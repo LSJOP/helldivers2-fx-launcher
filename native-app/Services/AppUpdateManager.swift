@@ -1,13 +1,14 @@
 import AppKit
 import Combine
 import Security
+import OSLog
 
 enum UpdateString: String {
     case section, currentVersion, automaticChecks, checkNow, unconfigured, ready, checking
     case available, finished, failed, scope, languageRestart, automaticOff, automaticOn
     case build, channel, stable, preview, lastCheck, never, noReleases, upToDate, releaseNotes
     case downloadOnly, downloadInstall, downloading, downloaded, verifying, installing, restarting, retryUpdate, cancelled, cancel
-    case trustBlocked, previewBlocked, network, malformed, missingAsset, incompatible, signature, integrity, diskSpace, download, installFailed, remindLater
+    case trustBlocked, previewBlocked, network, malformed, missingAsset, incompatible, signature, integrity, diskSpace, permission, download, installFailed, remindLater, details
     var key: String {
         switch self {
         case .section: return "ui.312"
@@ -52,6 +53,8 @@ enum UpdateString: String {
         case .signature: return "ui.integrated.064"
         case .integrity: return "ui.integrated.065"
         case .diskSpace: return "ui.integrated.066"
+        case .permission: return "ui.update.permission"
+        case .details: return "ui.update.details"
         case .download: return "ui.integrated.067"
         case .installFailed: return "ui.integrated.068"
         case .remindLater: return "ui.integrated.069"
@@ -293,7 +296,28 @@ struct UpdateConfiguration {
     func cancel() { operation?.cancel() }
     private func record(_ error: Error) {
         if error is CancellationError || (error as? URLError)?.code == .cancelled { status = .cancelled; return }
-        if let failure = error as? NativeUpdateFailure { status = UpdateString(rawValue: failure.rawValue) ?? .failed; errorCode = failure.rawValue }
-        else { status = error is URLError ? .network : .download; errorCode = "UPDATE_OPERATION_FAILED" }
+        let underlying = error as NSError
+        if error is UpdateArchivePathError {
+            status = .integrity
+            errorCode = "ZIP_PATH_POLICY_\(String(describing: error))"
+        } else if let failure = error as? NativeUpdateFailure {
+            status = UpdateString(rawValue: failure.rawValue) ?? .failed
+            errorCode = failure.rawValue
+        } else if error is URLError {
+            status = .network
+            errorCode = "URL_\(underlying.code)"
+        } else if (underlying.domain == NSPOSIXErrorDomain && [Int(EACCES), Int(EPERM)].contains(underlying.code))
+                    || (underlying.domain == NSCocoaErrorDomain && underlying.code == NSFileWriteNoPermissionError) {
+            status = .permission
+            errorCode = "PERMISSION_\(underlying.code)"
+        } else if underlying.domain == NSPOSIXErrorDomain && underlying.code == Int(ENOSPC) {
+            status = .diskSpace
+            errorCode = "DISK_SPACE_\(underlying.code)"
+        } else {
+            status = .download
+            errorCode = "ERROR_\(underlying.domain)_\(underlying.code)"
+        }
+        Logger(subsystem: "com.lsjop.helldivers2fx.native.phase1", category: "updates")
+            .error("Update failure: \(self.errorCode ?? "unknown", privacy: .public)")
     }
 }

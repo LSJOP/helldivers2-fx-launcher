@@ -46,3 +46,7 @@ For every new page/important setting/launch/performance/update UI change, review
 The complete terminal launcher remains in [legacy-script](https://github.com/LSJOP/helldivers2-fx-launcher/blob/legacy-script/README.md), with a [script archive ZIP](https://github.com/LSJOP/helldivers2-fx-launcher/archive/refs/heads/legacy-script.zip). Existing local script installations are not changed. Old main ZIP/raw-main script URLs now refer to Native content; use legacy-script for the original script paths. The pre-migration [0205aca commit](https://github.com/LSJOP/helldivers2-fx-launcher/tree/0205acaec3b32024df180a6dfb8ecc587e2f1914) remains accessible. No old release or tag is deleted by this merge. The earlier main README's Phase 1 disabled-launch/five-page claims are superseded by the verified current source, not retained as current capabilities.
 
 原终端脚本、ZIP 和历史提交入口保持有效；旧 main.zip／raw-main 路径现为 Native 内容，访问原脚本请改用 legacy-script。本次整合不修改既有脚本安装、不删除旧 Release 或 Tag。
+
+## 更新包规则
+
+后续补丁包可以采用新的归档规则，无需保证兼容 v1.0.1 的旧校验规则。发布前记录受影响的升级路径，必要时提供准确的安装方式，并继续执行当前签名、完整性和归档安全检查。
