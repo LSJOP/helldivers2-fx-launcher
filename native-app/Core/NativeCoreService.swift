@@ -425,11 +425,15 @@ actor NativeCoreService {
             result["fx_host_running"] = host["fx_host_running"] ?? .bool(false)
             guard host["fx_host_running"]?.boolean == true else { throw CoreError("FX_NOT_RUNNING") }
             progress("CheckingSSHPort")
-            _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
+            guard let gvproxy = LaunchResources.gvproxyBinary else { throw CoreError("GVPROXY_UNAVAILABLE") }
             // OpenSSH supplies bounded port/protocol errors; avoid a second divergent socket implementation.
             transport.setSecret(password: request.password, passphrase: request.passphrase)
             progress("AuthenticatingSSH")
-            try transport.connectOnce(context: context)
+            try transport.connectWhileGuestStarts(context: context, endpointIdentity: {
+                try LaunchService.endpointIdentity(fx: fx, gvproxy: gvproxy, transport: transport, context: context)
+            }, onRetry: { code, attempt in
+                emit("INFO", "SSH handshake retry", ["reason": .string(code), "attempt": .number(Double(attempt))])
+            })
             result["port_reachable"] = .bool(true)
             result["protocol"] = .string("negotiated")
             result["authentication"] = .string("authenticated")
@@ -460,7 +464,7 @@ actor NativeCoreService {
                 stage = "AuthenticatingSSH"
             } else if ["SSH_CONNECTION_REFUSED", "SSH_CONNECTION_TIMEOUT", "SSH_CONNECTION_UNREACHABLE"].contains(error.code) {
                 result["port_reachable"] = .bool(false); stage = "CheckingSSHPort"
-            } else if error.code == "SSH_HOST_KEY_MISMATCH" || error.code == "SSH_PROTOCOL_ERROR" {
+            } else if ["SSH_HOST_KEY_MISMATCH", "SSH_PROTOCOL_ERROR", "SSH_HANDSHAKE_INTERRUPTED"].contains(error.code) {
                 stage = "NegotiatingSSH"
             }
             result["stage"] = .string(stage)

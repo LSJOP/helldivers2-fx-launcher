@@ -56,6 +56,7 @@ import Darwin
                      ("Host key verification failed", "SSH_HOST_KEY_MISMATCH"),
                      ("bind: Address already in use", "SSH_LOCAL_PORT_BUSY"),
                      ("Could not resolve hostname", "SSH_CONNECTION_UNREACHABLE"),
+                     ("kex_exchange_identification: read: Connection reset by peer", "SSH_HANDSHAKE_INTERRUPTED"),
                      ("kex_exchange_identification: closed", "SSH_PROTOCOL_ERROR")]
         for (text, code) in cases { check(SSHTransport.failureCode(text) == code, code) }
         check(SSHTransport.failureCode("", timedOut: true) == "SSH_CONNECTION_TIMEOUT", "deadline classification")

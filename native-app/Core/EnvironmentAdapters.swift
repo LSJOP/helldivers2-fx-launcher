@@ -415,9 +415,13 @@ extension NativeCoreService {
         let transport = SSHTransport(settings: setupSettings)
         defer { transport.closeMaster() }
         guard SSHTransport.localHost(transport.settings.host) else { throw CoreError("LOCAL_FX_REQUIRED") }
-        _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context)
+        guard let gvproxy = LaunchResources.gvproxyBinary else { throw CoreError("GVPROXY_UNAVAILABLE") }
         transport.setSecret(password: request.password, passphrase: request.passphrase)
-        try transport.connectOnce(context: context, forwarding: true)
+        try transport.connectWhileGuestStarts(context: context, endpointIdentity: {
+            try LaunchService.endpointIdentity(fx: fx, gvproxy: gvproxy, transport: transport, context: context)
+        }, onRetry: { code, attempt in
+            emit("INFO", "SSH handshake retry", ["reason": .string(code), "attempt": .number(Double(attempt))])
+        })
         let backend = try SSHEnvironmentBackend(fx: fx, transport: transport, context: context, revision: ConfigurationService.read().revision)
         backend.sudoPassword = request.sudoPassword
         backend.fexApprovals = request.fexApprovals

@@ -162,11 +162,40 @@ final class SSHTransport {
         let text = output.lowercased()
         if text.contains("host identification has changed") || text.contains("host key verification failed") { return "SSH_HOST_KEY_MISMATCH" }
         if text.contains("address already in use") || text.contains("cannot listen to port") { return "SSH_LOCAL_PORT_BUSY" }
+        if text.contains("kex_exchange_identification") &&
+            (text.contains("connection reset") || text.contains("connection closed")) {
+            return "SSH_HANDSHAKE_INTERRUPTED"
+        }
         if text.contains("connection refused") { return "SSH_CONNECTION_REFUSED" }
         if timedOut || text.contains("connection timed out") || text.contains("operation timed out") { return "SSH_CONNECTION_TIMEOUT" }
         if text.contains("permission denied") || text.contains("authentication failed") { return "SSH_AUTH_FAILED" }
         if text.contains("could not resolve hostname") || text.contains("no route to host") { return "SSH_CONNECTION_UNREACHABLE" }
         return "SSH_PROTOCOL_ERROR"
+    }
+
+    /// Retry a bounded startup failure only on the original, verified FX endpoint.
+    /// Host-key failures and failures after a credential challenge are terminal.
+    func connectWhileGuestStarts(context: CoreContext, endpointIdentity: () throws -> String,
+                                 onRetry: (String, Int) -> Void = { _, _ in }) throws {
+        let original = try endpointIdentity()
+        for attempt in 1...3 {
+            try context.check()
+            guard try endpointIdentity() == original else { throw CoreError("FX_IDENTITY_UNVERIFIED") }
+            do {
+                try connectOnce(context: context)
+                return
+            } catch let error as CoreError {
+                let transient = ["SSH_HANDSHAKE_INTERRUPTED", "SSH_CONNECTION_REFUSED", "SSH_CONNECTION_TIMEOUT"]
+                guard attempt < 3, transient.contains(error.code),
+                      error.details["before_credentials"]?.boolean == true else { throw error }
+                onRetry(error.code, attempt + 1)
+                let until = CoreClock.monotonic + Double(attempt)
+                while CoreClock.monotonic < until {
+                    try context.check()
+                    Thread.sleep(forTimeInterval: 0.1)
+                }
+            }
+        }
     }
 
     func connectOnce(context: CoreContext? = nil, forwarding: Bool = true) throws {
@@ -249,14 +278,14 @@ final class SSHTransport {
             while process.isRunning && CoreClock.monotonic < grace { Thread.sleep(forTimeInterval: 0.01) }
             if process.isRunning { kill(process.processIdentifier, SIGKILL) }
             process.waitUntilExit()
-            throw CoreError(Self.failureCode(String(decoding: buffer, as: UTF8.self), timedOut: true))
+            throw CoreError(Self.failureCode(String(decoding: buffer, as: UTF8.self), timedOut: true), ["before_credentials": .bool(!sent)])
         }
         process.waitUntilExit()
         let text = String(decoding: buffer, as: UTF8.self)
         guard process.terminationStatus == 0 else {
             let code = Self.failureCode(text)
             if code == "SSH_AUTH_FAILED" { password = nil; passphrase = nil }
-            throw CoreError(code)
+            throw CoreError(code, ["before_credentials": .bool(!sent)])
         }
         guard masterPID(context: context) != nil else { throw CoreError("SSH_PROTOCOL_ERROR") }
         Self.ownershipLock.lock(); Self.owned.insert(settings.socketPath); Self.ownershipLock.unlock()
