@@ -1,13 +1,14 @@
 import AppKit
 import Combine
 import Security
+import OSLog
 
 enum UpdateString: String {
     case section, currentVersion, automaticChecks, checkNow, unconfigured, ready, checking
     case available, finished, failed, scope, languageRestart, automaticOff, automaticOn
     case build, channel, stable, preview, lastCheck, never, noReleases, upToDate, releaseNotes
-    case downloadOnly, downloadInstall, downloading, downloaded, installing, cancelled, cancel
-    case trustBlocked, previewBlocked, network, malformed, missingAsset, incompatible, signature, integrity, diskSpace, download, installFailed, remindLater
+    case downloadOnly, downloadInstall, downloading, downloaded, verifying, installing, restarting, retryUpdate, cancelled, cancel
+    case trustBlocked, previewBlocked, network, malformed, missingAsset, incompatible, signature, integrity, diskSpace, permission, download, installFailed, remindLater, details
     var key: String {
         switch self {
         case .section: return "ui.312"
@@ -37,6 +38,9 @@ enum UpdateString: String {
         case .downloadInstall: return "ui.integrated.053"
         case .downloading: return "ui.integrated.054"
         case .downloaded: return "ui.integrated.055"
+        case .verifying: return "ui.update.verifying"
+        case .restarting: return "ui.update.restarting"
+        case .retryUpdate: return "ui.update.retry"
         case .installing: return "ui.integrated.056"
         case .cancelled: return "ui.integrated.057"
         case .cancel: return "ui.037"
@@ -49,6 +53,8 @@ enum UpdateString: String {
         case .signature: return "ui.integrated.064"
         case .integrity: return "ui.integrated.065"
         case .diskSpace: return "ui.integrated.066"
+        case .permission: return "ui.update.permission"
+        case .details: return "ui.update.details"
         case .download: return "ui.integrated.067"
         case .installFailed: return "ui.integrated.068"
         case .remindLater: return "ui.integrated.069"
@@ -207,6 +213,11 @@ struct UpdateConfiguration {
                               received >= 0, total == candidate.manifest.length else { return }
                         self.downloadProgress = min(1, Double(received) / Double(total))
                     }
+                } verifying: {
+                    await MainActor.run {
+                        guard self.status == .downloading else { return }
+                        self.status = .verifying
+                    }
                 }
                 try Task.checkCancellation()
                 self.status = .downloaded
@@ -218,8 +229,12 @@ struct UpdateConfiguration {
     }
     func downloadAndInstall() {
         guard canStartInstall else { return }
-        if cachedArchive != nil { handoffInstallation() }
-        else { downloadVerifiedArchive(installAfterDownload: true) }
+        if let cachedArchive, FileManager.default.fileExists(atPath: cachedArchive.path) {
+            handoffInstallation()
+        } else {
+            cachedArchive = nil
+            downloadVerifiedArchive(installAfterDownload: true)
+        }
     }
     private func handoffInstallation() {
         guard canInstall, let candidate, let cachedArchive else { return }
@@ -251,7 +266,12 @@ struct UpdateConfiguration {
                 Task { @MainActor [weak self] in
                     while helper.isRunning {
                         if FileManager.default.fileExists(atPath: request.appendingPathComponent("prepared").path) {
-                            guard !CoreWorkerStatus.isActive else { return }
+                            guard !CoreWorkerStatus.isActive else {
+                                self?.status = .installFailed
+                                self?.errorCode = "UPDATE_WORKER_ACTIVE"
+                                return
+                            }
+                            self?.status = .restarting
                             NSApp.terminate(nil)
                             return
                         }
@@ -264,6 +284,10 @@ struct UpdateConfiguration {
                 throw error
             }
         } catch {
+            if let failure = error as? NativeUpdateFailure, failure == .integrity || failure == .signature {
+                try? FileManager.default.removeItem(at: cachedArchive)
+                self.cachedArchive = nil
+            }
             record(error)
             if !(error is NativeUpdateFailure) { status = .installFailed }
             canCheck = true
@@ -272,7 +296,28 @@ struct UpdateConfiguration {
     func cancel() { operation?.cancel() }
     private func record(_ error: Error) {
         if error is CancellationError || (error as? URLError)?.code == .cancelled { status = .cancelled; return }
-        if let failure = error as? NativeUpdateFailure { status = UpdateString(rawValue: failure.rawValue) ?? .failed; errorCode = failure.rawValue }
-        else { status = error is URLError ? .network : .download; errorCode = "UPDATE_OPERATION_FAILED" }
+        let underlying = error as NSError
+        if error is UpdateArchivePathError {
+            status = .integrity
+            errorCode = "ZIP_PATH_POLICY_\(String(describing: error))"
+        } else if let failure = error as? NativeUpdateFailure {
+            status = UpdateString(rawValue: failure.rawValue) ?? .failed
+            errorCode = failure.rawValue
+        } else if error is URLError {
+            status = .network
+            errorCode = "URL_\(underlying.code)"
+        } else if (underlying.domain == NSPOSIXErrorDomain && [Int(EACCES), Int(EPERM)].contains(underlying.code))
+                    || (underlying.domain == NSCocoaErrorDomain && underlying.code == NSFileWriteNoPermissionError) {
+            status = .permission
+            errorCode = "PERMISSION_\(underlying.code)"
+        } else if underlying.domain == NSPOSIXErrorDomain && underlying.code == Int(ENOSPC) {
+            status = .diskSpace
+            errorCode = "DISK_SPACE_\(underlying.code)"
+        } else {
+            status = .download
+            errorCode = "ERROR_\(underlying.domain)_\(underlying.code)"
+        }
+        Logger(subsystem: "com.lsjop.helldivers2fx.native.phase1", category: "updates")
+            .error("Update failure: \(self.errorCode ?? "unknown", privacy: .public)")
     }
 }
