@@ -46,7 +46,7 @@ struct FirstRunSetupView: View {
         return plan
     }
     private var setupStatusKey: String {
-        if state.environmentWorkflow.active { return state.environmentWorkflow.phase.titleKey }
+        if state.environmentWorkflow.active || state.environmentWorkflow.phase == .cancelled { return state.environmentWorkflow.phase.titleKey }
         return state.firstRunState == .NotChecked ? "ui.workflow.idle" : "ui.setup.state." + state.firstRunState.rawValue
     }
     private var welcomeContent: some View {
@@ -74,8 +74,10 @@ struct FirstRunSetupView: View {
                 TacticalFlowStep(number: "03", title: state.t("ui.setup.deploy"), symbol: "wrench.and.screwdriver")
                 TacticalFlowStep(number: "04", title: state.t("ui.workflow.result"), symbol: "checkmark.shield")
             }
-            TacticalButton(title: state.t("ui.workflow.begin"), symbol: "play.fill", primary: true, disabledReason: tasks.busy ? state.t("ui.014") : nil, fillsWidth: true) {
-                state.startEnvironmentWorkflow(launchGame: false)
+            if state.environmentWorkflow.phase == .idle || state.environmentWorkflow.launchesGame {
+                TacticalButton(title: state.t("ui.workflow.begin"), symbol: "play.fill", primary: true, disabledReason: tasks.busy ? state.t("ui.014") : nil, fillsWidth: true) {
+                    state.startEnvironmentWorkflow(launchGame: false)
+                }
             }
             EnvironmentWorkflowProgressView(state: state, tasks: tasks)
             TacticalFlowFooter()

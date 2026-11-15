@@ -7,7 +7,7 @@
   "timezone": "Asia/Shanghai",
   "fx_guest_actions": "none",
   "credential_autoload": "disabled by isolated capture arguments",
-  "reviewed_ui_source_sha256": "5a03046e24ec74003ebbbd2cfbbf4eada29b116df8841ccf7d312bea09b8d1d3",
+  "reviewed_ui_source_sha256": "e881c1820233547dc360f91b2c2f65d8ba9fc2ba4ee3fe89cd145408c64932f2",
   "screenshots": [
     {
       "path": "docs/images/en/dashboard.png",
@@ -418,7 +418,7 @@
       "credential_autoload": "no target selected; no saved credential load requested"
     }
   ],
-  "review_scope": "2026-11-15: zh-CN/en seven real idle viewports reviewed for updated navigation; welcome final status layout recaptured. Completion and launch are separately labeled fixture previews.",
+  "review_scope": "2026-11-15: zh-CN/en seven real idle viewports reviewed for updated navigation; welcome final status layout recaptured. Completion and launch are separately labeled fixture previews. Follow-up cancellation text and duplicate-retry correction apply only outside the captured idle state; real idle screenshots retained with original provenance.",
   "dashboard_update_note": "2026-11-05: only English and Chinese Dashboard captures updated for duplicate setup-shortcut removal, build 2026110503; other screenshots retain their own historical provenance.",
   "ssh_settings_update_note": "2026-11-05: SSH settings screenshots from reviewed original dirty Debug build 2026110501; Dashboard remains build 2026110503. Entries retain individual source provenance.",
   "local_copy_review_note": "FX Manager zh-CN/en build2026110505 recaptured: both official and local test copy shown, metadata-only; other page layouts unchanged.",
