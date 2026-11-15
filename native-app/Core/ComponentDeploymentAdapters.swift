@@ -362,6 +362,11 @@ enum FEXWorkflow {
         let staticResult = try probe()
         snapshot.facts["fex_status"] = "repair"
         snapshot.facts["fex_reason"] = staticResult["reason"]?.text ?? "FEX_RUNTIME_FAILED"
+        if staticResult["layout"]?.text == "proton-integrated" {
+            snapshot.facts["fex_status"] = "unverified"
+            snapshot.facts["fex_layout"] = "proton-integrated"
+            snapshot.facts["fex_path"] = staticResult["path"]?.text
+        }
         guard staticResult["preflight"]?.boolean == true, let tree = staticResult["tree"]?.text else { return }
         if hasKnownLaunchIncompatibility(fxVersion: snapshot.fxVersion, architecture: snapshot.architecture,
                                          executableSHA256: staticResult["executable_sha256"]?.text) {
@@ -400,7 +405,13 @@ root=pathlib.Path.home()/'.local/share/Steam/steamapps/common/FEX-Emu'
 exe=root/'usr/bin/FEX'
 def check():
  if pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip()!=EXPECTED_BOOT:return {'reason':'TARGET_CHANGED'}
- if not exe.is_file():return {'reason':'FEX_MISSING'}
+ if not exe.is_file():
+  bundled=pathlib.Path.home()/'.local/share/Steam/steamapps/common/Proton 11.0 (ARM64)'
+  libraries=[bundled/'files/lib/wine/aarch64-unix'/name for name in ['libarm64ecfex.so','libwow64fex.so']]
+  if all(p.is_file() and not p.is_symlink() and elf_arm64(p) for p in libraries):
+   return {'reason':'FEX_PROTON_INTEGRATED_UNVERIFIED','layout':'proton-integrated',
+           'path':str(bundled),'library_hashes':{p.name:digest(p) for p in libraries}}
+  return {'reason':'FEX_MISSING'}
  if not os.access(exe,os.X_OK):return {'reason':'FEX_NOT_EXECUTABLE'}
  if platform.machine() not in ['aarch64','arm64'] or not elf_arm64(exe):return {'reason':'FEX_ARCHITECTURE'}
  if not (root/'emulator.json').is_file():return {'reason':'FEX_INTEGRATION_MISSING'}

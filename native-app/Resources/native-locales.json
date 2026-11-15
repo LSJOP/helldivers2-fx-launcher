@@ -1,5 +1,6 @@
 {
  "en": {
+  "ui.fex.integrated": "Proton-integrated FEX detected. Compatibility is unverified; no approved automatic deployment is available.",
   "ui.workflow.environment": "Environment status",
   "ui.workflow.configure": "Automatic setup",
   "ui.workflow.begin": "Start automatic setup",
@@ -615,6 +616,7 @@
   "ui.art.completedTitle": "Environment setup completed"
  },
  "zh-CN": {
+  "ui.fex.integrated": "检测到 Proton 内置 FEX。兼容性尚未验证，暂无已审核的自动部署方案。",
   "ui.workflow.environment": "环境状态",
   "ui.workflow.configure": "自动配置",
   "ui.workflow.begin": "开始自动配置",
@@ -1230,6 +1232,7 @@
   "ui.art.completedTitle": "环境配置流程已完成"
  },
  "ja": {
+  "ui.fex.integrated": "Proton 内蔵 FEX を検出。互換性は未検証で、承認済みの自動導入はありません。",
   "ui.workflow.environment": "環境の状態",
   "ui.workflow.configure": "自動セットアップ",
   "ui.workflow.begin": "自動セットアップを開始",
@@ -1845,6 +1848,7 @@
   "ui.art.completedTitle": "環境設定が完了しました"
  },
  "ko": {
+  "ui.fex.integrated": "Proton 내장 FEX가 감지되었습니다. 호환성은 미검증이며 승인된 자동 배포가 없습니다.",
   "ui.workflow.environment": "환경 상태",
   "ui.workflow.configure": "자동 설정",
   "ui.workflow.begin": "자동 설정 시작",
@@ -2460,6 +2464,7 @@
   "ui.art.completedTitle": "환경 설정이 완료되었습니다"
  },
  "ru": {
+  "ui.fex.integrated": "Обнаружен FEX в Proton. Совместимость не проверена; одобренное автоматическое развёртывание отсутствует.",
   "ui.workflow.environment": "Состояние среды",
   "ui.workflow.configure": "Автонастройка",
   "ui.workflow.begin": "Начать автонастройку",
@@ -3075,6 +3080,7 @@
   "ui.art.completedTitle": "Настройка среды завершена"
  },
  "es": {
+  "ui.fex.integrated": "Se detectó FEX integrado en Proton. Compatibilidad sin verificar; no hay despliegue automático aprobado.",
   "ui.workflow.environment": "Estado del entorno",
   "ui.workflow.configure": "Configuración automática",
   "ui.workflow.begin": "Iniciar configuración automática",
@@ -3690,6 +3696,7 @@
   "ui.art.completedTitle": "Configuración del entorno completada"
  },
  "de": {
+  "ui.fex.integrated": "In Proton integriertes FEX erkannt. Kompatibilität ungeprüft; keine freigegebene automatische Bereitstellung.",
   "ui.workflow.environment": "Umgebungsstatus",
   "ui.workflow.configure": "Automatische Einrichtung",
   "ui.workflow.begin": "Einrichtung starten",
@@ -4305,6 +4312,7 @@
   "ui.art.completedTitle": "Einrichtung der Umgebung abgeschlossen"
  },
  "fr": {
+  "ui.fex.integrated": "FEX intégré à Proton détecté. Compatibilité non vérifiée ; aucun déploiement automatique approuvé.",
   "ui.workflow.environment": "État de l’environnement",
   "ui.workflow.configure": "Configuration automatique",
   "ui.workflow.begin": "Démarrer la configuration",
@@ -4920,6 +4928,7 @@
   "ui.art.completedTitle": "Configuration de l’environnement terminée"
  },
  "pt-BR": {
+  "ui.fex.integrated": "FEX integrado ao Proton detectado. Compatibilidade não verificada; sem implantação automática aprovada.",
   "ui.workflow.environment": "Estado do ambiente",
   "ui.workflow.configure": "Configuração automática",
   "ui.workflow.begin": "Iniciar configuração automática",
@@ -5535,6 +5544,7 @@
   "ui.art.completedTitle": "Configuração do ambiente concluída"
  },
  "zh-TW": {
+  "ui.fex.integrated": "偵測到 Proton 內建 FEX。相容性尚未驗證，暫無已審核的自動部署方案。",
   "ui.workflow.environment": "環境狀態",
   "ui.workflow.configure": "自動配置",
   "ui.workflow.begin": "開始自動配置",

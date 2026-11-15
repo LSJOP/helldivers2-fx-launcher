@@ -37,6 +37,14 @@ class RuntimeChecks(unittest.TestCase):
   tree=self.run_probe()['tree'];self.assertEqual(self.run_probe(tree,status=1)['reason'],'FEX_RUNTIME_FAILED')
  def test_missing(self):
   self.exe.unlink();self.assertEqual(self.run_probe()['reason'],'FEX_MISSING')
+ def test_proton_integrated_layout_is_unverified_without_execution(self):
+  elf=self.exe.read_bytes();self.exe.unlink()
+  root=self.home/'.local/share/Steam/steamapps/common/Proton 11.0 (ARM64)/files/lib/wine/aarch64-unix'
+  root.mkdir(parents=True)
+  for name in ['libarm64ecfex.so','libwow64fex.so']:(root/name).write_bytes(elf)
+  result=self.run_probe()
+  self.assertEqual(result['reason'],'FEX_PROTON_INTEGRATED_UNVERIFIED')
+  self.assertEqual(result['layout'],'proton-integrated');self.assertEqual(self.calls,0)
  def test_no_execute_permission(self):
   self.exe.chmod(0o600);self.assertEqual(self.run_probe()['reason'],'FEX_NOT_EXECUTABLE')
  def test_wrong_architecture(self):

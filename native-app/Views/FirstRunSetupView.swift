@@ -282,7 +282,7 @@ struct EnvironmentWorkflowProgressView: View {
     private var stepDetails: some View {
         Group {
             if let status = state.firstRunPlan?.snapshot.facts["fex_status"] {
-                Text(state.t(status == "normal" ? "ui.fex.normal" : status == "compatible" ? "ui.fex.compatible" : status == "confirmation" ? "ui.fex.unverified" : "ui.fex.repair"))
+                Text(state.t(status == "unverified" ? "ui.fex.integrated" : status == "normal" ? "ui.fex.normal" : status == "compatible" ? "ui.fex.compatible" : status == "confirmation" ? "ui.fex.unverified" : "ui.fex.repair"))
             }
             Text(verbatim: "ID: " + workflow.taskID.uuidString).font(.caption.monospaced()).textSelection(.enabled)
         }
