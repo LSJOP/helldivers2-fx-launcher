@@ -5,6 +5,7 @@ from pathlib import Path
 import plistlib
 import tempfile
 import unittest
+import sys
 from unittest.mock import patch
 import zipfile
 import sync_stable_release as sync
@@ -74,6 +75,21 @@ class StableReleaseChecks(unittest.TestCase):
         (self.root/self.dmg).write_bytes(b"modified")
         with self.assertRaises(ValueError):
             sync.validate_release(self.release, self.root)
+
+    def test_draft_gate_keeps_current_readme_unchanged(self):
+        source = Path(__file__).resolve().parents[1]
+        originals = {}
+        for name in ("README.md", "README.zh-CN.md"):
+            originals[name] = (source / name).read_text()
+            (self.root / name).write_text(originals[name])
+        draft = dict(self.release, draft=True, published_at=None)
+        with patch.object(sys, "argv", ["sync", "--tag", self.tag, "--assets-dir", str(self.root)]), \
+             patch.object(sync, "release_for", return_value=draft), \
+             patch.object(sync, "validate_release", return_value=("9.1.0", "123", self.dmg)), \
+             patch.object(sync.subprocess, "run"):
+            sync.main()
+        for name, content in originals.items():
+            self.assertEqual((self.root / name).read_text(), content)
 
     def test_readme_sync_is_scoped_and_idempotent(self):
         doc = (sync.Path(__file__).resolve().parents[1] / "README.md").read_text()
