@@ -426,6 +426,9 @@ extension NativeCoreService {
         backend.sudoPassword = request.sudoPassword
         backend.fexApprovals = request.fexApprovals
         backend.expectedGuestBoot = params["credential_guest_boot"]?.text
+        #if DEBUG
+        if method == "first_run_fex_local_replay" { return try FEXWorkflow.localReplay(backend: backend) }
+        #endif
         if method.hasPrefix("first_run_fex_") {
             emit("INFO", "FEX workflow", ["deployment_state": .string(method == "first_run_fex_audit" ? "Checking" : "Deploying")])
             return try FEXWorkflow.run(method, backend: backend, params: params)

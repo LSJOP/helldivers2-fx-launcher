@@ -10,6 +10,14 @@ actor NativeCoreService {
 
     struct Operation { let method: String; let scope: String; let confirmation: Bool; let external: Bool }
 
+    #if DEBUG
+    private static let debugOperations = [
+        Operation(method: "first_run_fex_local_replay", scope: "setup", confirmation: true, external: true),
+    ]
+    #else
+    private static let debugOperations: [Operation] = []
+    #endif
+
     static let operations: [Operation] = [
         Operation(method: "first_run_fex_audit", scope: "setup", confirmation: true, external: true),
         Operation(method: "first_run_fex_build", scope: "setup", confirmation: true, external: true),
@@ -58,7 +66,7 @@ actor NativeCoreService {
         Operation(method: "export_network_report", scope: "logs", confirmation: true, external: false),
         Operation(method: "export_environment_report", scope: "logs", confirmation: true, external: false),
         Operation(method: "get_legacy_catalog", scope: "settings", confirmation: false, external: false),
-    ]
+    ] + debugOperations
 
     static let readMethods: Set<String> = ["handshake", "get_launcher_version", "get_system_info",
                                            "get_environment_status", "get_dependencies", "list_fx_versions",
@@ -142,6 +150,11 @@ actor NativeCoreService {
         case "first_run_detect", "first_run_deploy", "first_run_recover", "first_run_receipts", "first_run_fex_audit", "first_run_fex_build", "first_run_fex_install", "first_run_fex_recover":
             guard method == "first_run_receipts" || params["confirmed"]?.boolean == true else { throw CoreError("CONFIRMATION_REQUIRED") }
             return try deployment(method, params: params, context: context, emit: emit)
+        #if DEBUG
+        case "first_run_fex_local_replay":
+            guard params["confirmed"]?.boolean == true else { throw CoreError("CONFIRMATION_REQUIRED") }
+            return try deployment(method, params: params, context: context, emit: emit)
+        #endif
         case "credential_target": return try credentialTarget(params, context: context)
         case "handshake":
             return ["protocol_min": .number(1), "protocol_max": .number(1),

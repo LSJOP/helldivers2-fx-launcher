@@ -378,8 +378,7 @@ enum FEXWorkflow {
             snapshot.facts["fex_reason"] = "FEX_KNOWN_LAUNCH_INCOMPATIBILITY"
             return
         }
-        let binding = ["fx_path", "machine_id", "fx_executable_sha256", "ssh_connection"].map { snapshot.facts[$0] ?? "UNKNOWN" }
-        let approval = CoreHash.sha256(Data((binding.joined(separator: "|") + "|" + tree).utf8))
+        let approval = runtimeApproval(tree: tree, snapshot: snapshot)
         snapshot.facts["fex_fingerprint"] = approval
         snapshot.facts["fex_tree"] = tree
         snapshot.facts["fex_provenance"] = "unverified"
@@ -399,6 +398,11 @@ enum FEXWorkflow {
         snapshot.facts["fex_runtime"] = "ready"
         snapshot.facts["fex_reason"] = ""
     }
+    private static func runtimeApproval(tree: String, snapshot: DeploymentSnapshot) -> String {
+        let binding = ["fx_path", "machine_id", "fx_executable_sha256", "ssh_connection"].map { snapshot.facts[$0] ?? "UNKNOWN" }
+        return CoreHash.sha256(Data((binding.joined(separator: "|") + "|" + tree).utf8))
+    }
+
     static func requireCompatible(_ snapshot: DeploymentSnapshot) throws {
         guard ["normal", "compatible"].contains(snapshot.facts["fex_status"] ?? "") else {
             throw CoreError(snapshot.facts["fex_reason"] ?? "FEX_RUNTIME_FAILED")
@@ -500,6 +504,124 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
         }
         return false
     }
+    #if DEBUG
+    private static let localRFInventory: [(String, String, Int)] = [
+        ("usr/bin/FEX", "ce93cadae7b7d3ef01376ba2acd58aedb602a7fc077e49592179766d13c294bf", 493),
+        ("usr/bin/FEXBash", "ec3e084e8ace83eee1de61d052b5d6b61f19d4ca6ca8d17180aeb39ccf512ddd", 493),
+        ("usr/bin/FEXGetConfig", "7da0614a4c1c16ac4cf92e7eae5b4bc0255722cf3675e7b30f7a5a6c06e21cde", 493),
+        ("usr/bin/FEXOfflineCompiler", "7c7aa677f33cbc8ac5d7cff7ef693fabd6d74d162809120eb51124a281f5c03e", 493),
+        ("usr/bin/FEXpidof", "907b6801d8cbb2844b66ad8cb199cff933aa7e9b63f596ebd924179bbde9ef56", 493),
+        ("usr/bin/FEXServer", "f32cf426de3d1126bc89bdbf59bd244f9a371fe967b5c2e76437c496eea98236", 493),
+        ("usr/bin/FEXServerManager", "02ff8a14554a8ffc91ec4c71bb2fa470c965b6f38bb5316c44e9296a3bfa4898", 493),
+        ("FEXCompatTool", "85a86207a34c9ae286435ba7ea19aa004ef50220ddc043eeb6bc8963ce516b67", 493),
+        ("ConfigTemplate.json", "e458d3fe3d0e259de3465f621b6742df16e6f0858aa8484a39fd5e47366aeb1d", 420),
+        ("VERSIONS.txt", "e4d61eba61576bfd8ea8dae3cde90dd079b9bf000cf6352b2ff52dfbdd781fea", 420),
+        ("emulator.json", "431e4340dabceb76fd83733864058e1d4176fa35aecde3b8c69cafc686968774", 420),
+        ("toolmanifest.vdf", "35c57b914d1263ae03016aaca37784686c23503c80b7269a13f59f34fb97f08f", 420),
+        ("fex-compat-tool", "3dcb4a90765683c681d7d156ac52116317bbfea0d3161658664101510b0bc8d2", 493),
+    ]
+
+    // A developer launch argument opts this explicit test image into local replay.
+    // Neither the local package nor this entry point is available in Release builds.
+    private static let localGuestDigest = "ace6a40cbce2fb3848a8b28fb7e7f8202e370b111a0e1eac898ab6861f78a5e6"
+
+    static var localReplayEnabled: Bool {
+        ProcessInfo.processInfo.arguments.contains("--hd2-local-rf-replay")
+    }
+
+    static func localReplay(backend: SSHEnvironmentBackend) throws -> [String: JSONValue] {
+        guard localReplayEnabled, backend.fx.lastPathComponent == "FX Steam Launcher测试用.app",
+              backend.transport.settings.host == "127.0.0.1", backend.transport.settings.port == 2223 else {
+            throw CoreError("ARTIFACT_UNAPPROVED")
+        }
+        let snapshot = try backend.snapshot()
+        guard snapshot.fxVersion == "1.9.9", snapshot.osVersion == "0.4.5", snapshot.architecture == "aarch64",
+              snapshot.facts["machine_id"].map({ CoreHash.sha256(Data($0.utf8)) }) == localGuestDigest,
+              snapshot.facts["fex_layout"] == "proton-integrated", !snapshot.gameRunning else {
+            throw CoreError("TARGET_CHANGED")
+        }
+        let disk = "/Volumes/Thunderbolt2TB/steamos-1.img"
+        let rows = try LaunchService.processTable(context: backend.context)
+        let owner = try LaunchService.fxSupervisorPID(rows: rows, executable: LaunchService.normalizedExecutable(backend.fx))
+        let ownership = try CoreProcess.run("/usr/sbin/lsof", ["-t", disk], timeout: 8, context: backend.context)
+        let pids = ownership.stdout.split(whereSeparator: \.isNewline).compactMap { Int($0) }
+        guard ownership.status == 0, !pids.isEmpty,
+              pids.allSatisfy({ LaunchService.descendant($0, of: owner, rows: rows) }) else { throw CoreError("TARGET_CHANGED") }
+
+        // Check the exact runtime and Steam state before sending bytes or creating a receipt.
+        let request: [String: JSONValue] = ["boot": .string(snapshot.boot), "machine": .string(localGuestDigest)]
+        _ = try runLocalReplay(backend: backend, request: request, preflight: true)
+
+        let base = URL(fileURLWithPath: "/Volumes/Thunderbolt2TB/FX-compat-investigation-20261114")
+        let support = base.appendingPathComponent("rf-replay-support")
+        let manifest = try localArtifact(support.appendingPathComponent("SHA256SUMS"),
+            hash: "43663a2d2d0c1b22f44c0d6d4ed2ef1b6bc145aca94157786b6b3434de26db1b")
+        let extra = try String(decoding: manifest, as: UTF8.self).split(whereSeparator: \.isNewline).map { line -> (String, String, Int) in
+            let fields = line.split(separator: " ")
+            guard fields.count == 2, ApprovedArtifact.hash(String(fields[0])),
+                  fields[1] == "unshare.py" || fields[1].hasPrefix("usr/lib/") || fields[1].hasPrefix("usr/share/") else {
+                throw CoreError("ARTIFACT_FORMAT")
+            }
+            return (String(fields[1]), String(fields[0]), 0o755)
+        }
+        let parts = localRFInventory.map { (base.appendingPathComponent($0.0 == "fex-compat-tool" ?
+            "steamos_test.img-fex-compat-tool" : "rf-verified-stage/" + $0.0), $0.0, $0.1, $0.2) }
+            + extra.map { (support.appendingPathComponent($0.0), $0.0, $0.1, $0.2) }
+        let files: [JSONValue] = try parts.map { file, path, hash, mode in
+            var contents = try localArtifact(file, hash: hash)
+            if path == "fex-compat-tool" {
+                // The archived wrapper dumps its entire process environment to a log.
+                let original = String(decoding: contents, as: UTF8.self)
+                let trimmed = original.replacingOccurrences(of: "subprocess.call(['/usr/bin/printenv'])", with: "")
+                guard trimmed != original else { throw CoreError("ARTIFACT_FORMAT") }
+                contents = Data(trimmed.utf8)
+            }
+            return .object(["path": .string(path), "sha256": .string(CoreHash.sha256(contents)), "mode": .number(Double(mode)),
+                            "data": .string(contents.base64EncodedString())])
+        }
+        var install = request
+        install["mode"] = .string("local_replay")
+        install["ticket"] = .string(UUID().uuidString)
+        install["files"] = .array(files)
+        let result = try runLocalReplay(backend: backend, request: install, preflight: false)
+        guard result["verified"]?.boolean == true, let tree = result["installed_manifest"]?.text,
+              ApprovedArtifact.hash(tree) else { throw CoreError("VERIFY_FAILED") }
+        return ["approval": .string(runtimeApproval(tree: tree, snapshot: snapshot))]
+    }
+
+    private static func localArtifact(_ file: URL, hash: String) throws -> Data {
+        let values = try? file.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
+        guard file.path == file.resolvingSymlinksInPath().path, values?.isRegularFile == true,
+              let size = values?.fileSize, size <= 8 * 1_048_576 else { throw CoreError("ARTIFACT_UNAVAILABLE") }
+        let contents = try Data(contentsOf: file)
+        guard contents.count == size, CoreHash.sha256(contents) == hash else { throw CoreError("ARTIFACT_HASH") }
+        return contents
+    }
+
+    private static func runLocalReplay(backend: SSHEnvironmentBackend, request: [String: JSONValue],
+                                       preflight: Bool) throws -> [String: JSONValue] {
+        let payload = Data(CoreJSON.encode(.object(request)).utf8).base64EncodedString()
+        let code: String
+        if preflight {
+            code = pipeline.components(separatedBy: "work=pathlib.Path.home()")[0]
+                + "\nlocal_replay_preflight(pathlib.Path.home()/'.local/share/Steam/steamapps/common/FEX-Emu');print('{}')"
+        } else {
+            let probe = runtimeProbe.components(separatedBy: "try:print(json.dumps(check()))")[0]
+            code = "import pathlib\n" + probe + "\n" + pipeline
+        }
+        let script = "python3 - <<'HD2_FEX_LOCAL'\nimport base64,json\nREQUEST=json.loads(base64.b64decode('" + payload + "'))\n" + code + "\nHD2_FEX_LOCAL\n"
+        _ = try backend.hostIdentity()
+        let outcome = try backend.transport.run(script, timeout: preflight ? 15 : 180, context: backend.context)
+        guard outcome.status == 0 else {
+            let reasons = ["FEX_LOCAL_RUNTIME_MISSING", "FEX_ROOTFS_UNAVAILABLE", "TARGET_CHANGED", "STEAM_RUNNING",
+                           "EXTERNAL_DRIFT", "ARTIFACT_HASH", "UNSAFE_PATH", "VERIFY_FAILED",
+                           "FEX_CHANGED", "FEX_TIMEOUT", "FEX_DEPENDENCY_FAILED", "FEX_RUNTIME_FAILED"]
+            throw CoreError(reasons.first { outcome.stderr.contains($0) } ?? "COMPONENT_INSTALL_FAILED")
+        }
+        return try JSONDecoder().decode([String: JSONValue].self, from: Data(outcome.stdout.utf8))
+    }
+    #endif
+
     static func run(_ method: String, backend: SSHEnvironmentBackend, params: [String: JSONValue]) throws -> [String: JSONValue] {
         let mode = String(method.dropFirst("first_run_fex_".count))
         guard ["audit", "build", "install", "recover"].contains(mode) else { throw CoreError("INVALID_ARGUMENT") }
@@ -647,6 +769,24 @@ def inventory(root):
    else:fail('ARTIFACT_FORMAT')
  return result
 def fingerprint(x):return hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+def local_replay_preflight(installed):
+ identity()
+ machine=pathlib.Path('/etc/machine-id').read_text().strip()
+ if hashlib.sha256(machine.encode()).hexdigest()!=REQUEST['machine']:fail('TARGET_CHANGED')
+ safe(installed)
+ if os.path.lexists(installed):fail('EXTERNAL_DRIFT')
+ runtime=installed.parent/'SteamLinuxRuntime_4'
+ pinned={'VERSIONS.txt':'936cb7e1a2de6463e81b08443f3096ea6900de05d1723c0f0f7bcef946aad88a',
+         '_v2-entry-point':'ab9beb61c7c614caeb53e70ea0f4a1736d18b71eacb907ab09832db53cf6e46d'}
+ for name,expected in pinned.items():
+  item=runtime/name;safe(item)
+  if not item.is_file() or item.stat().st_size>32768 or digest(item)!=expected:fail('FEX_LOCAL_RUNTIME_MISSING')
+ for name in ['pressure-vessel','pressure-vessel-arm64','steamrt4_platform_4.0.20261021.265997']:
+  item=runtime/name;safe(item)
+  if not item.is_dir():fail('FEX_LOCAL_RUNTIME_MISSING')
+ provider=pathlib.Path('/usr/share/guestos/fex-mesa')
+ if not (provider/'graphics_provider.json').is_file() or not (provider/'usr/lib/ld-linux-x86-64.so.2').is_file():fail('FEX_ROOTFS_UNAVAILABLE')
+ idle()
 work=pathlib.Path.home()/'.local/share/HD2FXLauncher/fex-rf-v1';safe(work)
 work.mkdir(parents=True,exist_ok=True,mode=0o700)
 if work.stat().st_uid!=os.getuid() or work.stat().st_mode&0o022:fail('UNSAFE_PATH')
@@ -759,9 +899,28 @@ try:
    if record.get('ticket')==file.stem and record.get('boot')==REQUEST['boot'] and record.get('state') in ['prepared','completed']:recoverable.append(file.stem)
   return {'build_metadata':build,'inventory':tree,'recoverable':sorted(recoverable),'build_log':tail,'source':BASE,'patch':PATCH,'executable_sha256':actual,'expected_sha256':EXPECTED,'ready':ready,'candidate':fingerprint(tree),'original':fingerprint(before),'files':len(tree or {}),'installed':before is not None}
  if mode in ['audit','build']:print(json.dumps(audit()))
- elif mode=='install':
+ elif mode in ['install','local_replay']:
+  if mode=='local_replay':
+   local_replay_preflight(installed)
+   stage=work/('local-runtime-'+str(uuid.UUID(REQUEST['ticket'])))
+   stage.mkdir(mode=0o700)
+   import base64
+   for item in REQUEST['files']:
+    relative=pathlib.Path(item['path'])
+    if relative.is_absolute() or '..' in relative.parts:fail('UNSAFE_PATH')
+    dst=stage/relative
+    dst.parent.mkdir(parents=True,exist_ok=True)
+    data=base64.b64decode(item['data'],validate=True)
+    if hashlib.sha256(data).hexdigest()!=item['sha256']:fail('ARTIFACT_HASH')
+    with dst.open('xb') as f:f.write(data)
+    dst.chmod(item['mode'])
+   registration=stage/'emulator.json'
+   config=json.loads(registration.read_text())
+   config['emulator_v0']['container_environment']['FEX_ROOTFS']='/'
+   registration.write_text(json.dumps(config,indent=2)+'\n')
   idle();current=audit()
-  if not current['ready'] or any(current[k]!=REQUEST['audit'].get(k) for k in ['source','patch','executable_sha256','expected_sha256','candidate','original','files','installed']):fail('ARTIFACT_UNAPPROVED')
+  if mode=='install' and (not current['ready'] or any(current[k]!=REQUEST['audit'].get(k) for k in ['source','patch','executable_sha256','expected_sha256','candidate','original','files','installed'])):fail('ARTIFACT_UNAPPROVED')
+  if mode=='local_replay' and (current['installed'] or current['executable_sha256']!=EXPECTED):fail('EXTERNAL_DRIFT')
   token=REQUEST['ticket'];uuid.UUID(token)
   backup=installed.with_name(installed.name+'.hd2-backup-'+token)
   prepared=installed.with_name(installed.name+'.hd2-stage-'+token)
@@ -790,6 +949,10 @@ try:
     installed.rename(backup);moved_original=True
    prepared.rename(installed);activated=True
    if inventory(installed)!=expected:fail('VERIFY_FAILED')
+   if mode=='local_replay':
+    EXPECTED_BOOT=REQUEST['boot'];EXPECTED_TREE=fingerprint(expected)
+    runtime=check()
+    if not runtime.get('runtime'):fail(runtime.get('reason','FEX_RUNTIME_FAILED'))
    receipt['state']='completed';save_record(record,receipt)
   except Exception:
    idle()

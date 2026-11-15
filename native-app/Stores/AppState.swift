@@ -671,9 +671,23 @@ final class AppState: ObservableObject {
                 }
                 self.environmentWorkflow.completedSteps = 2
                 self.workflowPhase(.detecting)
-                let detected = try await self.core.request("first_run_detect", timeout: 240, params: input)
-                guard let raw = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
-                let plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
+                var detected = try await self.core.request("first_run_detect", timeout: 240, params: input)
+                guard var raw = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
+                var plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
+                #if DEBUG
+                if !launchGame, FEXWorkflow.localReplayEnabled, plan.snapshot.facts["fex_layout"] == "proton-integrated" {
+                    self.firstRunPlan = plan
+                    self.workflowLog(taskID, "FEX: local replay preflight")
+                    input["credential_guest_boot"] = .string(boot)
+                    let replay = try await self.core.request("first_run_fex_local_replay", timeout: 420, params: input)
+                    guard let approval = replay.result["approval"]?.text else { throw ErrorState("VERIFY_FAILED") }
+                    input["fex_approvals"] = .array((input["fex_approvals"]?.array ?? []) + [.string(approval)])
+                    detected = try await self.core.request("first_run_detect", timeout: 240, params: input)
+                    guard let refreshed = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
+                    raw = refreshed
+                    plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
+                }
+                #endif
                 self.firstRunPlan = plan
                 for component in ["fex", "proton", "steam", "game"] {
                     if let operation = plan.operations.first(where: { $0.component == component }) {

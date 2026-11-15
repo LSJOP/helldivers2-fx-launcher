@@ -1,5 +1,5 @@
 """Real filesystem transaction tests; identity/idle are fixture-only substitutions."""
-import ast,contextlib,hashlib,io,json,pathlib,tempfile,unittest,uuid
+import ast,base64,contextlib,hashlib,io,json,pathlib,shutil,tempfile,unittest,uuid
 from unittest.mock import patch
 source=(pathlib.Path(__file__).resolve().parents[1]/'Core/ComponentDeploymentAdapters.swift').read_text().split('    static let pipeline = #"""\n',1)[1].rsplit('\n"""#',1)[0]
 class PipelineChecks(unittest.TestCase):
@@ -21,15 +21,17 @@ class PipelineChecks(unittest.TestCase):
  def provenance(self):
   self.work.mkdir(parents=True,exist_ok=True)
   (self.work/'provenance.json').write_text(json.dumps({'source':'87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8','patch':'85999c4f3a82063c66095d5315a661f0eed8369ed7b4b03191ed5dc8521d7926','runtime':self.inventory(self.stage)}))
- def run_pipeline(self,mode,audit=None):
+ def run_pipeline(self,mode,audit=None,files=None):
   tree=ast.parse(source)
   for n in tree.body:
-   if isinstance(n,ast.FunctionDef) and n.name in ['identity','idle']:n.body=[ast.Return(value=None)]
+   if isinstance(n,ast.FunctionDef) and n.name in ['identity','idle','local_replay_preflight']:n.body=[ast.Return(value=None)]
+   if mode=='local_replay' and isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='EXPECTED' for t in n.targets):
+    n.value=ast.Constant(self.expected)
   ast.fix_missing_locations(tree)
-  request={'mode':mode,'boot':'fixture-boot','ticket':self.ticket,'audit':audit}
+  request={'mode':mode,'boot':'fixture-boot','ticket':self.ticket,'audit':audit,'files':files}
   out=io.StringIO()
   with patch.object(pathlib.Path,'home',return_value=self.home),contextlib.redirect_stdout(out):
-   try:exec(compile(tree,'fixture-pipeline','exec'),{'REQUEST':request})
+   try:exec(compile(tree,'fixture-pipeline','exec'),{'REQUEST':request,'check':lambda:{'reason':'FEX_RUNTIME_FAILED'}})
    except SystemExit as e:
     if e.code:raise
   return json.loads(out.getvalue())
@@ -96,6 +98,31 @@ class PipelineChecks(unittest.TestCase):
    with self.assertRaises(OSError):self.run_pipeline('recover')
   self.assertTrue(self.run_pipeline('recover')['recovered'])
   self.assertEqual(self.inventory(self.installed),self.original)
+ def test_local_replay_missing_runtime_writes_nothing(self):
+  shutil.rmtree(self.installed)
+  machine=self.home/'machine-id';machine.write_text('fixture-machine')
+  original_read=pathlib.Path.read_text
+  def read(p,*args,**kwargs):
+   if p==pathlib.Path('/etc/machine-id'):p=machine
+   return original_read(p,*args,**kwargs)
+  self.helpers['REQUEST']={'machine':hashlib.sha256(b'fixture-machine').hexdigest()}
+  self.helpers['identity']=lambda:None
+  with patch.object(pathlib.Path,'read_text',read):
+   with self.assertRaisesRegex(RuntimeError,'FEX_LOCAL_RUNTIME_MISSING'):
+    self.helpers['local_replay_preflight'](self.installed)
+  self.assertFalse(self.installed.exists())
+  self.assertFalse((self.work/(self.ticket+'.json')).exists())
+ def test_local_replay_failed_runtime_probe_removes_candidate(self):
+  shutil.rmtree(self.installed)
+  files=[]
+  for path,data,mode in [('usr/bin/FEX',(self.stage/'usr/bin/FEX').read_bytes(),0o755),
+                         ('emulator.json',b'{"emulator_v0":{"container_environment":{}}}',0o644)]:
+   files.append({'path':path,'sha256':hashlib.sha256(data).hexdigest(),'mode':mode,
+                 'data':base64.b64encode(data).decode()})
+  with self.assertRaisesRegex(RuntimeError,'FEX_RUNTIME_FAILED'):
+   self.run_pipeline('local_replay',files=files)
+  self.assertFalse(self.installed.exists())
+  self.assertEqual(json.loads((self.work/(self.ticket+'.json')).read_text())['state'],'recovered')
  def test_shared_work_directory_rejected(self):
   self.work.chmod(0o777)
   with self.assertRaisesRegex(RuntimeError,'UNSAFE_PATH'):self.run_pipeline('audit')
