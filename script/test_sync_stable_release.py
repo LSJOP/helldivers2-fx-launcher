@@ -61,6 +61,11 @@ class StableReleaseChecks(unittest.TestCase):
     def test_valid_release(self):
         self.assertEqual(sync.validate_release(self.release, self.root), ("9.1.0", "123", self.dmg))
 
+    def test_changelog_dates_must_agree(self):
+        (self.root / "CHANGELOG.zh-CN.md").write_text("### v9.1.0 — 2026-11-16\n")
+        with self.assertRaises(ValueError):
+            sync.validate_release(self.release, self.root)
+
     def test_prerelease_cannot_sync_stable(self):
         self.release["prerelease"] = True
         with self.assertRaises(ValueError):

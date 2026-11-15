@@ -78,9 +78,14 @@ def validate_release(release, assets_dir):
     base64.b64decode((assets_dir / "update-manifest.sig").read_text().strip(), validate=True)
     base64.b64decode(manifest["archiveEdSignature"], validate=True)
     run("swift", str(ROOT / "script/verify_stable_signatures.swift"), str(assets_dir), key_match.group(1), archive)
+    dates = []
     for name in ("CHANGELOG.md", "CHANGELOG.zh-CN.md"):
-        if not re.search(r"(?m)^### " + re.escape(tag) + r"\s+[—-]\s+\d{4}-\d{2}-\d{2}\s*$", (ROOT / name).read_text()):
+        match = re.search(r"(?m)^### " + re.escape(tag) + r"\s+[—-]\s+(\d{4}-\d{2}-\d{2})\s*$", (ROOT / name).read_text())
+        if not match:
             raise ValueError(f"{name} is missing the released version and date")
+        dates.append(match.group(1))
+    if dates[0] != dates[1]:
+        raise ValueError("English and Chinese changelog release dates differ")
     return version, str(manifest["build"]), dmg
 
 def replace_block(text, name, transform):
