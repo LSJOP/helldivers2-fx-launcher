@@ -269,7 +269,8 @@ struct NativeReleaseService {
         return try UpdateZIPPreflight.validate(archive)
     }
 
-    func download(_ candidate: NativeUpdateCandidate, to directory: URL, progress: @escaping @Sendable (Int64, Int64) -> Void = { _, _ in }) async throws -> URL {
+    func download(_ candidate: NativeUpdateCandidate, to directory: URL, progress: @escaping @Sendable (Int64, Int64) -> Void = { _, _ in },
+                  verifying: @escaping @Sendable () async -> Void = {}) async throws -> URL {
         guard candidate.signatureVerified, publicKey?.count == 32 else { throw NativeUpdateFailure.unconfigured }
         let fm = FileManager.default
         try fm.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
@@ -282,6 +283,7 @@ struct NativeReleaseService {
         let file = try await transport.download(from: candidate.archive.browser_download_url, limit: candidate.manifest.length, progress: progress)
         defer { try? fm.removeItem(at: file) }
         try Task.checkCancellation()
+        await verifying()
 
         // Pin source and destination with file descriptors. Never follow a transport-supplied
         // symlink or rename an unchecked path after hashing. The installer must reverify its

@@ -4,6 +4,7 @@ struct FirstRunSetupView: View {
     @ObservedObject var state: AppState
     @ObservedObject var tasks: TaskManager
     @ObservedObject var credentials: SessionCredentialManager
+    @Environment(\.colorScheme) private var scheme
     @State private var authorize = false
     @State private var fexAction: String?
     @State private var recoverID: UUID?
@@ -45,58 +46,72 @@ struct FirstRunSetupView: View {
         return plan
     }
     private var setupStatusKey: String {
-        if state.environmentWorkflow.active { return state.environmentWorkflow.phase.titleKey }
+        if state.environmentWorkflow.active || state.environmentWorkflow.phase == .cancelled { return state.environmentWorkflow.phase.titleKey }
         return state.firstRunState == .NotChecked ? "ui.workflow.idle" : "ui.setup.state." + state.firstRunState.rawValue
     }
     private var welcomeContent: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
             TacticalFlowMark()
-            Text(state.t("ui.art.welcomeTitle")).font(.system(size: 25, weight: .bold))
-            Text(state.t("ui.art.welcomeDetail")).foregroundStyle(.secondary)
-            TacticalPanel(number: "", title: state.t("ui.workflow.environment"), symbol: "checkmark.shield") {
-                TacticalInfoRow(title: "FX", value: state.t(state.fxSelection.selected != nil ? "ui.219" : "ui.210"))
-                TacticalInfoRow(title: "SteamOS", value: state.t(state.credentials.guestBoot != nil ? "ui.credentials.status.connected" : "ui.credentials.status.idle"))
-                TacticalInfoRow(title: state.t("ui.135"), value: state.t(setupStatusKey))
-            }
-            TacticalPanel(number: "", title: state.t("ui.workflow.configure"), symbol: "wrench.and.screwdriver") {
+            Text(state.t("ui.art.welcomeTitle"))
+                .font(.system(size: 29, weight: .heavy)).fixedSize(horizontal: false, vertical: true)
+            Text(state.t("ui.art.welcomeDetail")).font(.body).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: "checkmark.shield").font(.title2).foregroundStyle(TacticalColors(scheme: scheme).accent).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(state.t("ui.workflow.environment")).font(.headline)
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(alignment: .top) { Text(verbatim: "FX"); Text(state.t(state.fxSelection.selected != nil ? "ui.219" : "ui.210")) }
+                        HStack(alignment: .top) { Text(verbatim: "SteamOS"); Text(state.t(state.credentials.guestBoot != nil ? "ui.credentials.status.connected" : "ui.credentials.status.idle")) }
+                    }.font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Text(state.t(setupStatusKey)).font(.caption).foregroundStyle(.secondary)
+                }
+            }.padding(.vertical, 4)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(state.t("ui.workflow.configure")).font(.headline).padding(.bottom, 8)
                 TacticalFlowStep(number: "01", title: state.t("ui.setup.fx"), symbol: "shippingbox")
                 TacticalFlowStep(number: "02", title: state.t("ui.setup.detect"), symbol: "magnifyingglass")
                 TacticalFlowStep(number: "03", title: state.t("ui.setup.deploy"), symbol: "wrench.and.screwdriver")
                 TacticalFlowStep(number: "04", title: state.t("ui.workflow.result"), symbol: "checkmark.shield")
+            }
+            if state.environmentWorkflow.phase == .idle || state.environmentWorkflow.launchesGame {
                 TacticalButton(title: state.t("ui.workflow.begin"), symbol: "play.fill", primary: true, disabledReason: tasks.busy ? state.t("ui.014") : nil, fillsWidth: true) {
                     state.startEnvironmentWorkflow(launchGame: false)
                 }
             }
-            TacticalFlowMark()
             EnvironmentWorkflowProgressView(state: state, tasks: tasks)
+            TacticalFlowFooter()
         }
     }
     private func completionContent(_ plan: DeploymentPlan) -> some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
             TacticalFlowMark()
-            Text(state.t("ui.art.completedTitle")).font(TacticalTypography.module)
-            Text(state.t("ui.setup.acceptance")).foregroundStyle(.secondary)
-            TacticalPanel(number: "", title: state.t("ui.workflow.environment"), symbol: "checkmark.shield") {
-                ForEach(plan.operations) { operation in
-                    TacticalInfoRow(title: state.t("ui.setup.component." + operation.component), value: state.t(statusKey(operation)))
+            HStack(alignment: .center, spacing: 16) {
+                Image(systemName: "checkmark.seal.fill").font(.system(size: 48)).foregroundStyle(TacticalColors(scheme: scheme).accent).accessibilityHidden(true)
+                Text(state.t("ui.art.completedTitle")).font(.system(size: 27, weight: .heavy))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text(state.t("ui.setup.acceptance")).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(state.t("ui.workflow.environment")).font(.headline).padding(.bottom, 9)
+                ForEach(Array(plan.operations.enumerated()), id: \.element.id) { index, operation in
+                    HStack(spacing: 10) {
+                        Text(String(format: "%02d", index + 1)).font(TacticalTypography.log).foregroundStyle(TacticalColors(scheme: scheme).accent).accessibilityHidden(true)
+                        Text(state.t("ui.setup.component." + operation.component)).fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 8)
+                        Text(state.t(statusKey(operation))).font(.caption.weight(.semibold)).multilineTextAlignment(.trailing)
+                    }.padding(.vertical, 7)
+                    TacticalDivider()
                 }
             }
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 10) { completionActions }
-                VStack(alignment: .leading, spacing: 10) { completionActions }
-            }
-            TacticalFlowMark()
-        }
-    }
-    private var completionActions: some View {
-        Group {
-            TacticalButton(title: state.t("ui.176"), symbol: "play.fill", primary: true, disabledReason: tasks.busy ? state.t("ui.014") : nil) {
+            TacticalButton(title: state.t("ui.176"), symbol: "play.fill", primary: true, disabledReason: tasks.busy ? state.t("ui.014") : nil, fillsWidth: true) {
                 state.selection = .dashboard
                 state.perform(.game)
             }
             TacticalButton(title: state.t("ui.workflow.retry"), symbol: "arrow.clockwise", primary: false, disabledReason: tasks.busy ? state.t("ui.014") : nil) {
                 state.startEnvironmentWorkflow(launchGame: false)
             }
+            TacticalFlowFooter()
         }
     }
     var body: some View {
@@ -106,15 +121,6 @@ struct FirstRunSetupView: View {
                 TacticalFlowArtwork(asset: "MOTR7SuperEarth") { completionContent(completed) }
             } else {
                 TacticalFlowArtwork(asset: "MOTR7Democracy") { welcomeContent }
-            }
-            DisclosureGroup(state.t("ui.workflow.advanced")) {
-            TacticalPanel(number: "1", title: state.t("ui.setup.fx"), symbol: "shippingbox") {
-                HStack {
-                    Button(state.t("ui.fx.rescan")) { state.scanFX() }.disabled(tasks.busy)
-                    Button(state.t("ui.setup.choose")) { state.selection = .fx }
-                }
-                Text(state.fxVersion + " · " + (state.fxSelection.selectedPath ?? state.t("ui.368"))).textSelection(.enabled)
-                Text(plan?.snapshot.facts["os_version"] ?? state.t("ui.368"))
             }
             TacticalPanel(number: "2", title: state.t("ui.setup.connect"), symbol: "key") {
                 SecureField(state.t("ui.305"), text: $credentials.password)
@@ -129,6 +135,15 @@ struct FirstRunSetupView: View {
                 if let snapshot = plan?.snapshot {
                     Text(state.t("ui.setup.identity") + " · " + String(snapshot.boot.prefix(8)) + " · " + snapshot.architecture)
                 }
+            }
+            DisclosureGroup(state.t("ui.workflow.advanced")) {
+            TacticalPanel(number: "1", title: state.t("ui.setup.fx"), symbol: "shippingbox") {
+                HStack {
+                    Button(state.t("ui.fx.rescan")) { state.scanFX() }.disabled(tasks.busy)
+                    Button(state.t("ui.setup.choose")) { state.selection = .fx }
+                }
+                Text(state.fxVersion + " · " + (state.fxSelection.selectedPath ?? state.t("ui.368"))).textSelection(.enabled)
+                Text(plan?.snapshot.facts["os_version"] ?? state.t("ui.368"))
             }
             TacticalPanel(number: "FEX", title: state.t("ui.fex.title"), symbol: "shippingbox") {
                 Text(state.t("ui.fex.scope")).font(.caption)
@@ -267,6 +282,7 @@ struct FirstRunSetupView: View {
 struct EnvironmentWorkflowProgressView: View {
     @ObservedObject var state: AppState
     @ObservedObject var tasks: TaskManager
+    @Environment(\.colorScheme) private var scheme
     var showIdle = false
     var showStepsInline = false
     var returnToDashboard: (() -> Void)? = nil
@@ -275,8 +291,15 @@ struct EnvironmentWorkflowProgressView: View {
     private var stepRows: some View {
         ForEach(Array([EnvironmentWorkflowPhase.startingFX, .connecting, .detecting, .deploying, .verifying, .launching].prefix(workflow.totalSteps).enumerated()), id: \.offset) { index, phase in
             let stepKeys = ["ui.setup.fx", "ui.setup.connect", "ui.setup.detect", "ui.setup.deploy", "ui.workflow.result", "ui.176"]
-            Label(state.t(stepKeys[index]), systemImage: index < workflow.completedSteps ? "checkmark.circle" : workflow.active && phase == workflow.phase ? "arrow.right.circle" : "circle.dashed")
-                .font(TacticalTypography.caption)
+            let done = index < workflow.completedSteps
+            let current = workflow.active && phase == workflow.phase
+            HStack(spacing: 10) {
+                Text(String(format: "%02d", index + 1)).font(TacticalTypography.log).foregroundStyle(.secondary).accessibilityHidden(true)
+                Label(state.t(stepKeys[index]), systemImage: done ? "checkmark.circle.fill" : current ? "arrow.right.circle.fill" : "circle.dashed")
+                    .foregroundStyle(done ? TacticalColors(scheme: scheme).success : current ? TacticalColors(scheme: scheme).accent : Color.secondary)
+                    .font(TacticalTypography.caption.weight(current ? .bold : .regular))
+                Spacer(minLength: 0)
+            }.padding(.vertical, 5)
         }
     }
     private var stepDetails: some View {
@@ -287,12 +310,13 @@ struct EnvironmentWorkflowProgressView: View {
             Text(verbatim: "ID: " + workflow.taskID.uuidString).font(.caption.monospaced()).textSelection(.enabled)
         }
     }
-    var body: some View {
-        if showIdle || workflow.phase != .idle {
-            TacticalPanel(number: "", title: state.t(workflow.launchesGame ? "ui.176" : "ui.workflow.result"), symbol: workflow.launchesGame ? "play.rectangle" : "gearshape.2") {
+    private var workflowContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text(workflow.phase == .launching ? state.launchSession.current.title(state.languageCode) :
-                         state.t(workflow.launchesGame && workflow.phase == .failed ? "ui.179" : workflow.phase.titleKey))
+                    if !showStepsInline || workflow.phase == .launching {
+                        Text(workflow.phase == .launching ? state.launchSession.current.title(state.languageCode) :
+                             state.t(workflow.launchesGame && workflow.phase == .failed ? "ui.179" : workflow.phase.titleKey))
+                    }
                     Spacer()
                     if workflow.showsProgress { Text("\(workflow.completedSteps) / \(workflow.totalSteps)").monospacedDigit() }
                 }
@@ -303,7 +327,7 @@ struct EnvironmentWorkflowProgressView: View {
                     }
                 }
                 if workflow.active {
-                    ProgressView().tint(.yellow)
+                    ProgressView().tint(TacticalColors(scheme: scheme).accent)
                 }
                 if let failure = workflow.failure {
                     Text(failure.code == "ARTIFACT_UNAPPROVED" && failure.details["component"]?.text == "fex"
@@ -339,6 +363,29 @@ struct EnvironmentWorkflowProgressView: View {
                     Button(state.t(workflow.launchesGame ? "ui.176" : "ui.workflow.retry")) {
                         state.startEnvironmentWorkflow(launchGame: workflow.launchesGame)
                     }.disabled(tasks.busy)
+                }
+        }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+    var body: some View {
+        if showIdle || workflow.phase != .idle {
+            Group {
+                if showStepsInline {
+                    VStack(alignment: .leading, spacing: 18) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "scope").font(.system(size: 32)).foregroundStyle(TacticalColors(scheme: scheme).accent).accessibilityHidden(true)
+                            Text(state.t(workflow.phase.titleKey)).font(.system(size: 25, weight: .heavy))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        TacticalDivider()
+                        workflowContent
+                    }
+                    .padding(18)
+                    .background(.primary.opacity(0.035))
+                    .overlay(alignment: .leading) { Rectangle().fill(TacticalColors(scheme: scheme).accent).frame(width: 3) }
+                } else {
+                    TacticalPanel(number: "", title: state.t(workflow.launchesGame ? "ui.176" : "ui.workflow.result"), symbol: workflow.launchesGame ? "play.rectangle" : "gearshape.2") {
+                        workflowContent
+                    }
                 }
             }
             .sheet(isPresented: Binding(get: { state.pendingFEXApproval != nil && !tasks.busy }, set: { if !$0 { state.cancelFEXApproval() } })) {

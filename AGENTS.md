@@ -1,7 +1,7 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.29** · Updated: **2026-11-15**.
-Change: combine GitHub delivery and version release gates with reference fidelity, product naming and workflow artwork review. Instruction version is independent of App version.
+Instruction version: **v1.2.30** · Updated: **2026-11-15**.
+Change: support setup-first navigation and patch archive compatibility guidance. Instruction version is independent of App version.
 
 ## Authority and task lifecycle
 
@@ -36,6 +36,7 @@ Change: combine GitHub delivery and version release gates with reference fidelit
 - Ordinary delivery is development, necessary tests, push and, when eligible, merge to main. Automatically create/update PRs and merge ordinary PRs only after required checks and repository rules pass. Preserve other work; high-risk or unaccepted changes remain separate.
 - A release requires an unused version and increasing build number, paired changelogs and READMEs, ten-language checks, arm64 Release build, signing and update security checks, DMG/ZIP, SHA-256 and Ed25519-signed update metadata. Review artifacts and perform required acceptance before publication; verify the App detects the published version. Formal Stable Release creation requires explicit user authorization. See [release procedure](docs/NATIVE_UPDATES.md#current-release-policy--发布规则).
 - Keep Stable separate from prereleases, verify signatures and download URLs, test safe recovery on failure, keep signing private keys out of GitHub, and preserve the independent Update Helper. Never claim production upgrade or recovery acceptance from fixtures alone.
+- A patch package may use updated archive rules even when v1.0.1 cannot validate it. Record the affected upgrade path and provide an accurate installation method when required. Continue enforcing the current signature, integrity and archive safety checks.
 
 ## Verification and reporting
 
@@ -58,4 +59,6 @@ All subsequent UI work must first follow `docs/UI_DESIGN_GUIDELINES.md`: read th
 - Review changed pages for visual consistency, action placement and duplication, clipping, loading, errors and accessibility. For ordinary visual iterations inspect Chinese and English in light/dark and wide/narrow layouts; expand review when localization or other languages are affected. Maintain automated checks and all ten languages. Provide real App screenshots for substantial visual changes; routine code changes do not require screenshots. Clearly label fixture previews and never present them as live success.
 
 - Protect the Dashboard hero and the shared secondary-page starfield, sunrise and Super Earth emblem header; never replace or cover them with new illustrations. Restrict MOTR7 artwork to the first-run welcome, verified setup completion and game-launch preparation flows. Place it on the right using the shared adaptive container, consistent size and spacing; hide it when room is insufficient for controls. Preserve the whole original image and its aspect ratio. Record third-party authorship and permission. Workflow success and progress must come from actual service evidence; never fabricate them for presentation. Artwork must not reduce readability or impede actions. Review every substantial visual change with real App screenshots.
+- Keep sidebar order: first-run setup, dashboard, environment, FX, performance, logs, settings; derive visible numbers and Command shortcuts from the same order while keeping the dashboard as the ordinary default.
+- Build the three artwork flows as cohesive command-terminal compositions with reusable lower-left tactical decoration, clear evidence and action hierarchy, and full-size right-hand artwork; do not settle for unrelated standard cards beside a poster.
 - User-facing product names are `绝地潜兵 2 FX 启动器` and `HELLDIVERS 2 FX Launcher`; localize product naming consistently and reserve `HD2FXNative` for engineering. Treat approved reference images as visual guidance, not evidence of functionality or state. Reuse tactical decoration components, avoid isolated miniature posters and meaningless image padding, and preserve complete authorized artwork.

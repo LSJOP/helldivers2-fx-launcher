@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum Page: String, CaseIterable, Identifiable {
-    case dashboard, environment, fx, performance, logs, settings, setup
+    case setup, dashboard, environment, fx, performance, logs, settings
     var id: String { rawValue }
     var menuTitle: String { title("en") }
     var symbol: String {

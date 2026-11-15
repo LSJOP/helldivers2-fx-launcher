@@ -8,6 +8,20 @@ v1.0.2 (2026111501) was published on 2026-11-15. Fresh SteamOS deployment, singl
 
 ## Unreleased
 
+## v1.0.3 — 2026-11-15 (build 2026111502)
+
+- Simplify software updates to a single download-and-install action with progress, retry and clearer errors.
+- Refresh setup and launch workflow layouts, and place SSH credentials on the first-run page.
+- Fresh-VM FEX deployment, live 1.0.2 → 1.0.3 update, game, EAC and multiplayer acceptance remain unverified. v1.0.1 users may need the DMG to upgrade.
+
+## Historical development notes
+
+- Report update archive safety errors and installation permissions with specific messages and diagnostic details.
+
+- Redesign the setup and launch-preparation scenes as tactical workflow layouts; move First-Run Setup to sidebar position 01 and synchronize Command shortcuts. Dashboard remains the default.
+
+- Simplify software updates to one download and install action with live progress and retry.
+
 - Added an isolated, signed GitHub pre-release update channel for acceptance testing. Appearance preferences now persist across App restarts.
 
 - On next startup, the update helper resumes cleanup or rolls back an interrupted atomic swap after validating the saved bundle identities. Production rollout is pending end-to-end acceptance.
