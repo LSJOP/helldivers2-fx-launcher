@@ -226,8 +226,12 @@ struct UpdateConfiguration {
     }
     func downloadAndInstall() {
         guard canStartInstall else { return }
-        if cachedArchive != nil { handoffInstallation() }
-        else { downloadVerifiedArchive(installAfterDownload: true) }
+        if let cachedArchive, FileManager.default.fileExists(atPath: cachedArchive.path) {
+            handoffInstallation()
+        } else {
+            cachedArchive = nil
+            downloadVerifiedArchive(installAfterDownload: true)
+        }
     }
     private func handoffInstallation() {
         guard canInstall, let candidate, let cachedArchive else { return }
