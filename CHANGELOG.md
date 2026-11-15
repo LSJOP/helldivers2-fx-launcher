@@ -8,6 +8,8 @@ v1.0.1 (2026111406) is the latest published stable release. Fresh SteamOS deploy
 
 ## Unreleased
 
+- Record Proton-integrated FEX evidence during first-run detection and preserve the sudo credential kind when requesting authentication.
+
 - Add original MOTR7 artwork to setup and launch workflows and an artwork credit in Settings; preserve the Dashboard hero and shared header.
 
 - Move snapshot refresh into a shared content-area action on Environment, FX and Logs; avoid repeated resource hashing during FX view updates. Add shared UI design standards and disable first-run rescan during tasks.

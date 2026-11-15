@@ -93,3 +93,5 @@ Update development: v1.0.1 candidate pins a stable Ed25519 public key, with the 
 Interrupted native update transactions can be recovered on the next App launch. The production feed remains disabled pending full upgrade acceptance.
 
 FX 1.9.9 environment observations are recorded in the [FEX baseline report](docs/environment/FEX_BASELINE_REPORT_20261115.md).
+
+First-run detection distinguishes Proton-integrated FEX from a missing standalone runtime. It records the Proton version, config digest and library hashes, and reports compatibility as unverified until an approved plan is available.

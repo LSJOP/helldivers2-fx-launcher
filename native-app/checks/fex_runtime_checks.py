@@ -42,9 +42,12 @@ class RuntimeChecks(unittest.TestCase):
   root=self.home/'.local/share/Steam/steamapps/common/Proton 11.0 (ARM64)/files/lib/wine/aarch64-unix'
   root.mkdir(parents=True)
   for name in ['libarm64ecfex.so','libwow64fex.so']:(root/name).write_bytes(elf)
+  proton=self.home/'.local/share/Steam/steamapps/common/Proton 11.0 (ARM64)'
+  (proton/'version').write_text('fixture-arm64-proton')
   result=self.run_probe()
   self.assertEqual(result['reason'],'FEX_PROTON_INTEGRATED_UNVERIFIED')
   self.assertEqual(result['layout'],'proton-integrated');self.assertEqual(self.calls,0)
+  self.assertEqual(result['version'],'fixture-arm64-proton')
  def test_no_execute_permission(self):
   self.exe.chmod(0o600);self.assertEqual(self.run_probe()['reason'],'FEX_NOT_EXECUTABLE')
  def test_wrong_architecture(self):

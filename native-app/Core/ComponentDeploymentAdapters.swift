@@ -366,6 +366,11 @@ enum FEXWorkflow {
             snapshot.facts["fex_status"] = "unverified"
             snapshot.facts["fex_layout"] = "proton-integrated"
             snapshot.facts["fex_path"] = staticResult["path"]?.text
+            snapshot.facts["fex_proton_version"] = staticResult["version"]?.text
+            snapshot.facts["fex_config_sha256"] = staticResult["Config.json_sha256"]?.text
+            if let hashes = staticResult["library_hashes"] {
+                snapshot.facts["fex_library_hashes"] = CoreJSON.encode(hashes)
+            }
         }
         guard staticResult["preflight"]?.boolean == true, let tree = staticResult["tree"]?.text else { return }
         if hasKnownLaunchIncompatibility(fxVersion: snapshot.fxVersion, architecture: snapshot.architecture,
@@ -409,8 +414,16 @@ def check():
   bundled=pathlib.Path.home()/'.local/share/Steam/steamapps/common/Proton 11.0 (ARM64)'
   libraries=[bundled/'files/lib/wine/aarch64-unix'/name for name in ['libarm64ecfex.so','libwow64fex.so']]
   if all(p.is_file() and not p.is_symlink() and elf_arm64(p) for p in libraries):
-   return {'reason':'FEX_PROTON_INTEGRATED_UNVERIFIED','layout':'proton-integrated',
-           'path':str(bundled),'library_hashes':{p.name:digest(p) for p in libraries}}
+   version=bundled/'version'
+   config=bundled/'files/share/fex-emu/Config.json'
+   metadata={'reason':'FEX_PROTON_INTEGRATED_UNVERIFIED','layout':'proton-integrated',
+             'path':str(bundled),'library_hashes':{p.name:digest(p) for p in libraries}}
+   for p in [version,config]:
+    safe(p)
+    if p.is_file() and p.stat().st_size<=65536:
+     metadata[p.name+'_sha256']=digest(p)
+     if p==version:metadata['version']=p.read_text().strip()[:256]
+   return metadata
   return {'reason':'FEX_MISSING'}
  if not os.access(exe,os.X_OK):return {'reason':'FEX_NOT_EXECUTABLE'}
  if platform.machine() not in ['aarch64','arm64'] or not elf_arm64(exe):return {'reason':'FEX_ARCHITECTURE'}
