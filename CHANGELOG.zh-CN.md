@@ -8,6 +8,10 @@ v1.0.1（2026111406）是最新已发布正式版；该版本未重新验收全�
 
 ## 未发布
 
+- 恢复开发补充 Runtime 校验缓存／重试、显式 Debug 资源路径及内置组件完整性清单。真实配置已安装 Proton 并配置 Steam，但重启后 FEX 与容器 RootFS 回到不兼容原版，最终验证失败；公开版一键配置仍阻塞。
+
+- 隔离首次配置可从已校验的本地归档或 Valve HTTPS 下载固定版本的 Steam Linux Runtime 4.0，保留原有的 ARM64 专用 Runtime。
+
 - 新增仅限 FX 1.9.9 隔离测试镜像的 Debug RF 样本复刻入口。写入前检查配套 Steam Linux Runtime，并在可恢复的部署事务中运行 FEX 探针。全新 Guest 部署尚待验收。
 
 - SteamOS SSH 在认证前遇到短暂连接失败时自动重试，每次复核 FX 连接目标。

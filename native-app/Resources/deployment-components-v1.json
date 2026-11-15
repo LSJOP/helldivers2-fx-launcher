@@ -1,0 +1,241 @@
+{
+  "schema": 1,
+  "status": "BLOCKED_PUBLIC_RF_DISTRIBUTION",
+  "compatibility": "isolated FX 1.9.9 / SteamOS 0.4.5 aarch64 only; no gameplay claim",
+  "bundled": [
+    {
+      "name": "environment-profile-v1.json",
+      "bytes": 3213,
+      "sha256": "475e0782308efc50973096d324a7581a5c28794ce52dcf72110af762f32662fe",
+      "bundled": true
+    },
+    {
+      "name": "successful-environment-baseline-v1.json",
+      "bytes": 2700,
+      "sha256": "2c656c5fc207e06245a8d0425805e7a12bf86f565351a1e26a422574ff9ecc01",
+      "bundled": true
+    },
+    {
+      "name": "fex-rf-reviewed.patch",
+      "bytes": 7381,
+      "sha256": "85999c4f3a82063c66095d5315a661f0eed8369ed7b4b03191ed5dc8521d7926",
+      "bundled": true
+    },
+    {
+      "name": "LICENSE-FEX.txt",
+      "bytes": 1094,
+      "sha256": "f34a779f56b36d22b20e1b990d23e583a6a7ca071331925fa46156441c77a1ee",
+      "bundled": true
+    },
+    {
+      "name": "proton-je-approved.json",
+      "bytes": 1083919,
+      "sha256": "c2469305cd27a8d613ca97aff2f676f772c037ebbbc0dd56e03512f07080efba",
+      "bundled": true
+    }
+  ],
+  "localTestOnly": [
+    {
+      "name": "usr/bin/FEX",
+      "version": "RF-historical-candidate",
+      "bytes": 4597568,
+      "sha256": "ce93cadae7b7d3ef01376ba2acd58aedb602a7fc077e49592179766d13c294bf",
+      "source": "historical isolated test image",
+      "license": "UNCONFIRMED_BINARY_REDISTRIBUTION",
+      "dependencies": [
+        "SteamLinuxRuntime_4 4.0.20261021.265997",
+        "SteamOS 0.4.5 aarch64"
+      ],
+      "bundled": false,
+      "installation": "Debug local replay only"
+    },
+    {
+      "name": "usr/bin/FEXBash",
+      "version": "RF-historical-candidate",
+      "bytes": 659144,
+      "sha256": "ec3e084e8ace83eee1de61d052b5d6b61f19d4ca6ca8d17180aeb39ccf512ddd",
+      "source": "historical isolated test image",
+      "license": "UNCONFIRMED_BINARY_REDISTRIBUTION",
+      "dependencies": [
+        "SteamLinuxRuntime_4 4.0.20261021.265997",
+        "SteamOS 0.4.5 aarch64"
+      ],
+      "bundled": false,
+      "installation": "Debug local replay only"
+    },
+    {
+      "name": "usr/bin/FEXGetConfig",
+      "version": "RF-historical-candidate",
+      "bytes": 396632,
+      "sha256": "7da0614a4c1c16ac4cf92e7eae5b4bc0255722cf3675e7b30f7a5a6c06e21cde",
+      "source": "historical isolated test image",
+      "license": "UNCONFIRMED_BINARY_REDISTRIBUTION",
+      "dependencies": [
+        "SteamLinuxRuntime_4 4.0.20261021.265997",
+        "SteamOS 0.4.5 aarch64"
+      ],
+      "bundled": false,
+      "installation": "Debug local replay only"
+    },
+    {
+      "name": "usr/bin/FEXOfflineCompiler",
+      "version": "RF-historical-candidate",
+      "bytes": 4268920,
+      "sha256": "7c7aa677f33cbc8ac5d7cff7ef693fabd6d74d162809120eb51124a281f5c03e",
+      "source": "historical isolated test image",
+      "license": "UNCONFIRMED_BINARY_REDISTRIBUTION",
+      "dependencies": [
+        "SteamLinuxRuntime_4 4.0.20261021.265997",
+        "SteamOS 0.4.5 aarch64"
+      ],
+      "bundled": false,
+      "installation": "Debug local replay only"
+    },
+    {
+      "name": "usr/bin/FEXpidof",
+      "version": "RF-historical-candidate",
+      "bytes": 265464,
+      "sha256": "907b6801d8cbb2844b66ad8cb199cff933aa7e9b63f596ebd924179bbde9ef56",
+      "source": "historical isolated test image",
+      "license": "UNCONFIRMED_BINARY_REDISTRIBUTION",
+      "dependencies": [
+        "SteamLinuxRuntime_4 4.0.20261021.265997",
+        "SteamOS 0.4.5 aarch64"
+      ],
+      "bundled": false,
+      "installation": "Debug local replay only"
+    },
+    {
+      "name": "usr/bin/FEXServer",
+      "version": "RF-historical-candidate",
+      "bytes": 462712,
+      "sha256": "f32cf426de3d1126bc89bdbf59bd244f9a371fe967b5c2e76437c496eea98236",
+      "source": "historical isolated test image",
+      "license": "UNCONFIRMED_BINARY_REDISTRIBUTION",
+      "dependencies": [
+        "SteamLinuxRuntime_4 4.0.20261021.265997",
+        "SteamOS 0.4.5 aarch64"
+      ],
+      "bundled": false,
+      "installation": "Debug local replay only"
+    },
+    {
+      "name": "usr/bin/FEXServerManager",
+      "version": "RF-historical-candidate",
+      "bytes": 1039792,
+      "sha256": "02ff8a14554a8ffc91ec4c71bb2fa470c965b6f38bb5316c44e9296a3bfa4898",
+      "source": "historical isolated test image",
+      "license": "UNCONFIRMED_BINARY_REDISTRIBUTION",
+      "dependencies": [
+        "SteamLinuxRuntime_4 4.0.20261021.265997",
+        "SteamOS 0.4.5 aarch64"
+      ],
+      "bundled": false,
+      "installation": "Debug local replay only"
+    },
+    {
+      "name": "FEXCompatTool",
+      "version": "RF-historical-candidate",
+      "bytes": 1035920,
+      "sha256": "85a86207a34c9ae286435ba7ea19aa004ef50220ddc043eeb6bc8963ce516b67",
+      "source": "historical isolated test image",
+      "license": "UNCONFIRMED_BINARY_REDISTRIBUTION",
+      "dependencies": [
+        "SteamLinuxRuntime_4 4.0.20261021.265997",
+        "SteamOS 0.4.5 aarch64"
+      ],
+      "bundled": false,
+      "installation": "Debug local replay only"
+    },
+    {
+      "name": "ConfigTemplate.json",
+      "version": "RF-historical-candidate",
+      "bytes": 324,
+      "sha256": "e458d3fe3d0e259de3465f621b6742df16e6f0858aa8484a39fd5e47366aeb1d",
+      "source": "historical isolated test image",
+      "license": "UNCONFIRMED_BINARY_REDISTRIBUTION",
+      "dependencies": [
+        "SteamLinuxRuntime_4 4.0.20261021.265997",
+        "SteamOS 0.4.5 aarch64"
+      ],
+      "bundled": false,
+      "installation": "Debug local replay only"
+    },
+    {
+      "name": "VERSIONS.txt",
+      "version": "RF-historical-candidate",
+      "bytes": 81,
+      "sha256": "e4d61eba61576bfd8ea8dae3cde90dd079b9bf000cf6352b2ff52dfbdd781fea",
+      "source": "historical isolated test image",
+      "license": "UNCONFIRMED_BINARY_REDISTRIBUTION",
+      "dependencies": [
+        "SteamLinuxRuntime_4 4.0.20261021.265997",
+        "SteamOS 0.4.5 aarch64"
+      ],
+      "bundled": false,
+      "installation": "Debug local replay only"
+    },
+    {
+      "name": "emulator.json",
+      "version": "RF-historical-candidate",
+      "bytes": 456,
+      "sha256": "431e4340dabceb76fd83733864058e1d4176fa35aecde3b8c69cafc686968774",
+      "source": "historical isolated test image",
+      "license": "UNCONFIRMED_BINARY_REDISTRIBUTION",
+      "dependencies": [
+        "SteamLinuxRuntime_4 4.0.20261021.265997",
+        "SteamOS 0.4.5 aarch64"
+      ],
+      "bundled": false,
+      "installation": "Debug local replay only"
+    },
+    {
+      "name": "toolmanifest.vdf",
+      "version": "RF-historical-candidate",
+      "bytes": 180,
+      "sha256": "35c57b914d1263ae03016aaca37784686c23503c80b7269a13f59f34fb97f08f",
+      "source": "historical isolated test image",
+      "license": "UNCONFIRMED_BINARY_REDISTRIBUTION",
+      "dependencies": [
+        "SteamLinuxRuntime_4 4.0.20261021.265997",
+        "SteamOS 0.4.5 aarch64"
+      ],
+      "bundled": false,
+      "installation": "Debug local replay only"
+    },
+    {
+      "name": "fex-compat-tool",
+      "version": "RF-historical-candidate",
+      "bytes": 6536,
+      "sha256": "3dcb4a90765683c681d7d156ac52116317bbfea0d3161658664101510b0bc8d2",
+      "source": "historical isolated test image",
+      "license": "UNCONFIRMED_BINARY_REDISTRIBUTION",
+      "dependencies": [
+        "SteamLinuxRuntime_4 4.0.20261021.265997",
+        "SteamOS 0.4.5 aarch64"
+      ],
+      "bundled": false,
+      "installation": "Debug local replay only"
+    }
+  ],
+  "downloads": [
+    {
+      "name": "SteamLinuxRuntime_4",
+      "version": "4.0.20261021.265997",
+      "bytes": 175077288,
+      "sha256": "aa9dd1aab2173e65b631faae34b85e2c17fe323d941013154ddd2e1dce8a0910",
+      "source": "https://repo.steampowered.com/steamrt4/images/4.0.20261021.265997/SteamLinuxRuntime_4.tar.xz",
+      "license": "Valve archive contains component notices; direct upstream download; not redistributed",
+      "installer": "Debug RF replay transaction; production activation pending"
+    },
+    {
+      "name": "Proton-JE",
+      "version": "11.0-20261014-3",
+      "bytes": 348245820,
+      "sha256": "aa5430696ca39451299e2f007ef652bc030e6419242776343d48947e21827485",
+      "source": "https://github.com/jegglest/proton-je/releases/download/proton-je-11.0-20261014-3/proton-je-11.0-20261014-3.tar.xz",
+      "license": "upstream notices retained; direct download",
+      "installer": "existing ProtonJERelease"
+    }
+  ]
+}

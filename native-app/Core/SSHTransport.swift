@@ -306,6 +306,21 @@ final class SSHTransport {
         return result
     }
 
+    /// Transfers a verified local archive through this process's authenticated SSH master.
+    func upload(_ file: URL, to remote: String, context: CoreContext) throws {
+        guard masterPID(context: context) != nil,
+              remote.range(of: "^/[A-Za-z0-9/_.-]+$", options: .regularExpression) != nil,
+              !file.path.contains(where: \.isNewline) else { throw CoreError("TARGET_CHANGED") }
+        let escaped = file.path.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+        let arguments = ["-q", "-b", "-", "-P", String(settings.port),
+                         "-o", "ControlPath=" + settings.socketPath, "-o", "ControlMaster=no",
+                         "-o", "ProxyCommand=false", "-o", "StrictHostKeyChecking=yes",
+                         settings.username + "@" + settings.host]
+        let result = try CoreProcess.run("/usr/bin/sftp", arguments, input: "put \"\(escaped)\" \"\(remote)\"\n",
+                                         timeout: 180, context: context)
+        guard result.status == 0 else { throw CoreError(result.timedOut ? "TIMEOUT" : "COMPONENT_INSTALL_FAILED") }
+    }
+
     func closeMaster() {
         Self.ownershipLock.lock(); Self.owned.remove(settings.socketPath)
         Self.reconnected = Self.reconnected.filter { $0.value.socketPath != settings.socketPath }

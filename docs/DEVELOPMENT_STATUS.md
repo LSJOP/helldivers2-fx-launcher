@@ -180,3 +180,6 @@ PR #4 已发布隔离签名更新测试包 v1.0.1-update-test.1 和 v1.0.2-updat
 ## 新镜像首次配置实测 · 2026-11-15
 
 在 steamos-1.img / FX 1.9.9 上，从真实 Debug App 首次配置页点击自动配置。准备 FX、SSH 凭据复用及 Guest 身份核对通过，环境检测返回 FEX_PROTON_INTEGRATED_UNVERIFIED，界面显示具体阻塞并保持配置未完成。未进入下载或 Guest 配置写入，未启动游戏。沿用既有 Proton-JE 下载、校验及安装器；本次未实际执行该安装器。Proton 内置 FEX 的版本、Config.json SHA-256 和库哈希进入只读快照。尚无适用于该结构的经过验证的完整 FEX/RootFS 部署方案，因此不能将首次配置标记成功。十语言文案沿用前一提交，11项 FEX 探针检查、arm64 Debug 构建及双语文档检查通过。当前实际 App 屏幕验收为阻塞路径。
+
+
+Runtime 自动安装恢复候选：见 docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md 的 2026-11-15 Recovery candidate。保留原 6 个未提交文件并备份；Runtime/FEX 本地事务完成，Proton 下载安装、Steam 设置及受控重启已执行。重启后 FEX 与 RootFS 注册回到原版，最终 VERIFY_FAILED，重复配置明确阻塞于 FEX_KNOWN_LAUNCH_INCOMPATIBILITY。未达到 100%，不可宣称公开一键安装完成；RF 再分发及跨重启持久部署仍阻塞。

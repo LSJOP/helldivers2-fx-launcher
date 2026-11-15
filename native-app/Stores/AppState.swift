@@ -645,7 +645,13 @@ final class AppState: ObservableObject {
                 var input = launch
                 input["runtime_root"] = .string(root)
                 input["confirmed"] = .bool(true)
-                input["fex_approvals"] = .array((UserDefaults.standard.stringArray(forKey: "FEXBuildApprovals") ?? []).map(JSONValue.string))
+                var approvals = (UserDefaults.standard.stringArray(forKey: "FEXBuildApprovals") ?? []).map(JSONValue.string)
+                #if DEBUG
+                if FEXWorkflow.localReplayEnabled, let replay = UserDefaults.standard.string(forKey: "FEXLocalReplayApproval") {
+                    approvals.append(.string(replay))
+                }
+                #endif
+                input["fex_approvals"] = .array(approvals)
                 let fx = try await self.core.request("start_fx", timeout: 180, params: input)
                 self.environmentWorkflow.evidence = fx.result
                 try Task.checkCancellation()
@@ -679,9 +685,11 @@ final class AppState: ObservableObject {
                     self.firstRunPlan = plan
                     self.workflowLog(taskID, "FEX: local replay preflight")
                     input["credential_guest_boot"] = .string(boot)
-                    let replay = try await self.core.request("first_run_fex_local_replay", timeout: 420, params: input)
+                    let replay = try await self.core.request("first_run_fex_local_replay", timeout: 650, params: input)
                     guard let approval = replay.result["approval"]?.text else { throw ErrorState("VERIFY_FAILED") }
-                    input["fex_approvals"] = .array((input["fex_approvals"]?.array ?? []) + [.string(approval)])
+                    UserDefaults.standard.set(approval, forKey: "FEXLocalReplayApproval")
+                    input["fex_approvals"] = .array(approvals + [.string(approval)])
+                    self.workflowLog(taskID, "SteamLinuxRuntime_4 / FEX / RootFS: verified")
                     detected = try await self.core.request("first_run_detect", timeout: 240, params: input)
                     guard let refreshed = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
                     raw = refreshed

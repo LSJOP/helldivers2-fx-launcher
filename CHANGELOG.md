@@ -8,6 +8,10 @@ v1.0.1 (2026111406) is the latest published stable release. Fresh SteamOS deploy
 
 ## Unreleased
 
+- Recovery continuation adds verified Runtime cache/retry, explicit Debug resource paths and a bundled component integrity catalogue. Real setup installed Proton and configured Steam, but failed final verification after reboot restored the incompatible stock FEX and empty container RootFS; public one-click setup remains blocked.
+
+- The isolated first-run replay can install the pinned Steam Linux Runtime 4.0 from a verified local archive or Valve HTTPS download. It preserves the existing ARM64-only Runtime.
+
 - Add an opt-in Debug path for replaying pinned local RF samples on the isolated FX 1.9.9 test image. It checks the matching Steam Linux Runtime before writing and runs the FEX probe inside the recovery transaction. Fresh-guest deployment is pending.
 
 - Retry transient SteamOS SSH startup failures before authentication, with FX endpoint verification on each attempt.

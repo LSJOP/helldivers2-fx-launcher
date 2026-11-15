@@ -95,3 +95,5 @@ FX 1.9.9 历史实测记录了游戏主菜单及飞船。单人、EAC、多人�
 FX 1.9.9 环境实测记录见 [FEX 基线报告](docs/environment/FEX_BASELINE_REPORT_20261115.md)。
 
 首次配置会区分 Proton 内置 FEX 与独立运行时缺失，记录 Proton 版本、配置及库文件哈希；取得已审核方案之前明确显示兼容性未验证。
+
+恢复分支已接入固定版本 Runtime 的隔离 Debug 安装（已验证本地归档或 Valve HTTPS、SHA-256、SFTP、保留 ARM64 Runtime、事务恢复）。公开版一键配置仍受 RF 二进制来源／再分发许可审核阻塞；Debug 回放需明确传入测试镜像与资源目录。见[首次配置验收](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md)。
