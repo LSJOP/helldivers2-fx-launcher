@@ -80,3 +80,5 @@ The fourteen README page images were recaptured from isolated Debug build 202611
 2026-11-15 重新设计审核：中英文七个空闲页面已按新侧边栏顺序审核；欢迎页在状态标签最后调整后重拍。构建 1.0.2 / 2026111501，基于 `f862623` 的未提交源码。保留窗口原始像素，未执行 FX、SSH、Guest 或游戏操作；模拟完成及启动预览单独标注，不代表真实成功。
 
 The cancellation-label and duplicate-retry follow-up changes only non-idle workflow states; the reviewed idle screenshots above are retained with their original bytes and capture metadata. Live cancellation and retry remain unverified.
+
+2026-11-15 integration review: the ten English and ten Chinese page captures were refreshed from isolated Debug source `6a83b6c08b7ee54dfaa95f3cf33434e4a1da8f6e`. Screenshots show idle states and an unconfigured update service; capture did not connect to or modify FX, SSH, the Guest, or the game. Historical MOTR7-specific images retain their recorded provenance.
