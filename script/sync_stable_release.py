@@ -148,7 +148,10 @@ def main():
                 if updated_readme(path.read_text(), version, build, dmg, date) != updated:
                     raise ValueError(f"README synchronization failed: {name}")
     if changed and not args.write:
-        raise ValueError("Stable README blocks are out of date: " + ", ".join(changed))
+        if not release["draft"]:
+            raise ValueError("Stable README blocks are out of date: " + ", ".join(changed))
+        print(f"Verified draft {release['tag_name']} build {build}; both README blocks can be synchronized after publication")
+        return
     print(f"Verified {release['tag_name']} build {build}; README " + (", ".join(changed) if changed else "already synchronized"))
 
 if __name__ == "__main__":
