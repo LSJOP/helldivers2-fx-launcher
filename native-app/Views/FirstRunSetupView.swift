@@ -107,15 +107,6 @@ struct FirstRunSetupView: View {
             } else {
                 TacticalFlowArtwork(asset: "MOTR7Democracy") { welcomeContent }
             }
-            DisclosureGroup(state.t("ui.workflow.advanced")) {
-            TacticalPanel(number: "1", title: state.t("ui.setup.fx"), symbol: "shippingbox") {
-                HStack {
-                    Button(state.t("ui.fx.rescan")) { state.scanFX() }.disabled(tasks.busy)
-                    Button(state.t("ui.setup.choose")) { state.selection = .fx }
-                }
-                Text(state.fxVersion + " · " + (state.fxSelection.selectedPath ?? state.t("ui.368"))).textSelection(.enabled)
-                Text(plan?.snapshot.facts["os_version"] ?? state.t("ui.368"))
-            }
             TacticalPanel(number: "2", title: state.t("ui.setup.connect"), symbol: "key") {
                 SecureField(state.t("ui.305"), text: $credentials.password)
                 SecureField(state.t("ui.304"), text: $credentials.sudoPassword)
@@ -129,6 +120,15 @@ struct FirstRunSetupView: View {
                 if let snapshot = plan?.snapshot {
                     Text(state.t("ui.setup.identity") + " · " + String(snapshot.boot.prefix(8)) + " · " + snapshot.architecture)
                 }
+            }
+            DisclosureGroup(state.t("ui.workflow.advanced")) {
+            TacticalPanel(number: "1", title: state.t("ui.setup.fx"), symbol: "shippingbox") {
+                HStack {
+                    Button(state.t("ui.fx.rescan")) { state.scanFX() }.disabled(tasks.busy)
+                    Button(state.t("ui.setup.choose")) { state.selection = .fx }
+                }
+                Text(state.fxVersion + " · " + (state.fxSelection.selectedPath ?? state.t("ui.368"))).textSelection(.enabled)
+                Text(plan?.snapshot.facts["os_version"] ?? state.t("ui.368"))
             }
             TacticalPanel(number: "FEX", title: state.t("ui.fex.title"), symbol: "shippingbox") {
                 Text(state.t("ui.fex.scope")).font(.caption)
