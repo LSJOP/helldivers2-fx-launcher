@@ -78,3 +78,5 @@ The fourteen README page images were recaptured from isolated Debug build 202611
 2026-11-15 redesign review: seven idle pages per language were visually reviewed after the setup-first sidebar change; the two welcome pages were recaptured after the final status-label adjustment. Build 1.0.2 / 2026111501, dirty source based on `f862623`. Original window pixels, no FX/SSH/Guest/game action. Separately marked DEBUG fixture previews are in `reviews/motr7-redesign-20261115` and do not establish real setup or launch success.
 
 2026-11-15 重新设计审核：中英文七个空闲页面已按新侧边栏顺序审核；欢迎页在状态标签最后调整后重拍。构建 1.0.2 / 2026111501，基于 `f862623` 的未提交源码。保留窗口原始像素，未执行 FX、SSH、Guest 或游戏操作；模拟完成及启动预览单独标注，不代表真实成功。
+
+The cancellation-label and duplicate-retry follow-up changes only non-idle workflow states; the reviewed idle screenshots above are retained with their original bytes and capture metadata. Live cancellation and retry remain unverified.
