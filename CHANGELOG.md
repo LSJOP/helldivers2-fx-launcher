@@ -8,7 +8,7 @@ v1.0.2 (2026111501) was published on 2026-11-15. Fresh SteamOS deployment, singl
 
 ## Unreleased
 
-## v1.0.3 — 2026-11-15 (build 2026111502)
+### v1.0.3 — 2026-11-15
 
 - Simplify software updates to a single download-and-install action with progress, retry and clearer errors.
 - Refresh setup and launch workflow layouts, and place SSH credentials on the first-run page.
