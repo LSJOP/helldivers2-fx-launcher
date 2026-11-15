@@ -8,6 +8,8 @@ v1.0.2 (2026111501) was published on 2026-11-15. Fresh SteamOS deployment, singl
 
 ## Unreleased
 
+- Report update archive safety errors and installation permissions with specific messages and diagnostic details.
+
 - Simplify software updates to one download and install action with live progress and retry.
 
 - Added an isolated, signed GitHub pre-release update channel for acceptance testing. Appearance preferences now persist across App restarts.

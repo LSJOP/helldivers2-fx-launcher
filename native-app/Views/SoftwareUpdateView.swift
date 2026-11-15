@@ -53,7 +53,7 @@ struct SoftwareUpdateView: View {
             }
             if manager.cachedArchive != nil { Text(text(.downloaded)) }
             if !manager.isConfigured { TacticalWarningBanner(text: text(.trustBlocked)) }
-            if let code = manager.errorCode { DisclosureGroup(text(.failed)) { Text(code).font(TacticalTypography.log) } }
+            if let code = manager.errorCode { DisclosureGroup(text(.details)) { Text(code).font(TacticalTypography.log) } }
             Text(text(.scope)).font(TacticalTypography.caption).foregroundStyle(.secondary)
         }
     }

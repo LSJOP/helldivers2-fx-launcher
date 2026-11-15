@@ -1,7 +1,7 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.29** · Updated: **2026-11-15**.
-Change: combine GitHub delivery and version release gates with reference fidelity, product naming and workflow artwork review. Instruction version is independent of App version.
+Instruction version: **v1.2.30** · Updated: **2026-11-15**.
+Change: permit patch packages to use updated archive rules when older clients cannot validate them. Instruction version is independent of App version.
 
 ## Authority and task lifecycle
 
@@ -36,6 +36,7 @@ Change: combine GitHub delivery and version release gates with reference fidelit
 - Ordinary delivery is development, necessary tests, push and, when eligible, merge to main. Automatically create/update PRs and merge ordinary PRs only after required checks and repository rules pass. Preserve other work; high-risk or unaccepted changes remain separate.
 - A release requires an unused version and increasing build number, paired changelogs and READMEs, ten-language checks, arm64 Release build, signing and update security checks, DMG/ZIP, SHA-256 and Ed25519-signed update metadata. Review artifacts and perform required acceptance before publication; verify the App detects the published version. Formal Stable Release creation requires explicit user authorization. See [release procedure](docs/NATIVE_UPDATES.md#current-release-policy--发布规则).
 - Keep Stable separate from prereleases, verify signatures and download URLs, test safe recovery on failure, keep signing private keys out of GitHub, and preserve the independent Update Helper. Never claim production upgrade or recovery acceptance from fixtures alone.
+- A patch package may use updated archive rules even when v1.0.1 cannot validate it. Record the affected upgrade path and provide an accurate installation method when required. Continue enforcing the current signature, integrity and archive safety checks.
 
 ## Verification and reporting
 

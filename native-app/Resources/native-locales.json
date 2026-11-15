@@ -615,7 +615,9 @@
   "ui.art.completedTitle": "Environment setup completed",
   "ui.update.verifying": "Verifying…",
   "ui.update.restarting": "Restarting…",
-  "ui.update.retry": "Retry update"
+  "ui.update.retry": "Retry update",
+  "ui.update.permission": "Installation permission denied",
+  "ui.update.details": "View details"
  },
  "zh-CN": {
   "ui.workflow.environment": "环境状态",
@@ -1233,7 +1235,9 @@
   "ui.art.completedTitle": "环境配置流程已完成",
   "ui.update.verifying": "正在验证…",
   "ui.update.restarting": "正在重新启动…",
-  "ui.update.retry": "重试更新"
+  "ui.update.retry": "重试更新",
+  "ui.update.permission": "安装权限不足",
+  "ui.update.details": "查看详情"
  },
  "ja": {
   "ui.workflow.environment": "環境の状態",
@@ -1851,7 +1855,9 @@
   "ui.art.completedTitle": "環境設定が完了しました",
   "ui.update.verifying": "検証中…",
   "ui.update.restarting": "再起動中…",
-  "ui.update.retry": "更新を再試行"
+  "ui.update.retry": "更新を再試行",
+  "ui.update.permission": "インストール権限がありません",
+  "ui.update.details": "詳細を表示"
  },
  "ko": {
   "ui.workflow.environment": "환경 상태",
@@ -2469,7 +2475,9 @@
   "ui.art.completedTitle": "환경 설정이 완료되었습니다",
   "ui.update.verifying": "확인 중…",
   "ui.update.restarting": "다시 시작 중…",
-  "ui.update.retry": "업데이트 재시도"
+  "ui.update.retry": "업데이트 재시도",
+  "ui.update.permission": "설치 권한이 부족합니다",
+  "ui.update.details": "세부 정보 보기"
  },
  "ru": {
   "ui.workflow.environment": "Состояние среды",
@@ -3087,7 +3095,9 @@
   "ui.art.completedTitle": "Настройка среды завершена",
   "ui.update.verifying": "Проверка…",
   "ui.update.restarting": "Перезапуск…",
-  "ui.update.retry": "Повторить обновление"
+  "ui.update.retry": "Повторить обновление",
+  "ui.update.permission": "Недостаточно прав для установки",
+  "ui.update.details": "Подробнее"
  },
  "es": {
   "ui.workflow.environment": "Estado del entorno",
@@ -3705,7 +3715,9 @@
   "ui.art.completedTitle": "Configuración del entorno completada",
   "ui.update.verifying": "Verificando…",
   "ui.update.restarting": "Reiniciando…",
-  "ui.update.retry": "Reintentar actualización"
+  "ui.update.retry": "Reintentar actualización",
+  "ui.update.permission": "Permiso de instalación insuficiente",
+  "ui.update.details": "Ver detalles"
  },
  "de": {
   "ui.workflow.environment": "Umgebungsstatus",
@@ -4323,7 +4335,9 @@
   "ui.art.completedTitle": "Einrichtung der Umgebung abgeschlossen",
   "ui.update.verifying": "Überprüfung…",
   "ui.update.restarting": "Neustart…",
-  "ui.update.retry": "Update erneut versuchen"
+  "ui.update.retry": "Update erneut versuchen",
+  "ui.update.permission": "Keine Installationsberechtigung",
+  "ui.update.details": "Details anzeigen"
  },
  "fr": {
   "ui.workflow.environment": "État de l’environnement",
@@ -4941,7 +4955,9 @@
   "ui.art.completedTitle": "Configuration de l’environnement terminée",
   "ui.update.verifying": "Vérification…",
   "ui.update.restarting": "Redémarrage…",
-  "ui.update.retry": "Réessayer la mise à jour"
+  "ui.update.retry": "Réessayer la mise à jour",
+  "ui.update.permission": "Autorisation d’installation insuffisante",
+  "ui.update.details": "Voir les détails"
  },
  "pt-BR": {
   "ui.workflow.environment": "Estado do ambiente",
@@ -5559,7 +5575,9 @@
   "ui.art.completedTitle": "Configuração do ambiente concluída",
   "ui.update.verifying": "Verificando…",
   "ui.update.restarting": "Reiniciando…",
-  "ui.update.retry": "Tentar atualização novamente"
+  "ui.update.retry": "Tentar atualização novamente",
+  "ui.update.permission": "Permissão de instalação insuficiente",
+  "ui.update.details": "Ver detalhes"
  },
  "zh-TW": {
   "ui.workflow.environment": "環境狀態",
@@ -6177,6 +6195,8 @@
   "ui.art.completedTitle": "環境設定流程已完成",
   "ui.update.verifying": "正在驗證…",
   "ui.update.restarting": "正在重新啟動…",
-  "ui.update.retry": "重試更新"
+  "ui.update.retry": "重試更新",
+  "ui.update.permission": "安裝權限不足",
+  "ui.update.details": "查看詳情"
  }
 }
