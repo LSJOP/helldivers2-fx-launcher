@@ -336,26 +336,85 @@ struct TacticalFlowArtwork<Content: View>: View {
     let asset: String
     @ViewBuilder let content: Content
     @State private var availableWidth: CGFloat = 0
+    @Environment(\.colorScheme) private var scheme
     var body: some View {
-        HStack(alignment: .top, spacing: 20) {
+        let c = TacticalColors(scheme: scheme)
+        let showArt = availableWidth >= 860
+        let artWidth = min(420, max(320, availableWidth * 0.36))
+        HStack(alignment: .top, spacing: 24) {
             content.fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .topLeading)
-            if availableWidth >= 860 {
-                Image(asset)
-                    .resizable().scaledToFit()
-                    .frame(width: 320)
-                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.4)))
-                    .accessibilityHidden(true)
-                    .allowsHitTesting(false)
+            if showArt {
+                VStack(alignment: .trailing, spacing: 8) {
+                    HStack(spacing: 5) {
+                        Rectangle().fill(c.accent).frame(width: 40, height: 3)
+                        Rectangle().fill(c.line).frame(height: 1)
+                        Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(c.accent)
+                    }
+                    Image(asset).resizable().scaledToFit().frame(width: artWidth)
+                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(c.line, lineWidth: 1))
+                    TacticalHazardBand().frame(width: 106, height: 9)
+                }
+                .frame(width: artWidth)
+                .accessibilityHidden(true).allowsHitTesting(false)
             }
         }
+        .padding(.horizontal, 18).padding(.vertical, 20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
-            GeometryReader { geometry in
-                Color.clear
+            ZStack {
+                LinearGradient(colors: [c.panel.opacity(0.65), c.background, c.panel.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                TacticalFlowBackdrop().foregroundStyle(c.accent.opacity(scheme == .dark ? 0.08 : 0.11))
+                GeometryReader { geometry in
+                    Color.clear
                     .onAppear { availableWidth = geometry.size.width }
                     .onChange(of: geometry.size.width) { _, width in availableWidth = width }
+                }
             }
         }
+        .overlay(alignment: .topLeading) { Rectangle().fill(c.accent).frame(width: 58, height: 3) }
+    }
+}
+
+/// Background graphics are decorative and carry no state or interaction.
+private struct TacticalFlowBackdrop: View {
+    var body: some View {
+        Canvas { context, size in
+            for index in 0..<7 {
+                let x = CGFloat(index) * 105
+                var path = Path(); path.move(to: CGPoint(x: x, y: size.height)); path.addLine(to: CGPoint(x: x + size.height * 0.55, y: 0))
+                context.stroke(path, with: .foreground, lineWidth: 1)
+            }
+        }.accessibilityHidden(true).allowsHitTesting(false)
+    }
+}
+
+struct TacticalHazardBand: View {
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        Canvas { context, size in
+            let color = TacticalColors(scheme: scheme).accent
+            for index in 0..<18 {
+                let x = CGFloat(index) * 16
+                var path = Path(); path.move(to: CGPoint(x: x, y: size.height)); path.addLine(to: CGPoint(x: x + 6, y: 0)); path.addLine(to: CGPoint(x: x + 13, y: 0)); path.addLine(to: CGPoint(x: x + 7, y: size.height)); path.closeSubpath()
+                context.fill(path, with: .color(color))
+            }
+        }.clipped().accessibilityHidden(true).allowsHitTesting(false)
+    }
+}
+
+struct TacticalFlowFooter: View {
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        let c = TacticalColors(scheme: scheme)
+        HStack(alignment: .bottom, spacing: 12) {
+            VStack(alignment: .leading, spacing: 5) {
+                TacticalHazardBand().frame(width: 132, height: 13)
+                Rectangle().fill(c.accent).frame(width: 92, height: 3)
+                Rectangle().fill(c.line).frame(width: 148, height: 1)
+            }
+            Image(systemName: "shield.lefthalf.filled").font(.system(size: 23, weight: .bold)).foregroundStyle(c.accent)
+            Rectangle().fill(c.line).frame(maxWidth: .infinity).frame(height: 1)
+        }.padding(.top, 12).accessibilityHidden(true).allowsHitTesting(false)
     }
 }
 

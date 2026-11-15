@@ -8,6 +8,8 @@ v1.0.1 (2026111406) is the latest published stable release. Fresh SteamOS deploy
 
 ## Unreleased
 
+- Redesign the setup and launch-preparation scenes as tactical workflow layouts; move First-Run Setup to sidebar position 01 and synchronize Command shortcuts. Dashboard remains the default.
+
 - Add original MOTR7 artwork to setup and launch workflows and an artwork credit in Settings; preserve the Dashboard hero and shared header.
 
 - Move snapshot refresh into a shared content-area action on Environment, FX and Logs; avoid repeated resource hashing during FX view updates. Add shared UI design standards and disable first-run rescan during tasks.
