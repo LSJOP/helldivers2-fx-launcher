@@ -74,3 +74,7 @@ The fourteen README page images were recaptured from isolated Debug build 202611
 2026-11-15 merge review: seven idle pages and the software-update viewport per language were recaptured and visually reviewed from the 1.0.2 / 2026111501 isolated Debug candidate (base `afc1158`, integrating main `b967ccd`). Performance screenshots contain read-only hardware and preference values. Setup completion and game launch remain unverified; no FX, SSH, Guest or game action was performed.
 
 2026-11-15 合并审核：中英文各七页和软件更新视口均从 1.0.2 / 2026111501 隔离 Debug 候选重拍并审核（基于 `afc1158`，整合 main `b967ccd`）。性能截图含只读硬件和偏好值；真实配置完成及游戏启动未验证，采集未执行 FX、SSH、Guest 或游戏操作。
+
+2026-11-15 redesign review: seven idle pages per language were visually reviewed after the setup-first sidebar change; the two welcome pages were recaptured after the final status-label adjustment. Build 1.0.2 / 2026111501, dirty source based on `f862623`. Original window pixels, no FX/SSH/Guest/game action. Separately marked DEBUG fixture previews are in `reviews/motr7-redesign-20261115` and do not establish real setup or launch success.
+
+2026-11-15 重新设计审核：中英文七个空闲页面已按新侧边栏顺序审核；欢迎页在状态标签最后调整后重拍。构建 1.0.2 / 2026111501，基于 `f862623` 的未提交源码。保留窗口原始像素，未执行 FX、SSH、Guest 或游戏操作；模拟完成及启动预览单独标注，不代表真实成功。

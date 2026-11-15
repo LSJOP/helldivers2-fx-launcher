@@ -10,6 +10,8 @@ v1.0.2 (2026111501) was published on 2026-11-15. Fresh SteamOS deployment, singl
 
 - Report update archive safety errors and installation permissions with specific messages and diagnostic details.
 
+- Redesign the setup and launch-preparation scenes as tactical workflow layouts; move First-Run Setup to sidebar position 01 and synchronize Command shortcuts. Dashboard remains the default.
+
 - Simplify software updates to one download and install action with live progress and retry.
 
 - Added an isolated, signed GitHub pre-release update channel for acceptance testing. Appearance preferences now persist across App restarts.
