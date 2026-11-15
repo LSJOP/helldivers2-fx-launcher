@@ -122,6 +122,16 @@ struct DeploymentPlan: Codable {
     let id: UUID, profileID: String, profileVersion: Int, snapshot: DeploymentSnapshot
     let operations: [DeploymentOperation]
     var executable: [DeploymentOperation] { operations.filter { !$0.advisory && $0.blocked == nil && !$0.changes.isEmpty && !(snapshot.steamRunning && $0.requiresStoppedSteam) } }
+    func setupObservationVerified(_ operation: DeploymentOperation) -> Bool {
+        guard operation.blocked == nil, operation.changes.isEmpty else { return false }
+        if operation.component == "fex" {
+            return ["normal", "compatible"].contains(operation.currentVersion) && snapshot.facts["fex_runtime"] == "ready"
+        }
+        return operation.detectionPassed
+    }
+    var firstUnverifiedSetupOperation: DeploymentOperation? {
+        operations.first { !$0.advisory && !setupObservationVerified($0) }
+    }
     var detectionState: DeploymentState {
         let required = operations.filter { !$0.advisory }
         if !required.isEmpty && required.allSatisfy({ $0.blocked == "UNSUPPORTED" }) { return .Unsupported }

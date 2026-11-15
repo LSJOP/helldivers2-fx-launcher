@@ -67,6 +67,23 @@ final class FileDeploymentBackend: DeploymentBackend {
             let service = EnvironmentDeploymentService(backend: backend, receipts: .init(directory: dir.appendingPathComponent("receipts")))
             return (backend, service, DeploymentPlanBuilder.build(try backend.snapshot(), profile: profile))
         }
+        do {
+            let (_, _, fixturePlan) = try fixture()
+            var snapshot = fixturePlan.snapshot
+            snapshot.facts["fex_status"] = "unverified"
+            snapshot.facts["fex_reason"] = "FEX_PROTON_INTEGRATED_UNVERIFIED"
+            let plan = DeploymentPlanBuilder.build(snapshot, profile: profile)
+            try check(plan.firstUnverifiedSetupOperation?.blocked == "FEX_PROTON_INTEGRATED_UNVERIFIED",
+                      "observing integrated FEX cannot complete setup without compatibility evidence")
+            snapshot.facts["fex_status"] = "compatible"
+            let noProof = DeploymentPlanBuilder.build(snapshot, profile: profile)
+            try check(noProof.firstUnverifiedSetupOperation?.component == "fex",
+                      "compatible status still requires a verified runtime probe")
+            snapshot.facts["fex_runtime"] = "ready"
+            let verified = DeploymentPlanBuilder.build(snapshot, profile: profile)
+            try check(verified.firstUnverifiedSetupOperation?.component == "proton",
+                      "passing FEX advances verification to the next missing prerequisite")
+        }
         func execute(_ service: EnvironmentDeploymentService, _ plan: DeploymentPlan) throws -> DeploymentReceipt {
             try service.execute(plan, approved: Set(plan.executable.map(\.id)), context: CoreContext(timeout: 10))
         }

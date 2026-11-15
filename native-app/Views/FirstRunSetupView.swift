@@ -18,7 +18,7 @@ struct FirstRunSetupView: View {
             .disabled(state.firstRunFEXRestore == nil)
     }
     private func statusKey(_ operation: DeploymentOperation) -> String {
-        if operation.component == "fex", let plan, setupObservationVerified(operation, in: plan) { return "ui.net.pass" }
+        if operation.component == "fex", let plan, plan.setupObservationVerified(operation) { return "ui.net.pass" }
         switch operation.observation {
         case .advisory: return "ui.setup.status.advisory"
         case .passed: return "ui.net.pass"
@@ -29,11 +29,6 @@ struct FirstRunSetupView: View {
         case .change: return "ui.setup.change"
         }
     }
-    private func setupObservationVerified(_ operation: DeploymentOperation, in plan: DeploymentPlan) -> Bool {
-        EnvironmentWorkflow.setupObservationVerified(component: operation.component, current: operation.currentVersion,
-            passed: operation.detectionPassed, blocked: operation.blocked != nil, hasChanges: !operation.changes.isEmpty,
-            fexRuntime: plan.snapshot.facts["fex_runtime"])
-    }
     private var verifiedCompletion: DeploymentPlan? {
         guard let plan else { return nil }
         let workflow = state.environmentWorkflow
@@ -41,7 +36,7 @@ struct FirstRunSetupView: View {
         guard workflow.canShowSetupCompletion(busy: tasks.busy, deploymentCompleted: state.firstRunState == .Completed,
                                               hasCurrentBinding: state.fxSelection.selected != nil && state.fxSelection.selectedPath == state.runtimeRoot && !plan.snapshot.boot.isEmpty && state.credentials.guestBoot == plan.snapshot.boot,
                                               hasRequiredObservations: !required.isEmpty,
-                                              inspectionReady: required.allSatisfy { setupObservationVerified($0, in: plan) }) else { return nil }
+                                              inspectionReady: plan.firstUnverifiedSetupOperation == nil) else { return nil }
         return plan
     }
     private var setupStatusKey: String {
@@ -294,7 +289,7 @@ struct EnvironmentWorkflowProgressView: View {
                     Text(workflow.phase == .launching ? state.launchSession.current.title(state.languageCode) :
                          state.t(workflow.launchesGame && workflow.phase == .failed ? "ui.179" : workflow.phase.titleKey))
                     Spacer()
-                    if workflow.showsProgress { Text("\(workflow.completedSteps) / \(workflow.totalSteps)").monospacedDigit() }
+                    if workflow.showsProgress { Text(workflow.fraction, format: .percent.precision(.fractionLength(0))).monospacedDigit() }
                 }
                 if workflow.active {
                     TimelineView(.periodic(from: workflow.startedAt, by: 1)) { context in
@@ -303,7 +298,7 @@ struct EnvironmentWorkflowProgressView: View {
                     }
                 }
                 if workflow.active {
-                    ProgressView().tint(.yellow)
+                    ProgressView(value: workflow.fraction).tint(.yellow)
                 }
                 if let failure = workflow.failure {
                     Text(failure.code == "ARTIFACT_UNAPPROVED" && failure.details["component"]?.text == "fex"

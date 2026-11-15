@@ -680,6 +680,7 @@ final class AppState: ObservableObject {
                         self.workflowLog(taskID, "\(component): \(operation.detectionPassed ? "verified" : "unverified")")
                     }
                 }
+                self.environmentWorkflow.completedSteps = 3
                 if plan.snapshot.facts["fex_status"] == "confirmation" {
                     self.pendingFEXApproval = plan.snapshot.facts["fex_fingerprint"]
                     throw ErrorState("FEX_CONFIRMATION_REQUIRED")
@@ -688,7 +689,6 @@ final class AppState: ObservableObject {
                     throw ErrorState(blocked.blocked ?? "FEX_RUNTIME_FAILED")
                 }
                 self.environmentWorkflow.evidence["steam_running"] = .bool(plan.snapshot.steamRunning)
-                self.environmentWorkflow.completedSteps = 3
                 self.workflowPhase(.deploying)
                 if !plan.executable.isEmpty {
                     if plan.executable.contains(where: { $0.needsRestart }) && !restartApproved {
@@ -740,6 +740,9 @@ final class AppState: ObservableObject {
                 if let blocked = fresh.operations.first(where: {
                     ["fex", "proton", "tool", "launch", "steam", "game"].contains($0.component) && $0.blocked != nil
                 }) { throw ErrorState(blocked.blocked ?? "VERIFY_FAILED", details: ["component": .string(blocked.component)]) }
+                if !launchGame, let unverified = fresh.firstUnverifiedSetupOperation {
+                    throw ErrorState(unverified.blocked ?? "VERIFY_FAILED", details: ["component": .string(unverified.component)])
+                }
                 self.firstRunState = .Completed
                 self.environmentWorkflow.completedSteps = 5
                 if launchGame {
