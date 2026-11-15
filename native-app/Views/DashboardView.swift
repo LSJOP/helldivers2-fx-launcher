@@ -27,7 +27,7 @@ struct DashboardView: View {
                     TacticalFlowMark()
                     EnvironmentWorkflowProgressView(state: state, tasks: tasks, showStepsInline: true, returnToDashboard: { showingOverview = true })
                     TacticalButton(title: state.t("ui.092"), symbol: "square.grid.2x2", primary: false) { showingOverview = true }
-                    TacticalFlowMark()
+                    TacticalFlowFooter()
                 }
             }
             if let error = state.error { TacticalWarningBanner(text: error.message(state.languageCode) + " · " + error.code, isError: true) }

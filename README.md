@@ -36,7 +36,7 @@ The Dashboard retains five cards: FX, virtual machine, Steam, EAC and multiplaye
 
 ### Features
 
-Unreleased setup and launch workflow artwork is by **MOTR7**, used with the artist’s permission as supplied by the user. The Dashboard hero and shared page header are unchanged.
+Unreleased setup and launch workflow artwork is by **MOTR7**, used with the artist’s permission as supplied by the user. The Dashboard hero and shared page header are unchanged. First-Run Setup is first in the sidebar (⌘1); Dashboard remains the default (⌘2).
 
 **Unreleased UI:** Environment, FX Manager and Logs use a shared content-area snapshot refresh. The FX details view reuses inspection evidence to avoid repeated hashing during redraw.
 
