@@ -250,7 +250,9 @@ import ApplicationServices
         var result: [String: Any] = [:]
         do {
             guard NativeLocalization.languages.contains(where: { $0.0 == language }),
-                  Bundle.main.bundleIdentifier?.hasPrefix("com.lsjop.helldivers2fx.native.readme.") == true,
+                  (Bundle.main.bundleIdentifier?.hasPrefix("com.lsjop.helldivers2fx.native.readme.") == true
+                   || (ProcessInfo.processInfo.arguments.contains("--capture-update-candidate")
+                       && Bundle.main.bundleIdentifier == NativeReleaseService.testBundleID)),
                   state.runtimeRoot.isEmpty, UserDefaults.standard.bool(forKey: "NativeCredentialAutoLoadDisabled") else {
                 throw ErrorState("SCREENSHOT_ARGUMENT_GUARD")
             }
@@ -260,6 +262,11 @@ import ApplicationServices
             // The bundle guard above keeps language changes confined to the capture copy.
             if state.languageCode != language { state.languageCode = language }
             state.appearance = ProcessInfo.processInfo.arguments.contains("--capture-light") ? .light : .dark
+            if ProcessInfo.processInfo.arguments.contains("--capture-update-candidate") {
+                state.updates.checkForUpdates()
+                while !state.updates.canCheck { try await Task.sleep(nanoseconds: 200_000_000) }
+                guard state.updates.candidate != nil else { throw ErrorState("UPDATE_CANDIDATE_UNAVAILABLE") }
+            }
             state.runOperation("read_performance"); try await waitForTask(state)
             guard state.operationError == nil else { throw ErrorState("PERFORMANCE_READ_FAILED") }
             guard let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
