@@ -259,7 +259,7 @@ import ApplicationServices
             guard state.hasLoaded, state.error == nil else { throw ErrorState("SNAPSHOT_FAILED") }
             // The bundle guard above keeps language changes confined to the capture copy.
             if state.languageCode != language { state.languageCode = language }
-            state.appearance = .dark
+            state.appearance = ProcessInfo.processInfo.arguments.contains("--capture-light") ? .light : .dark
             state.runOperation("read_performance"); try await waitForTask(state)
             guard state.operationError == nil else { throw ErrorState("PERFORMANCE_READ_FAILED") }
             guard let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
