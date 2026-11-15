@@ -1,68 +1,80 @@
-name: Native release readiness
+name: Native stable release verification and README sync
+
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Explicit Native semantic version'
+      tag:
+        description: Stable release tag to verify before publishing
         required: true
-      build:
-        description: 'Positive monotonically increasing build number'
-        required: true
-      channel:
-        type: choice
-        options: [stable, preview]
-        default: stable
-        required: true
+        type: string
+  release:
+    types: [published]
+
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
+
 concurrency:
-  group: native-release-readiness
+  group: native-stable-release-sync
   cancel-in-progress: false
+
 jobs:
-  validate:
-    if: github.ref == 'refs/heads/main'
+  verify:
+    if: github.event_name == 'workflow_dispatch' || (github.event.release.prerelease == false && github.event.release.draft == false)
     runs-on: macos-15
-    timeout-minutes: 40
+    timeout-minutes: 30
     env:
-      RELEASE_VERSION: ${{ inputs.version }}
-      RELEASE_BUILD: ${{ inputs.build }}
-      RELEASE_CHANNEL: ${{ inputs.channel }}
+      GH_TOKEN: ${{ github.token }}
+      REQUESTED_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+      EVENT_NAME: ${{ github.event_name }}
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
-          persist-credentials: false
-      - name: Validate explicit release identity
+          ref: main
+          fetch-depth: 0
+      - name: Check whether the published release is Latest
+        if: github.event_name == 'release'
         run: |
-          python3 - <<'PY'
-          import os,re
-          version,build,channel=(os.environ[k] for k in ['RELEASE_VERSION','RELEASE_BUILD','RELEASE_CHANNEL'])
-          assert re.fullmatch(r'(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?',version)
-          assert re.fullmatch(r'[1-9]\d*',build)
-          assert (channel=='preview')==('-' in version)
-          PY
-      - name: Select Xcode 26
+          latest="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
+          if [[ "$latest" != "$REQUESTED_TAG" ]]; then
+            echo "This release is not Latest; no README update is needed." >> "$GITHUB_STEP_SUMMARY"
+            echo 'SKIP_SYNC=1' >> "$GITHUB_ENV"
+          fi
+      - name: Check release synchronization safeguards
+        if: env.SKIP_SYNC != '1'
+        run: python3 script/test_sync_stable_release.py
+      - name: Verify release assets, signatures, version and localizations
+        if: env.SKIP_SYNC != '1'
         run: |
-          python3 - <<'PYCODE'
-          import glob,os,pathlib
-          choices=sorted(glob.glob('/Applications/Xcode_26*.app'))
-          assert choices, 'Xcode 26 is required; nothing will be published'
-          assert os.uname().machine=='arm64', 'Apple Silicon runner required'
-          with open(os.environ['GITHUB_ENV'],'a') as env:
-              env.write('DEVELOPER_DIR='+choices[-1]+'/Contents/Developer\n')
-          PYCODE
-      - name: Debug build and isolated checks
+          if [[ "$EVENT_NAME" == workflow_dispatch ]]; then
+            python3 script/sync_stable_release.py --tag "$REQUESTED_TAG"
+          else
+            python3 script/sync_stable_release.py --tag "$REQUESTED_TAG" --write
+          fi
+      - name: Commit and push stable README changes
+        if: github.event_name == 'release' && env.SKIP_SYNC != '1'
         run: |
-          bash native-app/script/build_and_run.sh --build-only
-          bash native-app/script/run_checks.sh
-          bash native-app/script/run_update_checks.sh
-      - name: Scan tracked sources for accidental secrets
-        run: python3 -I -B native-app/script/check_release_secrets.py --tracked
-      - name: Record release gate
-        run: |
-          python3 - <<'PY'
-          import os
-          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as report:
-              report.write('## Native release readiness\n\nBuild and isolated checks passed. **Nothing signed or published.**\n\n')
-              report.write('Next: operator-reviewed Developer ID archive, notarization/stapling, Ed25519 signed ZIP/manifest/Appcast, isolated upgrade validation, then explicit publication approval.\n')
-          PY
+          set -euo pipefail
+          if git diff --quiet -- README.md README.zh-CN.md; then
+            echo "README files already match $REQUESTED_TAG." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)" = "$REQUESTED_TAG"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md README.zh-CN.md
+          git commit -m "docs: sync stable release $REQUESTED_TAG"
+          if git push origin HEAD:main; then
+            echo "Synchronized both README files to $REQUESTED_TAG." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD; then
+            echo "main advanced during synchronization. Rerun this workflow." >&2
+            exit 1
+          fi
+          branch="automation/stable-readme-${REQUESTED_TAG}"
+          git push origin "HEAD:refs/heads/$branch"
+          gh pr create --base main --head "$branch" --title "docs: sync stable release $REQUESTED_TAG" \
+            --body "Synchronizes the English and Chinese stable download blocks after release asset, signature, version and localization checks."
+          echo "Direct push was rejected; opened a pull request for $REQUESTED_TAG." >> "$GITHUB_STEP_SUMMARY"

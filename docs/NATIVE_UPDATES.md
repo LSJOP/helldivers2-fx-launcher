@@ -132,3 +132,9 @@ Schema 2 integration requires archiveEdSignature in the signed manifest. The ver
 Swift 服务保留签名清单原始字节和签名，将已经下载的 ZIP 交给单一 Helper。Helper 从当前 App 读取固定公钥，用复制到私有事务目录的归档复验 SHA-256、Ed25519 和 ZIP 结构，然后提取并校验 App 签名、版本、Bundle ID 和公钥连续性。旧 App 在 Helper 提示准备就绪后正常退出。Helper 使用同卷原子交换保留旧包，新 App 主窗口可见后写出本次启动令牌。未收到令牌或进程提前退出时恢复旧包并确认其启动。事务日志保存在安装目录旁。Sparkle 运行时的安装入口移除，历史打包和框架依赖保留。
 
 隔离测试使用临时密钥和实际 ad-hoc 签名的 AppKit 测试包，不读取正式私钥或用户数据。Helper 若被强制终止，现场、日志及交换后的旧包会保留在 .HD2FXNative-update，后续安装会拒绝覆盖。自动接管中断事务、真实启动器单击跨版本升级和用户配置保留验收仍待完成。生产服务继续关闭。
+
+## Stable README synchronization
+
+The GitHub Actions workflow `.github/workflows/native-release-check.yml` runs after a published Stable Release and offers a manual release verification entry. It checks the tag, packaged App identity and build, asset hashes, signed manifest and ZIP, changelogs, localizations and the public DMG URL. It updates the marked stable sections of both READMEs for the current Latest release. If direct push to main is rejected, it attempts a pull request; repository Actions permissions must permit that operation.
+
+Run the manual workflow against a draft release before publishing. GitHub does not automatically prevent a manually published release when a separate workflow fails, so the publisher must require the verification result. Releases created using the repository GITHUB_TOKEN may not trigger another workflow; use an appropriate release publisher credential or run the synchronization separately.
