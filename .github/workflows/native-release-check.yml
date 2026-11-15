@@ -8,7 +8,7 @@ on:
         required: true
         type: string
   release:
-    types: [published]
+    types: [published, released]
 
 permissions:
   contents: write
@@ -73,7 +73,7 @@ jobs:
             echo "main advanced during synchronization. Rerun this workflow." >&2
             exit 1
           fi
-          branch="automation/stable-readme-${REQUESTED_TAG}"
+          branch="automation/stable-readme-${REQUESTED_TAG}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           git push origin "HEAD:refs/heads/$branch"
           gh pr create --base main --head "$branch" --title "docs: sync stable release $REQUESTED_TAG" \
             --body "Synchronizes the English and Chinese stable download blocks after release asset, signature, version and localization checks."
