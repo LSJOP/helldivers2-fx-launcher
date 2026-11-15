@@ -45,3 +45,11 @@ PR #20's two commits descend from `9d0a260cbf03f2ebc48f4d70c92ba713a91c3d32`. Th
 | PR #20 head | Not run | Not run |
 
 The matched source baseline adds another control once built. Use the same verified test snapshot per run and keep Proton-JE and SteamLinuxRuntime_4 fixed. None of the fresh runs has been performed. The known historical copy was made while the guest could write and is not a verified restore point. An isolated Linux arm64 build environment and a verified restorable guest baseline are still required. No necessity claim or deployment approval follows from this experiment setup.
+
+## Local replay on the fresh FX 1.9.9 test image
+
+The isolated Debug App accepts `--hd2-local-rf-replay` for the bound `steamos-1.img` guest. It loads the ten pinned RF files and archived companion components from the host's private evidence directory. It installs the standalone FEX tree, sets the recorded container registration `FEX_ROOTFS=/`, verifies the installed inventory and runs the existing x86-64 FEX probe before committing the receipt. The local wrapper omits the historical full environment dump. A failed runtime probe restores the prior FEX tree in the transaction fixture.
+
+The real App reached the environment check through SSH and stopped before deployment with `FEX_LOCAL_RUNTIME_MISSING`. The guest had Valve's `SteamLinuxRuntime_4-arm64` (Steam app 4185400) and the graphics RootFS provider. The historical combination uses `SteamLinuxRuntime_4` (Steam app 4183110, build 26116036, depot 4183111, manifest 622183911945836103). The historic tree contains both pressure-vessel variants. Proton-JE was absent in the fresh guest. FEX, RootFS, Proton-JE and Steam launch settings were untouched during this attempt. No game was started.
+
+The archived test disk yielded a local Runtime tar with 8,014 entries and SHA-256 `31a43e6e6ff78509eb1cdb762cfff8e9d89fc83c118d5d723bead42b9b18ca5c`. The regular payloads, directory types and link targets matched the archived depot inventory. The manifest uses an all-zero digest for an empty `.ref` marker and the staged file is exactly zero bytes. The tar omits the writable Runtime cache. This local depot recovery does not install the Runtime in the fresh guest. Managed Runtime installation, downstream one-click setup and live rollback still require acceptance.
