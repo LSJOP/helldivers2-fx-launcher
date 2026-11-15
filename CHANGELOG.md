@@ -4,15 +4,9 @@
 
 All notable changes to the HELLDIVERS 2 FX Launcher Native App are recorded here, newest first. Unreleased entries have no release date. This file is the single source of truth for user-facing release notes; the README summary, GitHub Release notes and the future Sparkle appcast reuse this reviewed text. Do not paste raw, unreviewed Git commit messages into it.
 
-v1.0.1 (2026111406) is the latest published stable release. Fresh SteamOS deployment, single-player, EAC and multiplayer were not revalidated for that release. The 1.0.2 work below remains unreleased.
+v1.0.2 (2026111501) is the latest published stable release. Fresh SteamOS deployment, single-player, EAC and multiplayer were not revalidated.
 
 ## Unreleased
-
-- Add original MOTR7 artwork to setup and launch workflows and an artwork credit in Settings; preserve the Dashboard hero and shared header.
-
-- Move snapshot refresh into a shared content-area action on Environment, FX and Logs; avoid repeated resource hashing during FX view updates. Add shared UI design standards and disable first-run rescan during tasks.
-
-- Detect the known FX 1.9.9 stock FEX incompatibility and restore the original FEX tree if candidate activation fails.
 
 - Added an isolated, signed GitHub pre-release update channel for acceptance testing. Appearance preferences now persist across App restarts.
 
@@ -192,6 +186,18 @@ The development entries below retain historical stage evidence; statements about
 - No signed/notarized installer or GitHub Release exists; `0.1.0` is a development preview.
 - Safe FX stop/restart and validated automatic performance recommendations remain unavailable. Saved settings are not proof of runtime adoption; the original launch preflight may reject custom values.
 - Ground missions, independent EAC acceptance and multiplayer remain unverified.
+
+### v1.0.2 — 2026-11-15
+
+- Add original MOTR7 artwork to setup and launch workflows and an artwork credit in Settings; preserve the Dashboard hero and shared header.
+
+- Move snapshot refresh into a shared content-area action on Environment, FX and Logs; avoid repeated resource hashing during FX view updates. Add shared UI design standards and disable first-run rescan during tasks.
+
+- Detect the known FX 1.9.9 stock FEX incompatibility and restore the original FEX tree if candidate activation fails.
+
+- Add MOTR7 artwork and credits to setup and launch, and unify refresh controls.
+- Improve detection of the known FX 1.9.9 stock FEX incompatibility and recovery after failed candidate activation.
+- The published update ZIP is rejected by v1.0.1 archive safety checks. Use the DMG for this upgrade.
 
 ### v1.0.1 — 2026-11-14
 
