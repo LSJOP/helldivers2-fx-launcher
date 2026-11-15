@@ -4,6 +4,18 @@ struct SoftwareUpdateView: View {
     @ObservedObject var manager: AppUpdateManager
     let language: String
     private func text(_ key: UpdateString) -> String { key.text(language) }
+    private var installTitle: String {
+        switch manager.status {
+        case .downloading:
+            guard let progress = manager.downloadProgress else { return text(.downloading) }
+            return text(.downloading) + " " + progress.formatted(.percent.precision(.fractionLength(0)))
+        case .verifying: return text(.verifying)
+        case .installing: return text(.installing)
+        case .restarting: return text(.restarting)
+        case .available, .downloaded: return text(.downloadInstall)
+        default: return text(.retryUpdate)
+        }
+    }
     var body: some View {
         TacticalPanel(number: "U", title: text(.section), symbol: "arrow.down.circle") {
             TacticalInfoRow(title: text(.currentVersion), value: manager.version)
@@ -31,16 +43,13 @@ struct SoftwareUpdateView: View {
                 Text(candidate.manifest.version + " (" + String(candidate.manifest.build) + ")").font(.headline)
                 DisclosureGroup(text(.releaseNotes)) { Text(String((candidate.release.body ?? "").prefix(16000))).textSelection(.enabled) }
                 Link(text(.releaseNotes), destination: candidate.release.html_url)
-                HStack {
-                    TacticalButton(title: text(.downloadOnly), symbol: "arrow.down.circle", disabledReason: manager.canDownload ? nil : text(manager.canCheck ? .trustBlocked : .downloading)) { manager.downloadVerifiedArchive() }
-                    TacticalButton(title: text(.downloadInstall), symbol: "arrow.down.app", disabledReason: manager.canStartInstall ? nil : text(.trustBlocked)) { manager.downloadAndInstall() }
-                }
+                TacticalButton(title: installTitle, symbol: "arrow.down.app", primary: true,
+                               disabledReason: manager.canStartInstall ? nil : text(manager.canCheck ? .trustBlocked : manager.status)) {
+                    manager.downloadAndInstall()
+                }.accessibilityIdentifier("updates.install")
             }
             if manager.status == .downloading {
                 ProgressView(value: manager.downloadProgress)
-                if let progress = manager.downloadProgress {
-                    Text(progress, format: .percent.precision(.fractionLength(0)))
-                }
             }
             if manager.cachedArchive != nil { Text(text(.downloaded)) }
             if !manager.isConfigured { TacticalWarningBanner(text: text(.trustBlocked)) }

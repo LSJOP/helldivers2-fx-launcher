@@ -612,7 +612,10 @@
   "ui.art.permission": "Artwork used with permission.",
   "ui.art.welcomeTitle": "Welcome to HELLDIVERS 2 FX Launcher",
   "ui.art.welcomeDetail": "Prepare the selected FX environment, check game components and verify the result.",
-  "ui.art.completedTitle": "Environment setup completed"
+  "ui.art.completedTitle": "Environment setup completed",
+  "ui.update.verifying": "Verifying…",
+  "ui.update.restarting": "Restarting…",
+  "ui.update.retry": "Retry update"
  },
  "zh-CN": {
   "ui.workflow.environment": "环境状态",
@@ -1227,7 +1230,10 @@
   "ui.art.permission": "经作者授权使用",
   "ui.art.welcomeTitle": "欢迎使用绝地潜兵 2 FX 启动器",
   "ui.art.welcomeDetail": "准备所选 FX 环境，检查游戏组件并验证配置结果。",
-  "ui.art.completedTitle": "环境配置流程已完成"
+  "ui.art.completedTitle": "环境配置流程已完成",
+  "ui.update.verifying": "正在验证…",
+  "ui.update.restarting": "正在重新启动…",
+  "ui.update.retry": "重试更新"
  },
  "ja": {
   "ui.workflow.environment": "環境の状態",
@@ -1842,7 +1848,10 @@
   "ui.art.permission": "作者の許可を得て使用しています。",
   "ui.art.welcomeTitle": "HELLDIVERS 2 FX Launcher へようこそ",
   "ui.art.welcomeDetail": "選択した FX 環境を準備し、ゲームコンポーネントを確認して結果を検証します。",
-  "ui.art.completedTitle": "環境設定が完了しました"
+  "ui.art.completedTitle": "環境設定が完了しました",
+  "ui.update.verifying": "検証中…",
+  "ui.update.restarting": "再起動中…",
+  "ui.update.retry": "更新を再試行"
  },
  "ko": {
   "ui.workflow.environment": "환경 상태",
@@ -2457,7 +2466,10 @@
   "ui.art.permission": "작가의 허가를 받아 사용했습니다.",
   "ui.art.welcomeTitle": "HELLDIVERS 2 FX Launcher에 오신 것을 환영합니다",
   "ui.art.welcomeDetail": "선택한 FX 환경을 준비하고 게임 구성 요소와 설정 결과를 확인합니다.",
-  "ui.art.completedTitle": "환경 설정이 완료되었습니다"
+  "ui.art.completedTitle": "환경 설정이 완료되었습니다",
+  "ui.update.verifying": "확인 중…",
+  "ui.update.restarting": "다시 시작 중…",
+  "ui.update.retry": "업데이트 재시도"
  },
  "ru": {
   "ui.workflow.environment": "Состояние среды",
@@ -3072,7 +3084,10 @@
   "ui.art.permission": "Работа используется с разрешения автора.",
   "ui.art.welcomeTitle": "Добро пожаловать в HELLDIVERS 2 FX Launcher",
   "ui.art.welcomeDetail": "Подготовьте выбранную среду FX, проверьте компоненты игры и результат настройки.",
-  "ui.art.completedTitle": "Настройка среды завершена"
+  "ui.art.completedTitle": "Настройка среды завершена",
+  "ui.update.verifying": "Проверка…",
+  "ui.update.restarting": "Перезапуск…",
+  "ui.update.retry": "Повторить обновление"
  },
  "es": {
   "ui.workflow.environment": "Estado del entorno",
@@ -3687,7 +3702,10 @@
   "ui.art.permission": "Obra utilizada con permiso del autor.",
   "ui.art.welcomeTitle": "Te damos la bienvenida a HELLDIVERS 2 FX Launcher",
   "ui.art.welcomeDetail": "Prepara el entorno FX seleccionado, comprueba los componentes del juego y verifica el resultado.",
-  "ui.art.completedTitle": "Configuración del entorno completada"
+  "ui.art.completedTitle": "Configuración del entorno completada",
+  "ui.update.verifying": "Verificando…",
+  "ui.update.restarting": "Reiniciando…",
+  "ui.update.retry": "Reintentar actualización"
  },
  "de": {
   "ui.workflow.environment": "Umgebungsstatus",
@@ -4302,7 +4320,10 @@
   "ui.art.permission": "Das Kunstwerk wird mit Genehmigung verwendet.",
   "ui.art.welcomeTitle": "Willkommen bei HELLDIVERS 2 FX Launcher",
   "ui.art.welcomeDetail": "Bereite die gewählte FX-Umgebung vor, prüfe die Spielkomponenten und das Ergebnis.",
-  "ui.art.completedTitle": "Einrichtung der Umgebung abgeschlossen"
+  "ui.art.completedTitle": "Einrichtung der Umgebung abgeschlossen",
+  "ui.update.verifying": "Überprüfung…",
+  "ui.update.restarting": "Neustart…",
+  "ui.update.retry": "Update erneut versuchen"
  },
  "fr": {
   "ui.workflow.environment": "État de l’environnement",
@@ -4917,7 +4938,10 @@
   "ui.art.permission": "Œuvre utilisée avec l’autorisation de son auteur.",
   "ui.art.welcomeTitle": "Bienvenue dans HELLDIVERS 2 FX Launcher",
   "ui.art.welcomeDetail": "Préparez l’environnement FX sélectionné, vérifiez les composants du jeu et le résultat.",
-  "ui.art.completedTitle": "Configuration de l’environnement terminée"
+  "ui.art.completedTitle": "Configuration de l’environnement terminée",
+  "ui.update.verifying": "Vérification…",
+  "ui.update.restarting": "Redémarrage…",
+  "ui.update.retry": "Réessayer la mise à jour"
  },
  "pt-BR": {
   "ui.workflow.environment": "Estado do ambiente",
@@ -5532,7 +5556,10 @@
   "ui.art.permission": "Obra usada com autorização do autor.",
   "ui.art.welcomeTitle": "Boas-vindas ao HELLDIVERS 2 FX Launcher",
   "ui.art.welcomeDetail": "Prepare o ambiente FX selecionado, confira os componentes do jogo e verifique o resultado.",
-  "ui.art.completedTitle": "Configuração do ambiente concluída"
+  "ui.art.completedTitle": "Configuração do ambiente concluída",
+  "ui.update.verifying": "Verificando…",
+  "ui.update.restarting": "Reiniciando…",
+  "ui.update.retry": "Tentar atualização novamente"
  },
  "zh-TW": {
   "ui.workflow.environment": "環境狀態",
@@ -6147,6 +6174,9 @@
   "ui.art.permission": "經作者授權使用",
   "ui.art.welcomeTitle": "歡迎使用絕地潛兵 2 FX 啟動器",
   "ui.art.welcomeDetail": "準備所選 FX 環境，檢查遊戲元件並驗證設定結果。",
-  "ui.art.completedTitle": "環境設定流程已完成"
+  "ui.art.completedTitle": "環境設定流程已完成",
+  "ui.update.verifying": "正在驗證…",
+  "ui.update.restarting": "正在重新啟動…",
+  "ui.update.retry": "重試更新"
  }
 }
