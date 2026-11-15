@@ -6,7 +6,7 @@ enum UpdateString: String {
     case section, currentVersion, automaticChecks, checkNow, unconfigured, ready, checking
     case available, finished, failed, scope, languageRestart, automaticOff, automaticOn
     case build, channel, stable, preview, lastCheck, never, noReleases, upToDate, releaseNotes
-    case downloadOnly, downloadInstall, downloading, downloaded, installing, cancelled, cancel
+    case downloadOnly, downloadInstall, downloading, downloaded, verifying, installing, restarting, retryUpdate, cancelled, cancel
     case trustBlocked, previewBlocked, network, malformed, missingAsset, incompatible, signature, integrity, diskSpace, download, installFailed, remindLater
     var key: String {
         switch self {
@@ -37,6 +37,9 @@ enum UpdateString: String {
         case .downloadInstall: return "ui.integrated.053"
         case .downloading: return "ui.integrated.054"
         case .downloaded: return "ui.integrated.055"
+        case .verifying: return "ui.update.verifying"
+        case .restarting: return "ui.update.restarting"
+        case .retryUpdate: return "ui.update.retry"
         case .installing: return "ui.integrated.056"
         case .cancelled: return "ui.integrated.057"
         case .cancel: return "ui.037"
@@ -207,6 +210,11 @@ struct UpdateConfiguration {
                               received >= 0, total == candidate.manifest.length else { return }
                         self.downloadProgress = min(1, Double(received) / Double(total))
                     }
+                } verifying: {
+                    await MainActor.run {
+                        guard self.status == .downloading else { return }
+                        self.status = .verifying
+                    }
                 }
                 try Task.checkCancellation()
                 self.status = .downloaded
@@ -251,7 +259,12 @@ struct UpdateConfiguration {
                 Task { @MainActor [weak self] in
                     while helper.isRunning {
                         if FileManager.default.fileExists(atPath: request.appendingPathComponent("prepared").path) {
-                            guard !CoreWorkerStatus.isActive else { return }
+                            guard !CoreWorkerStatus.isActive else {
+                                self?.status = .installFailed
+                                self?.errorCode = "UPDATE_WORKER_ACTIVE"
+                                return
+                            }
+                            self?.status = .restarting
                             NSApp.terminate(nil)
                             return
                         }
@@ -264,6 +277,10 @@ struct UpdateConfiguration {
                 throw error
             }
         } catch {
+            if let failure = error as? NativeUpdateFailure, failure == .integrity || failure == .signature {
+                try? FileManager.default.removeItem(at: cachedArchive)
+                self.cachedArchive = nil
+            }
             record(error)
             if !(error is NativeUpdateFailure) { status = .installFailed }
             canCheck = true

@@ -101,7 +101,11 @@ final class ProgressRecorder: @unchecked Sendable {
         defer { try? FileManager.default.removeItem(at: directory) }
         try await failure(.unconfigured,"download requires trusted signature") { _ = try await noKey.download(unsigned,to:directory) }
         let progress=ProgressRecorder()
-        let output=try await service.download(candidate,to:directory,progress: { progress.record($0,$1) })
+        let verification = ProgressRecorder()
+        let output=try await service.download(candidate,to:directory,progress: { progress.record($0,$1) }, verifying: {
+            verification.record(1, 1)
+        })
+        try check(verification.read()?.0 == 1, "verification phase begins after download")
         try check(progress.read()?.0 == Int64(transport.archive.count / 2) && progress.read()?.1 == candidate.manifest.length,"download progress carries signed length")
         try check(try Data(contentsOf:output)==transport.archive,"verified download cached without installing")
         let symlinkTarget=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
