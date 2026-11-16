@@ -12,7 +12,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 concurrency:
   group: native-stable-release-sync
@@ -68,13 +67,5 @@ jobs:
             echo "Synchronized both README files to $REQUESTED_TAG." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          git fetch origin main
-          if ! git merge-base --is-ancestor origin/main HEAD; then
-            echo "main advanced during synchronization. Rerun this workflow." >&2
-            exit 1
-          fi
-          branch="automation/stable-readme-${REQUESTED_TAG}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          git push origin "HEAD:refs/heads/$branch"
-          gh pr create --base main --head "$branch" --title "docs: sync stable release $REQUESTED_TAG" \
-            --body "Synchronizes the English and Chinese stable download blocks after release asset, signature, version and localization checks."
-          echo "Direct push was rejected; opened a pull request for $REQUESTED_TAG." >> "$GITHUB_STEP_SUMMARY"
+          echo "Direct push failed. Inspect main and use an existing fixed development branch to synchronize the README files; no branch was created." >&2
+          exit 1
