@@ -205,3 +205,18 @@ remain separate. A fresh-disk, uninterrupted install on this final build and
 public RF source/redistribution remain open. No game, EAC, multiplayer, production
 FX, packaging or updater acceptance was performed. The current README screenshot
 source gate is pending renewed visual review of the changed completion view.
+
+## 内置 RF FEX 验收门禁 · 2026-11-16
+
+已完成的证据继续有效：最新 arm64 Debug App 冷启动及首次配置 100%，独立 RF 持久化，两次正常重启、18 个关键文件 SHA-256 一致，Proton-JE、Runtime 和 Steam 配置保留。这些结果来自既有测试镜像的迁移和复验，未走 App Bundle 的 RF 制品输入路径。
+
+新版混合部署方案待验收：
+
+- [ ] 构建产物实际捆绑审核通过的 RF FEX 和对应模板。
+- [ ] 验证 Bundle 路径、资源清单、文件大小和 SHA-256，并拒绝损坏资源。
+- [ ] 从全新测试镜像用真实 App 自动提取、上传、部署和验证，同时完成固定 Proton-JE 和 Runtime 的下载与校验。
+- [ ] 普通用户流程与备用下载均不依赖开发者本地路径或用户提供 RF 文件。
+- [ ] 两次正常重启后，文件哈希、实际 FEX 加载路径、Steam 配置和已验证组件跳过逻辑保持有效。
+- [ ] 在该构建上另外验收真实游戏启动，并记录结果。
+- [ ] 确认 RF 及伴随组件来源、许可和再分发权限。
+- [ ] 验收正式 Release 安装和应用内更新。

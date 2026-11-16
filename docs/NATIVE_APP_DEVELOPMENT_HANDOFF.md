@@ -219,3 +219,13 @@ Swift 服务保留签名清单原始字节和签名，将已经下载的 ZIP 交
 
 
 2026-11-15 recovery continuation: use fix/first-run-ssh-access in /private/tmp/hd2-fex-merge.9K0x03. See docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md for current live failure and exact hashes. Next work must identify the boot-time FEX overwrite owner and design identity-bound durable integration; never approve the known incompatible stock FEX or publish unreviewed RF binaries. Runtime is retained, Proton installed, game not launched; no main merge/release. Screenshot-source gate is pending; targeted checks and arm64 Debug pass.
+
+## 首次配置实施方案 · 2026-11-16
+
+下一版采用混合部署：已审核的 RF FEX 优先内置 App，受信 HTTPS 下载为备用；配置模板随 App 交付。Proton-JE 和 SteamLinuxRuntime_4 复用现有固定版本自动下载，保留系统的 SteamLinuxRuntime_4-arm64。普通用户无需提供 RF 文件。当前 Debug 本地样本入口仍是隔离测试工具，公开构建需先核实全部组件来源、构建版本、许可证和再分发许可。见 [组件清单](environment/ENVIRONMENT_COMPONENT_MANIFEST.md)。
+
+1. 从 App 资源目录读取批准清单及 RF 包，校验文件大小和 SHA-256。备用下载采用相同身份和完整性约束。包损坏或来源不符时停止。
+2. 通过已验证目标和 Guest 身份的 SSH/SFTP 上传到暂存目录。复用 FEX 部署事务，在持久化 /home 下的 App 独立目录进行原子切换，保留回滚回执及先前目录。
+3. 验证实际加载的 FEX 路径和哈希。分别核对 emulator 注册、provider 生成的配置及实际观测到的探针变量，保留有效配置，不强制设定 `FEX_ROOTFS=/`。
+4. 正常重启两次后重连，复验文件哈希、加载路径、Steam 兼容工具及参数。重复执行时跳过已验证组件。失败时根据回执恢复，发现漂移则停止覆盖。
+5. 用全新测试镜像完成真实首次安装验收，分别记录配置完成和游戏启动结果。历史成功镜像只用于读取证据。[实测结果和待验证项目](testing/NATIVE_FIRST_RUN_ACCEPTANCE.md)

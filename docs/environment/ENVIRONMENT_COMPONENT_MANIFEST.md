@@ -9,3 +9,11 @@
 | IPv6 | diagnostic result | no success dependency established | Diagnostic only; never an automatic operation |
 
 No alternate FEX, Proton, renderer, or network proxy is an approved substitute.
+
+## 内置优先实施清单 · 2026-11-16
+
+上表保留现有实现状态。新版目标为 RF FEX 与配置模板内置优先，RF 允许受信下载备用；Proton-JE 和 SteamLinuxRuntime_4 自动下载，原有 SteamLinuxRuntime_4-arm64 保留。
+
+[逐文件 JSON 清单](../../native-app/Resources/deployment-components-v1.json) 的 `localTestOnly` 记录已有样本名称、字节数、SHA-256 和已知取样来源。准确构建版本、完整产物来源及公开再分发资格为 **UNVERIFIED**。其中 VERSIONS.txt 有 stage 记录，正式成功环境的安装目录未观察到该文件。现有样本哈希不承诺等同于未来批准的发行资源。
+
+`plannedBundlePath` 是拟议的 Bundle 相对路径，`guestInstallPath` 是 SteamOS 目标。`plannedDeployment` 和 `rollback` 记录预期事务。现行 `bundled` 清单及各样本的 `bundled: false` 仍记录实际交付状态。备用源、完整伴随依赖及最终包清单尚待确认。发布校验不得把新增规划字段当作资源批准。

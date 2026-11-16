@@ -47,7 +47,14 @@
         "SteamOS 0.4.5 aarch64"
       ],
       "bundled": false,
-      "installation": "Debug local replay only"
+      "installation": "Debug local replay only",
+      "buildVersion": "UNVERIFIED",
+      "provenanceStatus": "UNVERIFIED",
+      "redistributionStatus": "UNVERIFIED",
+      "plannedBundlePath": "Contents/Resources/Deployment/RF-FEX/usr/bin/FEX",
+      "guestInstallPath": "~/.local/share/HD2FXLauncher/compatibility/FEX-RF/usr/bin/FEX",
+      "plannedDeployment": "Verify bytes and SHA-256, transfer over authenticated SSH/SFTP, stage and activate through FEX transaction",
+      "rollback": "Restore the identity-bound prior tree and any changed managed Steam selection using receipts; stop on drift"
     },
     {
       "name": "usr/bin/FEXBash",
@@ -61,7 +68,14 @@
         "SteamOS 0.4.5 aarch64"
       ],
       "bundled": false,
-      "installation": "Debug local replay only"
+      "installation": "Debug local replay only",
+      "buildVersion": "UNVERIFIED",
+      "provenanceStatus": "UNVERIFIED",
+      "redistributionStatus": "UNVERIFIED",
+      "plannedBundlePath": "Contents/Resources/Deployment/RF-FEX/usr/bin/FEXBash",
+      "guestInstallPath": "~/.local/share/HD2FXLauncher/compatibility/FEX-RF/usr/bin/FEXBash",
+      "plannedDeployment": "Verify bytes and SHA-256, transfer over authenticated SSH/SFTP, stage and activate through FEX transaction",
+      "rollback": "Restore the identity-bound prior tree and any changed managed Steam selection using receipts; stop on drift"
     },
     {
       "name": "usr/bin/FEXGetConfig",
@@ -75,7 +89,14 @@
         "SteamOS 0.4.5 aarch64"
       ],
       "bundled": false,
-      "installation": "Debug local replay only"
+      "installation": "Debug local replay only",
+      "buildVersion": "UNVERIFIED",
+      "provenanceStatus": "UNVERIFIED",
+      "redistributionStatus": "UNVERIFIED",
+      "plannedBundlePath": "Contents/Resources/Deployment/RF-FEX/usr/bin/FEXGetConfig",
+      "guestInstallPath": "~/.local/share/HD2FXLauncher/compatibility/FEX-RF/usr/bin/FEXGetConfig",
+      "plannedDeployment": "Verify bytes and SHA-256, transfer over authenticated SSH/SFTP, stage and activate through FEX transaction",
+      "rollback": "Restore the identity-bound prior tree and any changed managed Steam selection using receipts; stop on drift"
     },
     {
       "name": "usr/bin/FEXOfflineCompiler",
@@ -89,7 +110,14 @@
         "SteamOS 0.4.5 aarch64"
       ],
       "bundled": false,
-      "installation": "Debug local replay only"
+      "installation": "Debug local replay only",
+      "buildVersion": "UNVERIFIED",
+      "provenanceStatus": "UNVERIFIED",
+      "redistributionStatus": "UNVERIFIED",
+      "plannedBundlePath": "Contents/Resources/Deployment/RF-FEX/usr/bin/FEXOfflineCompiler",
+      "guestInstallPath": "~/.local/share/HD2FXLauncher/compatibility/FEX-RF/usr/bin/FEXOfflineCompiler",
+      "plannedDeployment": "Verify bytes and SHA-256, transfer over authenticated SSH/SFTP, stage and activate through FEX transaction",
+      "rollback": "Restore the identity-bound prior tree and any changed managed Steam selection using receipts; stop on drift"
     },
     {
       "name": "usr/bin/FEXpidof",
@@ -103,7 +131,14 @@
         "SteamOS 0.4.5 aarch64"
       ],
       "bundled": false,
-      "installation": "Debug local replay only"
+      "installation": "Debug local replay only",
+      "buildVersion": "UNVERIFIED",
+      "provenanceStatus": "UNVERIFIED",
+      "redistributionStatus": "UNVERIFIED",
+      "plannedBundlePath": "Contents/Resources/Deployment/RF-FEX/usr/bin/FEXpidof",
+      "guestInstallPath": "~/.local/share/HD2FXLauncher/compatibility/FEX-RF/usr/bin/FEXpidof",
+      "plannedDeployment": "Verify bytes and SHA-256, transfer over authenticated SSH/SFTP, stage and activate through FEX transaction",
+      "rollback": "Restore the identity-bound prior tree and any changed managed Steam selection using receipts; stop on drift"
     },
     {
       "name": "usr/bin/FEXServer",
@@ -117,7 +152,14 @@
         "SteamOS 0.4.5 aarch64"
       ],
       "bundled": false,
-      "installation": "Debug local replay only"
+      "installation": "Debug local replay only",
+      "buildVersion": "UNVERIFIED",
+      "provenanceStatus": "UNVERIFIED",
+      "redistributionStatus": "UNVERIFIED",
+      "plannedBundlePath": "Contents/Resources/Deployment/RF-FEX/usr/bin/FEXServer",
+      "guestInstallPath": "~/.local/share/HD2FXLauncher/compatibility/FEX-RF/usr/bin/FEXServer",
+      "plannedDeployment": "Verify bytes and SHA-256, transfer over authenticated SSH/SFTP, stage and activate through FEX transaction",
+      "rollback": "Restore the identity-bound prior tree and any changed managed Steam selection using receipts; stop on drift"
     },
     {
       "name": "usr/bin/FEXServerManager",
@@ -131,7 +173,14 @@
         "SteamOS 0.4.5 aarch64"
       ],
       "bundled": false,
-      "installation": "Debug local replay only"
+      "installation": "Debug local replay only",
+      "buildVersion": "UNVERIFIED",
+      "provenanceStatus": "UNVERIFIED",
+      "redistributionStatus": "UNVERIFIED",
+      "plannedBundlePath": "Contents/Resources/Deployment/RF-FEX/usr/bin/FEXServerManager",
+      "guestInstallPath": "~/.local/share/HD2FXLauncher/compatibility/FEX-RF/usr/bin/FEXServerManager",
+      "plannedDeployment": "Verify bytes and SHA-256, transfer over authenticated SSH/SFTP, stage and activate through FEX transaction",
+      "rollback": "Restore the identity-bound prior tree and any changed managed Steam selection using receipts; stop on drift"
     },
     {
       "name": "FEXCompatTool",
@@ -145,7 +194,14 @@
         "SteamOS 0.4.5 aarch64"
       ],
       "bundled": false,
-      "installation": "Debug local replay only"
+      "installation": "Debug local replay only",
+      "buildVersion": "UNVERIFIED",
+      "provenanceStatus": "UNVERIFIED",
+      "redistributionStatus": "UNVERIFIED",
+      "plannedBundlePath": "Contents/Resources/Deployment/RF-FEX/FEXCompatTool",
+      "guestInstallPath": "~/.local/share/HD2FXLauncher/compatibility/FEX-RF/FEXCompatTool",
+      "plannedDeployment": "Verify bytes and SHA-256, transfer over authenticated SSH/SFTP, stage and activate through FEX transaction",
+      "rollback": "Restore the identity-bound prior tree and any changed managed Steam selection using receipts; stop on drift"
     },
     {
       "name": "ConfigTemplate.json",
@@ -159,7 +215,14 @@
         "SteamOS 0.4.5 aarch64"
       ],
       "bundled": false,
-      "installation": "Debug local replay only"
+      "installation": "Debug local replay only",
+      "buildVersion": "UNVERIFIED",
+      "provenanceStatus": "UNVERIFIED",
+      "redistributionStatus": "UNVERIFIED",
+      "plannedBundlePath": "Contents/Resources/Deployment/RF-FEX/ConfigTemplate.json",
+      "guestInstallPath": "~/.local/share/HD2FXLauncher/compatibility/FEX-RF/ConfigTemplate.json",
+      "plannedDeployment": "Verify bytes and SHA-256, transfer over authenticated SSH/SFTP, stage and activate through FEX transaction",
+      "rollback": "Restore the identity-bound prior tree and any changed managed Steam selection using receipts; stop on drift"
     },
     {
       "name": "VERSIONS.txt",
@@ -173,7 +236,15 @@
         "SteamOS 0.4.5 aarch64"
       ],
       "bundled": false,
-      "installation": "Debug local replay only"
+      "installation": "Debug local replay only",
+      "buildVersion": "UNVERIFIED",
+      "provenanceStatus": "UNVERIFIED",
+      "redistributionStatus": "UNVERIFIED",
+      "plannedBundlePath": "Contents/Resources/Deployment/RF-FEX/VERSIONS.txt",
+      "guestInstallPath": "~/.local/share/HD2FXLauncher/compatibility/FEX-RF/VERSIONS.txt",
+      "plannedDeployment": "Verify bytes and SHA-256, transfer over authenticated SSH/SFTP, stage and activate through FEX transaction",
+      "rollback": "Restore the identity-bound prior tree and any changed managed Steam selection using receipts; stop on drift",
+      "evidenceNote": "Known from historical stage; absent from the audited FX 1.9.12 installed tree"
     },
     {
       "name": "emulator.json",
@@ -187,7 +258,14 @@
         "SteamOS 0.4.5 aarch64"
       ],
       "bundled": false,
-      "installation": "Debug local replay only"
+      "installation": "Debug local replay only",
+      "buildVersion": "UNVERIFIED",
+      "provenanceStatus": "UNVERIFIED",
+      "redistributionStatus": "UNVERIFIED",
+      "plannedBundlePath": "Contents/Resources/Deployment/RF-FEX/emulator.json",
+      "guestInstallPath": "~/.local/share/HD2FXLauncher/compatibility/FEX-RF/emulator.json",
+      "plannedDeployment": "Verify bytes and SHA-256, transfer over authenticated SSH/SFTP, stage and activate through FEX transaction",
+      "rollback": "Restore the identity-bound prior tree and any changed managed Steam selection using receipts; stop on drift"
     },
     {
       "name": "toolmanifest.vdf",
@@ -201,7 +279,14 @@
         "SteamOS 0.4.5 aarch64"
       ],
       "bundled": false,
-      "installation": "Debug local replay only"
+      "installation": "Debug local replay only",
+      "buildVersion": "UNVERIFIED",
+      "provenanceStatus": "UNVERIFIED",
+      "redistributionStatus": "UNVERIFIED",
+      "plannedBundlePath": "Contents/Resources/Deployment/RF-FEX/toolmanifest.vdf",
+      "guestInstallPath": "~/.local/share/HD2FXLauncher/compatibility/FEX-RF/toolmanifest.vdf",
+      "plannedDeployment": "Verify bytes and SHA-256, transfer over authenticated SSH/SFTP, stage and activate through FEX transaction",
+      "rollback": "Restore the identity-bound prior tree and any changed managed Steam selection using receipts; stop on drift"
     },
     {
       "name": "fex-compat-tool",
@@ -215,7 +300,14 @@
         "SteamOS 0.4.5 aarch64"
       ],
       "bundled": false,
-      "installation": "Debug local replay only"
+      "installation": "Debug local replay only",
+      "buildVersion": "UNVERIFIED",
+      "provenanceStatus": "UNVERIFIED",
+      "redistributionStatus": "UNVERIFIED",
+      "plannedBundlePath": "Contents/Resources/Deployment/RF-FEX/fex-compat-tool",
+      "guestInstallPath": "~/.local/share/HD2FXLauncher/compatibility/FEX-RF/fex-compat-tool",
+      "plannedDeployment": "Verify bytes and SHA-256, transfer over authenticated SSH/SFTP, stage and activate through FEX transaction",
+      "rollback": "Restore the identity-bound prior tree and any changed managed Steam selection using receipts; stop on drift"
     }
   ],
   "downloads": [
@@ -237,5 +329,17 @@
       "license": "upstream notices retained; direct download",
       "installer": "existing ProtonJERelease"
     }
-  ]
+  ],
+  "rfPackagingPlan": {
+    "status": "UNVERIFIED",
+    "preferred": "APP_BUNDLE",
+    "fallback": "VERIFIED_DOWNLOAD",
+    "fallbackSource": "UNVERIFIED",
+    "publicRedistribution": "UNVERIFIED",
+    "bundlePathStatus": "PROPOSED",
+    "bundleRoot": "Contents/Resources/Deployment/RF-FEX",
+    "guestRoot": "~/.local/share/HD2FXLauncher/compatibility/FEX-RF",
+    "arm64Runtime": "PRESERVE_SYSTEM_COMPONENT",
+    "inventoryScope": "Historical pinned sample files. Complete public payload, companion dependencies and approved package hashes are UNVERIFIED."
+  }
 }

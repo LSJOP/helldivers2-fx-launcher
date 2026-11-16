@@ -1,7 +1,7 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.29** · Updated: **2026-11-15**.
-Change: combine GitHub delivery and version release gates with reference fidelity, product naming and workflow artwork review. Instruction version is independent of App version.
+Instruction version: **v1.2.30** · Updated: **2026-11-16**.
+Change: define the first-run hybrid component strategy and retain existing delivery and UI gates. Instruction version is independent of App version.
 
 ## Authority and task lifecycle
 
@@ -22,6 +22,14 @@ Change: combine GitHub delivery and version release gates with reference fidelit
 - FEX readiness requires helper/integration/integrity and runtime capability evidence, not existence alone. Preserve official FX FEX. Restore only identity-bound owned changes with integrity receipts and conflict checks.
 - SessionCredentialManager owns independent SSH/sudo secrets. Main includes optional AES-GCM persistence alongside session memory; this does not authorize Keychain access. Persistent storage uses installation-random authenticated encryption, per-target/per-role binding, private directories/files, durable rejected/forgotten markers and visible errors. Never store secrets in source, bundle, defaults, argv, environment or logs; actual challenge plus verified identity is required before saving. No automatic legacy credential migration/deletion.
 - Launcher updates retain the independent Update Helper, project-trusted Ed25519/SHA-256 verification, HTTPS, safe archive paths, verified metadata binding and worker-aware relaunch. Do not update FX/Guest/game through the launcher updater. Unconfigured service stays visibly unconfigured, never “up to date.” Do not disable verification to make installation work. Developer ID/notarization and project signature trust are separate concerns.
+
+## First-run component deployment
+
+- Bundle reviewed RF FEX and configuration templates in the App by default. Use a verified network download as the fallback for RF FEX. First-run setup must not ask ordinary users to supply RF files or point to a developer's local directory.
+- For all bundled deployment resources record source, build/version, license, bytes and SHA-256. Public artifacts require confirmed redistribution rights and verified package provenance. Historical samples and unresolved companion files stay out of public bundles and download endpoints.
+- Continue using the existing pinned automatic downloads for Proton-JE and SteamLinuxRuntime_4. Preserve the original SteamLinuxRuntime_4-arm64. Reuse FEX staging, identity checks, transactions and recovery. Keep managed RF in its own persistent path under Guest /home, outside Steam's managed depot.
+- Preserve valid RootFS configuration. Treat emulator registration, provider-derived configuration, and effective runtime environment as separate evidence. Do not force an unverified FEX_ROOTFS=/ or edit historical success images.
+- Verify first installation from a clean test image, actual FEX loading, and unchanged approved state after two normal restarts. Re-run setup to confirm verified components are skipped. Configuration completion and game startup are separate acceptance results.
 
 ## UI, localization and documentation
 
