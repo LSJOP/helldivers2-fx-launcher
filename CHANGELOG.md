@@ -4,7 +4,7 @@
 
 All notable changes to the HELLDIVERS 2 FX Launcher Native App are recorded here, newest first. Unreleased entries have no release date. This file is the single source of truth for user-facing release notes; the README summary, GitHub Release notes and the future Sparkle appcast reuse this reviewed text. Do not paste raw, unreviewed Git commit messages into it.
 
-v1.0.2 (2026111501) was published on 2026-11-15. Fresh SteamOS deployment, single-player, EAC and multiplayer were not revalidated.
+v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgrade, automatic restart and production failure recovery have not been validated.
 
 ## Unreleased
 
