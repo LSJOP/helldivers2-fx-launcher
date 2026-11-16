@@ -1,9 +1,11 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.30** · Updated: **2026-11-15**.
-Change: support setup-first navigation and patch archive compatibility guidance. Instruction version is independent of App version.
+Instruction version: **v1.2.31** · Updated: **2026-11-16**.
+Change: require shared feature registry and handoff updates for all Codex work. Instruction version is independent of App version.
 
 ## Authority and task lifecycle
+
+- Every Codex must first review [development status](docs/DEVELOPMENT_STATUS.md), [handoff](docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md) and [feature registry](docs/FEATURE_REGISTRY.md), then inspect current code and relevant branches/PRs before deciding whether development is needed. After development, repair, testing or integration, update the affected feature status and handoff with scope, source commit/branch, evidence/date and remaining work; distinguish main from unmerged work and fixtures from live acceptance. Preserve historical reports.
 
 - GitHub main source, this file, [DEVELOPMENT_STATUS](docs/DEVELOPMENT_STATUS.md) and [NATIVE_APP_DEVELOPMENT_HANDOFF](docs/NATIVE_APP_DEVELOPMENT_HANDOFF.md) are authoritative. Consult status and handoff when relevant; inspect current source for behavior. Chats, memory, old branches and historical reports are supporting evidence, never proof of current behavior.
 - Use `bash script/git_delivery.sh preflight` for Git inventory and `bash script/git_delivery.sh verify BRANCH` for remote containment after push. Begin with `git status --short --branch`, `git branch -a -vv`, `git remote -v`, `git log -5 --oneline`, `git worktree list --porcelain` and fetch. Inspect related worktrees for staged, unstaged, untracked and unpushed work. Preserve it with recoverable backups before integration. On network failure distinguish local main from last-known origin/main.
