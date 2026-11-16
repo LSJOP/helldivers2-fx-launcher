@@ -8,6 +8,8 @@ v1.0.2 (2026111501) was published on 2026-11-15. Fresh SteamOS deployment, singl
 
 ## Unreleased
 
+- Preserve the reviewed FX 1.9.12 environment evidence and comparison as historical documentation; this does not validate a new deployment.
+
 ### v1.0.3 — 2026-11-15
 
 - Simplify software updates to a single download-and-install action with progress, retry and clearer errors.
