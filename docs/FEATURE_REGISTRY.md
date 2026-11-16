@@ -10,6 +10,7 @@
 
 | 功能及位置 | 状态、所属提交和 main 归属 | 测试/证据及剩余工作 |
 | --- | --- | --- |
+| 固定分支、工作树和共享进度：`AGENTS.md`、`docs/NATIVE_DEVELOPMENT.md`、`.github/workflows/native-release-check.yml` | 已整合 main；`dev/core` 的 PR #18/#19 | 2026-11-16 文档检查 15/15、相对链接、diff、敏感信息模式扫描及工作流 YAML 语法通过；远端三个固定开发分支与 main 同步。未运行 App 回归或实际触发工作流；历史工作树逐步复核，未经授权不创建临时分支。 |
 | 导航、仪表盘、状态灯：`native-app/Models/Navigation.swift`、`native-app/Views/DashboardView.swift` | 已整合 main；`b7e8a20`，状态灯历史 `b789642` | 隔离状态矩阵与截图有历史记录；进程检测不等于 EAC 或联机成功，实际状态矩阵仍需验收。 |
 | 战术布局、美术及语言：`native-app/Views/FirstRunSetupView.swift`、`native-app/Resources/native-locales.json`、`docs/images/manifest.json` | 已整合 main；`6a83b6c`、`da3e149` | 2026-11-16 十语言静态检查、README 截图来源检查通过；动态文案和各语言自然度需人工复核。 |
 | FX 发现、选择与身份：`native-app/Core/FXDiscoveryService.swift`、`native-app/Services/FXSelectionManager.swift` | 已整合 main；`3ad6693` 等 | 2026-11-16 核心/身份隔离检查通过；实际 FX/Guest 身份、版本差异及新环境仍需独立验证。 |
