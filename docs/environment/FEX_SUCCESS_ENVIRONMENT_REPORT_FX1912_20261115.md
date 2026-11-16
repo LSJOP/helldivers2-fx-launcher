@@ -1,10 +1,10 @@
 # FX SteamOS 历史成功环境检查 · FX 1.9.12
 
-文件名按任务约定保留 `20261115`；实际检查跨 **2026-11-15 至 2026-11-16 00:18（Asia/Shanghai）**。参照 [FX 1.9.9 未配置环境报告](FEX_BASELINE_REPORT_20261115.md)，保留环境概览、FEX/RootFS/兼容工具、文件哈希及安装/历史证据结构，并展开持久化检查。配套：[逐项对比与自动部署建议](FEX_ENVIRONMENT_COMPARISON_FX199_VS_FX1912.md)。
+文件名按任务约定保留 `20261115`；实际检查跨 **2026-11-15 至 2026-11-16 00:40（Asia/Shanghai）**。参照 [FX 1.9.9 未配置环境报告](FEX_BASELINE_REPORT_20261115.md)，保留环境概览、FEX/RootFS/兼容工具、文件哈希及安装/历史证据结构，并展开持久化检查。配套：[逐项对比与自动部署建议](FEX_ENVIRONMENT_COMPARISON_FX199_VS_FX1912.md)。
 
 **结论：已定位持久保存在原镜像 `/home` 分区的 RF FEX、Proton-JE、Runtime 4、Steam 工具映射和启动参数；历史启动日志明确使用该路径链。不能据此声称已找出最小必要组件，也未重新验证游戏。正式盘中的 `container_environment.FEX_ROOTFS` 是空字符串，游戏配置中的 RootFS 是 `/usr/share/guestos/fex-mesa/`；本次没有发现正式盘将该参数持久写成 `/` 的直接证据。**
 
-证据等级：**在盘实测**为本次读取文件/哈希；**宿主日志**为已有启动记录；**历史运行**为 Steam 启动记录或 FX 统计；**用户确认**为多次重启仍正常运行的说明；**静态机制**为脚本内容所表达的行为；**未确认**为缺少当前进程/容器实测。等级不互相替代。
+证据等级：**在盘实测**为本次读取文件/哈希；**宿主日志**为已有启动记录；**历史运行**为 Steam 启动记录或 FX 统计；**用户确认**为多次重启仍正常运行的说明；**SSH 实测**为用户重开 SSH 后的现场只读采样；**静态机制**为脚本内容所表达的行为；**未确认**为缺少当前进程/容器实测。等级不互相替代。
 
 ## 1. 环境概览与保护边界
 
@@ -12,8 +12,9 @@
 
 - 2026-11-15 初查：`/Applications/FX Steam Launcher.app` 的 bundle ID 为 `es.fxgam.steamac`，版本/构建均为 `1.9.12`；宿主父进程 PID 15613、VM PID 15617，`lsof` 明确显示 VM 打开 `/Volumes/Thunderbolt2TB/steamos.img`。日志构建标识为 `1.9.12+7d9b6681c9`。E1。
 - 对照实例是 `/Applications/FX Steam Launcher测试用.app`、`es.fxgam.steamtc`、1.9.9、VM PID 11593，实际打开 `steamos-1.img`，由测试 gvproxy 提供端口 2223。所有现有 SSH ControlMaster 均指向 2223，**没有把这些连接用于正式盘检查**。
-- 正式实例的偏好为 `sshEnabled=false`，启动命令 `steamac.ssh=0`，gvproxy `-ssh-port -1`；控制台记录 sshd units runtime-masked。没有尝试密码认证、开启 SSH、绕过 SSH 开关或启动其他 Guest 服务；用户提供的密码未写入文件或命令。
-- 使用本机**已存在**的 `/tmp/hd2-offline-venv/bin/python -B` 与 `dissect.extfs`，以 Python `open(image, 'rb')` 解析 GPT 和 ext4 inode。没有安装软件、挂载镜像、回放 journal、fsck、修改组件或运行 Guest 程序。
+- 首轮离线检查时，正式实例的偏好为 `sshEnabled=false`，启动命令 `steamac.ssh=0`，gvproxy `-ssh-port -1`；控制台记录 sshd units runtime-masked。没有尝试密码认证、开启 SSH、绕过 SSH 开关或启动其他 Guest 服务；用户提供的密码未写入文件或命令。
+- 用户随后重新打开正式实例 SSH；11-16 00:33 后宿主进程与打开文件绑定同一 App、原 `steamos.img` 和端口 2222。采用已有 host key 严格校验，通过 SSH 标准输入运行只读 Python 采集，不上传脚本、安装软件或启动游戏；采集前后核对同一 Guest/boot 身份。SSH 登录及系统正常活动可能产生记账或日志写入，故不声称镜像字节完全不变。E9–E12。
+- 首轮使用本机**已存在**的 `/tmp/hd2-offline-venv/bin/python -B` 与 `dissect.extfs`，以 Python `open(image, 'rb')` 解析 GPT 和 ext4 inode。首轮没有安装软件、挂载镜像、回放 journal、fsck、修改组件或运行 Guest 程序。
 - 首次读取时原 VM 已在运行。继续检查时正式 VM 已退出，`lsof steamos.img` 不再出现 VM；本任务没有发出停止或启动命令。00:18 在无 VM 打开该盘的状态重新读取，所采组件/配置文件 SHA-256 与首次读取一致。原镜像 inode `1734248`、大小 `453523800064` 字节；最后一次读取前后 `mtime_ns=1794759188134160317` 一致。这里只证明本次句柄只读和重复读取一致，**没有生成完整镜像校验或可恢复备份**。E2/E3。
 - 活跃 VM 自身曾写盘；不能声称整个检查期间镜像完全没有任何变化。未冻结文件系统或作冷启动实验。图像、登录状态、密码、令牌、账号 ID、机器身份及完整 VDF 不入报告/Git。
 
@@ -24,14 +25,14 @@
 | FX App | `/Applications/FX Steam Launcher.app`，1.9.12，`es.fxgam.steamac` | Info.plist、宿主日志 E1 |
 | 原镜像 | `/Volumes/Thunderbolt2TB/steamos.img`，453,523,800,064 字节 | VM 打开文件 + GPT/stat；不是测试盘 |
 | SteamOS | 0.4.5；BUILD_ID `20261022.6150929` | 本次启动日志选中 `rootfs-B`，`/dev/vda5` |
-| 内核 | App 提供的 `Image` 内含 `Linux version 7.2.9-steamac`；构建时间 Tue Oct 6 18:59:28 UTC 2026 | 启动日志指向该 Image，静态读取 ARM64 Linux Image；没有现场 `uname -a` |
-| CPU 架构 | ARM64/aarch64 内核和 FEX ELF（e_machine=183） | 静态架构与历史构建记录一致；本次没有 Guest `uname -m` |
-| Guest CPU 数量 | VM 分配 8 vCPU | 宿主启动日志；Guest 在线 CPU 数量未重新实测 |
-| Guest 内存 | VM 分配 12,288 MiB，GPU budget 6,144 MiB | Guest 当前 MemTotal/MemAvailable **未确认**；不把宿主配置当作 `free` 输出 |
-| Swap | **未确认** | 无当前 `/proc/meminfo`；不照抄 1.9.9 的 5.8 GiB |
+| 内核 | Linux `7.2.9-steamac`，构建时间 Tue Oct 6 18:59:28 UTC 2026 | Guest `uname` 与 App Image 静态记录一致；E9 |
+| CPU 架构 | Guest `aarch64`；FEX ELF e_machine=183 | SSH 实测和 ELF 静态记录；E9 |
+| Guest CPU 数量 | 8 个在线 CPU，编号 0–7 | Guest 在线 CPU 和宿主分配均为 8；E9 |
+| Guest 内存 | Guest MemTotal 12,216,624 KiB，采样时 MemAvailable 10,670,432 KiB | VM 分配 12,288 MiB；瞬时可用量会变化，E9 |
+| Swap | `/dev/zram0` 6,108,156 KiB，采样使用 0 KiB | `/proc/swaps`、`/proc/meminfo`；E9 |
 | 图形 | 启动记录 `Venus → KosmicKrisp`、`steamac.gfx=vulkan` | 宿主日志与 1.9.12 历史会话一致 |
-| GPU | 历史统计 Apple M4 Pro，16 GPU cores；VM driver `kosmickrisp` | 宿主设备信息；Guest `vulkaninfo` 设备/驱动版本未确认 |
-| Vulkan ICD | **正式 Guest 的 ICD 清单及实际选中 ICD 未确认** | 未解析 Btrfs `/usr` 完整文件树；不能用测试盘 ICD 清单代替 |
+| GPU | 宿主 Apple M4 Pro、16 GPU cores；FX 启动日志 Venus → KosmicKrisp；Guest 现有日志报告 Venus 设备 `0x106b:0x0064` | Steam 进程映射 virtio Vulkan 驱动；不是游戏进程加载证据；E9–E11 |
+| Vulkan ICD | 原生 aarch64 freedreno、virtio；fex-mesa 中 x86 和 x86_64 的 freedreno、virtio | 共 6 个 ICD JSON；当前 Steam 映射 `/usr/lib/libvulkan_virtio.so`，游戏实际 ICD 未采样；E9 |
 | 图形实现文件 | `Contents/Frameworks/libvulkan_kosmickrisp.dylib` | 本次 SHA-256 见第 5 节；没有加载映射实测 |
 
 ## 2. FEX、RootFS 和兼容工具
@@ -48,9 +49,9 @@
 
 主程序是 `F/usr/bin/FEX`，4,597,568 字节，SHA-256 `ce93cadae7b7d3ef01376ba2acd58aedb602a7fc077e49592179766d13c294bf`。本次读取 ELF GNU build-id 为 `bb40813f814d70221557560c847dc90ef956010a`，二进制包含 `eac-main-20261022`。未执行 `--version`，版本字符串不是当前执行证明。E2/E4。
 
-`F/usr/bin/FEXBash` 是 659,144 字节 ARM64 ELF，GNU build-id `60f5895a7648b51d401d0e4dad326255ad1300b7`，与 1.9.9 报告中的 `/usr/bin/FEXBash` 631 字节脚本是不同路径/角色。正式 Guest `/usr/bin/FEXBash` 本次未读取。
+`F/usr/bin/FEXBash` 是 659,144 字节 ARM64 ELF，GNU build-id `60f5895a7648b51d401d0e4dad326255ad1300b7`，与 1.9.9 报告中的 `/usr/bin/FEXBash` 631 字节脚本是不同路径/角色。正式 Guest `/usr/bin/FEXBash` 同为 631 字节脚本，SHA-256 `8a907f46e455bf26d6bf2f2c09cf28e4aed6e2105a74c870a3d61c49b554e2d1`，与 1.9.9 基线相同；脚本转入 Steam 库的 FEX 和 Runtime，不能单独视为已部署 RF。E9。
 
-安装目录 `F/usr/bin` 未见独立文件 `FEXInterpreter`，注册入口为 `./usr/bin/FEX`。保留源码中有 `Source/Tools/FEXInterpreter/`；源码目录名不等于另有一套已加载解释器。系统 PATH 上是否另有 `FEXInterpreter` **未确认**。
+安装目录 `F/usr/bin` 未见独立文件 `FEXInterpreter`，注册入口为 `./usr/bin/FEX`。保留源码中有 `Source/Tools/FEXInterpreter/`；源码目录名不等于另有一套已加载解释器。现场 PATH 及显式检查的 `/usr/bin`、`/usr/local/bin` 未找到 `FEXInterpreter` 或 FEX 主程序；这不等于穷尽全系统所有目录。E9。
 
 RF 历史组共十文件，实测如下。**正式安装目录有九个与 stage 相同；不可写成“十个均已安装”。** E2/E4。
 
@@ -129,7 +130,7 @@ mtime 为 **2026-11-14 14:09:49.630708 +08:00**，与上述历史启动相邻；
 }
 ```
 
-`F/rootfs` 本次目录为空，脚本自身也说明使用系统 fex-mesa 时无需该目录。**空目录不等于缺少有效 RootFS；反之有目录也不证明能启动。** `/usr/share/guestos/fex-mesa` 的实际文件完整性、图形 provider 和 x86 loader 本次未核验。
+`F/rootfs` 本次目录为空，脚本自身也说明使用系统 fex-mesa 时无需该目录。**空目录不等于缺少有效 RootFS；反之有目录也不证明能启动。** SSH 已核验 `/usr/share/guestos/fex-mesa/graphics_provider.json` 和 x86_64 loader 存在及其哈希（第 7.1 节）；整个 provider 的完整性及容器最终使用情况仍未确认。
 
 另有 `/home/steamos/.config/fex-emu/Config.json`，RootFS 为 `/run/user/1000/nested_plasma/fexrootfs//`，mtime 2026-10-22；不能把这个桌面配置当成游戏配置。未检查到用户 `.bashrc`/`.bash_profile` 中设置 FEX_ROOTFS；用户 `environment.d` 不存在；A/B 两个 `/etc` overlay upper 的 `environment`、`environment.d`、`profile.d` 未见覆盖。检查范围不涵盖 Btrfs 下全部系统默认配置。
 
@@ -280,19 +281,39 @@ FEX_DISKCACHE=0 VKD3D_CONFIG=single_queue https_proxy=http://192.168.127.254:789
 | 调查项 | 结论 | 证据边界 |
 | --- | --- | --- |
 | FEX 实际部署目录 | `F`，七个 bin + FEXCompatTool + ConfigTemplate 与 RF stage 相同 | 在盘哈希；Steam 历史命令指向此目录 |
-| 是否持久文件系统 | 这些文件直接存于 GPT `home` ext4 分区；起止 LBA `46925824–885788631` | 直接解析磁盘 inode；不是宿主 `/tmp` 或只存在内存的文件 |
+| 是否持久文件系统 | `findmnt` 实测 `/home` 为 `/dev/vda8` ext4 rw；FEX 和 Steam 实际路径属于该文件系统 | 与原镜像 GPT home 分区和 inode 分析一致；E2、E9 |
 | FEX 目录符号链接 | 所查安装目录及九个 RF 文件为目录/普通文件，无 stage 替代链接 | 不代表全树无符号链接；Runtime/Steam 另有正常链接 |
-| OverlayFS | FX init 脚本声明只读 Btrfs rootfs、可写 `/etc` overlay、只读 `/usr` overlay | `/etc` upper 位于 var-A/B 的 `lib/overlays/etc/upper`；`/usr` lower 为 App 的只读 EROFS layer + 系统 `/usr`。无现场 mountinfo |
-| FEX 与 overlay 的关系 | RF 产物位于独立 `home`，不是往只读 `/usr` layer 换文件 | 没有证据要求通过 `/etc` overlay 保存 RF 主程序；不能从静态盘断言运行时完全无 bind mount |
+| OverlayFS | 现场 `/` 为 Btrfs rw、`/home` ext4 rw、`/var` ext4 rw；`/etc` overlay rw、`/usr` overlay ro | `/etc` upper 在 `/newroot/var/lib/overlays/etc/upper`；`/usr` lower 含 FX layer；与 init 起始只读挂载不同，应以现场挂载状态为准。E9 |
+| FEX 与 overlay 的关系 | RF 产物的实际路径及设备号属于独立 `/home`，不依赖写入只读 `/usr` layer | 已检查安装目录和九文件本身无 stage 替代符号链接；不代表全树无链接或游戏容器无 bind mount。E9 |
 | Steam 自动加载 | `F/toolmanifest.vdf` + `emulator.json` 注册包装器；JE toolmanifest 依赖 R4；Steam VDF 保存选择 | 本次 Steam 启动日志重新形成对应 command prefix，支持“下次启动重新发现”机制 |
 | RootFS 持久化 | 模板、wrapper、emulator.json 及 per-game Config.json 在 `/home` 持久保存；wrapper 每次启动重建子进程环境/配置 | 不是把环境变量永久留在内存；容器最终值未确认 |
-| systemd 用户服务 | 所查 `~/.config/systemd/user/default.target.wants` 只有 `gamemoded.service` 链接；未见用户自定义 FEX 恢复服务 | 未全面解析系统 `/usr/lib/systemd/user` 或运行中 units |
-| 系统服务 | A/B `/etc` upper 见 sshd、xrdp、devkit、Steam/SteamVR web debug 转发等 enablement；未见 FEX 自动部署服务 | `/usr` 系统默认服务未全面检查；当前 SSH 还受 init runtime mask 控制 |
+| systemd 用户服务 | `steam.service` 正运行，加载 `/usr/lib/systemd/user/steam.service.d/50-steamac.conf`；启动前调用 FX 图形、Steam 客户端等脚本 | 当前进程环境及本次启动 journal 可见相应执行；不是 FEX 自动重部署证据。E9–E11 |
+| 系统服务 | 已查 A/B `/etc` upper 及限定范围内 systemd/profile/cron、FX 脚本，未发现 FEX 自动恢复服务 | 扫描有限，不等于穷尽任意服务或脚本；SSH 由用户在首轮后重新打开。E9–E11 |
 | FX 初始化 | App `initramfs.cpio.gz` 的 `init` 负责 A/B、overlay、SSH 开关和切换根 | 读取源码而未执行；已有启动日志确认选 B 与只读 layer |
 | 自动恢复/重部署 FEX | **未发现已检查路径中的直接证据；完整机制未确认** | 保留构建目录不等于存在开机恢复任务；不能建议凭空新增服务 |
 | 多次重启有效 | 用户确认；多日期 1.9.12 会话、持久文件与重新注册链相互支持 | 没有逐次冷启动身份/哈希，未实施重启实验 |
 
-读取的 `init` 中关键语句位置：726–727 只读 Btrfs；773–777 var 与 `/etc` overlay；791–796 EROFS layer 与只读 `/usr` overlay；902–915 SSH runtime mask。脚本 SHA-256：`9db23a61489e3a978825e7c2112554159e7b501f48c87cb8e83dd01161e896b2`。这揭示 FX 的文件系统组织，不表示这些语句都是为 HELLDIVERS 2 特别修改的。
+读取的 `init` 中关键语句位置：726–727 只读 Btrfs；773–777 var 与 `/etc` overlay；791–796 EROFS layer 与只读 `/usr` overlay；902–915 SSH runtime mask。脚本 SHA-256：`9db23a61489e3a978825e7c2112554159e7b501f48c87cb8e83dd01161e896b2`。这是 init 的初始挂载语句；现场 `/` 已为 rw，不能把初始状态当成当前状态。它揭示 FX 文件系统组织，不表示这些语句都是为 HELLDIVERS 2 特别修改的。
+
+### 7.1 重开 SSH 后的启动机制和文件实测（2026-11-16）
+
+`steam.service` 的 drop-in `/usr/lib/systemd/user/steam.service.d/50-steamac.conf` SHA-256 `f18fc2a1d47df8465fa64c9c6156b5bb5fd487bf7ebee12572b1ad95643be2a7`，设置 `VKD3D_DISABLE_EXTENSIONS=VK_KHR_shader_atomic_int64,VK_EXT_shader_image_atomic_int64`，并在 Steam 启动前调用 FX 的 `steam-client`、`steam-gfx-env`、`steam-gfx-path` 等。现场 Steam 环境有该扩展禁用值和 `MESA_LOADER_DRIVER_OVERRIDE=zink`；已存在的本次启动 journal 也记录图形环境初始化。仅静态读取脚本及既有日志，没有运行脚本或 `vulkaninfo`。这些是当前 Steam 进程证据，不能推断历史每次游戏容器都继承相同值。E9–E11。
+
+`/usr/lib/steamac/steam-gfx-path` 的脚本内容显示：根据 Vulkan/DXMT 模式处理 Proton 目录中的 DXVK/VKD3D 图形文件，并保留/恢复相应备份；这属于 FX 的现有启动机制，**不是已发现的 RF FEX 恢复机制**。本次 JE 的四个图形 DLL 哈希均与仓库批准清单一致，具体见下表；这只覆盖四文件，不证明 JE 全树或此前每次启动的完整状态。`/home/steamos/.config/steamac/game-profiles.json` 与运行时副本当前均为空 games 表；其他可能的 FX 配置或历史值未穷尽。E10–E11。
+
+当前 Steam 环境中 `STEAM_RUNTIME_LIBRARY_PATH` 值为 `No compat data path?`；已有启动 journal 记录从 FEX wrapper 取值时出现该文本。脚本检查显示此 wrapper 要求 compat data path。这里只记录现象及代码关联，不将其认定为失败原因，也未修改。当前未观察到 FEX、Wine、pressure-vessel 或游戏进程；游戏容器最终环境、挂载和加载映射仍未确认。
+
+| 文件（JE 路径相对上文 JE） | SHA-256 | 证据 |
+| --- | --- | --- |
+| `/usr/share/guestos/fex-mesa/graphics_provider.json` | `ee9a8cdc6c19a194246c4e8695245ec84a72d85e5c907278a9c82a73cc44c8e7` | provider 描述 x86/x86_64 库目录，E9 |
+| `/usr/share/guestos/fex-mesa/usr/lib/ld-linux-x86-64.so.2` | `85603f532debd89e06c59e819993924949c38f4e2fb4da2db897515a0a5f3687` | x86_64 loader 存在；不代表整树完整，E9 |
+| `/usr/lib/libvulkan_virtio.so` | `f5d470a28384e0a05f2e6dad71c663edbe2f3180ee5194a7a7adf3be243622c9` | 现场 Steam 进程映射；内含 Mesa 26.3.0-devel 标识，E9–E10 |
+| `files/lib/wine/dxvk/x86_64-windows/d3d11.dll` | `70d1993597a50f8f347009b23e94e915719db01d0a0ddfba573e1316b27eeb7a` | 与批准清单一致，E11 |
+| `files/lib/wine/dxvk/x86_64-windows/dxgi.dll` | `b2c30079b15dc58d09b7998545ce74a9224e36ac548618dc2c170376b644fdba` | 与批准清单一致，E11 |
+| `files/lib/wine/dxvk/x86_64-windows/d3d10core.dll` | `f4175e845a2cf37b140fbdd396914cdfe25a660279893456d656342d3aeaa091` | 与批准清单一致，E11 |
+| `files/lib/wine/vkd3d-proton/x86_64-windows/d3d12.dll` | `8fd548a42b9d168b490e773ae162ab346b010866225b3e3b44e9f56268949b4f` | 与批准清单一致，E11 |
+
+重启后的 SSH 采样再次核验九个安装 RF 文件、Steam 映射与参数、JE 关键文件、Runtime 版本/入口和游戏 EXE；第十个 `VERSIONS.txt` 在安装目录仍缺失。此时已是新的运行时观测，与用户提供的历史多次重启确认相互支持，但不替代逐次重启游戏验收。E11。
 
 ## 8. 命令、证据索引与未确认项
 
@@ -307,6 +328,8 @@ lsof -nP /Volumes/Thunderbolt2TB/steamos.img
 /tmp/hd2-offline-venv/bin/python -B /Volumes/Thunderbolt2TB/绝地潜兵脚本/审计资料/FX1912-readonly-20261115/supplement.py
 ```
 
+SSH 补充阶段使用 `ssh -T` 复用严格校验的用户授权连接，通过标准输入运行 `python3 -I -B -`，只读取 `/proc`、`findmnt`、`systemctl show`、已有 journal、配置和文件哈希；未在 Guest 写入采集脚本。仅收集必要字段并脱敏，私有原始证据不入 Git。
+
 `plistlib` 只取 App 版本/偏好中镜像与 SSH 等允许字段；`hashlib.sha256` 对文件流/提取字节计算哈希；`gzip` + CPIO 解析 App initramfs 内容，未运行其中的脚本。ext4 解析记录使用分区内 `/steamos/...`，本报告补上 Guest 挂载前缀 `/home`。初次采集脚本曾因库对象没有 `mode` 属性未保存部分哈希，修正采集代码后已重读；报告只采用成功结果。解析失败与缺失文件严格区分。
 
 | 编号 | 来源 |
@@ -319,6 +342,10 @@ lsof -nP /Volumes/Thunderbolt2TB/steamos.img
 | E6 | `initramfs-selected.json`，来源 App `Contents/Resources/initramfs.cpio.gz`；没有从原盘提取敏感系统文件 |
 | E7 | `/Volumes/Thunderbolt2TB/绝地潜兵脚本/HD2-StonkGuy-Fork-20261024/goal-rf-20261026/active-components.txt`，以及 [已有 11-14 审计](FX199_RF_REPAIR_20261114.md)、[历史基准](HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)；均按各自时间和目标使用 |
 | E8 | [1.9.9 原始报告](FEX_BASELINE_REPORT_20261115.md) SHA-256 `a7672ec23f15df780421a750753016dd3e747e20c86b619cd9cea72152490d79`；本次不改写它，也不拿当前已变化的 2223 环境补填原始空白 |
+| E9 | `ssh-observation-20261116.json`：Guest 身份一致性、系统/挂载/进程及图形 provider 只读采样 |
+| E10 | `ssh-startup-20261116.json`：Steam/FX 启动脚本、服务与图形文件静态采样 |
+| E11 | `ssh-persistence-20261116.json`：重启后关键文件哈希、映射、进程与已存在 journal 采样 |
+| E12 | `ssh-host-binding-20261116.json`：用户重新开启 SSH 后的 App、gvproxy、原镜像宿主绑定 |
 
 本机采集目录：`/Volumes/Thunderbolt2TB/绝地潜兵脚本/审计资料/FX1912-readonly-20261115`。原始二进制、完整登录配置、镜像及私人日志不提交 Git；报告保留来源路径和已审核摘录供复核。
 
@@ -331,8 +358,12 @@ lsof -nP /Volumes/Thunderbolt2TB/steamos.img
 | `initramfs-selected.json` | `53af9f631e1e16e1aeac2c73fafd0e961467fdf564aaae35c20e3fa55821fbf6` |
 | `inspect_disk.py` | `fe5299ef1f1367a4cb02fc210f1f0ac310357e76175dc5f411864f42fa90dcdc` |
 | `supplement.py` | `0ade47602e6f70f79131525d92512acbc7f20ac2fc13d51b5ce5f86f2dc819a2` |
+| `ssh-observation-20261116.json` | `4f343bf352ff7f78351b290a7bba36d0ea1156e29cd11832f357d80d35747e64` |
+| `ssh-startup-20261116.json` | `01e7619b10bf8e799aea8aa18fa705e4f52587a4f1aef77fb9044a8959d6c5fb` |
+| `ssh-persistence-20261116.json` | `c591b50512271a89a3db778fd2eda16cb0e8d39d053949534631c3bc4a085d66` |
+| `ssh-host-binding-20261116.json` | `e1eb240d40ef65084ebe2326d3f08d344cd04f535b8b38c9b7b3e226c34475c2` |
 
 
-**仍需另行验证：** 当前 Guest 可见内存/Swap、ICD/图形驱动详情、系统全局 FEX/FEXInterpreter 清单、provider/loader 完整性、实际 `/proc/exe/maps/environ`、容器 FEX_ROOTFS 最终值及优先级、所有系统默认服务、完整 RF 可复现构建、全 Runtime/Proton 树完整性、逐项撤除因果实验及真实恢复。它们不妨碍记录本次观察，但阻止将这份记录升级为“最小自动部署方案已证明”。
+**仍需另行验证：** 游戏实际 ICD/图形驱动详情、系统全局 FEX/FEXInterpreter 完整清单、provider/loader 全树完整性、游戏实际 `/proc/exe/maps/environ`、容器 FEX_ROOTFS 最终值及优先级、所有系统默认服务、完整 RF 可复现构建、全 Runtime/Proton 树完整性、逐项撤除因果实验及真实恢复。它们不妨碍记录本次观察，但阻止将这份记录升级为“最小自动部署方案已证明”。
 
-本任务只新增环境文档，不改 App/本地化/UI，所以无需新 UI 资源、截图或 App 重构建。未修改 FX/Guest 配置或镜像，未合并 main，未发布 Release；提交与远端状态以 Git 交付记录为准。
+本任务只新增环境文档，不改 App/本地化/UI，所以无需新 UI 资源、截图或 App 重构建。未有意修改 FX/Guest 组件或配置；正常 VM 活动及 SSH 登录可能写入镜像，未合并 main，未发布 Release；提交与远端状态以 Git 交付记录为准。

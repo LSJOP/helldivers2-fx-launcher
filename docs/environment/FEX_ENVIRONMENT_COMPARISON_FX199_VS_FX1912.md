@@ -12,7 +12,7 @@
 | FX 1.9.12 历史成功环境 | `/Applications/FX Steam Launcher.app`；`es.fxgam.steamac`；`/Volumes/Thunderbolt2TB/steamos.img`；inode 1734248 | 本次只读文件观测、11-14 实际启动日志、11-15 Steam 重新注册日志、历史 1.9.12 会话和用户确认 |
 | 排除的第三套状态 | `steamos_test.img` | 11-14 经 RF/RootFS 修复的 1.9.9 测试盘，不是“新用户未配置”对照；不借用其 stock FEX 哈希填入 steamos-1.img |
 
-正式盘初查在运行但 SSH 关闭，故没有向它建立连接或运行命令；其后 VM 已退出，再用只读文件句柄复查。没有启动/停止 VM、游戏、组件探针，未安装、清理或部署。只读检查并非对两个系统执行同一组现场探针，因此缺失字段均保持“未确认”。原始 1.9.9 基线 SHA-256：`a7672ec23f15df780421a750753016dd3e747e20c86b619cd9cea72152490d79`。
+正式盘首轮检查时 SSH 关闭，未向它建立连接；其后 VM 已退出，再用只读文件句柄复查。用户随后重新开启正式实例 SSH，11-16 通过身份绑定的 2222 连接补充只读 Guest 采样；SSH 正常登录及 VM 自身活动可能产生记账和日志写入。没有启动/停止 VM、游戏、组件探针，未安装、清理或部署。只读检查并非对两个系统执行同一组现场探针，因此缺失字段均保持“未确认”。原始 1.9.9 基线 SHA-256：`a7672ec23f15df780421a750753016dd3e747e20c86b619cd9cea72152490d79`。
 
 ## 2. 对应字段比较
 
@@ -21,21 +21,21 @@
 | FX | 1.9.9 | 1.9.12，宿主日志构建 `7d9b6681c9` | 普通版本差异；未做只替换 FX 的对照 |
 | 镜像大小 | 144,286,154,752 字节 | 453,523,800,064 字节 | 容量不同，不是兼容性证明 |
 | SteamOS | 0.4.5，BUILD_ID 20261022.6150929 | 相同；本次启动选 rootfs-B | 没有证据要求升级 SteamOS |
-| 内核/架构 | 实测 Linux 7.2.9-steamac、aarch64 | 启动 Image 内版本相同，ARM64；未现场 uname | 无已证实版本差异 |
-| Guest CPU | 8 个逻辑 CPU | VM 分配 8；Guest 在线数量未实测 | 分配相同，口径不同 |
-| 内存/Swap | Guest 约 11 GiB / 约 5.8 GiB swap | VM 分配 12,288 MiB；Guest MemTotal/Swap 未确认 | 不用配置量代替 Guest 实测 |
-| Vulkan/GPU | 有 freedreno/virtio aarch64 ICD 与 fex-mesa x86/x86_64 ICD；实际设备/后端未确认 | 日志 Venus → KosmicKrisp/Vulkan；历史 M4 Pro/16 GPU cores；Guest ICD/驱动版本未确认 | 两侧证据覆盖不同，无法完整比对 |
+| 内核/架构 | 实测 Linux 7.2.9-steamac、aarch64 | SSH 实测相同 | 无已证实版本差异 |
+| Guest CPU | 8 个逻辑 CPU | SSH 实测在线 0–7，共 8 | 相同 |
+| 内存/Swap | Guest 约 11 GiB / 约 5.8 GiB swap | Guest MemTotal 12,216,624 KiB；zram swap 6,108,156 KiB | 容量接近；基线为约数，非逐字节比较 |
+| Vulkan/GPU | 有 freedreno/virtio aarch64 ICD 与 fex-mesa x86/x86_64 ICD；实际设备/后端未确认 | 相同种类 6 个 ICD；日志 Venus → KosmicKrisp，Steam 映射 virtio 驱动，Mesa 26.3.0-devel 标识 | 当前 Steam 映射不证明游戏使用；两侧未做完整文件哈希对照 |
 | 独立 FEX-Emu | 默认库中没有此目录；PATH 无 FEX/FEXInterpreter | `S/steamapps/common/FEX-Emu/usr/bin/FEX`，已知 RF 哈希 | **关键候选差异**；不是证明只有该二进制决定成功 |
 | FEX 版本/构建 | 内置库具体 FEX 源码/补丁未确认 | ELF `eac-main-20261022`；RF stage synthetic e42baddf…/format36；9 个安装文件一致 | 版本名不是完整构建出处 |
 | RF 十文件 | 目录不存在，未部署该历史组 | 9 个安装文件匹配；VERSIONS.txt 只在 stage | 不能把第 10 个文件列为已安装或启动必要 |
-| FEXBash | `/usr/bin/FEXBash` 631 字节脚本 | `F/usr/bin/FEXBash` 659,144 字节 ELF；系统 `/usr/bin/FEXBash` 未确认 | 不同路径/角色，不是一对一替换 |
-| FEXInterpreter | PATH 未找到 | FEX 安装 bin 未见独立该文件；系统 PATH 未确认 | 不能断言系统完全不存在 |
+| FEXBash | `/usr/bin/FEXBash` 631 字节脚本 | 系统同路径脚本哈希相同；另有 `F/usr/bin/FEXBash` 659,144 字节 ELF | 系统包装脚本相同；不同路径/角色不应混淆 |
+| FEXInterpreter | PATH 未找到 | FEX 安装 bin、系统 PATH 和检查的两个 bin 目录未找到 | 不能断言系统完全不存在 |
 | 多套 FEX | ARM64 Proton 内存在相关库 | 另有 RF 安装/stage/build 和 ARM64 Proton 库 | 必须检查实际选择，不能扫描到就算通过 |
 | 实际 FEX 选择 | 未启动游戏，未确认 | 11-14 Steam 命令使用 RF 安装目录包装器；当前 /proc 实际映射未确认 | 历史运行命令比文件存在强，仍非当前加载证据 |
 | RootFS 注册 | FEX-Emu/emulator.json 不存在；其余注册/实际路径未确认 | emulator.json：FEX_PORTABLE=1，container FEX_ROOTFS="" | 不能套用修复测试盘的 `/` |
 | RootFS 模板 | 未确认 | ConfigTemplate RootFS=`@FEX_ROOTFS_PATH@/` | 可复现的配置生成输入 |
 | per-game RootFS | 未确认 | compatdata/553850/fex-emu/Config.json：`/usr/share/guestos/fex-mesa/` | 关键路径证据；容器内最终值仍未知 |
-| RootFS 文件/容器生效 | provider/注册/容器变量未确认 | `F/rootfs` 为空；脚本使用系统 provider；该 provider 完整性及容器值未确认 | 空目录不证明缺失；`/` 不可硬编码 |
+| RootFS 文件/容器生效 | provider/注册/容器变量未确认 | `F/rootfs` 为空；系统 provider JSON 和 x86_64 loader 已核验哈希，完整树及容器最终值未确认 | 空目录不证明缺失；`/` 不可硬编码 |
 | Proton-JE | 默认路径未见 compatibilitytools.d/JE | JE 11.0-20261014-3，在盘/映射/启动日志一致 | **关键候选差异** |
 | 默认 Proton 选择 | 未找到 HD2 专用映射，默认选择未确认 | config.vdf 默认项0和553850均为 JE | 保存配置，不代替内存 API |
 | ARM64 Proton | proton-11.0-2e-arm64 | 同版本、同脚本/两相关库哈希，另有实验版 | 共同组件，不能解释成功差异 |
@@ -45,8 +45,8 @@
 | pressure-vessel | 0.20261007.0 | 相同；R4另有arm64实现 | 版本相同不代表所有二进制相同 |
 | Runtime 依赖 | 游戏实际选择未确认 | JE require_tool_appid=4183110；ARM64 Proton=4185400 | 需要完整工具依赖链 |
 | Steam 参数 | 检查未输出游戏专用条目 | 保存 FEX_NEEDSSECCOMP=1、FEX_DISKCACHE=0、single_queue 等；历史命令一致 | 关键配置候选；不能说基线经证明绝对无参数 |
-| 持久化 | Guest 未见 ~/.local/share/HD2FXLauncher；其他机制未确认 | /home ext4 文件 + Steam注册/映射 + wrapper每次生成环境；有系统 overlay但FEX不在/usr | 不要求新建 FEX 开机重部署服务 |
-| systemd / 自动恢复 | 未调查 | 用户 override和/etc upper未见FEX恢复服务；系统默认服务未全查 | 缺乏证据，不是全局不存在的证明 |
+| 持久化 | Guest 未见 ~/.local/share/HD2FXLauncher；其他机制未确认 | SSH 实测 /home ext4；Steam注册/映射 + wrapper每次生成环境；/etc overlay rw、/usr overlay ro | 不要求新建 FEX 开机重部署服务 |
+| systemd / 自动恢复 | 未调查 | Steam 用户服务的 FX drop-in 设置图形环境并运行启动脚本；有限扫描未发现 FEX 自动恢复服务 | FX 图形文件管理与 RF 自动恢复不同；不能证明全局不存在 |
 | 游戏目录 | 默认库 Helldivers 2 | 相同逻辑路径，不同镜像 | 切勿交叉操作 |
 | StateFlags/buildid/TargetBuildID | 同日复查 4 / 26568081 / 26568081 | 相同 | 初始 buildid=0 已被原报告同日复查取代 |
 | EXE | 28,743,256 字节；b434f6f3… | 同大小/同 SHA-256 | 游戏 EXE 不是观测到的差异 |
@@ -80,7 +80,7 @@
 | 路径/角色 | 1.9.9 基线 SHA-256 | 1.9.12 SHA-256 | 解释 |
 | --- | --- | --- | --- |
 | 对应 FX App `Contents/MacOS/steamac-vm` | `be281f1d430d24b5147229f032fe44f9d3b25171ab7f2a560e792bfc9962cb99` | `b0de0c2e13582f922af58095c161f72d99ff92339ac2e33f5ad75580eb495cc5` | FX 版本不同；未独立证明影响 |
-| `/usr/bin/FEXBash` | `8a907f46e455bf26d6bf2f2c09cf28e4aed6e2105a74c870a3d61c49b554e2d1` | 未采到同路径哈希 | 不拿 F/usr/bin/FEXBash 的 RF 哈希冒充此项 |
+| `/usr/bin/FEXBash` | `8a907f46e455bf26d6bf2f2c09cf28e4aed6e2105a74c870a3d61c49b554e2d1` | `8a907f46e455bf26d6bf2f2c09cf28e4aed6e2105a74c870a3d61c49b554e2d1` | 相同系统包装脚本；RF 安装路径是另一文件 |
 | `Proton 11.0 (ARM64)/proton` | `a4f94c208355639c87877ba63e8faf1f26d8c0731db04f722dee66cdfcfbf478` | `a4f94c208355639c87877ba63e8faf1f26d8c0731db04f722dee66cdfcfbf478` | 相同 |
 | ARM64 Proton `files/lib/wine/aarch64-unix/libwow64fex.so` | `257041413ae02eb5e2ba31fd16d991478f3a3b53f8ed48b3cc356e42f77649be` | 相同 | 不能认定内置 FEX 库不同导致差异 |
 | ARM64 Proton `files/lib/wine/aarch64-unix/libarm64ecfex.so` | `dc8f21f75ee11c3829b346d5a8d60ee87d24091f5e6ed901b5c36c739832ac53` | 相同 | 同上 |
@@ -123,6 +123,8 @@
 
 ### 5.2 每项操作、验证与恢复
 
+FX 当前 Steam 启动服务会设置 VKD3D 扩展禁用值，且 `steam-gfx-path` 会按图形模式管理 Proton 的图形 DLL；部署程序应检查现有机制，避免覆盖或重复管理，并在重启后校验所选 JE 的四个图形 DLL 与已批准清单一致。该机制在 1.9.9 侧未完整调查，不能直接认定为两版本差异或成功必要条件。当前 Steam 中 `STEAM_RUNTIME_LIBRARY_PATH` 为 `No compat data path?`，其因果影响未确认，不应据此自动修复。
+
 所有未来变更先绑定 FX/App、镜像、SSH目标、Guest身份/boot与配置revision，并确认Steam/游戏的适当状态。恢复前比较“当前=本次安装后的预期值、备份=原值”，外部漂移时停止覆盖；保留两边供人工处理。此规则是后续部署方案，本次未运行。
 
 | 操作 | 可由 App 复现程度 / 所需输入 | 验证方法 | 恢复方法 |
@@ -141,7 +143,7 @@
 ### 5.3 自动化边界与后续验证顺序
 
 - **有固定输入可复现**：JE版本与归档校验、553850工具映射、Steam参数语义编辑、持久目录与注册清单、逐文件备份/读回。当前代码 `ComponentDeploymentAdapters.swift` 已区分FEX文件预检与能力探针，且明确provider存在不是容器配置证明；这份报告不授权执行会写临时文件的探针。
-- **暂不能直接放行**：RF完整可分发/可复现产物、空字符串与`/`的容器语义、系统provider完整性、Runtime精确包、未采样的系统默认服务与跨重启进程证据。不能放宽hash门禁来匹配某次不同构建输出。
+- **暂不能直接放行**：RF完整可分发/可复现产物、空字符串与`/`的容器语义、系统provider完整性、Runtime精确包、未穷尽的系统默认服务与跨重启游戏进程证据。不能放宽hash门禁来匹配某次不同构建输出。
 - **先在独立、可恢复的测试镜像中验证**：冻结官方基线→只补全所需工具链→确认实际FEX/JE/Runtime与RootFS→多次正常重启→逐项撤除/替换以判断必要性→恢复原状态并验证。EAC加载、游戏画面/操作、任务、多人分别记录。实际执行需要后续任务授权，本次未做。
 - **不应自动复制**：SSH/Steam密码或token、用户prefix与账号目录、历史代理地址、旧机器CPU约束、缓存、其他游戏设置、系统更新、只读/usr层或原始成功镜像。容量、DLC与其他未选Proton的差异没有部署依据。
 
