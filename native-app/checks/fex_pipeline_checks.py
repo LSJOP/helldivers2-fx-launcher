@@ -24,7 +24,7 @@ class PipelineChecks(unittest.TestCase):
  def provenance(self):
   self.work.mkdir(parents=True,exist_ok=True)
   (self.work/'provenance.json').write_text(json.dumps({'source':'87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8','patch':'85999c4f3a82063c66095d5315a661f0eed8369ed7b4b03191ed5dc8521d7926','runtime':self.inventory(self.stage)}))
- def run_pipeline(self,mode,audit=None,files=None):
+ def run_pipeline(self,mode,audit=None,files=None,legacy_tree=None,probe_ok=False):
   tree=ast.parse(source)
   for n in tree.body:
    if isinstance(n,ast.FunctionDef) and n.name in ['identity','idle','runtime_smoke','stop_replay_steam']:n.body=[ast.Return(value=None)]
@@ -33,9 +33,10 @@ class PipelineChecks(unittest.TestCase):
     n.value=ast.Constant(self.expected)
   ast.fix_missing_locations(tree)
   request={'mode':mode,'boot':'fixture-boot','ticket':self.ticket,'audit':audit,'files':files}
+  if legacy_tree is not None:request['legacy_tree']=legacy_tree
   out=io.StringIO()
   with patch.object(pathlib.Path,'home',return_value=self.home),contextlib.redirect_stdout(out):
-   try:exec(compile(tree,'fixture-pipeline','exec'),{'REQUEST':request,'check':lambda:{'reason':'FEX_RUNTIME_FAILED'}})
+   try:exec(compile(tree,'fixture-pipeline','exec'),{'REQUEST':request,'check':lambda:{'runtime':probe_ok,'reason':'FEX_RUNTIME_FAILED'}})
    except SystemExit as e:
     if e.code:raise
   return json.loads(out.getvalue())
@@ -125,7 +126,7 @@ class PipelineChecks(unittest.TestCase):
   shutil.rmtree(self.installed)
   files=[]
   for path,data,mode in [('usr/bin/FEX',(self.stage/'usr/bin/FEX').read_bytes(),0o755),
-                         ('emulator.json',b'{"emulator_v0":{"container_environment":{}}}',0o644)]:
+                         ('emulator.json',b'{"emulator_v0":{"container_environment":{"FEX_ROOTFS":""}}}',0o644)]:
    files.append({'path':path,'sha256':hashlib.sha256(data).hexdigest(),'mode':mode,
                  'data':base64.b64encode(data).decode()})
   with self.assertRaisesRegex(RuntimeError,'FEX_RUNTIME_FAILED'):
@@ -133,6 +134,24 @@ class PipelineChecks(unittest.TestCase):
   self.assertFalse(self.installed.exists())
   self.assertEqual(json.loads((self.work/(self.ticket+'.json')).read_text())['state'],'recovered')
   self.assertEqual((stock/'stock').read_bytes(),b'original Steam FEX')
+ def test_local_replay_migrates_only_exact_legacy_registration_and_restores(self):
+  shutil.rmtree(self.installed)
+  binary=(self.stage/'usr/bin/FEX').read_bytes()
+  (self.installed/'usr/bin').mkdir(parents=True)
+  exe=self.installed/'usr/bin/FEX';exe.write_bytes(binary);exe.chmod(0o755)
+  registration={'emulator_v0':{'container_environment':{'FEX_ROOTFS':'/'}}}
+  old=(json.dumps(registration,indent=2)+'\n').encode()
+  metadata=self.installed/'emulator.json';metadata.write_bytes(old);metadata.chmod(0o644)
+  before=self.inventory(self.installed)
+  registration['emulator_v0']['container_environment']['FEX_ROOTFS']=''
+  new=json.dumps(registration,separators=(',',':')).encode()
+  files=[{'path':path,'sha256':hashlib.sha256(data).hexdigest(),'mode':mode,
+          'data':base64.b64encode(data).decode()}
+         for path,data,mode in [('usr/bin/FEX',binary,0o755),('emulator.json',new,0o644)]]
+  self.assertTrue(self.run_pipeline('local_replay',files=files,legacy_tree=self.fingerprint(before),probe_ok=True)['verified'])
+  self.assertEqual(metadata.read_bytes(),new)
+  self.assertTrue(self.run_pipeline('recover')['recovered'])
+  self.assertEqual(self.inventory(self.installed),before)
  def test_runtime_upload_uses_same_ticket_spelling_as_extraction(self):
   incoming=self.work/('incoming-'+self.ticket.lower())
   incoming.mkdir()

@@ -681,7 +681,8 @@ final class AppState: ObservableObject {
                 guard var raw = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
                 var plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
                 #if DEBUG
-                if !launchGame, FEXWorkflow.localReplayEnabled, plan.snapshot.facts["fex_managed_emulator"] == nil {
+                if !launchGame, FEXWorkflow.localReplayEnabled,
+                   plan.snapshot.facts["fex_managed_emulator"] == nil || plan.snapshot.facts["fex_registered_rootfs"] == "/" {
                     self.firstRunPlan = plan
                     self.workflowLog(taskID, "FEX: local replay preflight")
                     input["credential_guest_boot"] = .string(boot)

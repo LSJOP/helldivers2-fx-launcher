@@ -6,14 +6,26 @@ import AppKit
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         // Scene restoration can launch a process without restoring its primary window.
-        DispatchQueue.main.async { self.presentMainWindowIfNeeded() }
+        scheduleMainWindow()
     }
-    private func presentMainWindowIfNeeded() {
-        guard !NSApp.windows.contains(where: { $0.canBecomeMain && $0.isVisible }) else { return }
-        NativeLifecycle.presentMainWindow?()
+    private var presentingMainWindow = false
+    private func scheduleMainWindow() {
+        guard !presentingMainWindow else { return }
+        presentingMainWindow = true
+        Task { @MainActor in
+            defer { presentingMainWindow = false }
+            for _ in 0..<20 {
+                guard !NSApp.windows.contains(where: { $0.canBecomeMain && $0.isVisible }) else { return }
+                if let present = NativeLifecycle.presentMainWindow {
+                    present()
+                    return
+                }
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+        }
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if !flag { presentMainWindowIfNeeded() }
+        if !flag { scheduleMainWindow() }
         return true
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }

@@ -163,3 +163,45 @@ No game launch or production FX 1.9.12 write occurred. This acceptance spans
 installation and verification runs on the same isolated disk. A fresh-disk
 single uninterrupted pass, Valve Runtime download through the real App, live
 failure injection and RF public distribution are still pending.
+
+## Audited RootFS and reboot persistence · 2026-11-16
+
+Inputs: the [FX 1.9.12 audit and comparison at 78d03b6](https://github.com/LSJOP/helldivers2-fx-launcher/commit/78d03b6)
+record the RF executable under Steam's FEX-Emu depot, nine matching installed
+RF files, a stage-only VERSIONS.txt, the JE selection, the 4183110 Runtime,
+the empty emulator registration and the provider-based ConfigTemplate.
+Both the audited depot and the test App's managed location are on persistent
+/home. The observed Steam AppID 3127680 depot replacement on FX 1.9.9 is the
+reason the candidate keeps its RF tree outside that depot. The Steam copy is
+preserved, and the existing game launch option selects the managed emulator.
+
+The real Debug App migrated its exact legacy tree through the existing FEX
+backup and recovery transaction. The registered value is now the original empty
+string and emulator.json SHA-256 is
+`431e4340dabceb76fd83733864058e1d4176fa35aecde3b8c69cafc686968774`.
+The provider template remains `@FEX_ROOTFS_PATH@/`. No game prefix was created
+or edited to force a RootFS value. Recovery fixtures verify restoration of
+the previous registration without modifying Steam's copy.
+
+The FX 1.9.9 test VM ran through boot prefixes `348cdd1c`, `e8a54878` and
+`54ed4e07` after two normal restarts. Real App setup completed after each reboot
+and skipped replacement of the existing Runtime and Proton-JE. All 18 recorded
+file hashes matched across the three snapshots, including both Runtime versions,
+the managed RF group, Steam's original FEX executable and Proton-JE key files.
+The per-game emulator launch option and the Proton-JE selection persisted.
+The second-boot no-game container probe observed the exact managed executable
+`/home/steamos/.local/share/HD2FXLauncher/compatibility/FEX-RF/usr/bin/FEX`
+through its process executable identity. It reported an empty RootFS environment
+value in the synthetic probe. The historical game's effective container value
+remains unconfirmed.
+
+The final App opened its main window on a cold launch. A real setup click on the
+second reboot displayed the verified completion panel with 100%.
+The final arm64 Debug build SHA-256 for the executable is
+`a0880f15315db5024587ccc3953967e0c344c45eb8df41e6dc45768918a76686`.
+This was a migration and repeatability test on the existing test image. The
+Runtime and Proton installation observations from the previous acceptance
+remain separate. A fresh-disk, uninterrupted install on this final build and
+public RF source/redistribution remain open. No game, EAC, multiplayer, production
+FX, packaging or updater acceptance was performed. The current README screenshot
+source gate is pending renewed visual review of the changed completion view.

@@ -8,6 +8,8 @@ v1.0.1 (2026111406) is the latest published stable release. Fresh SteamOS deploy
 
 ## Unreleased
 
+- Preserve the audited empty RF RootFS registration and verify that the isolated Steam Runtime probe loads the installed RF executable. Migrate the previous Debug registration through the existing recovery transaction. Wait for the SwiftUI main-scene action during launch or reopen.
+
 - Verify the active FX Vulkan driver and Guest Steam HTTPS during first-run setup. Preserve the component name when final verification detects a pending change.
 
 - Persistence candidate: keep the RF compatibility tree outside the Steam-managed FEX depot, verify RootFS inside a real Runtime container, and restore the shared main window on launch/reopen. Final reboot acceptance and distributable RF build remain pending.

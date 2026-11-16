@@ -404,6 +404,7 @@ enum FEXWorkflow {
         snapshot.facts["fex_fingerprint"] = approval
         snapshot.facts["fex_tree"] = tree
         snapshot.facts["fex_managed_emulator"] = staticResult["managed_emulator"]?.text
+        snapshot.facts["fex_registered_rootfs"] = staticResult["registered_rootfs"]?.text
         snapshot.facts["fex_provenance"] = "unverified"
         let reviewed = verifyInstalled(tree: tree, snapshot: snapshot)
         if reviewed { snapshot.facts["fex_provenance"] = "verified" }
@@ -419,7 +420,8 @@ enum FEXWorkflow {
         }
         snapshot.facts["fex_status"] = reviewed ? "normal" : "compatible"
         snapshot.facts["fex_runtime"] = "ready"
-        snapshot.facts["fex_container_rootfs"] = runtime["container_rootfs"]?.text
+        snapshot.facts["fex_probe_rootfs"] = runtime["probe_rootfs"]?.text
+        snapshot.facts["fex_loaded_executable"] = runtime["loaded_executable"]?.text
         snapshot.facts["fex_reason"] = ""
     }
     private static func runtimeApproval(tree: String, snapshot: DeploymentSnapshot) -> String {
@@ -481,8 +483,9 @@ def check():
  tree=fingerprint(files)
  result={'preflight':True,'tree':tree,'executable_sha256':entry[1]}
  if managed:
-  if registration.get('container_environment',{}).get('FEX_ROOTFS')!='/':return {'reason':'FEX_ROOTFS_UNAVAILABLE'}
   result['managed_emulator']=str(root/'emulator.json')
+  registered=registration.get('container_environment',{}).get('FEX_ROOTFS')
+  if isinstance(registered,str):result['registered_rootfs']=registered
  if not EXPECTED_TREE:return result
  if tree!=EXPECTED_TREE:return {'reason':'FEX_CHANGED'}
  # Static x86-64 ELF with one load segment and exit(42), requiring no x86 libc.
@@ -510,20 +513,29 @@ def check():
            STEAM_COMPAT_GRAPHICS_PROVIDER=str(provider/'graphics_provider.json'),
            STEAM_COMPAT_MACHINE_ARCHITECTURE='aarch64-linux-gnu',
            PRESSURE_VESSEL_PREFIX=str(rt/'pressure-vessel-arm64'))
+  if fingerprint(inventory(rt,omit_var=True)) not in [RUNTIME_VALVE[2],RUNTIME_LOCAL[2]]:
+   return {'reason':'FEX_LOCAL_RUNTIME_MISSING'}
+  env.pop('FEX_ROOTFS',None)
   command=[str(rt/'_v2-entry-point'),'--verb=run','--','/bin/sh','-c',
-           'test "$FEX_ROOTFS" = / && printf HD2_ROOTFS_OK']
+           'case "${FEX_ROOTFS-unset}" in "") r=empty;; /) r=slash;; /usr/share/guestos/fex-mesa|/usr/share/guestos/fex-mesa/) r=provider;; unset) r=unset;; *) r=other;; esac; printf "HD2_ROOTFS_OK:%s\n" "$r"; sleep 1']
   with tempfile.TemporaryDirectory(prefix='hd2-fex-container-') as data:
    # Simulate Steam's per-app data contract without touching the game prefix.
    env.update(STEAM_COMPAT_DATA_PATH=data,FEX_APP_DATA_LOCATION=data+'/fex-emu',FEX_DISABLETELEMETRY='1')
    try:
     container=subprocess.Popen(command,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True)
-    try:output,errors=container.communicate(timeout=90)
-    except subprocess.TimeoutExpired:
-     os.killpg(container.pid,signal.SIGKILL);container.communicate();return {'reason':'FEX_TIMEOUT'}
+    deadline=time.monotonic()+90;loaded=False
+    while True:
+     loaded=loaded or observed_managed_executable(container.pid,exe)
+     try:output,errors=container.communicate(timeout=0.15);break
+     except subprocess.TimeoutExpired:
+      if time.monotonic()>=deadline:
+       os.killpg(container.pid,signal.SIGKILL);container.communicate();return {'reason':'FEX_TIMEOUT'}
    except OSError:return {'reason':'FEX_DEPENDENCY_FAILED'}
-   if container.returncode!=0 or b'HD2_ROOTFS_OK' not in output:return {'reason':'FEX_RUNTIME_FAILED'}
+   evidence=[line for line in output.splitlines() if line.startswith(b'HD2_ROOTFS_OK:')]
+   if container.returncode!=0 or len(evidence)!=1 or not loaded:return {'reason':'FEX_RUNTIME_FAILED'}
   if fingerprint(inventory(root))!=tree:return {'reason':'FEX_CHANGED'}
-  result['container_rootfs']='/'
+  result['probe_rootfs']=evidence[0].split(b':',1)[1].decode()
+  result['loaded_executable']=str(exe)
  result['runtime']=True
  return result
 try:print(json.dumps(check()))
@@ -608,7 +620,14 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
               pids.allSatisfy({ LaunchService.descendant($0, of: owner, rows: rows) }) else { throw CoreError("TARGET_CHANGED") }
 
         // Check the exact runtime and Steam state before sending bytes or creating a receipt.
-        let request: [String: JSONValue] = ["boot": .string(snapshot.boot), "machine": .string(localGuestDigest)]
+        var request: [String: JSONValue] = ["boot": .string(snapshot.boot), "machine": .string(localGuestDigest)]
+        if snapshot.facts["fex_managed_emulator"] != nil {
+            guard snapshot.facts["fex_registered_rootfs"] == "/",
+                  let tree = snapshot.facts["fex_tree"], ApprovedArtifact.hash(tree) else {
+                throw CoreError("EXTERNAL_DRIFT")
+            }
+            request["legacy_tree"] = .string(tree)
+        }
         let preflight = try runLocalReplay(backend: backend, request: request, phase: "preflight")
 
         let base = try resourceArgument("--hd2-rf-resources")
@@ -875,6 +894,25 @@ def inventory(root, omit_var=False):
    elif stat.S_ISDIR(s.st_mode):result[r]=['dir']
    else:fail('ARTIFACT_FORMAT')
  return result
+def observed_managed_executable(supervisor, executable):
+ expected=executable.stat()
+ processes={}
+ matches=[]
+ for entry in pathlib.Path('/proc').iterdir():
+  if not entry.name.isdigit():continue
+  try:
+   stat_fields=(entry/'stat').read_text().rsplit(')',1)[1].split()
+   pid=int(entry.name)
+   processes[pid]=(int(stat_fields[1]),int(stat_fields[2]))
+   actual=(entry/'exe').stat()
+   if (actual.st_dev,actual.st_ino)==(expected.st_dev,expected.st_ino):matches.append(pid)
+  except (OSError,ValueError,IndexError):continue
+ for pid in matches:
+  visited=set()
+  while pid in processes and pid not in visited:
+   if pid==supervisor or processes[pid][1]==supervisor:return True
+   visited.add(pid);pid=processes[pid][0]
+ return False
 def fingerprint(x):return hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 RUNTIME_NAME='SteamLinuxRuntime_4'
 RUNTIME_URL='https://repo.steampowered.com/steamrt4/images/4.0.20261021.265997/SteamLinuxRuntime_4.tar.xz'
@@ -891,7 +929,9 @@ def local_replay_preflight(installed):
  machine=pathlib.Path('/etc/machine-id').read_text().strip()
  if hashlib.sha256(machine.encode()).hexdigest()!=REQUEST['machine']:fail('TARGET_CHANGED')
  safe(installed)
- if os.path.lexists(installed):fail('EXTERNAL_DRIFT')
+ if os.path.lexists(installed):
+  legacy=REQUEST.get('legacy_tree')
+  if not legacy or fingerprint(inventory(installed))!=legacy:fail('EXTERNAL_DRIFT')
  provider=pathlib.Path('/usr/share/guestos/fex-mesa')
  if not (provider/'graphics_provider.json').is_file() or not (provider/'usr/lib/ld-linux-x86-64.so.2').is_file():fail('FEX_ROOTFS_UNAVAILABLE')
  runtime=runtime_common()/RUNTIME_NAME
@@ -1157,8 +1197,13 @@ try:
     dst.chmod(item['mode'])
    registration=stage/'emulator.json'
    config=json.loads(registration.read_text())
-   config['emulator_v0']['container_environment']['FEX_ROOTFS']='/'
-   registration.write_text(json.dumps(config,indent=2)+'\n')
+   container_environment=config['emulator_v0']['container_environment']
+   if container_environment.get('FEX_ROOTFS')!='':fail('ARTIFACT_UNAPPROVED')
+   if REQUEST.get('legacy_tree'):
+    prior=inventory(stage)
+    container_environment['FEX_ROOTFS']='/'
+    prior['emulator.json'][1]=hashlib.sha256((json.dumps(config,indent=2)+'\n').encode()).hexdigest()
+    if fingerprint(prior)!=REQUEST['legacy_tree']:fail('EXTERNAL_DRIFT')
    if not runtime_ready:
     if os.path.lexists(rt_acf):fail('COMPONENT_CONFLICT')
     rt_stage,rt_tree=stage_runtime(runtime_common(),REQUEST['ticket'])
@@ -1166,7 +1211,9 @@ try:
    runtime_smoke(rt_stage if rt_stage is not None else rt)
   idle();current=audit()
   if mode=='install' and (not current['ready'] or any(current[k]!=REQUEST['audit'].get(k) for k in ['source','patch','executable_sha256','expected_sha256','candidate','original','files','installed'])):fail('ARTIFACT_UNAPPROVED')
-  if mode=='local_replay' and (current['installed'] or current['executable_sha256']!=EXPECTED):fail('EXTERNAL_DRIFT')
+  if mode=='local_replay':
+   if current['executable_sha256']!=EXPECTED:fail('ARTIFACT_UNAPPROVED')
+   if current['original']!=REQUEST.get('legacy_tree',fingerprint(None)):fail('EXTERNAL_DRIFT')
   token=REQUEST['ticket'];uuid.UUID(token)
   backup=installed.with_name(installed.name+'.hd2-backup-'+token)
   prepared=installed.with_name(installed.name+'.hd2-stage-'+token)

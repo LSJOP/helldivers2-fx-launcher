@@ -69,7 +69,12 @@ struct FirstRunSetupView: View {
     private func completionContent(_ plan: DeploymentPlan) -> some View {
         VStack(alignment: .leading, spacing: 20) {
             TacticalFlowMark()
-            Text(state.t("ui.art.completedTitle")).font(TacticalTypography.module)
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(state.t("ui.art.completedTitle")).font(TacticalTypography.module)
+                Text(state.environmentWorkflow.fraction, format: .percent.precision(.fractionLength(0)))
+                    .font(TacticalTypography.module.monospacedDigit())
+            }
+            .accessibilityElement(children: .combine)
             Text(state.t("ui.setup.acceptance")).foregroundStyle(.secondary)
             TacticalPanel(number: "", title: state.t("ui.workflow.environment"), symbol: "checkmark.shield") {
                 ForEach(plan.operations) { operation in
