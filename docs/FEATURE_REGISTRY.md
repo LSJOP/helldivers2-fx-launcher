@@ -41,4 +41,13 @@
 
 2026-11-16 已审计 70 个分支名称（含当时的整合分支），保护并清理 25 条远端已合入分支；包含全部引用的六个 bundle 已验证，原始 refs、SHA-256 和分类在本机 `绝地潜兵脚本/Backups/branch-audit-20261116/`。备份是本机证据，不是远端归档；未证明等效、开放 PR、被工作树使用及首次配置开发分支继续保留。实际状态以 GitHub 和 `git worktree list` 为准。
 
+2026-11-16 固定分支建立时，对保留的远端历史分支按主要后续归属分类；跨领域分支需要分别审核，分类不是迁移完成或可删除证明：
+
+- **环境 → `dev/environment`**：`docs/fx1912-success-environment-20261115`、`feature/native-recovery-20261112`、`fix/first-run-ssh-access`、`fix/fx199-fex-readiness-20261114`。首次配置分支含独有开发成果，继续保留；不得因新分支建立而覆盖或自动合并。
+- **界面 → `dev/ui`**：`feature/localized-app-brand-20261114`、`integration/dashboard-led-brand-20261114`、`ui/motr7-artwork-20261114`。已有等效成果需对照当前代码，正在使用的工作树保留。
+- **核心/共享规范 → `dev/core`**：`backup/stable-publish-20261114`、`chore/swift-incremental-checks-20261114`、`docs/feature-registry-20261116`、`docs/github-release-policy-20261114`、`docs/v1-release-preparation-20261113`、`docs/v104-published-20261116`、`docs/v104-release-20261116`、`feature/full-swift-native-migration`、`feature/macos-native-app`、`feature/native-auto-update-20261114`、`fix/live-logging-launch-20261114`、`fix/native-launch-resources-20261103`、`fix/simplify-update-button`、`integration/branch-audit-20261116`、`release/candidate-1.0.4-20261116`。PR #8 仍开放，工作树和备份依赖保留。
+- **跨环境、界面和核心**：`feature/full-native-audit-20261106`、`release/v1.0.0-integration`。按实际文件拆分归属到上述固定分支；旧候选未完成或含历史实现，保留并逐项复核。
+
+本机独有分支和各独立 Git 仓库的 refs 见上述本地审计清单；它们没有因远端分类自动合并或删除。固定分支初始基于当时 main；后续开发前重新 fetch 和核对各自状态。
+
 复用测试基线：2026-11-16、`ba7e495`（与 main `04f9fb4` 的文件树相同，仅提交历史不同），独立 worktree 执行 arm64 Debug、`native-app/script/run_checks.sh`、`run_update_checks.sh`、十语言和 `script/check_docs.py`（15/15）通过。具体输出位于该 worktree 的 `native-app/evidence/`；该目录为本机证据，不承诺存在于其他机器。隔离安装助手及实际 v1.0.3 检测/下载证据属于 2026-11-16 本机测试；均不证明新版本生产升级。后续代码、依赖或环境变化时按受影响范围重验。
