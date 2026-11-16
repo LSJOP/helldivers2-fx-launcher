@@ -8,6 +8,8 @@ v1.0.1 (2026111406) is the latest published stable release. Fresh SteamOS deploy
 
 ## Unreleased
 
+- Verify the active FX Vulkan driver and Guest Steam HTTPS during first-run setup. Preserve the component name when final verification detects a pending change.
+
 - Persistence candidate: keep the RF compatibility tree outside the Steam-managed FEX depot, verify RootFS inside a real Runtime container, and restore the shared main window on launch/reopen. Final reboot acceptance and distributable RF build remain pending.
 
 - Recovery continuation adds verified Runtime cache/retry, explicit Debug resource paths and a bundled component integrity catalogue. Real setup installed Proton and configured Steam, but failed final verification after reboot restored the incompatible stock FEX and empty container RootFS; public one-click setup remains blocked.

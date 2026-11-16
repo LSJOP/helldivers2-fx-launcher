@@ -174,7 +174,22 @@ final class SSHEnvironmentBackend: DeploymentBackend {
             }
         }
         for (key, value) in fields where key.hasPrefix("net6_") { values["ipv6." + key.dropFirst(5)] = value }
-        facts["network"] = "UNKNOWN" // A default route is not Steam/game reachability.
+        if fields["vulkan"] == "configured",
+           let driver = try? LaunchService.observedVulkanDriver(fx: fx, context: context) {
+            facts["kosmickrisp"] = driver == "kosmickrisp" ? "configured" : "unavailable"
+        }
+        // This is Steam Store HTTPS reachability from the attested Guest only.
+        // SSH, the default route and Steam's local API do not establish it.
+        facts["network"] = "UNKNOWN"
+        if gp == 0, fields["reaper_count"] == "0" {
+            let probe = NetworkDiagnosticsService.guestCurl(host: "store.steampowered.com", proxy: nil)
+            if let result = try? transport.run(probe, timeout: 6, context: context),
+               NetworkDiagnosticsService.classifyCurl(result) == .pass,
+               let tls = Double(result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)), tls > 0 {
+                facts["network"] = "available"
+            }
+        }
+        try context.check()
         let pref = try? CFPreferencesStore(domain: PerformanceDomain.name).read()
         for key in ["cpus", "memMiB", "gpuMemMiB", "graphicsPath", "vulkanDriver", "metalHUD", "superResolution"] {
             facts["fx_" + key] = pref?[key].map { CoreJSON.encode($0) } ?? "UNKNOWN"

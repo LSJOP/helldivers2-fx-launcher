@@ -271,6 +271,25 @@ enum LaunchService {
 
     // MARK: - Launch arguments
 
+    static func observedVulkanDriver(command: String, executable: String) -> String? {
+        let line = command.trimmingCharacters(in: .whitespacesAndNewlines)
+        let prefix = executable + " "
+        guard line.hasPrefix(prefix) else { return nil }
+        // App-owned launch arguments put the driver before the opaque Guest command line.
+        let options = Array(line.dropFirst(prefix.count).split(whereSeparator: \.isWhitespace).prefix(while: { $0 != "--cmdline" }))
+        let flags = options.indices.filter { options[$0] == "--vulkan-driver" }
+        guard flags.count == 1, let index = flags.first, options.indices.contains(index + 1) else { return nil }
+        let driver = String(options[index + 1])
+        return ["kosmickrisp", "moltenvk"].contains(driver) ? driver : nil
+    }
+
+    static func observedVulkanDriver(fx: URL, context: CoreContext) throws -> String? {
+        let executable = normalizedExecutable(fx)
+        let supervisor = try fxSupervisorPID(rows: processTable(context: context), executable: executable)
+        let result = try CoreProcess.run("/bin/ps", ["-ww", "-p", String(supervisor), "-o", "args="], timeout: 5, context: context)
+        return result.status == 0 ? observedVulkanDriver(command: result.stdout, executable: executable) : nil
+    }
+
     static func launchArguments(transport: SSHTransport) -> [String] {
         let values = (try? CFPreferencesStore(domain: PerformanceDomain.name).read()) ?? [:]
         let cores = SystemProbe.physicalCores() ?? 8

@@ -758,7 +758,9 @@ final class AppState: ObservableObject {
                 guard let raw = verified.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
                 let fresh = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
                 self.firstRunPlan = fresh
-                guard fresh.executable.isEmpty else { throw ErrorState("VERIFY_FAILED") }
+                if let pending = fresh.executable.first {
+                    throw ErrorState("VERIFY_FAILED", details: ["component": .string(pending.component)])
+                }
                 if let blocked = fresh.operations.first(where: {
                     ["fex", "proton", "tool", "launch", "steam", "game"].contains($0.component) && $0.blocked != nil
                 }) { throw ErrorState(blocked.blocked ?? "VERIFY_FAILED", details: ["component": .string(blocked.component)]) }

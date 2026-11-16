@@ -133,3 +133,33 @@ vendored notices/reproducible outputs: BUILD_THUNKS is OFF in that service, wher
 the local sample includes thunk libraries. No historical RF binary was added to
 the public bundle. Formal source-built distribution and fresh-user acceptance
 remain blocked until the full dependency/notice/build chain is reviewed.
+
+## Isolated App acceptance · 2026-11-16
+
+The arm64 Debug App launched FX 1.9.9 and verified its process owned
+`steamos-1.img`. The first click reached the RF package read on the external
+volume and stalled in a host file open. This attempt was cancelled before Guest
+deployment. The next App process used a private local copy of the same pinned
+RF inputs. The existing App-installed SteamLinuxRuntime_4 and Proton-JE
+11.0-20261014-3 were reused. SteamLinuxRuntime_4-arm64 remained present.
+
+A real setup click deployed the RF tree outside Steam's depot, verified the RF
+executable and ran the Runtime container probe with FEX_ROOTFS=/. The App applied
+the per-game emulator launch option, presented the normal reboot confirmation,
+reconnected after the boot ID changed, and retained the RF tree, RootFS setting,
+Proton selection and launch option. The stock FEX hash remained
+`f9cbb7a70e804b9930fed02fd9d1349d49d7808faace703063a9b4944bc3568e`.
+The managed RF hash after reboot was
+`ce93cadae7b7d3ef01376ba2acd58aedb602a7fc077e49592179766d13c294bf`.
+
+Verification initially stopped on the hard-coded unknown KosmicKrisp check.
+The fix reads the identity-bound FX supervisor's driver argument and checks the
+Guest's Vulkan boot mode. The network check requires a successful, bounded
+Steam Store TLS probe from the Guest. A cold App reopen and another real setup
+click verified the persisted configuration and displayed the completed state.
+The final arm64 Debug binary SHA-256 is
+`8571abedc991fe5e200c60c8e665765261b76329a13299bc1a16b7df82f289be`.
+No game launch or production FX 1.9.12 write occurred. This acceptance spans
+installation and verification runs on the same isolated disk. A fresh-disk
+single uninterrupted pass, Valve Runtime download through the real App, live
+failure injection and RF public distribution are still pending.

@@ -381,6 +381,9 @@ final class FileDeploymentBackend: DeploymentBackend {
         let readyWithIPv6 = DeploymentPlan(id: UUID(), profileID: p.profileID, profileVersion: p.profileVersion, snapshot: observed,
             operations: observedPlan.operations.filter { ["steam", "game", "ipv4", "gvproxy", "ipv6"].contains($0.id) })
         try check(readyWithIPv6.detectionState == .Ready, "IPv6 warning does not block readiness")
+        let fxExecutable = "/Applications/FX Steam Launcher测试用.app/Contents/MacOS/steamac-vm"
+        try check(LaunchService.observedVulkanDriver(command: fxExecutable + " --no-wmtr --vulkan-driver kosmickrisp --cmdline console=hvc0", executable: fxExecutable) == "kosmickrisp", "live driver uses the selected FX process command")
+        try check(LaunchService.observedVulkanDriver(command: fxExecutable + " --cmdline test --vulkan-driver kosmickrisp", executable: fxExecutable) == nil, "driver words inside guest arguments are not evidence")
         for id in ["kosmickrisp", "network"] {
             let op = observedPlan.operations.first { $0.id == id }!
             try check(op.observation == .unverified && !op.warning && op.blocked == nil, "unknown evidence stays unverified: " + id)
