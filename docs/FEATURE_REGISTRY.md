@@ -20,11 +20,11 @@
 | 启动、等待与日志：`native-app/Core/NativeCoreService.swift`、`native-app/Core/LaunchService.swift`、`native-app/Views/LogsView.swift` | 已整合 main；`37852a5`、`ec71958` | 2026-11-16 核心/启动 fixtures 通过；真实游戏、EAC、单人、多人及本版完整启动未验证。 |
 | 更新检测、签名下载与单操作界面：`native-app/Services/UpdateReleaseService.swift`、`native-app/Services/AppUpdateManager.swift`、`native-app/Views/SoftwareUpdateView.swift` | 已整合 main；`f573a09`、`da3e149`；生产升级仍未验收 | 2026-11-16 更新服务 44、管理器 14 项隔离检查通过；实际服务检测并下载验签 v1.0.3。主线代码与开放 PR #8 的四个更新核心文件逐字一致；PR 仍开放，勿重复合并。 |
 | 更新安装、重启确认与失败恢复：`native-app/UpdateHelper/UpdateInstaller.swift`、`native-app/UpdateHelper/UpdateZIPPreflight.swift` | 已整合 main；`90f6931` 等；真实版本间端到端升级已实现未验证 | 2026-11-16 临时密钥/隔离 AppKit 测试覆盖安装、启动确认、失败回滚和中断恢复；不证明发布版 App 实际升级。v1.0.1 可能需 DMG 手动升级。正式发布前必须完成实际安装、升级及失败恢复验收。 |
-| 正式 Release 与签名清单：`native-app/Config/Updates.xcconfig`、`native-app/script/package_update_zip.sh`、`.github/workflows/native-release-check.yml` | 已整合 main；v1.0.3 已发布；1.0.4 候选未合并 | 现有 ad-hoc 签名、固定 Ed25519 公钥和正式发布资源已配置；不等于 Apple 公证或生产升级通过。旧记录“无正式包/生产服务关闭”是历史阶段。发布门禁见 [NATIVE_UPDATES](NATIVE_UPDATES.md)。 |
+| 正式 Release 与签名清单：`native-app/Config/Updates.xcconfig`、`native-app/script/package_update_zip.sh`、`.github/workflows/native-release-check.yml` | 已整合 main；v1.0.4 已发布；PR #14 已合并，标签指向 `6987fae` | 现有 ad-hoc 签名、固定 Ed25519 公钥和正式发布资源已配置；不等于 Apple 公证或生产升级通过。旧记录“无正式包/生产服务关闭”是历史阶段。发布门禁见 [NATIVE_UPDATES](NATIVE_UPDATES.md)。 |
 | FX/SteamOS 安全停止或重启后端 | 未实现或未证明安全，保留不可用状态；不可用强制终止替代 | 需要可靠生命周期后端和独立实机验收；本轮不开发。 |
 | Python Bridge 运行时 | 已废弃；`legacy-script` 为历史兼容快照 | 当前 App 使用 Swift Native Core；不得恢复或随意推进 CoreSnapshot。 |
 
-## 保留的开发与候选
+## 保留的开发与发布记录
 
 | 功能及位置 | 状态、分支/提交和 main 归属 | 证据及剩余工作 |
 | --- | --- | --- |
@@ -33,7 +33,7 @@
 | 更新器单操作候选：`native-app/Services/AppUpdateManager.swift`、`native-app/Views/SoftwareUpdateView.swift` | 已有等效主线实现；`origin/fix/simplify-update-button` `8b3ac32`，PR #8 开放 | 主要四个更新核心文件与 main 字节一致；PR 存在，保留并另行核对剩余文档/测试，不能以提交图未包含判断功能未实现。 |
 | 历史完整审计候选：`docs/HD2_NATIVE_FULL_AUDIT_20261106.md`、`native-app/Core/` | 未完成的 WIP；`feature/full-native-audit-20261106` `a96acac`；未合入 main | 旧候选混合 UI、凭据、部署和启动修改，部分已有较新主线实现；保留工作树与提交，逐项复核，禁止整树覆盖。 |
 | FX 1.9.12 历史环境证据：`docs/environment/FEX_SUCCESS_ENVIRONMENT_REPORT_FX1912_20261115.md`、`docs/environment/FEX_ENVIRONMENT_COMPARISON_FX199_VS_FX1912.md` | 已整合 main；PR #13，基线 `04f9fb4`；原 `docs/fx1912-success-environment-20261115` 工作树保留 | 2026-11-16 原文对照、相对链接和敏感信息模式扫描通过；观察和历史会话不证明当前游戏/最小部署方案。 |
-| 1.0.4 候选版本：`native-app/HD2FXNative.xcodeproj/project.pbxproj`、双语 CHANGELOG | 已完成候选构建但未满足发布门槛；`release/candidate-1.0.4-20261116` `2b31065`，PR #14 草稿；未合入 main | 2026-11-16 arm64/ad-hoc、ZIP 策略、DMG 校验/挂载、安装副本签名通过；实际 App 升级/重启、生产失败恢复、正式签名清单及发布检查待完成。候选不是已发布版本。 |
+| 1.0.4 发布：`native-app/HD2FXNative.xcodeproj/project.pbxproj`、双语 CHANGELOG | 已整合 main；PR #14，v1.0.4 标签 `6987fae`；用户明确决定不等待额外验收而发布 | 2026-11-16 发布包 arm64/ad-hoc、ZIP 策略、DMG 校验、签名清单及 SHA-256 通过；真实跨版本应用内升级、升级后自动重启及生产环境失败恢复均未验证。旧候选 `2b31065` 与正式包来源不同。 |
 
 ## 审计及复用证据
 
