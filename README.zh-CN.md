@@ -82,7 +82,7 @@ FX 1.9.9 历史实测记录了游戏主菜单及飞船。单人、EAC、多人�
 [v1.0.4 — 2026-11-16](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · 正式稳定版，构建 `2026111601`。见[发布说明](CHANGELOG.zh-CN.md)。
 <!-- stable-version:end -->
 
-未发布变更包括总览启动、首次运行 Proton-JE 校验及 Steam 配置、实验性 FEX 审核及恢复，以及 SSH 认证修复。参见[更新日志](CHANGELOG.zh-CN.md)和[原版启动器历史](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script)。
+当前功能状态、验证范围和未合并成果见[功能索引](docs/FEATURE_REGISTRY.md)、[更新日志](CHANGELOG.zh-CN.md)及[原版启动器历史](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script)。
 
 ### 免责声明
 

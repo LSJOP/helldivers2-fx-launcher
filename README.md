@@ -82,7 +82,7 @@ Earlier FX 1.9.9 testing reached the game menu and ship. Single-player, EAC, mul
 [v1.0.4 — 2026-11-16](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · Stable release, build `2026111601`. See [release notes](CHANGELOG.md).
 <!-- stable-version:end -->
 
-Unreleased changes include Dashboard launch, first-run Proton-JE verification and Steam configuration, experimental FEX review and recovery, and SSH authentication fixes. See the [changelog](CHANGELOG.md) and [original launcher history](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script).
+For current feature status, verification and unmerged work, see the [feature registry](docs/FEATURE_REGISTRY.md), [changelog](CHANGELOG.md) and [original launcher history](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script).
 
 ### Disclaimer
 

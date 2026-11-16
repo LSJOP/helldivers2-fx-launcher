@@ -2,6 +2,8 @@
 
 核对日期：2026-11-16（Asia/Shanghai）；主线基线 `04f9fb40c7832c50b107210fd3a5a7f70fadd3b6`。这是可供后续 Codex 接续的索引，不替代实际代码、当前 Git 状态或具体验收记录。检查顺序：开发状态与交接 → 本索引 → 当前代码和相关分支/PR → 判断是否需要开发。完成开发、修复、测试或合并时同步更新本表和交接；勿将隔离测试、文件存在或历史成功当作当前实机通过。
 
+后续固定分支：`dev/environment` 管理 FX/SteamOS/FEX/Proton/Runtime/首次配置，`dev/ui` 管理界面、设计与本地化，`dev/core` 管理启动、SSH、凭据、日志、更新及共享规范；`main` 为稳定发布，`legacy-script` 保留原终端脚本。开发前先检查相应固定分支及其工作树，并核对下表历史分支；存在未合并的独有成果不代表可以覆盖或直接整枝合入。每个固定开发分支最多一个常驻 worktree；新临时分支须用户事先授权。已完成工作应按功能更新本表和交接，记录文件、分支/提交、main 归属、测试范围/结果/日期及剩余事项。
+
 状态可同时表达归属和验证：**已整合 main** 表示代码存在于基线；**已验证**必须限定测试范围；**已实现未验证**指相应真实路径未验收；**开发中**和**已完成但未合并 main**表示分支状态；**未实现**或**已废弃**不代表历史记录应删除。下表所有条目的最后核对时间均为 2026-11-16；提交是对应代码或证据的可追溯历史点，不声称该提交单独包含整个功能。后续通过 `git log -- <文件>`、`git merge-base --is-ancestor` 和远端 API 刷新，不在提交内循环写入自己的 SHA。
 
 ## 主线功能
@@ -19,7 +21,7 @@
 | SteamOS 网络与诊断：`native-app/Core/SteamOSNetworkService.swift`、`native-app/Core/NetworkDiagnosticsService.swift` | 已整合 main；`104beaa` | 2026-11-16 网络隔离回归通过；IPv6 操作需显式用户操作；不能据只读诊断推断游戏匹配或多人成功。 |
 | 启动、等待与日志：`native-app/Core/NativeCoreService.swift`、`native-app/Core/LaunchService.swift`、`native-app/Views/LogsView.swift` | 已整合 main；`37852a5`、`ec71958` | 2026-11-16 核心/启动 fixtures 通过；真实游戏、EAC、单人、多人及本版完整启动未验证。 |
 | 更新检测、签名下载与单操作界面：`native-app/Services/UpdateReleaseService.swift`、`native-app/Services/AppUpdateManager.swift`、`native-app/Views/SoftwareUpdateView.swift` | 已整合 main；`f573a09`、`da3e149`；生产升级仍未验收 | 2026-11-16 更新服务 44、管理器 14 项隔离检查通过；实际服务检测并下载验签 v1.0.3。主线代码与开放 PR #8 的四个更新核心文件逐字一致；PR 仍开放，勿重复合并。 |
-| 更新安装、重启确认与失败恢复：`native-app/UpdateHelper/UpdateInstaller.swift`、`native-app/UpdateHelper/UpdateZIPPreflight.swift` | 已整合 main；`90f6931` 等；真实版本间端到端升级已实现未验证 | 2026-11-16 临时密钥/隔离 AppKit 测试覆盖安装、启动确认、失败回滚和中断恢复；不证明发布版 App 实际升级。v1.0.1 可能需 DMG 手动升级。正式发布前必须完成实际安装、升级及失败恢复验收。 |
+| 更新安装、重启确认与失败恢复：`native-app/UpdateHelper/UpdateInstaller.swift`、`native-app/UpdateHelper/UpdateZIPPreflight.swift` | 已整合 main；`90f6931` 等；真实版本间端到端升级已实现未验证 | 2026-11-16 临时密钥/隔离 AppKit 测试覆盖安装、启动确认、失败回滚和中断恢复；不证明发布版 App 实际升级。v1.0.1 可能需 DMG 手动升级。正式发布默认需实际安装、升级及失败恢复验收；明确授权的非安全验收例外须逐项记为未验证。 |
 | 正式 Release 与签名清单：`native-app/Config/Updates.xcconfig`、`native-app/script/package_update_zip.sh`、`.github/workflows/native-release-check.yml` | 已整合 main；v1.0.4 已发布；PR #14 已合并，标签指向 `6987fae` | 现有 ad-hoc 签名、固定 Ed25519 公钥和正式发布资源已配置；不等于 Apple 公证或生产升级通过。旧记录“无正式包/生产服务关闭”是历史阶段。发布门禁见 [NATIVE_UPDATES](NATIVE_UPDATES.md)。 |
 | FX/SteamOS 安全停止或重启后端 | 未实现或未证明安全，保留不可用状态；不可用强制终止替代 | 需要可靠生命周期后端和独立实机验收；本轮不开发。 |
 | Python Bridge 运行时 | 已废弃；`legacy-script` 为历史兼容快照 | 当前 App 使用 Swift Native Core；不得恢复或随意推进 CoreSnapshot。 |
