@@ -7,11 +7,11 @@
 [简体中文](README.zh-CN.md) | [English](README.md)
 
 <!-- stable-download:start -->
-### [🟨 ⬇️ Download HD2 FX Launcher — Latest Stable](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.3-macOS-arm64.dmg)
+### [🟨 ⬇️ Download HD2 FX Launcher — Latest Stable](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.4-macOS-arm64.dmg)
 
-**🟨 Stable Release · v1.0.3** · **macOS · Apple Silicon / arm64**
+**🟨 Stable Release · v1.0.4** · **macOS · Apple Silicon / arm64**
 
-**[⬇️ Download DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.3-macOS-arm64.dmg)** · [All Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**[⬇️ Download DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.4-macOS-arm64.dmg)** · [All Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
 <!-- stable-download:end -->
 
 ## English
@@ -53,7 +53,7 @@ The Logs page displays local system time, streams bounded task events, supports 
 ### Installation
 
 <!-- stable-install:start -->
-Current App: `1.0.3` (build `2026111502`), macOS 14+ Apple Silicon arm64. Ad-hoc signed; no Apple Developer ID signature or Apple notarization. Gatekeeper may block the download. Verify the [SHA-256 file](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt) before opening. If blocked, use Privacy & Security → Open Anyway for the verified App.
+Current App: `1.0.4` (build `2026111601`), macOS 14+ Apple Silicon arm64. Ad-hoc signed; no Apple Developer ID signature or Apple notarization. Gatekeeper may block the download. Verify the [SHA-256 file](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt) before opening. If blocked, use Privacy & Security → Open Anyway for the verified App.
 <!-- stable-install:end -->
 
 1. Download the macOS arm64 DMG from the published release.
@@ -79,7 +79,7 @@ Earlier FX 1.9.9 testing reached the game menu and ship. Single-player, EAC, mul
 ### Changelog
 
 <!-- stable-version:start -->
-[v1.0.3 — 2026-11-15](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · Stable release, build `2026111502`. See [release notes](CHANGELOG.md).
+[v1.0.4 — 2026-11-16](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · Stable release, build `2026111601`. See [release notes](CHANGELOG.md).
 <!-- stable-version:end -->
 
 Unreleased changes include Dashboard launch, first-run Proton-JE verification and Steam configuration, experimental FEX review and recovery, and SSH authentication fixes. See the [changelog](CHANGELOG.md) and [original launcher history](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script).

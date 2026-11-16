@@ -7,11 +7,11 @@
 [简体中文](README.zh-CN.md) | [English](README.md)
 
 <!-- stable-download:start -->
-### [🟨 ⬇️ 下载 绝地潜兵 2 FX 启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.3-macOS-arm64.dmg)
+### [🟨 ⬇️ 下载 绝地潜兵 2 FX 启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.4-macOS-arm64.dmg)
 
-**🟨 Stable Release · v1.0.3** · **macOS · Apple Silicon / arm64**
+**🟨 Stable Release · v1.0.4** · **macOS · Apple Silicon / arm64**
 
-**[⬇️ 立即下载 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.3-macOS-arm64.dmg)** · [查看所有版本](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**[⬇️ 立即下载 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.4-macOS-arm64.dmg)** · [查看所有版本](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
 <!-- stable-download:end -->
 
 ## 简体中文
@@ -53,7 +53,7 @@ FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游�
 ### 安装说明
 
 <!-- stable-install:start -->
-当前 App：`1.0.3`（构建 `2026111502`），适用于 macOS 14+ Apple Silicon arm64。采用 ad-hoc 签名，无 Apple Developer ID 签名，未经 Apple 公证。Gatekeeper 可能拦截下载副本；打开前核对 [SHA-256 文件](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt)。若被拦截，对已核验 App 使用「隐私与安全性 → 仍要打开」。
+当前 App：`1.0.4`（构建 `2026111601`），适用于 macOS 14+ Apple Silicon arm64。采用 ad-hoc 签名，无 Apple Developer ID 签名，未经 Apple 公证。Gatekeeper 可能拦截下载副本；打开前核对 [SHA-256 文件](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt)。若被拦截，对已核验 App 使用「隐私与安全性 → 仍要打开」。
 <!-- stable-install:end -->
 
 1. 从正式 Release 下载 macOS arm64 DMG。
@@ -79,7 +79,7 @@ FX 1.9.9 历史实测记录了游戏主菜单及飞船。单人、EAC、多人�
 ### 更新日志
 
 <!-- stable-version:start -->
-[v1.0.3 — 2026-11-15](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · 正式稳定版，构建 `2026111502`。见[发布说明](CHANGELOG.zh-CN.md)。
+[v1.0.4 — 2026-11-16](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · 正式稳定版，构建 `2026111601`。见[发布说明](CHANGELOG.zh-CN.md)。
 <!-- stable-version:end -->
 
 未发布变更包括总览启动、首次运行 Proton-JE 校验及 Steam 配置、实验性 FEX 审核及恢复，以及 SSH 认证修复。参见[更新日志](CHANGELOG.zh-CN.md)和[原版启动器历史](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script)。
