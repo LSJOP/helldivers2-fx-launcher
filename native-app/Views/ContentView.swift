@@ -7,7 +7,7 @@ struct ContentView: View {
     var body: some View {
         NavigationSplitView {
             SidebarView(state: state)
-                .navigationSplitViewColumnWidth(min: 210, ideal: 210, max: 250)
+                .navigationSplitViewColumnWidth(min: 230, ideal: 240, max: 280)
         } detail: {
             VStack(alignment: .leading, spacing: 16) {
                 if let error = state.error, state.selection != .dashboard {
@@ -26,7 +26,7 @@ struct ContentView: View {
                         case .setup: FirstRunSetupView(state: state, tasks: tasks, credentials: state.credentials)
                         case .dashboard: DashboardView(state: state, tasks: tasks)
                         case .environment: EnvironmentView(state: state)
-                        case .fx: FXManagerView(state: state)
+                        case .fx: DashboardView(state: state, tasks: tasks)
                         case .performance: GamePerformanceView(state: state)
                         case .logs: LogsView(state: state)
                         case .settings: SettingsView(state: state)

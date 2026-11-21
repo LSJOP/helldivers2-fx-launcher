@@ -24,6 +24,17 @@ final class AppState: ObservableObject {
             firstRunState = .Completed
             environmentWorkflow = EnvironmentWorkflow(phase: .completed, completedSteps: 5)
             selection = .setup
+        } else if scenario == "fx" {
+            let rows: [[String: JSONValue]] = [
+                ["path": .string("/ui-preview-fixture/One/FX Steam Launcher.app"), "name": .string("FX Steam Launcher"), "version": .string("1.9.9"), "identity_valid": .bool(true), "structure": .string("metadata_valid")],
+                ["path": .string("/ui-preview-fixture/Two/FX Steam Launcher.app"), "name": .string("FX Steam Launcher"), "version": .string("1.9.9"), "identity_valid": .bool(true), "structure": .string("metadata_valid")],
+                ["path": .string("/ui-preview-fixture/Three/FX Steam Launcher.app"), "name": .string("FX Steam Launcher"), "version": .string("1.9.8"), "identity_valid": .bool(true), "structure": .string("metadata_valid")]
+            ]
+            fxSelection.reconcile(rows, incomplete: false)
+            fxSelection.select(rows[0]["path"]?.text)
+            runtimeRoot = fxSelection.selectedPath ?? ""
+            results["list_fx_versions"] = ["candidates": .array(rows.map(JSONValue.object)), "scan_incomplete": .bool(false)]
+            selection = .dashboard
         } else if scenario == "launch" {
             environmentWorkflow = EnvironmentWorkflow(phase: .detecting, completedSteps: 2, launchesGame: true)
             selection = .dashboard

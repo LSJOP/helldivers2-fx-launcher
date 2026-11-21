@@ -8,9 +8,17 @@ Keep the dark HELLDIVERS 2 tactical identity, yellow emphasis for primary action
 
 ## Navigation and workflow composition
 
-The sidebar order is first-run setup, dashboard, environment, FX manager, game performance, logs and settings. Derive numbering and Command shortcuts from this shared order. Preserve dashboard as the default and do not restart configuration for existing users.
+The sidebar order is first-run setup, dashboard, environment, game performance, logs and settings. Derive numbering and Command shortcuts from `Page.navigationPages`. Preserve dashboard as the default and do not restart configuration for existing users. FX scanning, selection and controls are integrated into Dashboard; its More action retains the full diagnostic and maintenance view. Internal routing for a pending FX choice remains intact.
 
 Compose welcome, verified completion and launch preparation as related command-terminal scenes, not generic stacked cards next to an isolated poster. Use a clear primary heading, evidence-bound status, a prominent real action, the complete large right-hand artwork and reusable tactical background and lower-left hazard detail. Distinguish pending, active, completed, failed and cancelled from the actual workflow state. Reference images guide visual hierarchy only; do not introduce fictional states or actions.
+
+## Overview and FX controls
+
+Use the user-supplied `HD2FX_UI_Reference_Matched_v2` reference as the current composition guide; the reference is not a runtime asset or proof of state. Keep the existing licensed hero, tactical charcoal layers, a yellow game-launch primary action and four evidence-bound cards for FX, Steam, EAC and multiplayer. Preserve VM detection in the service and Environment page. A recognized installation or selected card does not establish that FX is running.
+
+List instances by their verified paths, not version alone; reuse `FXSelectionManager` and its incomplete-scan and persisted-selection rules. At most three cards occupy a row and narrow windows wrap. Render the selected frame separately from actual runtime evidence; unknown and unverified remain visible. Keep rescan, manual location and safe FX/Steam entry points, task guards, errors and diagnostics. Stop/restart remain visibly unavailable unless the existing safe backend is genuinely available; never substitute force termination. Keep detailed hashes and compatibility inspection behind More. Decorative frames may be rebuilt with scalable SwiftUI shapes or supplied stretchable assets; all labels and controls remain native UI.
+
+The v2 supplied kit SHA-256 is `892c9d8b576b424a0ca4202ab223cdffea6e673099107981ff3c259f550a5465`. Its transparent assets used here are FX panel, selected and idle frames, FX cube and watermark, three evidence icons, command globe and hazard stripes. The original v1 kit SHA-256 is `1278068eeff5a1b6752900bdb2a3cf4e2c83eaa5fd4424865cc806a24d02c8fd`; its `super_earth_horizon` is an original auxiliary illustration and does not reproduce the reference's photographic city. The v2 `raster_reference_only` files are cropped reference screenshots and must not ship as art. The reference contains no clean soldier or city layers: reuse the project hero and do not claim those details match exactly. Unused vector/PNG variants remain in the supplied kit; use only those needed rather than duplicate equivalent geometry. Third-party attribution and permission remain recorded below.
 
 ## Artwork and attribution
 

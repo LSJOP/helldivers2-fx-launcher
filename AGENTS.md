@@ -1,7 +1,7 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.30** · Updated: **2026-11-15**.
-Change: establish setup-first navigation and integrated tactical workflow composition. Instruction version is independent of App version.
+Instruction version: **v1.2.31** · Updated: **2026-11-21**.
+Change: integrate the six-item overview navigation and evidence-bound FX controls. Instruction version is independent of App version.
 
 ## Authority and task lifecycle
 
@@ -58,6 +58,7 @@ All subsequent UI work must first follow `docs/UI_DESIGN_GUIDELINES.md`: read th
 - Review changed pages for visual consistency, action placement and duplication, clipping, loading, errors and accessibility. For ordinary visual iterations inspect Chinese and English in light/dark and wide/narrow layouts; expand review when localization or other languages are affected. Maintain automated checks and all ten languages. Provide real App screenshots for substantial visual changes; routine code changes do not require screenshots. Clearly label fixture previews and never present them as live success.
 
 - Protect the Dashboard hero and the shared secondary-page starfield, sunrise and Super Earth emblem header; never replace or cover them with new illustrations. Restrict MOTR7 artwork to the first-run welcome, verified setup completion and game-launch preparation flows. Place it on the right using the shared adaptive container, consistent size and spacing; hide it when room is insufficient for controls. Preserve the whole original image and its aspect ratio. Record third-party authorship and permission. Workflow success and progress must come from actual service evidence; never fabricate them for presentation. Artwork must not reduce readability or impede actions. Review every substantial visual change with real App screenshots.
-- Keep sidebar order: first-run setup, dashboard, environment, FX, performance, logs, settings; derive visible numbers and Command shortcuts from the same order while keeping the dashboard as the ordinary default.
+- Keep sidebar order: first-run setup, dashboard, environment, performance, logs, settings; derive visible numbers and Command shortcuts from the same order while keeping the dashboard as the ordinary default. FX controls and advanced diagnostics remain reachable from Dashboard; preserve internal selection routing and never remove existing functionality.
 - Build the three artwork flows as cohesive command-terminal compositions with reusable lower-left tactical decoration, clear evidence and action hierarchy, and full-size right-hand artwork; do not settle for unrelated standard cards beside a poster.
+- Use the approved overview reference for composition, not as an App background or proof of live state. The overview shows four evidence-bound FX, Steam, EAC and multiplayer cards, an emphasized game launch action, and FX instance controls. Instance identity is path-based; selection is not runtime evidence. Keep detailed resource and compatibility diagnostics available without crowding the default overview. Do not change Core behavior for visual fidelity.
 - User-facing product names are `绝地潜兵 2 FX 启动器` and `HELLDIVERS 2 FX Launcher`; localize product naming consistently and reserve `HD2FXNative` for engineering. Treat approved reference images as visual guidance, not evidence of functionality or state. Reuse tactical decoration components, avoid isolated miniature posters and meaningless image padding, and preserve complete authorized artwork.

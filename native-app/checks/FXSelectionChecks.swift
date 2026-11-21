@@ -37,6 +37,8 @@ import Foundation
         try check(manager.selectedPath == nil, "missing default and two candidates requires choice")
         manager.reconcile([row("/fixture/C.app"), row("/fixture/D.app")], incomplete: false)
         try check(manager.selected == nil, "two candidates never auto-sort by version")
+        manager.select("/fixture/D.app")
+        try check(manager.selectedPath == "/fixture/D.app" && manager.selected?["version"]?.text == "1.9.8", "same-version instances remain distinct by path")
         manager.reconcile([["path": .string("/fake.app"), "structure": .string("metadata_valid")]], incomplete: false)
         try check(manager.selected == nil, "unverified identity rejected")
         manager.reconcile([row("/fixture/A.app")], incomplete: true)

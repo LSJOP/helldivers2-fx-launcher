@@ -1,5 +1,8 @@
 {
  "en": {
+  "ui.dashboard.fxControl": "FX controls",
+  "ui.dashboard.more": "More",
+  "ui.dashboard.selected": "Selected",
   "ui.workflow.environment": "Environment status",
   "ui.workflow.configure": "Automatic setup",
   "ui.workflow.begin": "Start automatic setup",
@@ -615,6 +618,9 @@
   "ui.art.completedTitle": "Environment setup completed"
  },
  "zh-CN": {
+  "ui.dashboard.fxControl": "FX 控制",
+  "ui.dashboard.more": "更多",
+  "ui.dashboard.selected": "已选择",
   "ui.workflow.environment": "环境状态",
   "ui.workflow.configure": "自动配置",
   "ui.workflow.begin": "开始自动配置",
@@ -1230,6 +1236,9 @@
   "ui.art.completedTitle": "环境配置流程已完成"
  },
  "ja": {
+  "ui.dashboard.fxControl": "FX コントロール",
+  "ui.dashboard.more": "その他",
+  "ui.dashboard.selected": "選択中",
   "ui.workflow.environment": "環境の状態",
   "ui.workflow.configure": "自動セットアップ",
   "ui.workflow.begin": "自動セットアップを開始",
@@ -1845,6 +1854,9 @@
   "ui.art.completedTitle": "環境設定が完了しました"
  },
  "ko": {
+  "ui.dashboard.fxControl": "FX 제어",
+  "ui.dashboard.more": "더 보기",
+  "ui.dashboard.selected": "선택됨",
   "ui.workflow.environment": "환경 상태",
   "ui.workflow.configure": "자동 설정",
   "ui.workflow.begin": "자동 설정 시작",
@@ -2460,6 +2472,9 @@
   "ui.art.completedTitle": "환경 설정이 완료되었습니다"
  },
  "ru": {
+  "ui.dashboard.fxControl": "Управление FX",
+  "ui.dashboard.more": "Ещё",
+  "ui.dashboard.selected": "Выбрано",
   "ui.workflow.environment": "Состояние среды",
   "ui.workflow.configure": "Автонастройка",
   "ui.workflow.begin": "Начать автонастройку",
@@ -3075,6 +3090,9 @@
   "ui.art.completedTitle": "Настройка среды завершена"
  },
  "es": {
+  "ui.dashboard.fxControl": "Control de FX",
+  "ui.dashboard.more": "Más",
+  "ui.dashboard.selected": "Seleccionado",
   "ui.workflow.environment": "Estado del entorno",
   "ui.workflow.configure": "Configuración automática",
   "ui.workflow.begin": "Iniciar configuración automática",
@@ -3690,6 +3708,9 @@
   "ui.art.completedTitle": "Configuración del entorno completada"
  },
  "de": {
+  "ui.dashboard.fxControl": "FX-Steuerung",
+  "ui.dashboard.more": "Mehr",
+  "ui.dashboard.selected": "Ausgewählt",
   "ui.workflow.environment": "Umgebungsstatus",
   "ui.workflow.configure": "Automatische Einrichtung",
   "ui.workflow.begin": "Einrichtung starten",
@@ -4305,6 +4326,9 @@
   "ui.art.completedTitle": "Einrichtung der Umgebung abgeschlossen"
  },
  "fr": {
+  "ui.dashboard.fxControl": "Contrôle FX",
+  "ui.dashboard.more": "Plus",
+  "ui.dashboard.selected": "Sélectionné",
   "ui.workflow.environment": "État de l’environnement",
   "ui.workflow.configure": "Configuration automatique",
   "ui.workflow.begin": "Démarrer la configuration",
@@ -4920,6 +4944,9 @@
   "ui.art.completedTitle": "Configuration de l’environnement terminée"
  },
  "pt-BR": {
+  "ui.dashboard.fxControl": "Controle do FX",
+  "ui.dashboard.more": "Mais",
+  "ui.dashboard.selected": "Selecionado",
   "ui.workflow.environment": "Estado do ambiente",
   "ui.workflow.configure": "Configuração automática",
   "ui.workflow.begin": "Iniciar configuração automática",
@@ -5535,6 +5562,9 @@
   "ui.art.completedTitle": "Configuração do ambiente concluída"
  },
  "zh-TW": {
+  "ui.dashboard.fxControl": "FX 控制",
+  "ui.dashboard.more": "更多",
+  "ui.dashboard.selected": "已選擇",
   "ui.workflow.environment": "環境狀態",
   "ui.workflow.configure": "自動配置",
   "ui.workflow.begin": "開始自動配置",

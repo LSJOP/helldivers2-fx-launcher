@@ -143,7 +143,7 @@ struct NavigationCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .newItem) {}
         CommandMenu(state.t("ui.193")) {
-            ForEach(Array(Page.allCases.enumerated()), id: \.element.id) { index, page in
+            ForEach(Array(Page.navigationPages.enumerated()), id: \.element.id) { index, page in
                 Button(state.pageTitle(page)) { state.selection = page }
                     .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: .command)
                     .disabled(NativeLocalization.artworkPreviewRequested)
@@ -177,7 +177,7 @@ struct NavigationCommands: Commands {
                 .padding(8)
                 .background(.yellow)
             HStack(spacing: 0) {
-                SidebarView(state: state).frame(width: 210)
+                SidebarView(state: state).frame(width: 240)
                 ScrollView {
                     Group {
                         if option("--artwork-fixture-preview", fallback: "") == "completion" {

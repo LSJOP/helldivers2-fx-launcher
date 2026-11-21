@@ -17,9 +17,13 @@ apple_languages = dict(zip(
 ))
 parser.add_argument('--language',required=True,choices=apple_languages)
 parser.add_argument('--bootstrap-chinese',action='store_true',help='Use only with an isolated capture-copy bundle identifier')
-parser.add_argument('--fx-only',action='store_true',help='Capture only FX Manager in an isolated read-only window')
+parser.add_argument('--fx-only',action='store_true',help='Capture only the Dashboard FX controls in an isolated read-only window')
 parser.add_argument('--credentials-only',action='store_true',help='Capture only Settings and First-Run Setup, with no credential-store access')
+parser.add_argument('--appearance',choices=['dark','light'],default='dark')
+parser.add_argument('--width',type=int,default=1180)
+parser.add_argument('--height',type=int,default=850)
 args=parser.parse_args();bundle=args.bundle.resolve();output=args.output.resolve()
+if args.width < 850 or args.height < 560:raise SystemExit('Requested window is below the app minimum')
 info=plistlib.loads((bundle/'Contents/Info.plist').read_bytes())
 if not info.get('CFBundleIdentifier','').startswith('com.lsjop.helldivers2fx.native.readme.'):
     raise SystemExit('Capture requires a separate capture bundle identifier')
@@ -28,6 +32,7 @@ output.mkdir(parents=True,exist_ok=True)
 result_file=output/'readme-capture.json';request_file=output/'capture-request.json'
 if result_file.exists() or request_file.exists():raise SystemExit('Use a fresh capture directory')
 launch_args=['--readme-screenshots',str(output),args.language,
+             '--capture-appearance',args.appearance,'--capture-width',str(args.width),'--capture-height',str(args.height),
              '-NativeLanguage',initial,'-AppleLanguages','('+apple_languages[initial]+')',
              '-NativeRememberedRuntimeRoot','',
              '-NativeCredentialAutoLoadDisabled','YES','-ApplePersistenceIgnoreState','YES','-NSQuitAlwaysKeepsWindows','NO']

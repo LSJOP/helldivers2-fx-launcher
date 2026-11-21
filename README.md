@@ -22,30 +22,28 @@ FX 1.9.9 test-Guest repair now reaches the game through the GUI with the histori
 
 Screenshots come from isolated Debug builds. The update panel capture uses a separate App identity and shows the service as unconfigured. See [capture provenance](docs/images/README.md).
 
-The Dashboard retains five cards: FX, virtual machine, Steam, EAC and multiplayer. Green identifies an observed FX/Steam process or a verified Guest SSH connection; yellow means an active check, red an explicit stage failure, and gray missing or stale evidence. Process detection, completed checks and menu/single-player confirmation do not establish EAC loading or multiplayer success. The isolated status matrix validates display logic; it does not establish live game readiness.
+The Dashboard shows four cards: FX, Steam, EAC and multiplayer; Guest/VM detection remains available in Environment. Green identifies an observed FX/Steam process; yellow denotes an active check or unverified EAC/multiplayer, red an explicit stage failure, and gray missing or stale process evidence. Process detection, completed checks and menu/single-player confirmation do not establish EAC loading or multiplayer success. The isolated status matrix validates display logic; it does not establish live game readiness.
 
 | Dashboard | First-Run Setup |
 | --- | --- |
 | ![Dashboard](docs/images/en/dashboard.png) | ![First-Run Setup](docs/images/en/first-run-setup.png) |
-| Environment | FX Manager |
-| ![Environment](docs/images/en/environment.png) | ![FX Manager](docs/images/en/fx-manager.png) |
+| Environment | Logs |
+| ![Environment](docs/images/en/environment.png) | ![Logs](docs/images/en/logs.png) |
 | Game Performance | Settings |
 | ![Game Performance](docs/images/en/performance.png) | ![Settings](docs/images/en/settings.png) |
-| Logs | |
-| ![Logs](docs/images/en/logs.png) | |
 
 ### Features
 
 Unreleased setup and launch workflow artwork is by **MOTR7**, used with the artist’s permission as supplied by the user. The Dashboard hero and shared page header are unchanged. First-Run Setup is first in the sidebar (⌘1); Dashboard remains the default (⌘2).
 
-**Unreleased UI:** Environment, FX Manager and Logs use a shared content-area snapshot refresh. The FX details view reuses inspection evidence to avoid repeated hashing during redraw.
+**Unreleased UI:** Dashboard integrates FX scanning, path-based instance selection and supported FX/Steam controls. More opens the existing resource and compatibility diagnostics. Stop and restart remain unavailable without a verified graceful-exit backend. Environment and Logs retain their shared content-area refresh.
 
 The Logs page displays local system time, streams bounded task events, supports auto-scroll and exports redacted raw ISO 8601 timestamps. Launch command success, process detection, window and gameplay remain separate; game-window and gameplay evidence are not automatic.
 
-- Dashboard starts the guarded HELLDIVERS 2 launch workflow. FX Manager inspects the selected FX installation and exposes supported FX/Steam actions.
+- Dashboard starts the guarded HELLDIVERS 2 launch workflow. Dashboard also inspects the selected FX installation and exposes supported FX/Steam actions.
 - First-Run Setup checks Guest identity, runtime capabilities and component integrity. Approved configuration can install the pinned Proton-JE package, select a verified Steam compatibility tool and merge launch options while retaining custom arguments. Detection is read-only. Deployment and recovery require their own checks.
 - Environment reports FEX and Proton-JE evidence. SSH and sudo credentials can be stored separately in encrypted local storage for a verified target; reuse after restart still requires real-world acceptance.
-- The Swift App provides seven native pages, logs, scoped performance controls and ten interface languages. Optional SteamOS installation steps require Python 3.
+- The Swift App provides six navigation pages, logs, scoped performance controls and ten interface languages. Optional SteamOS installation steps require Python 3.
 - In v1.0.1, open Settings → Software Update to check for and install later stable releases. Upgrade once from v1.0.0 using the official DMG.
 
 ### Installation
@@ -56,7 +54,7 @@ Current App: `1.0.1` (build `2026111406`), macOS 14+ Apple Silicon arm64. Ad-hoc
 2. Run `shasum -a 256 <downloaded-dmg>` and compare the result with the SHA-256 in the release notes. Open the DMG after they match.
 3. Drag the App to Applications.
 4. Open the App.
-5. Select an installed FX Steam Launcher in FX Manager and follow First-Run Setup. You need SteamOS with Steam and HELLDIVERS 2 (AppID 553850) installed under an account that owns the game. The Guest must be reachable over SSH. Enter required credentials in the App and review the proposed changes.
+5. Select an installed FX Steam Launcher in Dashboard and follow First-Run Setup. You need SteamOS with Steam and HELLDIVERS 2 (AppID 553850) installed under an account that owns the game. The Guest must be reachable over SSH. Enter required credentials in the App and review the proposed changes.
 6. Choose **Launch HELLDIVERS 2** on Dashboard.
 
 For source builds, see the [development guide](docs/NATIVE_DEVELOPMENT.md).
