@@ -97,6 +97,8 @@ def main() -> int:
 
     debug_manifest_path = ROOT / 'Resources/rf-fex-debug-manifest-v1.json'
     debug_manifest = json.loads(debug_manifest_path.read_text())
+    if hashlib.sha256(debug_manifest_path.read_bytes()).hexdigest() not in adapter:
+        fail(errors, 'runtime does not pin the controlled-Debug manifest bytes')
     debug_files = debug_manifest.get('files', [])
     debug_paths = [item.get('path') for item in debug_files]
     if (debug_manifest.get('schema') != 1 or debug_manifest.get('expectedFiles') != 41
@@ -104,6 +106,7 @@ def main() -> int:
             or debug_manifest.get('debugOnly') is not True
             or debug_manifest.get('distributionApproved') is not False):
         fail(errors, 'controlled-Debug RF manifest policy or inventory is invalid')
+    guest_tree = {}
     for item in debug_files:
         path = item.get('path', '')
         if (not path or path.startswith('/') or '..' in Path(path).parts or '\\' in path
@@ -112,6 +115,14 @@ def main() -> int:
                 or item.get('publicDistributionAllowed') is not False
                 or item.get('controlledDebugOnly') is not True):
             fail(errors, 'invalid controlled-Debug RF entry: ' + repr(path))
+            continue
+        guest_tree[path] = ['file', item['sha256'], item['mode']]
+        for parent in Path(path).parents:
+            if parent != Path('.'):
+                guest_tree[parent.as_posix()] = ['dir']
+    tree_hash = hashlib.sha256(json.dumps(guest_tree, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+    if tree_hash not in adapter:
+        fail(errors, 'managed repair tree differs from the 41-file manifest')
     plan = manifest.get('rfPackagingPlan', {})
     if (plan.get('debugExpectedFiles') != 41
             or plan.get('debugPayloadFingerprint') != debug_manifest.get('payloadFingerprint')

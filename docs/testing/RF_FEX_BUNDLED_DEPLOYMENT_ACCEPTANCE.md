@@ -30,8 +30,14 @@ FEX 基础源码有 MIT 许可证记录。历史二进制的完整源码与补�
 | 项目 | 结果 |
 | --- | --- |
 | arm64 Debug Bundle 和 41 文件检验 | PASS |
+| 真实 App 冷启动与打开首次配置页 | PASS，独立本机 App 数据目录 |
+| 私有 payload 在 Release 和 CI 的构建拒绝 | PASS，执行 Xcode 资源阶段的两个负例 |
 | 缺失自动进入修复入口 | PASS，静态检查 |
 | 损坏替换、权限位、事务和 RootFS | PASS，隔离文件系统测试 |
 | 真实 SSH/SFTP、App 配置 A–H、两次重启 | NOT_TESTED |
 | Steam 启动请求、游戏进程、游戏窗口、主菜单、单人、多人 | NOT_TESTED |
 | Release 制品与 RF 网络备用 | BLOCKED，等待制品及完整再分发审核 |
+
+实际构建使用干净源码 `933872929de7019b88213f573854490dfc8a9009`。arm64 主可执行文件 SHA-256 为 `b057806cea25297fa44b2004178267b81de2bb8d0dd094d5cb4543973c5319be`，Debug dylib 为 `3610ffd1b9db423a33a50fc974b9784910f0a4802263a5197bc6111610182003`。实际 Bundle 的两项更新标记均为 `NO`。
+
+资源树与清单共 42 个文件通过敏感信息扫描。新增及修改的 Git 文件也通过暂存扫描。全仓已跟踪文件扫描在既有 `PersistentCredentialChecks.swift` 中报告一项测试凭据模式命中，该文件本次无改动。
