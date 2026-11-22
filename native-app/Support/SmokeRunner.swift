@@ -331,7 +331,22 @@ import ApplicationServices
                         if maximum > 2 && !(abs(positions[0] - positions[2]) > 1) {
                             throw ErrorState("SCROLL_POSITION_UNCHANGED")
                         }
-                        measurements.append(["positions": positions, "vertical_extent": maximum])
+                        var measurement: [String: Any] = ["positions": positions, "vertical_extent": maximum]
+                        if maximum > 2,
+                           let event = CGEvent(scrollWheelEvent2Source: nil, units: .line,
+                                               wheelCount: 1, wheel1: -6, wheel2: 0, wheel3: 0),
+                           let wheel = NSEvent(cgEvent: event) {
+                            let bottom = clip.bounds.origin
+                            clip.scroll(to: NSPoint(x: bottom.x, y: positions[0]))
+                            scroll.reflectScrolledClipView(clip)
+                            scroll.scrollWheel(with: wheel)
+                            try await Task.sleep(nanoseconds: 190_000_000)
+                            measurement["wheel_moved"] = abs(clip.bounds.origin.y - positions[0]) > 1
+                            measurement["wheel_scroller_visible"] = visibleScroller(scroll)
+                            clip.scroll(to: bottom)
+                            scroll.reflectScrolledClipView(clip)
+                        }
+                        measurements.append(measurement)
                     }
                     scrollAudit[name] = measurements
                     if page == .dashboard || page == .logs {

@@ -498,5 +498,285 @@
         }
       ]
     }
+  },
+  "en-wheel-audit": {
+    "appearance": "dark",
+    "requested_size": [
+      1180,
+      850
+    ],
+    "input": "NSEvent scrollWheel delivered to the live NSScrollView",
+    "pages": {
+      "dashboard": [
+        {
+          "positions": [
+            0,
+            65.5,
+            131
+          ],
+          "vertical_extent": 131,
+          "wheel_moved": true,
+          "wheel_scroller_visible": false
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "environment": [
+        {
+          "positions": [
+            0,
+            527,
+            1054
+          ],
+          "vertical_extent": 1054,
+          "wheel_moved": true,
+          "wheel_scroller_visible": false
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "first-run-setup": [
+        {
+          "positions": [
+            0,
+            149.5,
+            299
+          ],
+          "vertical_extent": 299,
+          "wheel_moved": true,
+          "wheel_scroller_visible": false
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "logs": [
+        {
+          "positions": [
+            0,
+            64.75,
+            129.5
+          ],
+          "vertical_extent": 129.5,
+          "wheel_moved": true,
+          "wheel_scroller_visible": false
+        },
+        {
+          "positions": [
+            0,
+            157.5,
+            295
+          ],
+          "vertical_extent": 315,
+          "wheel_moved": true,
+          "wheel_scroller_visible": false
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "performance": [
+        {
+          "positions": [
+            0,
+            421.5,
+            843
+          ],
+          "vertical_extent": 843,
+          "wheel_moved": true,
+          "wheel_scroller_visible": false
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "settings": [
+        {
+          "positions": [
+            0,
+            707.25,
+            1414.5
+          ],
+          "vertical_extent": 1414.5,
+          "wheel_moved": true,
+          "wheel_scroller_visible": false
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ]
+    }
+  },
+  "zh-CN-wheel-audit": {
+    "appearance": "light",
+    "requested_size": [
+      850,
+      700
+    ],
+    "input": "NSEvent scrollWheel delivered to the live NSScrollView",
+    "pages": {
+      "dashboard": [
+        {
+          "positions": [
+            0,
+            56.5,
+            113
+          ],
+          "vertical_extent": 113,
+          "wheel_moved": true,
+          "wheel_scroller_visible": false
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "environment": [
+        {
+          "positions": [
+            0,
+            594.5,
+            1189
+          ],
+          "vertical_extent": 1189,
+          "wheel_moved": true,
+          "wheel_scroller_visible": false
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "first-run-setup": [
+        {
+          "positions": [
+            0,
+            207.5,
+            415
+          ],
+          "vertical_extent": 415,
+          "wheel_moved": true,
+          "wheel_scroller_visible": false
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "logs": [
+        {
+          "positions": [
+            0,
+            139.75,
+            279.5
+          ],
+          "vertical_extent": 279.5,
+          "wheel_moved": true,
+          "wheel_scroller_visible": false
+        },
+        {
+          "positions": [
+            0,
+            157.5,
+            295
+          ],
+          "vertical_extent": 315,
+          "wheel_moved": true,
+          "wheel_scroller_visible": false
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "performance": [
+        {
+          "positions": [
+            0,
+            496.5,
+            993
+          ],
+          "vertical_extent": 993,
+          "wheel_moved": true,
+          "wheel_scroller_visible": false
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "settings": [
+        {
+          "positions": [
+            0,
+            782.25,
+            1564.5
+          ],
+          "vertical_extent": 1564.5,
+          "wheel_moved": true,
+          "wheel_scroller_visible": false
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ]
+    }
   }
 }
