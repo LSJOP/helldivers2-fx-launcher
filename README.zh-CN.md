@@ -8,6 +8,9 @@
 
 ### [🟨 ⬇️ 下载 绝地潜兵 2 FX 启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.1/HD2FXNative-v1.0.1-macOS-arm64.dmg)
 
+总览 V003 隐藏滚动条，并优化紧凑布局、选中高亮和浅色横幅。
+
+
 **🟨 Stable Release · v1.0.1** · **macOS · Apple Silicon / arm64**
 
 **[⬇️ 立即下载 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.1/HD2FXNative-v1.0.1-macOS-arm64.dmg)** · [查看所有版本](https://github.com/LSJOP/helldivers2-fx-launcher/releases)

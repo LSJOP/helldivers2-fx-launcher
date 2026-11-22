@@ -552,13 +552,14 @@ struct TacticalMetric: View {
 
 /// Keeps complete rows across the proposed width; never reserves empty grid slots.
 struct TacticalAdaptiveLayout: Layout {
+    static let compactWidth: CGFloat = 760
     var minimumWidth: CGFloat
     var maximumColumns: Int
     var fillsPartialRows = true
     var compactColumns: Int? = nil
     private let gap: CGFloat = 12
     private func columns(_ width: CGFloat, count: Int) -> Int {
-        let limit = width < 760 ? compactColumns ?? maximumColumns : maximumColumns
+        let limit = width < Self.compactWidth ? compactColumns ?? maximumColumns : maximumColumns
         let n = min(count, limit, max(1, Int((width + gap) / (minimumWidth + gap))))
         if count == 4 && n == 3 { return 2 }
         if count == 5 && n == 4 { return 3 }

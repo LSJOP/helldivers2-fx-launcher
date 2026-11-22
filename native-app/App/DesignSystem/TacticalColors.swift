@@ -23,8 +23,8 @@ struct TacticalColors {
     var elevated: Color { adaptive(0x2B3138, 0xFFFFFF) }
     var hover: Color { adaptive(0x2F353D, 0xEBEEE5) }
     var pressed: Color { adaptive(0x262B31, 0xDFE3D6) }
-    var selected: Color { adaptive(0x2D2E27, 0xF9F3DC) }
-    var selectedHover: Color { adaptive(0x34352B, 0xFFF0C7) }
+    var selected: Color { adaptive(0x292B2A, 0xF8F5E9) }
+    var selectedHover: Color { adaptive(0x32342F, 0xFAF2D9) }
     var disabled: Color { adaptive(0x3A3F46, 0xE3E5DE) }
     var unknown: Color { adaptive(0x8B919A, 0x686F76) }
     var primaryHover: Color { adaptive(0xFFE053, 0xF8E28B) }

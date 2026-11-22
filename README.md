@@ -8,6 +8,9 @@
 
 ### [🟨 ⬇️ Download HD2 FX Launcher — Latest Stable](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.1/HD2FXNative-v1.0.1-macOS-arm64.dmg)
 
+Dashboard V003 hides scroll indicators and improves the compact layout, target highlight and light hero.
+
+
 **🟨 Stable Release · v1.0.1** · **macOS · Apple Silicon / arm64**
 
 **[⬇️ Download DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.0.1/HD2FXNative-v1.0.1-macOS-arm64.dmg)** · [All Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)

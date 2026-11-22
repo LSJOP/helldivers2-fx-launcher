@@ -54,3 +54,7 @@ Maintain all ten existing languages through the localization resources. User-vis
 - Verify hover, pressed, disabled, loading, success and error states where applicable.
 - Check VoiceOver labels, keyboard navigation and all ten language resources; review Chinese and English layouts and widen the review where appropriate.
 - Build and run appropriate tests; inspect real App screenshots for substantial visual changes and report any missing verification honestly.
+
+## Dashboard V003
+
+Hide both scroll indicators at the SwiftUI scene roots and in editors. Keep the scroll containers, selection and scrolling behavior active. For any AppKit scroll views introduced in the future, hide their scrollers on the view itself. Use the Dashboard content width to reduce the hero and status-card height in compact layouts. Keep the full-width emblem asset in the compact sidebar and retain the existing safety confirmation with concise copy for FX launch.

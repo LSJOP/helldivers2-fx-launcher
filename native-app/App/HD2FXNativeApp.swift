@@ -97,6 +97,7 @@ struct HD2FXNativeApp: App {
                 regularContent
                 #endif
             }
+            .scrollIndicators(.hidden)
             .frame(minWidth: 850, minHeight: 560)
             .preferredColorScheme(state.appearance.scheme)
         }
@@ -107,6 +108,7 @@ struct HD2FXNativeApp: App {
         }
         Settings {
             ScrollView { SettingsView(state: state).padding(24) }
+                .scrollIndicators(.hidden)
                 .disabled(NativeLocalization.artworkPreviewRequested)
                 .frame(width: 650, height: 700)
                 .preferredColorScheme(state.appearance.scheme)

@@ -67,7 +67,7 @@ struct ContentView: View {
             }
             Button(state.t("ui.037"), role: .cancel) { state.pendingAction = nil }
         } message: {
-            Text(state.t("ui.358"))
+            Text(state.t(state.pendingAction == .startFX ? "ui.dashboard.confirmFX" : "ui.358"))
         }
         .sheet(item: $state.operationSelection) { item in
             LegacyOperationSheet(state: state, operation: item.method)

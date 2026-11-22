@@ -42,7 +42,7 @@ struct SidebarView: View {
                     TacticalDivider()
                     VStack(alignment: .leading, spacing: 10) {
                         Image("super_earth_command_emblem").resizable().scaledToFit()
-                            .frame(maxWidth: compact ? 52 : 184)
+                            .frame(maxWidth: compact ? 64 : 184)
                             .frame(maxWidth: .infinity)
                             .accessibilityHidden(true)
                         if !compact {
@@ -56,7 +56,8 @@ struct SidebarView: View {
                             .frame(width: compact ? 36 : 96, height: compact ? 5 : 10)
                             .frame(maxWidth: .infinity)
                             .accessibilityHidden(true)
-                    }.padding(compact ? 8 : 16)
+                    }.padding(.vertical, compact ? 8 : 16)
+                    .padding(.horizontal, compact ? 0 : 16)
                 }
                 .frame(maxWidth: .infinity, minHeight: geometry.size.height, alignment: .topLeading)
             }.scrollIndicators(.hidden)

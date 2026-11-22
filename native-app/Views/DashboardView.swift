@@ -5,6 +5,7 @@ struct DashboardView: View {
     @ObservedObject var state: AppState
     @ObservedObject var tasks: TaskManager
     @Environment(\.colorScheme) private var scheme
+    @State private var compactOverview = false
     @State private var showingOverview = false
     @State private var locatingFX = false
     @State private var scanningFX = false
@@ -44,7 +45,7 @@ struct DashboardView: View {
         }
     }
     private var overview: some View {
-        VStack(alignment: .leading, spacing: TacticalSpacing.panel) {
+        VStack(alignment: .leading, spacing: compactOverview ? 12 : TacticalSpacing.panel) {
             hero
             TacticalAdaptiveLayout(minimumWidth: 154, maximumColumns: 4, compactColumns: 2) {
                 statusCard("FX", "shippingbox", "fx_host_running", .startingFX)
@@ -77,12 +78,13 @@ struct DashboardView: View {
             }
             if state.stale { TacticalWarningBanner(text: state.t("ui.309")) }
         }
+        .onGeometryChange(for: Bool.self) { $0.size.width < TacticalAdaptiveLayout.compactWidth } action: { compactOverview = $0 }
     }
     private func statusCard(_ title: String, _ symbol: String, _ key: String, _ stage: LaunchStage?) -> some View {
         let status = DashboardStatus.resolve(key: key, stage: stage, session: statusSession,
                                              workflow: statusWorkflow, evidence: statusEvidence,
                                              stale: state.stale)
-        return DashboardStatusCard(title: title, value: state.t(status.textKey), symbol: symbol, tone: status.tone)
+        return DashboardStatusCard(title: title, value: state.t(status.textKey), symbol: symbol, tone: status.tone, compact: compactOverview)
     }
     private var statusInputs: (LaunchSession, EnvironmentWorkflow, [String: JSONValue]) {
         DashboardStatus.boundInputs(root: state.runtimeRoot, session: state.launchSession,
@@ -94,7 +96,7 @@ struct DashboardView: View {
 
     private var hero: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: compactOverview ? 10 : 14) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("HELLDIVERS 2").font(TacticalTypography.brand).foregroundStyle(c.accent).lineLimit(1).minimumScaleFactor(0.75)
                         .accessibilityIdentifier("page.title").accessibilityAddTraits(.isHeader)
@@ -108,7 +110,7 @@ struct DashboardView: View {
                 }
             }
             .padding(20)
-            .frame(maxWidth: .infinity, minHeight: 214, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: compactOverview ? 178 : 214, alignment: .leading)
             .background { SoldierBackdrop() }
         }
         .background(c.panel).overlay(Rectangle().stroke(c.line, lineWidth: 1))
@@ -321,23 +323,26 @@ private struct DashboardStatusCard: View {
     let value: String
     let symbol: String
     let tone: DashboardStatus.Tone
+    let compact: Bool
     @Environment(\.colorScheme) private var scheme
     var body: some View {
         let c = TacticalColors(scheme: scheme)
+        let iconSize: CGFloat = compact ? 22 : 28
         HStack(spacing: 8) {
             if title == "FX" {
-                Image("OverviewFXCube").renderingMode(.template).resizable().scaledToFit().frame(width: 28, height: 28)
+                Image("OverviewFXCube").renderingMode(.template).resizable().scaledToFit().frame(width: iconSize, height: iconSize)
                     .foregroundStyle(c.accent).accessibilityHidden(true)
             } else {
-                Image(systemName: symbol).font(.system(size: 22)).frame(width: 28).foregroundStyle(c.accent).accessibilityHidden(true)
+                Image(systemName: symbol).font(.system(size: compact ? 17 : 22)).frame(width: iconSize).foregroundStyle(c.accent).accessibilityHidden(true)
             }
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: compact ? 2 : 5) {
                 Text(title).font(TacticalTypography.caption).foregroundStyle(c.muted).lineLimit(2).minimumScaleFactor(0.8)
                 Text(value).font(TacticalTypography.caption.weight(.semibold)).foregroundStyle(c.text).lineLimit(2).minimumScaleFactor(0.8)
             }
             Spacer(minLength: 0)
             DashboardLED(tone: tone)
-        }.padding(12).frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
+        }.padding(.horizontal, 12).padding(.vertical, compact ? 6 : 12)
+            .frame(maxWidth: .infinity, minHeight: compact ? 52 : 72, alignment: .leading)
             .background(c.panel, in: RoundedRectangle(cornerRadius: TacticalControlMetrics.cardRadius))
             .overlay(RoundedRectangle(cornerRadius: TacticalControlMetrics.cardRadius)
                 .strokeBorder(c.line, lineWidth: TacticalControlMetrics.border))
