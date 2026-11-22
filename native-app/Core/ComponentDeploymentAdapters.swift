@@ -415,7 +415,17 @@ enum FEXWorkflow {
         snapshot.facts["fex_provenance"] = "unverified"
         let reviewed = verifyInstalled(tree: tree, snapshot: snapshot)
         if reviewed { snapshot.facts["fex_provenance"] = "verified" }
-        guard reviewed || approvals.contains(approval) else {
+        // A private Debug Bundle can recognize an exact App-owned installation
+        // from an earlier run. Full payload verification still precedes the
+        // runtime probe, and this does not establish public build provenance.
+        var matchesBundle = false
+        #if DEBUG
+        if !reviewed, !approvals.contains(approval), tree == controlledDebugTree,
+           staticResult["managed_emulator"]?.text != nil {
+            matchesBundle = (try? bundledPackage()) != nil
+        }
+        #endif
+        guard reviewed || approvals.contains(approval) || matchesBundle else {
             #if DEBUG
             // A previously accepted bundled tree may now have a readable but
             // changed file. The install transaction still requires its receipt,
