@@ -57,4 +57,4 @@ Maintain all ten existing languages through the localization resources. User-vis
 
 ## Dashboard V003
 
-Hide both scroll indicators at the SwiftUI scene roots and in editors. Keep the scroll containers, selection and scrolling behavior active. For any AppKit scroll views introduced in the future, hide their scrollers on the view itself. Use the Dashboard content width to reduce the hero and status-card height in compact layouts. Keep the full-width emblem asset in the compact sidebar and retain the existing safety confirmation with concise copy for FX launch.
+Use the shared scroll-indicator modifier at scene and sheet roots, in the nested log view and in editors. It combines SwiftUI’s hidden-indicator preference with window-scoped AppKit scroller flags. Keep the scroll containers, selection and scrolling behavior active. Use the Dashboard content width to reduce the hero and status-card height in compact layouts. Keep the full-width emblem asset in the compact sidebar and retain the existing safety confirmation with concise copy for FX launch.

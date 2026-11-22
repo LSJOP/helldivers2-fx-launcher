@@ -4,21 +4,30 @@
 
 All notable changes to the HELLDIVERS 2 FX Launcher Native App are recorded here, newest first. Unreleased entries have no release date. This file is the single source of truth for user-facing release notes; the README summary, GitHub Release notes and the future Sparkle appcast reuse this reviewed text. Do not paste raw, unreviewed Git commit messages into it.
 
-v1.0.1 (2026111406) is the latest published stable release. Fresh SteamOS deployment, single-player, EAC and multiplayer were not revalidated for that release. The 1.0.2 work below remains unreleased.
+v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgrade, automatic restart and production failure recovery have not been validated.
 
 ## Unreleased
 
-- Refine the Dashboard with theme tokens, native FX frames, a path-bound operation target, compact navigation and the approved cinematic city artwork.
+- Refine the Dashboard with compact status cards, understated FX selection, a larger compact emblem, concise FX confirmation and a softer light hero. Hide scroll indicators across the App.
 
-- Integrate path-based FX selection and diagnostics into Dashboard; show four evidence-bound status cards and six navigation entries. Safe FX stop/restart remain unavailable pending a verified backend.
+### v1.0.4 — 2026-11-16
+
+- Preserve the reviewed FX 1.9.12 environment evidence and comparison as historical documentation; this does not validate a new deployment.
+- Real cross-version in-app upgrade, automatic restart after upgrade, and production failure recovery have not been validated.
+
+### v1.0.3 — 2026-11-15
+
+- Simplify software updates to a single download-and-install action with progress, retry and clearer errors.
+- Refresh setup and launch workflow layouts, and place SSH credentials on the first-run page.
+- Fresh-VM FEX deployment, live 1.0.2 → 1.0.3 update, game, EAC and multiplayer acceptance remain unverified. v1.0.1 users may need the DMG to upgrade.
+
+## Historical development notes
+
+- Report update archive safety errors and installation permissions with specific messages and diagnostic details.
 
 - Redesign the setup and launch-preparation scenes as tactical workflow layouts; move First-Run Setup to sidebar position 01 and synchronize Command shortcuts. Dashboard remains the default.
 
-- Add original MOTR7 artwork to setup and launch workflows and an artwork credit in Settings; preserve the Dashboard hero and shared header.
-
-- Move snapshot refresh into a shared content-area action on Environment, FX and Logs; avoid repeated resource hashing during FX view updates. Add shared UI design standards and disable first-run rescan during tasks.
-
-- Detect the known FX 1.9.9 stock FEX incompatibility and restore the original FEX tree if candidate activation fails.
+- Simplify software updates to one download and install action with live progress and retry.
 
 - Added an isolated, signed GitHub pre-release update channel for acceptance testing. Appearance preferences now persist across App restarts.
 
@@ -198,6 +207,18 @@ The development entries below retain historical stage evidence; statements about
 - No signed/notarized installer or GitHub Release exists; `0.1.0` is a development preview.
 - Safe FX stop/restart and validated automatic performance recommendations remain unavailable. Saved settings are not proof of runtime adoption; the original launch preflight may reject custom values.
 - Ground missions, independent EAC acceptance and multiplayer remain unverified.
+
+### v1.0.2 — 2026-11-15
+
+- Add original MOTR7 artwork to setup and launch workflows and an artwork credit in Settings; preserve the Dashboard hero and shared header.
+
+- Move snapshot refresh into a shared content-area action on Environment, FX and Logs; avoid repeated resource hashing during FX view updates. Add shared UI design standards and disable first-run rescan during tasks.
+
+- Detect the known FX 1.9.9 stock FEX incompatibility and restore the original FEX tree if candidate activation fails.
+
+- Add MOTR7 artwork and credits to setup and launch, and unify refresh controls.
+- Improve detection of the known FX 1.9.9 stock FEX incompatibility and recovery after failed candidate activation.
+- The published update ZIP is rejected by v1.0.1 archive safety checks. Use the DMG for this upgrade.
 
 ### v1.0.1 — 2026-11-14
 

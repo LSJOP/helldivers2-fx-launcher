@@ -87,4 +87,8 @@ The fourteen README page images were recaptured from isolated Debug build 202611
 
 The cancellation-label and duplicate-retry follow-up changes only non-idle workflow states; the reviewed idle screenshots above are retained with their original bytes and capture metadata. Live cancellation and retry remain unverified.
 
+2026-11-15 integration review: the ten English and ten Chinese page captures were refreshed from isolated Debug source `6a83b6c08b7ee54dfaa95f3cf33434e4a1da8f6e`. Screenshots show idle states and an unconfigured update service; capture did not connect to or modify FX, SSH, the Guest, or the game. Historical MOTR7-specific images retain their recorded provenance.
+
 Dashboard V002 visual review is indexed in [Dashboard V002 screenshots](reviews/dashboard-v002/README.md). The review includes the final three-action FX area, the gold emblem, the Environment diagnostics and the existing confirmation. The bilingual README windows were recaptured with the shared styling and new sidebar.
+
+The integrated Dashboard V003 captures are indexed in [Dashboard V003 screenshots](reviews/dashboard-v003/README.md). The six bilingual README pages were re-reviewed from the integrated 1.0.4 Debug App. The scroll audit recorded top, middle and bottom offsets for the six pages and nested log view.

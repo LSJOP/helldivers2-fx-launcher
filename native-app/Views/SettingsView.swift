@@ -186,7 +186,7 @@ struct LegacyOperationSheet: View {
                 if operation == "save_configuration" {
                     Text(state.operationResult["target"]?.text ?? state.t("ui.247")).textSelection(.enabled)
                     TacticalButton(title: state.t("ui.266"), symbol: "arrow.clockwise") { state.runOperation("read_configuration") }
-                    TextEditor(text: $configuration).scrollIndicators(.hidden).font(TacticalTypography.log).frame(minHeight: 220)
+                    TextEditor(text: $configuration).tacticalHiddenScrollIndicators().font(TacticalTypography.log).frame(minHeight: 220)
                     Text(state.t("ui.106"))
                         .font(TacticalTypography.caption)
                 }
@@ -230,6 +230,7 @@ struct LegacyOperationSheet: View {
 
             }.padding(24)
         }
+        .tacticalHiddenScrollIndicators()
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
                 TacticalDivider()

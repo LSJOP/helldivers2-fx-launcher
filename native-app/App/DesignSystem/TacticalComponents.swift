@@ -1,5 +1,55 @@
+import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
+
+extension View {
+    func tacticalHiddenScrollIndicators() -> some View {
+        scrollIndicators(.hidden)
+            .background(ScrollIndicatorPolicy().allowsHitTesting(false).accessibilityHidden(true))
+    }
+}
+
+/// Applies the same policy to native scroll views hosted within this window.
+private struct ScrollIndicatorPolicy: NSViewRepresentable {
+    func makeNSView(context: Context) -> Marker { Marker() }
+
+    func updateNSView(_ view: Marker, context: Context) {
+        view.scheduleUpdate()
+    }
+
+    final class Marker: NSView {
+        private var updateScheduled = false
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            scheduleUpdate()
+        }
+
+        override func layout() {
+            super.layout()
+            scheduleUpdate()
+        }
+
+        func scheduleUpdate() {
+            guard !updateScheduled else { return }
+            updateScheduled = true
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.updateScheduled = false
+                guard let root = self.window?.contentView else { return }
+                Self.hideScrollers(in: root)
+            }
+        }
+
+        private static func hideScrollers(in view: NSView) {
+            if let scroll = view as? NSScrollView {
+                if scroll.hasVerticalScroller { scroll.hasVerticalScroller = false }
+                if scroll.hasHorizontalScroller { scroll.hasHorizontalScroller = false }
+            }
+            for child in view.subviews { hideScrollers(in: child) }
+        }
+    }
+}
 
 /// Selected FX plus app-bundled launch resources; no user script directory is required.
 struct RuntimeTargetPanel: View {

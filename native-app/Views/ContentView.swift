@@ -35,6 +35,7 @@ struct ContentView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.bottom)
                 }
+                .tacticalHiddenScrollIndicators()
                 .id(state.selection)
                 if tasks.busy && !(state.selection == .dashboard && state.environmentWorkflow.active) {
                     HStack(spacing: 10) {

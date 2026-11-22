@@ -1,0 +1,502 @@
+{
+  "en-readme": {
+    "appearance": "dark",
+    "requested_size": [
+      1180,
+      850
+    ],
+    "pages": {
+      "dashboard": [
+        {
+          "positions": [
+            0,
+            65.5,
+            131
+          ],
+          "vertical_extent": 131
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "environment": [
+        {
+          "positions": [
+            0,
+            527,
+            1054
+          ],
+          "vertical_extent": 1054
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "first-run-setup": [
+        {
+          "positions": [
+            0,
+            149.5,
+            299
+          ],
+          "vertical_extent": 299
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "logs": [
+        {
+          "positions": [
+            0,
+            64.75,
+            129.5
+          ],
+          "vertical_extent": 129.5
+        },
+        {
+          "positions": [
+            0,
+            147.5,
+            295
+          ],
+          "vertical_extent": 295
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "performance": [
+        {
+          "positions": [
+            0,
+            421.5,
+            843
+          ],
+          "vertical_extent": 843
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "settings": [
+        {
+          "positions": [
+            0,
+            707.25,
+            1414.5
+          ],
+          "vertical_extent": 1414.5
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ]
+    }
+  },
+  "zh-CN-readme": {
+    "appearance": "dark",
+    "requested_size": [
+      1180,
+      850
+    ],
+    "pages": {
+      "dashboard": [
+        {
+          "positions": [
+            0,
+            65.5,
+            131
+          ],
+          "vertical_extent": 131
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "environment": [
+        {
+          "positions": [
+            0,
+            505.5,
+            1011
+          ],
+          "vertical_extent": 1011
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "first-run-setup": [
+        {
+          "positions": [
+            0,
+            126,
+            252
+          ],
+          "vertical_extent": 252
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "logs": [
+        {
+          "positions": [
+            0,
+            64.75,
+            129.5
+          ],
+          "vertical_extent": 129.5
+        },
+        {
+          "positions": [
+            0,
+            154.5,
+            309
+          ],
+          "vertical_extent": 309
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "performance": [
+        {
+          "positions": [
+            0,
+            413.5,
+            827
+          ],
+          "vertical_extent": 827
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "settings": [
+        {
+          "positions": [
+            0,
+            707.25,
+            1414.5
+          ],
+          "vertical_extent": 1414.5
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ]
+    }
+  },
+  "en-scroll-audit-light": {
+    "appearance": "light",
+    "requested_size": [
+      850,
+      700
+    ],
+    "pages": {
+      "dashboard": [
+        {
+          "positions": [
+            0,
+            56.5,
+            113
+          ],
+          "vertical_extent": 113
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "environment": [
+        {
+          "positions": [
+            0,
+            616,
+            1232
+          ],
+          "vertical_extent": 1232
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "first-run-setup": [
+        {
+          "positions": [
+            0,
+            207.5,
+            415
+          ],
+          "vertical_extent": 415
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "logs": [
+        {
+          "positions": [
+            0,
+            139.75,
+            279.5
+          ],
+          "vertical_extent": 279.5
+        },
+        {
+          "positions": [
+            0,
+            157.5,
+            309
+          ],
+          "vertical_extent": 315
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "performance": [
+        {
+          "positions": [
+            0,
+            511.5,
+            1023
+          ],
+          "vertical_extent": 1023
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "settings": [
+        {
+          "positions": [
+            0,
+            796.25,
+            1592.5
+          ],
+          "vertical_extent": 1592.5
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ]
+    }
+  },
+  "zh-CN-scroll-audit-light": {
+    "appearance": "light",
+    "requested_size": [
+      850,
+      700
+    ],
+    "pages": {
+      "dashboard": [
+        {
+          "positions": [
+            0,
+            56.5,
+            113
+          ],
+          "vertical_extent": 113
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "environment": [
+        {
+          "positions": [
+            0,
+            594.5,
+            1189
+          ],
+          "vertical_extent": 1189
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "first-run-setup": [
+        {
+          "positions": [
+            0,
+            207.5,
+            415
+          ],
+          "vertical_extent": 415
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "logs": [
+        {
+          "positions": [
+            0,
+            139.75,
+            279.5
+          ],
+          "vertical_extent": 279.5
+        },
+        {
+          "positions": [
+            0,
+            154.5,
+            309
+          ],
+          "vertical_extent": 309
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "performance": [
+        {
+          "positions": [
+            0,
+            496.5,
+            993
+          ],
+          "vertical_extent": 993
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ],
+      "settings": [
+        {
+          "positions": [
+            0,
+            782.25,
+            1564.5
+          ],
+          "vertical_extent": 1564.5
+        },
+        {
+          "positions": [
+            0,
+            0,
+            0
+          ],
+          "vertical_extent": 0
+        }
+      ]
+    }
+  }
+}

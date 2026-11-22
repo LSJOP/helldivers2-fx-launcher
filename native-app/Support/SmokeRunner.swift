@@ -250,7 +250,9 @@ import ApplicationServices
         var result: [String: Any] = [:]
         do {
             guard NativeLocalization.languages.contains(where: { $0.0 == language }),
-                  Bundle.main.bundleIdentifier?.hasPrefix("com.lsjop.helldivers2fx.native.readme.") == true,
+                  (Bundle.main.bundleIdentifier?.hasPrefix("com.lsjop.helldivers2fx.native.readme.") == true
+                   || (ProcessInfo.processInfo.arguments.contains("--capture-update-candidate")
+                       && Bundle.main.bundleIdentifier == NativeReleaseService.testBundleID)),
                   state.runtimeRoot.isEmpty, UserDefaults.standard.bool(forKey: "NativeCredentialAutoLoadDisabled") else {
                 throw ErrorState("SCREENSHOT_ARGUMENT_GUARD")
             }
@@ -264,15 +266,30 @@ import ApplicationServices
                 guard let index = args.firstIndex(of: name), args.indices.contains(index + 1) else { return fallback }
                 return args[index + 1]
             }
-            state.appearance = captureOption("--capture-appearance", fallback: "dark") == "light" ? .light : .dark
+            state.appearance = captureOption("--capture-appearance", fallback: args.contains("--capture-light") ? "light" : "dark") == "light" ? .light : .dark
             let width = max(850, Double(captureOption("--capture-width", fallback: "1180")) ?? 1180)
             let height = max(560, Double(captureOption("--capture-height", fallback: "850")) ?? 850)
+            if ProcessInfo.processInfo.arguments.contains("--capture-update-candidate") {
+                state.updates.checkForUpdates()
+                while !state.updates.canCheck { try await Task.sleep(nanoseconds: 200_000_000) }
+                guard state.updates.candidate != nil else { throw ErrorState("UPDATE_CANDIDATE_UNAVAILABLE") }
+            }
             state.runOperation("read_performance"); try await waitForTask(state)
             guard state.operationError == nil else { throw ErrorState("PERFORMANCE_READ_FAILED") }
             guard let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
             var files: [String] = []
             let pages: [(Page, String)] = [(.dashboard,"dashboard"),(.environment,"environment"),(.performance,"performance"),(.logs,"logs"),(.settings,"settings"),(.setup,"first-run-setup")]
             let capturePages = args.contains("--environment-diagnostics") ? [(Page.environment, "environment-fx-diagnostics")] : args.contains("--fx-only") ? [(Page.dashboard, "dashboard-fx")] : ProcessInfo.processInfo.arguments.contains("--credentials-only") ? pages.filter { $0.0 == .settings || $0.0 == .setup } : pages
+            var scrollAudit: [String: [[String: Any]]] = [:]
+            func scrollViews(_ view: NSView) -> [NSScrollView] {
+                let nested = view.subviews.flatMap(scrollViews)
+                return (view as? NSScrollView).map { [$0] + nested } ?? nested
+            }
+            func visibleScroller(_ scroll: NSScrollView) -> Bool {
+                [scroll.hasVerticalScroller ? scroll.verticalScroller : nil,
+                 scroll.hasHorizontalScroller ? scroll.horizontalScroller : nil]
+                    .compactMap { $0 }.contains { !$0.isHiddenOrHasHiddenAncestor && $0.alphaValue > 0.01 }
+            }
             for (page, name) in capturePages {
                 state.selection = page
                 window.setContentSize(NSSize(width: width, height: height))
@@ -294,10 +311,38 @@ import ApplicationServices
                 #endif
                 guard try await capture(window, name: name + ".png", directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
                 files.append(name + ".png")
-                if args.contains("--fx-only"), width <= 850, let root = window.contentView {
-                    func scrollViews(_ view: NSView) -> [NSScrollView] {
-                        (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews)
+                if args.contains("--scroll-audit"), let root = window.contentView {
+                    let views = scrollViews(root)
+                    guard !views.isEmpty else { throw ErrorState("SCROLL_VIEW_UNAVAILABLE") }
+                    var measurements: [[String: Any]] = []
+                    for scroll in views {
+                        guard let document = scroll.documentView else { continue }
+                        let clip = scroll.contentView
+                        let maximum = max(0, document.bounds.height - clip.bounds.height)
+                        var positions: [CGFloat] = []
+                        for fraction: CGFloat in [0, 0.5, 1] {
+                            clip.scroll(to: NSPoint(x: clip.bounds.origin.x,
+                                                    y: maximum * (document.isFlipped ? fraction : 1 - fraction)))
+                            scroll.reflectScrolledClipView(clip)
+                            await Task.yield()
+                            guard !visibleScroller(scroll) else { throw ErrorState("SCROLLER_VISIBLE_" + name.uppercased()) }
+                            positions.append(clip.bounds.origin.y)
+                        }
+                        if maximum > 2 && !(abs(positions[0] - positions[2]) > 1) {
+                            throw ErrorState("SCROLL_POSITION_UNCHANGED")
+                        }
+                        measurements.append(["positions": positions, "vertical_extent": maximum])
                     }
+                    scrollAudit[name] = measurements
+                    if page == .dashboard || page == .logs {
+                        let bottom = name + "-bottom.png"
+                        guard try await capture(window, name: bottom, directory: directory, external: true) else {
+                            throw ErrorState("CAPTURE_FAILED")
+                        }
+                        files.append(bottom)
+                    }
+                }
+                if args.contains("--fx-only"), width <= 850, let root = window.contentView {
                     guard let scroll = scrollViews(root).filter({ $0.bounds.width > 300 }).max(by: { $0.bounds.width < $1.bounds.width }),
                           let document = scroll.documentView else { throw ErrorState("SCROLL_VIEW_UNAVAILABLE") }
                     let maximum = max(0, document.bounds.height - scroll.contentView.bounds.height)
@@ -309,9 +354,6 @@ import ApplicationServices
                     files.append(detail)
                 }
                 if !args.contains("--environment-diagnostics") && (page == .performance || page == .settings || page == .environment) {
-                    func scrollViews(_ view: NSView) -> [NSScrollView] {
-                        (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews)
-                    }
                     if let root = window.contentView,
                        let scroll = scrollViews(root).filter({ $0.bounds.width > 600 }).max(by: { $0.bounds.width < $1.bounds.width }),
                        let document = scroll.documentView {
@@ -332,7 +374,8 @@ import ApplicationServices
                       "app_version":Bundle.main.object(forInfoDictionaryKey:"CFBundleShortVersionString") ?? "unknown",
                       "app_build":Bundle.main.object(forInfoDictionaryKey:"CFBundleVersion") ?? "unknown",
                       "hardware":"real_read_only", "guest_actions":"none", "credential_autoload":"disabled_by_process_argument",
-                      "production_app_preferences":"unchanged", "capture_bundle_identifier":Bundle.main.bundleIdentifier ?? "unknown", "interactive_clicks":"NOT_TESTED"]
+                      "production_app_preferences":"unchanged", "capture_bundle_identifier":Bundle.main.bundleIdentifier ?? "unknown", "interactive_clicks":"NOT_TESTED",
+                      "scroll_audit": scrollAudit]
         } catch { result = ["result":"FAIL", "code":(error as? ErrorState)?.code ?? "README_CAPTURE_FAILED"] }
         if let data = try? JSONSerialization.data(withJSONObject:result, options:[.prettyPrinted,.sortedKeys]) {
             try? data.write(to:directory.appendingPathComponent("readme-capture.json"))
