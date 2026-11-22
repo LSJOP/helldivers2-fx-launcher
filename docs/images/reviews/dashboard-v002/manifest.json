@@ -296,6 +296,17 @@
       "width": 2560,
       "height": 1898,
       "sha256": "4c9c9e964b09d9226fc178ab10ac42c71776fea25fb05a853f0c5ce80b3bb615"
+    },
+    {
+      "path": "en-emblem-detail.png",
+      "language": "en",
+      "appearance": "dark",
+      "scope": "Actual App sidebar footer, native macOS screen-region capture; no post-processing",
+      "captured_at": "2026-11-22T11:13:15.442959+00:00",
+      "capture_bundle_identifier": "com.lsjop.helldivers2fx.native.readme.v002.interaction",
+      "width": 420,
+      "height": 316,
+      "sha256": "2f49ab08ac33ed23fe7d0f0049a73534e4f0e77c240b6762ad39d08b6390c4fc"
     }
   ],
   "captured_ui_source_sha256": "d6dd5add4138e0685d26770b5115134d1e6daf98fdcde987b05ce25bbb4c27cc",

@@ -29,7 +29,7 @@ UI 与截图提交为 `834dec2b911f7baf3521061839a5a41ea24e1e49`，基于 `6c81b
 
 - 视图修改涉及 Dashboard、Sidebar、Content、Environment 和 FirstRunSetup。共享设计系统涉及 TacticalColors、TacticalComponents、TacticalTheme。
 - 更新 `native-locales.json`、DEBUG fixture、截图工具、Xcode 源文件清单、两个资产图集、双语 README／Changelog、AGENTS、UI 规范、素材声明和截图清单。[完整文件列表](https://github.com/LSJOP/helldivers2-fx-launcher/commit/834dec2b911f7baf3521061839a5a41ea24e1e49)
-- [22 张独立审核截图](images/reviews/dashboard-v002/README.md) 包括中英文深浅色宽窗、窄窗初始及滚动、诊断、确认、0 至 5 个实例、加载及切换 fixture。README 另更新 12 张截图。徽章和实机选中卡见宽窗，三按钮见滚动后窄窗，未选中卡见多实例 fixture。
+- [23 张独立审核截图](images/reviews/dashboard-v002/README.md) 包括中英文深浅色宽窗、窄窗初始及滚动、诊断、确认、0 至 5 个实例、加载及切换 fixture。README 另更新 12 张截图。徽章有独立实拍细节，实机选中卡见宽窗，三按钮见滚动后窄窗，未选中卡见多实例 fixture。
 
 ## 构建与验证
 
