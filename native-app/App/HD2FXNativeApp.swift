@@ -211,7 +211,9 @@ struct NavigationCommands: Commands {
                 SidebarView(state: state).frame(width: 210)
                 ScrollView {
                     Group {
-                        if option("--artwork-fixture-preview", fallback: "") == "completion" {
+                        if option("--artwork-fixture-preview", fallback: "") == "failure" {
+                            EnvironmentWorkflowProgressView(state: state, tasks: state.tasks, showIdle: true, showStepsInline: true)
+                        } else if option("--artwork-fixture-preview", fallback: "") == "completion" {
                             FirstRunSetupView(state: state, tasks: state.tasks, credentials: state.credentials)
                         } else {
                             DashboardView(state: state, tasks: state.tasks)

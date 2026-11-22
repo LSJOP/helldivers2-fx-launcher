@@ -43,7 +43,18 @@ class RuntimeChecks(unittest.TestCase):
  def test_execution_failure(self):
   tree=self.run_probe()['tree'];self.assertEqual(self.run_probe(tree,status=1)['reason'],'FEX_RUNTIME_FAILED')
  def test_missing(self):
-  self.exe.unlink();self.assertEqual(self.run_probe()['reason'],'FEX_MISSING')
+  self.exe.unlink();result=self.run_probe();self.assertEqual(result['reason'],'FEX_MISSING');self.assertEqual(result['diagnostic_reason'],'FEX_BINARY_MISSING')
+ def test_unreadable_component_is_not_reported_missing(self):
+  original=os.access
+  with patch('os.access',side_effect=lambda path,mode: False if pathlib.Path(path)==self.root else original(path,mode)):
+   result=self.run_probe()
+  self.assertEqual(result['reason'],'FEX_PERMISSION_DENIED');self.assertEqual(result['diagnostic_reason'],'FEX_ROOT_ACCESS_DENIED')
+ def test_unwritable_deployment_parent_is_not_reported_missing(self):
+  import shutil
+  shutil.rmtree(self.root)
+  with patch('os.access',return_value=False):
+   result=self.run_probe()
+  self.assertEqual(result['reason'],'FEX_PERMISSION_DENIED');self.assertEqual(result['diagnostic_reason'],'FEX_DEPLOYMENT_PARENT_NOT_WRITABLE')
  def test_proton_integrated_layout_is_unverified_without_execution(self):
   elf=self.exe.read_bytes();self.exe.unlink()
   root=self.home/'.local/share/Steam/steamapps/common/Proton 11.0 (ARM64)/files/lib/wine/aarch64-unix'

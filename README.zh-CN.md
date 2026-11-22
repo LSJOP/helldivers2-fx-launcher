@@ -16,7 +16,7 @@
 
 绝地潜兵 2 FX 启动器是面向 Apple Silicon Mac 的第三方社区启动与管理工具，使用 SwiftUI 和原生核心，帮助用户检查 FX 环境、配置运行环境和管理游戏性能设置。
 
-FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游戏，主菜单／飞船获用户确认；单人、多人及自动更新完整闭环仍未测试。正式 FX 1.9.12 仅离线只读调查。见[修复证据](docs/environment/FX199_RF_REPAIR_20261114.md)。
+FX 1.9.9 测试盘已恢复历史验证的 RF 运行组件，通过 GUI 启动游戏，主菜单／飞船获用户确认；单人、多人及自动更新完整闭环仍未测试。正式 FX 1.9.12 仅离线只读调查。见[修复证据](docs/environment/FX199_RF_REPAIR_20261114.md)。
 
 ### 软件截图
 
@@ -44,7 +44,7 @@ FX 1.9.9 测试盘已恢复历史验证的 RF FEX 组件，通过 GUI 启动游�
 
 - 从总览发起带保护检查的 HELLDIVERS 2 启动流程。FX 管理检查所选 FX 安装并提供受支持的 FX／Steam 操作。
 - 首次运行环境配置检查 Guest 身份、运行能力和组件完整性。经确认后可安装固定版本的 Proton-JE、选择已验证的 Steam 兼容工具，并合并启动参数以保留自定义参数。检测为只读，部署与恢复各有检查条件。
-- 运行环境页面报告 FEX 和 Proton-JE 的检测依据。SSH 和 sudo 凭据可针对已验证目标分别加密保存在本地；跨重启复用仍需实机验收。
+- 运行环境页面报告 FX 运行环境和 Proton-JE 的检测依据。SSH 和 sudo 凭据可针对已验证目标分别加密保存在本地；跨重启复用仍需实机验收。
 - Swift App 提供七个原生页面、日志、限定范围的性能设置和十种界面语言。SteamOS 内的可选安装步骤需要 Python 3。
 - v1.0.1 支持在「设置 → 软件更新」中检查和安装后续稳定版。v1.0.0 用户需先使用正式 DMG 手动升级一次。
 
@@ -67,7 +67,8 @@ FX 1.9.9 历史实测记录了游戏主菜单及飞船。单人、EAC、多人�
 
 
 - FX 和 SteamOS 兼容性取决于所选构建和实测能力。当前启动路径有已记录的代理不匹配问题。安全停止或重启 FX 暂不可用。
-- 实验性 FEX 候选曾在真实 Guest 中构建成功，但可执行文件的哈希未通过部署审核。候选的安装、恢复和游戏兼容性均待验证。其他 Proton-JE 构建和全新 SteamOS 部署仍需验收。
+- 实验性 FX 运行组件候选曾在真实 Guest 中构建成功，但可执行文件的哈希未通过部署审核。候选的安装、恢复和游戏兼容性均待验证。其他 Proton-JE 构建和全新 SteamOS 部署仍需验收。
+- 首次配置现在会在 FX 运行组件缺失时自动进入修复，并区分权限、可执行位、架构、完整性和实际运行失败。公开 RF 资源及已验证备用下载仍待完成来源和再分发审核，因此全新用户安装会如实阻塞，不会使用未经审核的二进制。
 - 11 月 5 日的历史 Native 构建曾进入游戏主菜单／舰桥。正式包启动、单人任务、EAC 和多人联机仍需分别验证。
 - 公开分发、Gatekeeper 实际行为和签名自动更新仍待验收。已检查的本地 App 使用 ad hoc 签名，公证未获验证。
 - [验收报告](docs/acceptance/RELEASE_READINESS_REPORT.md) · [已知问题详情](docs/acceptance/KNOWN_ISSUES.md) · [首次运行验收](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md) · [更新机制](docs/NATIVE_UPDATES.md) · [性能设置限制](docs/GAME_PERFORMANCE.md) RF 复刻使用 App 独立持久目录和经审计的空字符串 RootFS 注册。Runtime 探针不启动游戏，会核对实际加载的 RF 执行文件并单独记录探针的 RootFS。
@@ -76,7 +77,7 @@ FX 1.9.9 历史实测记录了游戏主菜单及飞船。单人、EAC、多人�
 
 [v1.0.1 — 2026-11-14](https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/v1.0.1) · 正式稳定版，构建 `2026111406`。见[发布说明](CHANGELOG.zh-CN.md)。
 
-未发布变更包括总览启动、首次运行 Proton-JE 校验及 Steam 配置、实验性 FEX 审核及恢复，以及 SSH 认证修复。参见[更新日志](CHANGELOG.zh-CN.md)和[原版启动器历史](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script)。
+未发布变更包括总览启动、首次运行 Proton-JE 校验及 Steam 配置、实验性 FX 运行环境审核及恢复，以及 SSH 认证修复。参见[更新日志](CHANGELOG.zh-CN.md)和[原版启动器历史](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script)。
 
 ### 免责声明
 
@@ -92,10 +93,10 @@ FX 1.9.9 历史实测记录了游戏主菜单及飞船。单人、EAC、多人�
 
 原生更新中断后，下次打开 App 可恢复事务。生产更新服务仍待完整升级验收。
 
-FX 1.9.9 环境实测记录见 [FEX 基线报告](docs/environment/FEX_BASELINE_REPORT_20261115.md)。
+FX 1.9.9 环境实测记录见[运行环境基线报告](docs/environment/FEX_BASELINE_REPORT_20261115.md)。
 
-首次配置会区分 Proton 内置 FEX 与独立运行时缺失，记录 Proton 版本、配置及库文件哈希；取得已审核方案之前明确显示兼容性未验证。
+首次配置会区分 Proton 内置 FX 运行环境与独立运行组件缺失，记录 Proton 版本、配置及库文件哈希；取得已审核方案之前明确显示兼容性未验证。
 
 恢复分支已接入固定版本 Runtime 的隔离 Debug 安装（已验证本地归档或 Valve HTTPS、SHA-256、SFTP、保留 ARM64 Runtime、事务恢复）。公开版一键配置仍受 RF 二进制来源／再分发许可审核阻塞；Debug 回放需明确传入测试镜像与资源目录。见[首次配置验收](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md)。
 
-持久部署候选：实测确认 Steam 在重启后更新自身 FEX depot。恢复分支改为 App 管理目录部署 RF，并验证真实 Runtime 容器中的 RootFS。主窗口启动／重新打开及当前中英文空闲界面截图已修复；最终重复配置、跨重启验收及完整 RF 合法分发仍待完成。
+持久部署候选：实测确认 Steam 在重启后更新自身运行组件 depot。恢复分支改为 App 管理目录部署 RF，并验证真实 Runtime 容器中的 RootFS。主窗口启动／重新打开及当前中英文空闲界面截图已修复；最终重复配置、跨重启验收及完整 RF 合法分发仍待完成。

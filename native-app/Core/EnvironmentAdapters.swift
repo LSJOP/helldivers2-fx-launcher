@@ -57,6 +57,24 @@ struct SteamVDF {
         return result
     }
     func value(_ path: [String]) throws -> String? { try fields().first { $0.path == path.map { $0.lowercased() } }?.value?.text }
+    func steamLibraryRoots() throws -> [String] {
+        let roots = try fields().compactMap { field -> String? in
+            guard field.path.count == 3, field.path[0] == "libraryfolders",
+                  Int(field.path[1]) != nil, field.path[2] == "path" else { return nil }
+            return field.value?.text
+        }
+        guard roots.count <= 32 else { throw CoreError("OUTPUT_LIMIT") }
+        return Array(Set(roots)).sorted()
+    }
+    func mostRecentSteamAccountID() throws -> String? {
+        let users = try fields().compactMap { field -> UInt64? in
+            guard field.path.count == 3, field.path[0] == "users", field.path[2] == "mostrecent",
+                  field.value?.text == "1", let steamID = UInt64(field.path[1]) else { return nil }
+            return steamID
+        }
+        guard users.count <= 1 else { throw CoreError("VDF_CONFLICT") }
+        return users.first.map { String(UInt32(truncatingIfNeeded: $0)) }
+    }
     static func quote(_ text: String) -> String { "\"" + text.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\"" }
     func setting(_ path: [String], value: String) throws -> String {
         guard !path.isEmpty, !value.contains("\n"), !value.contains("\r") else { throw CoreError("VDF_CONFLICT") }
@@ -123,8 +141,43 @@ final class SSHEnvironmentBackend: DeploymentBackend {
               let sp = fields["steam_count"].flatMap(Int.init), let gp = fields["game_count"].flatMap(Int.init),
               try hostIdentity() == identity else { throw CoreError("TARGET_CHANGED") }
         if let expectedGuestBoot, boot != expectedGuestBoot { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
+        if fields["launch_data"] == nil, let encoded = fields["loginusers_data"],
+           let data = Data(base64Encoded: encoded), let document = String(data: data, encoding: .utf8),
+           let account = try? SteamVDF(document).mostRecentSteamAccountID(),
+           let home = fields["home"], home.hasPrefix("/"), !home.contains("\n") {
+            let path = home + "/.local/share/Steam/userdata/" + account + "/config/localconfig.vdf"
+            let script = "p=" + Self.quote(path) + "; [ -f \"$p\" ] && [ ! -L \"$p\" ] && [ \"$(wc -c < \"$p\")\" -le 262144 ] || exit 1; base64 < \"$p\" | tr -d '\\n'"
+            if let selected = try? transport.run(script, timeout: 15, context: context), selected.status == 0,
+               Data(base64Encoded: selected.stdout) != nil {
+                fields["launch_path"] = path
+                fields["launch_data"] = selected.stdout
+                fields["steam_account_selection"] = "loginusers_most_recent"
+            }
+        }
         documents = [:]; paths = [:]
         var values: [String: String] = [:], facts = fields
+        if let encoded = fields["libraryfolders_data"], let data = Data(base64Encoded: encoded),
+           let document = String(data: data, encoding: .utf8), let parsed = try? SteamVDF(document),
+           let roots = try? parsed.steamLibraryRoots() {
+            let candidates = roots.filter { $0.hasPrefix("/") && !$0.contains("\n") && $0.count <= 4096 }
+            if !candidates.isEmpty {
+                let checks = candidates.map { root in
+                    let path = Self.quote(root)
+                    return "p=\(path); if [ -f \"$p/steamapps/appmanifest_553850.acf\" ] && [ -f \"$p/steamapps/common/Helldivers 2/bin/helldivers2.exe\" ]; then printf '%s\\n' \"$p\" | base64 | tr -d '\\n'; printf '\\n'; fi"
+                }.joined(separator: "\n")
+                if let located = try? transport.run("set -eu\n" + checks, timeout: 20, context: context), located.status == 0 {
+                    let libraries = located.stdout.split(whereSeparator: \.isNewline).compactMap {
+                        Data(base64Encoded: String($0)).flatMap { String(data: $0, encoding: .utf8) }?.trimmingCharacters(in: .newlines)
+                    }
+                    facts["game_library_count"] = String(libraries.count)
+                    if !libraries.isEmpty {
+                        facts["game"] = "present"
+                        facts["game_manifest"] = "present"
+                        facts["game_library"] = libraries.count == 1 ? libraries[0] : "MULTIPLE"
+                    }
+                }
+            }
+        }
         facts["fx_path"] = fx.resolvingSymlinksInPath().path
         facts["fx_executable_sha256"] = try CoreHash.sha256File(fx.appendingPathComponent("Contents/MacOS/steamac-vm"))
         let connection: [String: JSONValue] = ["host": .string(transport.settings.host), "port": .number(Double(transport.settings.port)),
@@ -308,7 +361,7 @@ final class SSHEnvironmentBackend: DeploymentBackend {
 set -eu
 S="$HOME/.local/share/Steam"
 printf 'machine_id=%s\n' "$(cat /etc/machine-id)"
-printf 'boot=%s\nuser=%s\narch=%s\n' "$(cat /proc/sys/kernel/random/boot_id)" "$(id -un)" "$(uname -m)"
+printf 'boot=%s\nuser=%s\narch=%s\nhome=%s\n' "$(cat /proc/sys/kernel/random/boot_id)" "$(id -un)" "$(uname -m)" "$HOME"
 os=$(sed -n 's/^ID=//p' /etc/os-release | tr -d '"')
 os_version=$(sed -n 's/^VERSION_ID=//p' /etc/os-release | tr -d '"')
 printf 'os=%s\nos_version=%s\n' "$os" "$os_version"
@@ -321,6 +374,12 @@ printf 'free=%s\n' "$free"
 present(){ if [ -e "$2" ]; then printf '%s=present\n' "$1"; else printf '%s=missing\n' "$1"; fi; }
 present steam "$S/steam.sh"
 present game "$S/steamapps/common/Helldivers 2/bin/helldivers2.exe"
+for pair in "libraryfolders:$S/steamapps/libraryfolders.vdf" "loginusers:$S/config/loginusers.vdf"; do
+ key=${pair%%:*}; file=${pair#*:}
+ if [ -f "$file" ] && [ ! -L "$file" ] && [ "$(wc -c < "$file")" -le 262144 ]; then
+  printf '%s_data=' "$key"; base64 < "$file" | tr -d '\n'; printf '\n'
+ fi
+done
 # Bounded file discovery only: do not run unknown FEX/Proton executables.
 fex_found=missing
 for f in "$S/steamapps/common/FEX-Emu/usr/bin/FEX" "$S/steamapps/common/FEX-Emu/usr/bin/FEXInterpreter" /usr/bin/FEX /usr/bin/FEXInterpreter /usr/local/bin/FEXInterpreter; do
@@ -445,7 +504,10 @@ extension NativeCoreService {
         if method == "first_run_fex_local_replay" { return try FEXWorkflow.localReplay(backend: backend) }
         #endif
         if method.hasPrefix("first_run_fex_") {
-            emit("INFO", "FEX workflow", ["deployment_state": .string(method == "first_run_fex_audit" ? "Checking" : "Deploying")])
+            emit("INFO", "FX runtime workflow", ["deployment_state": .string(method == "first_run_fex_audit" ? "Checking" : "Deploying")])
+            if method == "first_run_fex_repair" {
+                return try FEXWorkflow.repair(backend: backend, params: params, emit: emit)
+            }
             return try FEXWorkflow.run(method, backend: backend, params: params)
         }
         let service = EnvironmentDeploymentService(backend: backend, receipts: deploymentReceipts)

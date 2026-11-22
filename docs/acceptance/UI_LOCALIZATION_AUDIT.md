@@ -31,3 +31,9 @@ GUI 总体验收与十语言完整验收均 NOT TESTED。首次安装不是干�
 ## Memory-only credential candidate
 
 Ten-language Settings and First-Run Setup text now states that SSH and sudo passwords remain only in the live App process and are cleared on target/session changes. Obsolete saved-status and storage-error keys were removed. English and Simplified Chinese Settings screenshots were recaptured from real App windows and visually reviewed; isolated First-Run Setup captures also passed visual review but are not embedded in the READMEs. No credential entry or Guest action occurred.
+
+## FX runtime wording and diagnostic copy · 2026-11-22
+
+All ten catalogs contain 625 matching keys and no user-visible `FEX` token. Missing, permission, executable, architecture, integrity and runtime-check messages use FX terminology; internal error codes, binary names, environment variables and paths remain unchanged. The first-run failure panel adds a localized Copy Diagnostic Report action. Reports use the formal product name and redact SteamID64, usernames, personal paths, SSH key paths, credentials and tokens.
+
+Static localization, negative fixtures and arm64 compilation pass. The current arm64 Debug App main window, Environment page and First-Run page were visually reviewed in Simplified Chinese without entering credentials or contacting the Guest. Clearly labelled synthetic zh-CN/en failure panels were separately reviewed for FX wording, Copy Diagnostic Report visibility and clipping; this is UI review, not a live Guest failure/recovery result. The screenshot fingerprint records that review while existing README image bytes retain their original provenance. The copied clipboard contents, narrow layouts, VoiceOver and translation naturalness outside the reviewed strings remain **NOT_TESTED**.

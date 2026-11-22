@@ -452,6 +452,30 @@ final class FileDeploymentBackend: DeploymentBackend {
         let edited = try SteamVDF(vdf).setting(SteamVDF.launchPath, value: merged)
         try check(try SteamVDF(edited).value(SteamVDF.launchPath) == merged, "VDF insert and structural readback")
         try check(edited.contains("\"Other\" \"keep\"") && edited.contains("\"LaunchOptions\" \"untouched\""), "unrelated games and values preserved")
+        let libraries = """
+        "libraryfolders"
+        {
+          "0" { "path" "/home/alpha/.local/share/Steam" "apps" { "10" "1" } }
+          "7" { "path" "/mnt/games" "apps" { "553850" "1" } }
+        }
+        """
+        try check(try SteamVDF(libraries).steamLibraryRoots() == ["/home/alpha/.local/share/Steam", "/mnt/games"], "Steam libraries are discovered from VDF without a fixed user or account")
+        let loginUsers = """
+        "users" {
+          "76561198000000001" { "MostRecent" "0" }
+          "76561199012345678" { "MostRecent" "1" }
+        }
+        """
+        let expectedAccount = String(UInt32(truncatingIfNeeded: UInt64(76_561_199_012_345_678)))
+        try check(try SteamVDF(loginUsers).mostRecentSteamAccountID() == expectedAccount, "active Steam account path is derived from loginusers instead of a fixed SteamID")
+        try fails("VDF_CONFLICT", "multiple active Steam identities stop instead of selecting a developer account") {
+            _ = try SteamVDF("""
+            "users" {
+              "76561198000000001" { "MostRecent" "1" }
+              "76561199012345678" { "MostRecent" "1" }
+            }
+            """).mostRecentSteamAccountID()
+        }
         try fails("VDF_CONFLICT", "duplicate VDF paths rejected") { _ = try SteamVDF("\"apps\" {} \"apps\" {}") }
         try fails("VDF_CONFLICT", "malformed VDF rejected") { _ = try SteamVDF("\"x\" {") }
         try fails("PROFILE_NOT_APPLICABLE", "network requires profile and consent") { _ = try NetworkConfigurationAdapter.ipv4Plan(current: ["lo": "0"], profileAllows: false, consent: true) }

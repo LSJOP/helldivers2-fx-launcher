@@ -8,29 +8,31 @@ v1.0.1 (2026111406) is the latest published stable release. Fresh SteamOS deploy
 
 ## Unreleased
 
+- First-run setup now enters automatic FX runtime repair for missing or damaged components, discovers Steam libraries and the active account without a developer SteamID, reports distinct permission/architecture/integrity failures, and can copy a redacted diagnostic report. Public RF Bundle and fallback payloads remain blocked pending provenance and redistribution approval; no unreviewed binary is installed.
+
 - Preserve the audited empty RF RootFS registration and verify that the isolated Steam Runtime probe loads the installed RF executable. Migrate the previous Debug registration through the existing recovery transaction. Wait for the SwiftUI main-scene action during launch or reopen.
 
 - Verify the active FX Vulkan driver and Guest Steam HTTPS during first-run setup. Preserve the component name when final verification detects a pending change.
 
-- Persistence candidate: keep the RF compatibility tree outside the Steam-managed FEX depot, verify RootFS inside a real Runtime container, and restore the shared main window on launch/reopen. Final reboot acceptance and distributable RF build remain pending.
+- Persistence candidate: keep the RF compatibility tree outside the Steam-managed FX runtime depot, verify RootFS inside a real Runtime container, and restore the shared main window on launch/reopen. Final reboot acceptance and distributable RF build remain pending.
 
-- Recovery continuation adds verified Runtime cache/retry, explicit Debug resource paths and a bundled component integrity catalogue. Real setup installed Proton and configured Steam, but failed final verification after reboot restored the incompatible stock FEX and empty container RootFS; public one-click setup remains blocked.
+- Recovery continuation adds verified Runtime cache/retry, explicit Debug resource paths and a bundled component integrity catalogue. Real setup installed Proton and configured Steam, but failed final verification after reboot restored the incompatible stock FX runtime and empty container RootFS; public one-click setup remains blocked.
 
 - The isolated first-run replay can install the pinned Steam Linux Runtime 4.0 from a verified local archive or Valve HTTPS download. It preserves the existing ARM64-only Runtime.
 
-- Add an opt-in Debug path for replaying pinned local RF samples on the isolated FX 1.9.9 test image. It checks the matching Steam Linux Runtime before writing and runs the FEX probe inside the recovery transaction. Fresh-guest deployment is pending.
+- Add an opt-in Debug path for replaying pinned local RF samples on the isolated FX 1.9.9 test image. It checks the matching Steam Linux Runtime before writing and runs the FX runtime probe inside the recovery transaction. Fresh-guest deployment is pending.
 
 - Retry transient SteamOS SSH startup failures before authentication, with FX endpoint verification on each attempt.
 
 - Show first-run progress as completed stages and require current verification evidence before marking setup complete.
 
-- Record Proton-integrated FEX evidence during first-run detection and preserve the sudo credential kind when requesting authentication.
+- Record Proton-integrated FX runtime evidence during first-run detection and preserve the sudo credential kind when requesting authentication.
 
 - Add original MOTR7 artwork to setup and launch workflows and an artwork credit in Settings; preserve the Dashboard hero and shared header.
 
 - Move snapshot refresh into a shared content-area action on Environment, FX and Logs; avoid repeated resource hashing during FX view updates. Add shared UI design standards and disable first-run rescan during tasks.
 
-- Detect the known FX 1.9.9 stock FEX incompatibility and restore the original FEX tree if candidate activation fails.
+- Detect the known FX 1.9.9 stock FX runtime incompatibility and restore the original FX runtime tree if candidate activation fails.
 
 - Added an isolated, signed GitHub pre-release update channel for acceptance testing. Appearance preferences now persist across App restarts.
 
@@ -52,7 +54,7 @@ The development entries below retain historical stage evidence; statements about
 
 - Simplify Dashboard to the brand banner, environment summary and one launch area with real completed-step progress. Restore reviewed historical RF components only in the authorized FX 1.9.9 test Guest; GUI launch and user-confirmed menu/ship pass, single-player/multiplayer and full updating remain untested.
 
-- Check the SteamOS FEX graphics provider and x86-64 loader during environment preflight. The effective RootFS inside the game runtime remains pending verification.
+- Check the SteamOS FX runtime graphics provider and x86-64 loader during environment preflight. The effective RootFS inside the game runtime remains pending verification.
 
 - Show dashboard refresh times in Shanghai time even when the snapshot timestamp has no fractional seconds.
 
@@ -62,15 +64,15 @@ The development entries below retain historical stage evidence; statements about
 
 - Require SHA-256, an independent archive Ed25519 signature and ZIP metadata/path preflight before installation. Bind Sparkle installation to the verified archive signature, URL and version. Real upgrade/recovery acceptance remains pending.
 
-- Keep acceptance DMG packaging exclusively ad hoc and remove certificate discovery and notarization calls. Reset prior FEX and game evidence when retrying the unified workflow.
+- Keep acceptance DMG packaging exclusively ad hoc and remove certificate discovery and notarization calls. Reset prior FX runtime and game evidence when retrying the unified workflow.
 
 - Accept structurally valid ad hoc launcher signing for the configured authenticated updater and allow the official stable GitHub Release appcast. Full installation and recovery acceptance remain pending.
 
 - Allocate a process-local loopback Steam API tunnel for the default forwarding port, avoiding conflicts with another running App copy. Explicit custom ports and endpoint ownership checks remain active.
 
-- Integration candidate separates installed FEX compatibility from provenance, with installation/fingerprint-bound confirmation and a bounded execution probe. Live acceptance remains pending.
+- Integration candidate separates installed FX runtime compatibility from provenance, with installation/fingerprint-bound confirmation and a bounded execution probe. Live acceptance remains pending.
 
-- Add a shared Home/setup preparation state machine, completed-step progress, folded maintenance controls and guarded continuation into game launch. Scope deployment revisions to managed values, reconcile exact externally restored receipts and separate approved installed FEX readiness from candidate review. Live acceptance remains incomplete.
+- Add a shared Home/setup preparation state machine, completed-step progress, folded maintenance controls and guarded continuation into game launch. Scope deployment revisions to managed values, reconcile exact externally restored receipts and separate approved installed FX runtime readiness from candidate review. Live acceptance remains incomplete.
 
 - Establish repository-owned development status and handoff, distinguishing main implementation, branch candidates and live acceptance.
 
@@ -78,7 +80,7 @@ The development entries below retain historical stage evidence; statements about
 
 - Start the existing guarded launch flow directly from the dashboard; ask for a credential only on an authentication error, then continue. Live FX launch remains blocked by the proxy mismatch.
 
-- Add an experimental App-only FEX candidate build, review, guarded deployment and recovery route. A real Guest build succeeded, but executable hash review blocked deployment; real installation, recovery and gameplay acceptance remain pending.
+- Add an experimental App-only FX runtime candidate build, review, guarded deployment and recovery route. A real Guest build succeeded, but executable hash review blocked deployment; real installation, recovery and gameplay acceptance remain pending.
 
 - Restore identity-verified reboot completion across setup requests to prevent continuation plan mismatches; live regression remains pending.
 
@@ -114,7 +116,7 @@ The development entries below retain historical stage evidence; statements about
 - Add host, port and user fields under Settings → SSH connection settings, with guarded saves and session credential invalidation. Candidate only; actual Chinese/English settings captures checked, live connection validation pending.
 - Fix duplicate selected FX entries in automatic discovery; correct current seven-page documentation. Real Guest/game and distribution acceptance remain pending.
 
-- Isolated First-Run Setup development build: actual environment detection, versioned profiles, reviewable plans, durable receipts, offline Steam VDF transactions and drift-guarded recovery, with ten-language UI. Credentials are process-memory only; compatibility checking no longer changes IPv4 configuration. FEX/Proton distribution is blocked pending reviewed artifacts; fresh VM/game/EAC/multiplayer remain untested. Latest is unchanged.
+- Isolated First-Run Setup development build: actual environment detection, versioned profiles, reviewable plans, durable receipts, offline Steam VDF transactions and drift-guarded recovery, with ten-language UI. Credentials are process-memory only; compatibility checking no longer changes IPv4 configuration. FX runtime/Proton distribution is blocked pending reviewed artifacts; fresh VM/game/EAC/multiplayer remain untested. Latest is unchanged.
 
 - SteamOS network candidate: runtime IPv6 moved to Environment with explicit preview, confirmation, independent sudo authentication, full-interface backup and recovery. Game startup no longer writes or requires IPv6.
 - Added bounded read-only VM, verified Steam TLS, Guest PlayFab and STUN/UDP diagnostics, ten-language UI and Python parity audit. Real Guest writes/gameplay remain unverified; no Latest publication.
@@ -224,6 +226,6 @@ Stable release: App version `1.0.0`, build `2026111403`, macOS 14+ arm64. Reuses
 - Fixed: Launch retry after completion/cancellation, unified launch progress, loopback Steam API forwarding conflicts and update archive integrity revalidation. Reviewed historical RF components were restored only in the authorized FX 1.9.9 test Guest.
 - Compatibility: Ad-hoc signing; no Apple Developer ID signature or Apple notarization. Gatekeeper may block downloaded copies. Download the DMG, compare its SHA-256, open it and drag the App into Applications. If blocked, use macOS Privacy & Security → Open Anyway for the verified download.
 - Evidence: Existing package reports record arm64 Release validation, DMG mount/install-copy and independent installed-process startup. GUI launch and user-confirmed menu/ship were recorded for the FX 1.9.9 test environment; this is not a general compatibility guarantee.
-- Known limitations: Single-player, EAC/multiplayer, fresh SteamOS/FEX/Proton deployment, credential restart/identity matrices and complete Sparkle installation/rollback/relaunch remain unverified. The bundled public update service is disabled/unconfigured. Production FX 1.9.12 was only inspected offline. Safe FX stop/restart remains unavailable. Existing bilingual screenshots are historical Debug captures, not final release captures. No functional tests, live environment changes or new screenshots were performed for this publication.
+- Known limitations: Single-player, EAC/multiplayer, fresh SteamOS/FX runtime/Proton deployment, credential restart/identity matrices and complete Sparkle installation/rollback/relaunch remain unverified. The bundled public update service is disabled/unconfigured. Production FX 1.9.12 was only inspected offline. Safe FX stop/restart remains unavailable. Existing bilingual screenshots are historical Debug captures, not final release captures. No functional tests, live environment changes or new screenshots were performed for this publication.
 
 DMG SHA-256: `59730d98f3a4c358ca335da481d170f57c452d075728441147aa38723c50a478`

@@ -10,19 +10,27 @@ final class AppState: ObservableObject {
         guard NativeLocalization.artworkPreviewAllowed else { return }
         languageCode = language == "zh-CN" ? "zh-CN" : "en"
         self.appearance = appearance
-        if scenario == "completion" {
+        if scenario == "completion" || scenario == "failure" {
             let root = "/ui-preview-fixture/FX.app"
             let boot = "ui-preview-fixture-boot"
             fxSelection.reconcile([["path": .string(root), "identity_valid": .bool(true), "structure": .string("metadata_valid")]], incomplete: false)
             runtimeRoot = root
             try? credentials.bindGuest(boot)
-            let snapshot = DeploymentSnapshot(target: "fixture", boot: boot, revision: "fixture", fxVersion: "fixture", osVersion: "fixture", architecture: "aarch64", steamRunning: false, gameRunning: false, freeBytes: 0, facts: [:], values: [:])
+            let snapshot = DeploymentSnapshot(target: "fixture", boot: boot, revision: "fixture", fxVersion: "fixture", osVersion: "fixture", architecture: "aarch64", steamRunning: false, gameRunning: false, freeBytes: 0,
+                facts: scenario == "failure" ? ["fex_status": "repair", "fex_diagnostic_reason": "RF_BUNDLE_PAYLOAD_UNAVAILABLE"] : [:], values: [:])
             let operations = ["fex", "proton", "steam", "game"].map { component in
-                DeploymentOperation(id: component, component: component, currentVersion: ["fex", "proton"].contains(component) ? "verified" : "present", targetVersion: "fixture", changes: [:], permission: "", estimatedBytes: 0, needsRestart: false, backupLocation: "", rollback: "", verification: "", requirement: .REQUIRED, blocked: nil)
+                DeploymentOperation(id: component, component: component, currentVersion: ["fex", "proton"].contains(component) ? "verified" : "present", targetVersion: "fixture", changes: [:], permission: "", estimatedBytes: 0, needsRestart: false, backupLocation: "", rollback: "", verification: "", requirement: .REQUIRED, blocked: scenario == "failure" && component == "fex" ? "ARTIFACT_UNAVAILABLE" : nil)
             }
             firstRunPlan = DeploymentPlan(id: UUID(), profileID: "fixture", profileVersion: 1, snapshot: snapshot, operations: operations)
-            firstRunState = .Completed
-            environmentWorkflow = EnvironmentWorkflow(phase: .completed, completedSteps: 5)
+            if scenario == "failure" {
+                firstRunState = .Failed
+                environmentWorkflow = EnvironmentWorkflow(phase: .failed, completedSteps: 3,
+                    failure: ErrorState("ARTIFACT_UNAVAILABLE", details: ["component": .string("fex"), "diagnostic_reason": .string("RF_BUNDLE_PAYLOAD_UNAVAILABLE")]),
+                    evidence: ["fx_runtime_repair_attempted": .bool(true), "fx_runtime_resource_source": .string("bundle-first")])
+            } else {
+                firstRunState = .Completed
+                environmentWorkflow = EnvironmentWorkflow(phase: .completed, completedSteps: 5)
+            }
             selection = .setup
         } else if scenario == "launch" {
             environmentWorkflow = EnvironmentWorkflow(phase: .detecting, completedSteps: 2, launchesGame: true)
@@ -602,7 +610,7 @@ final class AppState: ObservableObject {
             if status != "running" { workflowStageStarted.removeValue(forKey: key) }
             workflowLog(taskID, "\(component): \(logStatus(status))\(elapsed)", level: status == "failed" ? "ERROR" : "INFO", at: at)
         } else if let raw = event["deployment_state"]?.text, let stage = DeploymentState(rawValue: raw) {
-            workflowLog(taskID, "FEX / Proton / Steam: \(stage.rawValue)", at: at)
+            workflowLog(taskID, "FX runtime / Proton / Steam: \(stage.rawValue)", at: at)
         } else if event["kind"]?.text == "credential_status", event["status"]?.text == "authenticated" {
             workflowLog(taskID, "SSH / sudo: authenticated", at: at)
         } else if event["kind"]?.text == "launch_request", let success = event["command_succeeded"]?.boolean {
@@ -684,23 +692,59 @@ final class AppState: ObservableObject {
                 if !launchGame, FEXWorkflow.localReplayEnabled,
                    plan.snapshot.facts["fex_managed_emulator"] == nil || plan.snapshot.facts["fex_registered_rootfs"] == "/" {
                     self.firstRunPlan = plan
-                    self.workflowLog(taskID, "FEX: local replay preflight")
+                    self.workflowLog(taskID, "FX runtime: local replay preflight")
                     input["credential_guest_boot"] = .string(boot)
                     let replay = try await self.core.request("first_run_fex_local_replay", timeout: 650, params: input)
                     guard let approval = replay.result["approval"]?.text else { throw ErrorState("VERIFY_FAILED") }
                     UserDefaults.standard.set(approval, forKey: "FEXLocalReplayApproval")
                     input["fex_approvals"] = .array(approvals + [.string(approval)])
-                    self.workflowLog(taskID, "SteamLinuxRuntime_4 / FEX / RootFS: verified")
+                    self.workflowLog(taskID, "SteamLinuxRuntime_4 / FX runtime / RootFS: verified")
                     detected = try await self.core.request("first_run_detect", timeout: 240, params: input)
                     guard let refreshed = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
                     raw = refreshed
                     plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
                 }
                 #endif
+                let repairableFXReasons: Set<String> = [
+                    "FEX_MISSING", "FEX_NOT_EXECUTABLE", "FEX_ARCHITECTURE",
+                    "FEX_INTEGRATION_MISSING", "FEX_CHANGED", "FEX_INTEGRITY_FAILED",
+                    "FEX_RUNTIME_FAILED", "FEX_DEPENDENCY_FAILED",
+                    "FEX_KNOWN_LAUNCH_INCOMPATIBILITY", "FEX_PROTON_INTEGRATED_UNVERIFIED"
+                ]
+                if let repair = plan.operations.first(where: { $0.component == "fex" })?.blocked,
+                   repairableFXReasons.contains(repair) {
+                    self.firstRunPlan = plan
+                    self.workflowPhase(.deploying)
+                    self.workflowLog(taskID, "FX runtime: automatic repair started")
+                    self.environmentWorkflow.evidence["fx_runtime_repair_attempted"] = .bool(true)
+                    self.environmentWorkflow.evidence["fx_runtime_resource_source"] = .string("bundle-first")
+                    input["credential_guest_boot"] = .string(boot)
+                    let repairCredentials = input
+                    let repaired = try await self.core.request("first_run_fex_repair", timeout: 6500, params: input) { [weak self] event in
+                        if event["kind"]?.text == "credential_status", event["status"]?.text == "authenticated",
+                           let role = event["credential_kind"]?.text.flatMap(CredentialKind.init(rawValue:)),
+                           let value = repairCredentials[role.bridgeField]?.text {
+                            Task { @MainActor in await self?.credentials.authenticated(role, value: value, target: target) }
+                        }
+                        Task { @MainActor in
+                            guard let self, self.environmentWorkflow.taskID == taskID else { return }
+                            self.workflowEvent(event, taskID: taskID)
+                        }
+                    }
+                    self.environmentWorkflow.evidence["fx_runtime_repair_attempted"] = repaired.result["repair_attempted"] ?? .bool(true)
+                    self.environmentWorkflow.evidence["fx_runtime_resource_source"] = repaired.result["repair_source"] ?? .string("unknown")
+                    self.environmentWorkflow.evidence["fx_runtime_verification"] = repaired.result["verification"] ?? .null
+                    self.workflowLog(taskID, "FX runtime: automatic repair verified")
+                    self.workflowPhase(.detecting)
+                    detected = try await self.core.request("first_run_detect", timeout: 240, params: input)
+                    guard let refreshed = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
+                    raw = refreshed
+                    plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
+                }
                 self.firstRunPlan = plan
                 for component in ["fex", "proton", "steam", "game"] {
                     if let operation = plan.operations.first(where: { $0.component == component }) {
-                        self.workflowLog(taskID, "\(component): \(operation.detectionPassed ? "verified" : "unverified")")
+                    self.workflowLog(taskID, "\(component == "fex" ? "FX runtime" : component): \(operation.detectionPassed ? "verified" : "unverified")")
                     }
                 }
                 self.environmentWorkflow.completedSteps = 3
@@ -883,6 +927,39 @@ final class AppState: ObservableObject {
                             "level": .string(launchSession.failure == nil ? "INFO" : "ERROR"),
                             "message": .string(credentials.redactor.text(text))])
         if runtimeLogs.count > 500 { runtimeLogs.removeFirst(runtimeLogs.count - 500) }
+    }
+    func firstRunDiagnosticReport() -> String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let product = languageCode == "zh-CN" ? "绝地潜兵 2 FX 启动器" : languageCode == "zh-TW" ? "絕地潛兵 2 FX 啟動器" : "HELLDIVERS 2 FX Launcher"
+        let snapshot = firstRunPlan?.snapshot
+        let failure = environmentWorkflow.failure
+        let operations = firstRunPlan?.operations.map { operation in
+            let name = operation.component == "fex" ? "FX runtime" : operation.component
+            let status = operation.blocked ?? (firstRunPlan?.setupObservationVerified(operation) == true ? "PASS" : operation.changes.isEmpty ? "UNVERIFIED" : "REPAIR_REQUIRED")
+            return "- \(name): \(status)"
+        }.joined(separator: "\n") ?? "- unavailable"
+        let details = failure.map { $0.details.isEmpty ? "none" : CoreJSON.encode(.object($0.details)) } ?? "none"
+        let source = environmentWorkflow.evidence["fx_runtime_resource_source"]?.text
+            ?? snapshot?.facts["fex_source_type"] ?? "unknown"
+        let report = """
+        \(product)
+        App version: \(info["CFBundleShortVersionString"] as? String ?? "unknown") (\(info["CFBundleVersion"] as? String ?? "unknown"))
+        FX Steam Launcher version: \(snapshot?.fxVersion ?? fxVersion)
+        SteamOS version: \(snapshot?.osVersion ?? "unknown")
+        Failed stage: \(environmentWorkflow.phase.rawValue)
+        Internal error code: \(failure?.code ?? firstRunFailure ?? "none")
+        Actual reason: \(snapshot?.facts["fex_diagnostic_reason"] ?? failure?.details["diagnostic_reason"]?.text ?? "unknown")
+        Component checks:
+        \(operations)
+        Automatic repair attempted: \(environmentWorkflow.evidence["fx_runtime_repair_attempted"]?.boolean == true ? "yes" : "no")
+        Resource source: \(source)
+        Verification: \(CoreJSON.encode(environmentWorkflow.evidence["fx_runtime_verification"] ?? .null))
+        FX runtime executable SHA-256: \(snapshot?.facts["fex_executable_sha256"] ?? "unknown")
+        FX runtime tree SHA-256: \(snapshot?.facts["fex_tree"] ?? "unknown")
+        Permission diagnostic: \(snapshot?.facts["fex_diagnostic_reason"] ?? "unknown")
+        Technical details: \(details)
+        """
+        return CoreRedaction.scrub(credentials.redactor.text(report))
     }
     func confirmMainMenu() { launchSession.confirmMainMenu(); recordLaunch() }
     func confirmSinglePlayer() { launchSession.confirmSinglePlayer(); recordLaunch() }

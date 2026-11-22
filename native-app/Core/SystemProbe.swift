@@ -38,7 +38,7 @@ enum SystemProbe {
     }
 
     static func environmentStatus() -> [String: JSONValue] {
-        let names = ["FX launcher", "gvproxy", "SSH connection", "Guest", "Steam", "FEX", "Proton-JE", "EAC", "Multiplayer"]
+        let names = ["FX launcher", "gvproxy", "SSH connection", "Guest", "Steam", "FX runtime", "Proton-JE", "EAC", "Multiplayer"]
         return ["status": .string("unverified"), "scope": .string("host_metadata_only"),
                 "checks": .array(names.map { .object(["name": .string($0), "state": .string("unverified")]) })]
     }
@@ -132,8 +132,8 @@ enum DependencyProbe {
                      "state": .string(FileManager.default.isExecutableFile(atPath: "/usr/bin/ssh") ? "ready" : "missing")])
         rows.append(["id": .string("node"), "name": .string("Node.js"),
                      "version": .string("not required"), "state": .string("not_required")])
-        for name in ["Steam", "FEX", "Proton-JE", "EAC", "Multiplayer"] {
-            rows.append(["id": .string(name.lowercased()), "name": .string(name),
+        for (id, name) in [("steam", "Steam"), ("fex", "FX runtime"), ("proton-je", "Proton-JE"), ("eac", "EAC"), ("multiplayer", "Multiplayer")] {
+            rows.append(["id": .string(id), "name": .string(name),
                          "version": .string("unknown"), "state": .string("unverified")])
         }
         return rows

@@ -384,6 +384,12 @@ enum FEXWorkflow {
         let staticResult = try probe()
         snapshot.facts["fex_status"] = "repair"
         snapshot.facts["fex_reason"] = staticResult["reason"]?.text ?? "FEX_RUNTIME_FAILED"
+        for key in ["diagnostic_reason", "source_type", "root", "path"] {
+            if let value = staticResult[key]?.text { snapshot.facts["fex_" + key] = value }
+        }
+        if let present = staticResult["root_present"]?.boolean {
+            snapshot.facts["fex_root_present"] = present ? "true" : "false"
+        }
         if staticResult["layout"]?.text == "proton-integrated" {
             snapshot.facts["fex_status"] = "unverified"
             snapshot.facts["fex_layout"] = "proton-integrated"
@@ -403,6 +409,7 @@ enum FEXWorkflow {
         let approval = runtimeApproval(tree: tree, snapshot: snapshot)
         snapshot.facts["fex_fingerprint"] = approval
         snapshot.facts["fex_tree"] = tree
+        snapshot.facts["fex_executable_sha256"] = staticResult["executable_sha256"]?.text
         snapshot.facts["fex_managed_emulator"] = staticResult["managed_emulator"]?.text
         snapshot.facts["fex_registered_rootfs"] = staticResult["registered_rootfs"]?.text
         snapshot.facts["fex_provenance"] = "unverified"
@@ -435,13 +442,26 @@ enum FEXWorkflow {
         }
     }
     static let runtimeProbe = #"""
-import struct,tempfile,platform
-root=pathlib.Path.home()/'.local/share/HD2FXLauncher/compatibility/FEX-RF'
-managed=root.exists() or root.is_symlink()
-if not managed:root=pathlib.Path.home()/'.local/share/Steam/steamapps/common/FEX-Emu'
+import struct,tempfile,platform,os
+managed_root=pathlib.Path.home()/'.local/share/HD2FXLauncher/compatibility/FEX-RF'
+steam_root=pathlib.Path.home()/'.local/share/Steam/steamapps/common/FEX-Emu'
+managed=os.path.lexists(managed_root)
+root=managed_root if managed else steam_root
+source_type='app-managed' if managed else 'steam-managed'
 exe=root/'usr/bin/FEX'
+def failure(reason,diagnostic=None,**details):
+ result={'reason':reason,'diagnostic_reason':diagnostic or reason,'source_type':source_type,
+         'root':str(root),'path':str(exe)}
+ result.update(details);return result
 def check():
  if pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip()!=EXPECTED_BOOT:return {'reason':'TARGET_CHANGED'}
+ if os.path.lexists(root) and root.is_symlink():return failure('FEX_INTEGRITY_FAILED','FEX_ROOT_SYMLINK')
+ try:
+  root_present=root.exists()
+  root_directory=root.is_dir() if root_present else False
+ except PermissionError:return failure('FEX_PERMISSION_DENIED','FEX_ROOT_PERMISSION_DENIED')
+ if root_present and not root_directory:return failure('FEX_INTEGRITY_FAILED','FEX_ROOT_NOT_DIRECTORY')
+ if root_present and not os.access(root,os.R_OK|os.X_OK):return failure('FEX_PERMISSION_DENIED','FEX_ROOT_ACCESS_DENIED')
  if not exe.is_file():
   bundled=pathlib.Path.home()/'.local/share/Steam/steamapps/common/Proton 11.0 (ARM64)'
   libraries=[bundled/'files/lib/wine/aarch64-unix'/name for name in ['libarm64ecfex.so','libwow64fex.so']]
@@ -449,6 +469,7 @@ def check():
    version=bundled/'version'
    config=bundled/'files/share/fex-emu/Config.json'
    metadata={'reason':'FEX_PROTON_INTEGRATED_UNVERIFIED','layout':'proton-integrated',
+             'diagnostic_reason':'FEX_PROTON_INTEGRATED_ONLY','source_type':'proton-integrated',
              'path':str(bundled),'library_hashes':{p.name:digest(p) for p in libraries}}
    for p in [version,config]:
     safe(p)
@@ -456,19 +477,27 @@ def check():
      metadata[p.name+'_sha256']=digest(p)
      if p==version:metadata['version']=p.read_text().strip()[:256]
    return metadata
-  return {'reason':'FEX_MISSING'}
- if not os.access(exe,os.X_OK):return {'reason':'FEX_NOT_EXECUTABLE'}
- if platform.machine() not in ['aarch64','arm64'] or not elf_arm64(exe):return {'reason':'FEX_ARCHITECTURE'}
- if not (root/'emulator.json').is_file():return {'reason':'FEX_INTEGRATION_MISSING'}
- registration=json.loads((root/'emulator.json').read_text()).get('emulator_v0',{})
- if registration.get('argv') not in ['./usr/bin/FEX','usr/bin/FEX']:return {'reason':'FEX_INTEGRATION_MISSING'}
+  deployment_parent=managed_root.parent
+  while not deployment_parent.exists() and deployment_parent!=deployment_parent.parent:
+   deployment_parent=deployment_parent.parent
+  if not os.access(deployment_parent,os.W_OK|os.X_OK):
+   return failure('FEX_PERMISSION_DENIED','FEX_DEPLOYMENT_PARENT_NOT_WRITABLE',root_present=root_present)
+  return failure('FEX_MISSING','FEX_BINARY_MISSING' if root_present else 'FEX_COMPONENT_ABSENT',root_present=root_present)
+ if not os.access(exe,os.R_OK):return failure('FEX_PERMISSION_DENIED','FEX_READ_PERMISSION_DENIED')
+ if not os.access(exe,os.X_OK):return failure('FEX_NOT_EXECUTABLE','FEX_EXECUTE_PERMISSION_DENIED')
+ if platform.machine() not in ['aarch64','arm64'] or not elf_arm64(exe):return failure('FEX_ARCHITECTURE','FEX_BINARY_ARCHITECTURE_MISMATCH')
+ if not (root/'emulator.json').is_file():return failure('FEX_INTEGRATION_MISSING','FEX_EMULATOR_CONFIG_MISSING')
+ try:registration=json.loads((root/'emulator.json').read_text()).get('emulator_v0',{})
+ except PermissionError:return failure('FEX_PERMISSION_DENIED','FEX_CONFIG_PERMISSION_DENIED')
+ except (OSError,ValueError,TypeError):return failure('FEX_INTEGRATION_MISSING','FEX_EMULATOR_CONFIG_INVALID')
+ if registration.get('argv') not in ['./usr/bin/FEX','usr/bin/FEX']:return failure('FEX_INTEGRATION_MISSING','FEX_EMULATOR_ENTRY_INVALID')
  for key in ['main_argv','server_argv']:
   command=registration.get(key)
   if command:
    parts=shlex.split(command)
-   if len(parts)!=1:return {'reason':'FEX_INTEGRATION_MISSING'}
+   if len(parts)!=1:return failure('FEX_INTEGRATION_MISSING','FEX_INTEGRATION_COMMAND_INVALID')
    component=root/parts[0]
-   if not component.resolve().is_relative_to(root.resolve()) or not component.is_file() or not os.access(component,os.X_OK):return {'reason':'FEX_INTEGRATION_MISSING'}
+   if not component.resolve().is_relative_to(root.resolve()) or not component.is_file() or not os.access(component,os.X_OK):return failure('FEX_INTEGRATION_MISSING','FEX_INTEGRATION_COMPONENT_INVALID')
  # The SteamOS wrapper uses this provider when Steam supplies no override.
  # This is a guest-side prerequisite, not proof of the container's effective configuration.
  provider=pathlib.Path('/usr/share/guestos/fex-mesa')
@@ -476,12 +505,13 @@ def check():
      (provider/path).is_file() for path in (
          'lib64/ld-linux-x86-64.so.2', 'usr/lib/ld-linux-x86-64.so.2',
          'lib/x86_64-linux-gnu/ld-linux-x86-64.so.2')):
-  return {'reason':'FEX_ROOTFS_UNAVAILABLE'}
+  return failure('FEX_ROOTFS_UNAVAILABLE','FEX_ROOTFS_PROVIDER_MISSING')
  files=inventory(root)
  entry=files.get('usr/bin/FEX',[])
- if not entry or entry[0]!='file':return {'reason':'FEX_INTEGRITY_FAILED'}
+ if not entry or entry[0]!='file':return failure('FEX_INTEGRITY_FAILED','FEX_EXECUTABLE_INVENTORY_INVALID')
  tree=fingerprint(files)
- result={'preflight':True,'tree':tree,'executable_sha256':entry[1]}
+ result={'preflight':True,'tree':tree,'executable_sha256':entry[1],
+         'source_type':source_type,'root':str(root),'path':str(exe),'diagnostic_reason':'FEX_PREFLIGHT_PASSED'}
  if managed:
   result['managed_emulator']=str(root/'emulator.json')
   registered=registration.get('container_environment',{}).get('FEX_ROOTFS')
@@ -822,6 +852,63 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
 }
 
 extension FEXWorkflow {
+    /// First-run repair enters the existing identity-bound install transaction automatically.
+    /// It may reuse an exact, previously reviewed candidate. A new source build is deliberately
+    /// not treated as a verified download: compiler output is not the historical approved
+    /// binary and the public Bundle/download manifest is still blocked. No developer path or
+    /// user-supplied file is accepted.
+    static func repair(backend: SSHEnvironmentBackend, params: [String: JSONValue],
+                       emit: (String, String, [String: JSONValue]) -> Void) throws -> [String: JSONValue] {
+        let before = try backend.snapshot()
+        let reason = before.facts["fex_reason"] ?? "FEX_RUNTIME_FAILED"
+        let repairable = ["FEX_MISSING", "FEX_NOT_EXECUTABLE", "FEX_ARCHITECTURE",
+                          "FEX_INTEGRATION_MISSING", "FEX_CHANGED", "FEX_INTEGRITY_FAILED",
+                          "FEX_RUNTIME_FAILED", "FEX_DEPENDENCY_FAILED",
+                          "FEX_KNOWN_LAUNCH_INCOMPATIBILITY", "FEX_PROTON_INTEGRATED_UNVERIFIED"]
+        guard repairable.contains(reason) else {
+            throw CoreError(reason, ["diagnostic_reason": .string(before.facts["fex_diagnostic_reason"] ?? reason)])
+        }
+
+        emit("INFO", "FX runtime repair preflight", ["deployment_state": .string("Checking"),
+             "component": .string("fex"), "status": .string("running"),
+             "source": .string("pinned-source-fallback")])
+        let candidate = try run("first_run_fex_audit", backend: backend, params: params)
+        let audit = candidate["fex_audit"]?.object ?? [:]
+        let source = "existing-reviewed-build"
+        guard audit["ready"]?.boolean == true,
+              audit["executable_sha256"]?.text == audit["expected_sha256"]?.text,
+              let ticket = candidate["fex_ticket"]?.text, UUID(uuidString: ticket) != nil else {
+            emit("ERROR", "FX runtime resource unavailable", ["deployment_state": .string("Deploying"),
+                 "component": .string("fex"), "status": .string("failed"),
+                 "source": .string("bundle-first"), "diagnostic_reason": .string("RF_BUNDLE_PAYLOAD_UNAVAILABLE")])
+            throw CoreError("ARTIFACT_UNAVAILABLE", [
+                "component": .string("fex"),
+                "diagnostic_reason": .string("RF_BUNDLE_PAYLOAD_UNAVAILABLE"),
+                "bundle_status": .string("BLOCKED_PUBLIC_RF_DISTRIBUTION"),
+                "fallback_status": .string("UNVERIFIED"),
+                "source": .string("bundle-first")
+            ])
+        }
+        var installParams = params
+        installParams["receipt_id"] = .string(ticket)
+        let installed = try run("first_run_fex_install", backend: backend, params: installParams)
+        let after = try backend.snapshot()
+        try requireCompatible(after)
+        emit("INFO", "FX runtime repair verified", ["deployment_state": .string("Verifying"),
+             "component": .string("fex"), "status": .string("done"), "source": .string(source)])
+        var result = installed
+        result["repair_attempted"] = .bool(true)
+        result["repair_source"] = .string(source)
+        result["repair_reason"] = .string(reason)
+        result["verification"] = .object([
+            "status": .string(after.facts["fex_status"] ?? "unknown"),
+            "runtime": .string(after.facts["fex_runtime"] ?? "unknown"),
+            "executable_sha256": .string(after.facts["fex_executable_sha256"] ?? ""),
+            "tree_sha256": .string(after.facts["fex_tree"] ?? "")
+        ])
+        return result
+    }
+
     static let pipeline = #"""
 # Executed only by the bundled Native Core over an identity-verified Guest SSH session.
 import os,sys,json,hashlib,pathlib,subprocess,shutil,uuid,stat,time,fcntl,signal,shlex,urllib.parse

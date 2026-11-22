@@ -229,3 +229,11 @@ Swift 服务保留签名清单原始字节和签名，将已经下载的 ZIP 交
 3. 验证实际加载的 FEX 路径和哈希。分别核对 emulator 注册、provider 生成的配置及实际观测到的探针变量，保留有效配置，不强制设定 `FEX_ROOTFS=/`。
 4. 正常重启两次后重连，复验文件哈希、加载路径、Steam 兼容工具及参数。重复执行时跳过已验证组件。失败时根据回执恢复，发现漂移则停止覆盖。
 5. 用全新测试镜像完成真实首次安装验收，分别记录配置完成和游戏启动结果。历史成功镜像只用于读取证据。[实测结果和待验证项目](testing/NATIVE_FIRST_RUN_ACCEPTANCE.md)
+
+## 真实用户 FEX_MISSING 修复候选 · 2026-11-22
+
+分支 `fix/first-run-ssh-access` 的起点及原远端提交均为 `c32ce24b9cfd90d197b21cc9cfda45ce3948c0a8`；开发在独立工作树进行，未覆盖其他工作树。截图能确认 FX 与 SSH 成功、环境检查以内部码 `FEX_MISSING` 失败，不能单凭截图认定 ID、权限或资源缺失。
+
+源码追踪确认旧流程在检测到缺失后直接抛错，未进入既有安装事务；同时游戏检测只看当前 SSH 用户默认 Steam 目录。候选将缺失和可修复损坏状态自动送入修复阶段，分别记录组件不存在、二进制缺失、权限、可执行位、架构、完整性、注册、RootFS 与实际运行失败。Steam 游戏目录从 `libraryfolders.vdf` 发现，当前账户由 `loginusers.vdf` 的唯一 MostRecent SteamID64 推导账户 ID；没有个人 SteamID 白名单或固定生产 UID/GID。SSH HOME 和账户仍以已认证会话及 `id -un` 验证为准。
+
+当前公开 RF Bundle 仍为空，JSON 清单继续标记 `BLOCKED_PUBLIC_RF_DISTRIBUTION`，网络备用源为 `UNVERIFIED`。自动修复不会把新的固定源码构建输出误认作历史批准哈希；没有准确匹配的已审核候选时返回 `ARTIFACT_UNAVAILABLE / RF_BUNDLE_PAYLOAD_UNAVAILABLE`，保留重试和脱敏诊断。P1 及后续真实恢复、App 首配、两次重启和游戏验收因此仍受阻，不得破坏现有成功盘或冒充完成。详见[故障分析](environment/FIRST_RUN_FX_RUNTIME_FAILURE_20261122.md)。

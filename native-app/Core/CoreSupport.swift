@@ -370,6 +370,10 @@ enum CoreRedaction {
         }
         value = value.replacingOccurrences(of: #"(?i)(password|passphrase|token|authorization)\s*[:=]\s*\S+"#, with: "$1=[REDACTED]", options: .regularExpression)
         value = value.replacingOccurrences(of: #"/Users/[^/\s]+"#, with: "~/…", options: .regularExpression)
+        value = value.replacingOccurrences(of: #"/home/[^/\s\"']+"#, with: "/home/[USER]", options: .regularExpression)
+        value = value.replacingOccurrences(of: #"(?<!\d)7656119\d{10}(?!\d)"#, with: "[STEAM_ID]", options: .regularExpression)
+        value = value.replacingOccurrences(of: #"(?i)(ssh[_ -]?user|username|user)\s*[:=]\s*[A-Za-z_][A-Za-z0-9_.-]*"#, with: "$1=[USER]", options: .regularExpression)
+        value = value.replacingOccurrences(of: #"(?i)(identity[_ -]?file|ssh[_ -]?key)\s*[:=]\s*\S+"#, with: "$1=[REDACTED]", options: .regularExpression)
         value = value.replacingOccurrences(of: #"(?<![\w.])(?:\d{1,3}\.){3}\d{1,3}(?![\w.])"#, with: "[IP]", options: .regularExpression)
         if value.count > 4000 { value = String(value.prefix(4000)) }
         return value

@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct FirstRunSetupView: View {
     @ObservedObject var state: AppState
@@ -8,6 +9,7 @@ struct FirstRunSetupView: View {
     @State private var fexAction: String?
     @State private var recoverID: UUID?
     @State private var recoverySelection = Set<String>()
+    @State private var diagnosticCopied = false
     private var plan: DeploymentPlan? { state.firstRunPlan }
     @ViewBuilder private var fexButtons: some View {
         Button(state.t("ui.fex.audit")) { state.firstRunAction("first_run_fex_audit") }
@@ -130,7 +132,7 @@ struct FirstRunSetupView: View {
                 Text(state.fxVersion + " · " + (state.fxSelection.selectedPath ?? state.t("ui.368"))).textSelection(.enabled)
                 Text(plan?.snapshot.facts["os_version"] ?? state.t("ui.368"))
             }
-            TacticalPanel(number: "FEX", title: state.t("ui.fex.title"), symbol: "shippingbox") {
+            TacticalPanel(number: "FX", title: state.t("ui.fex.title"), symbol: "shippingbox") {
                 Text(state.t("ui.fex.scope")).font(.caption)
                 ViewThatFits(in: .horizontal) {
                     HStack { fexButtons }
@@ -218,6 +220,13 @@ struct FirstRunSetupView: View {
                     }
                 }
                 Text(state.t("ui.setup.acceptance"))
+                if state.firstRunState == .Failed || state.environmentWorkflow.failure != nil {
+                    Button(state.t(diagnosticCopied ? "ui.setup.diagnosticCopied" : "ui.setup.copyDiagnostic")) {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(state.firstRunDiagnosticReport(), forType: .string)
+                        diagnosticCopied = true
+                    }
+                }
                 Button(state.t("ui.setup.launch")) { state.selection = .dashboard }
             }
             TacticalPanel(number: "R", title: state.t("ui.setup.recovery"), symbol: "arrow.uturn.backward") {
@@ -272,6 +281,7 @@ struct EnvironmentWorkflowProgressView: View {
     var returnToDashboard: (() -> Void)? = nil
     private var workflow: EnvironmentWorkflow { state.environmentWorkflow }
     @State private var showFEXDetails = false
+    @State private var diagnosticCopied = false
     private var stepRows: some View {
         ForEach(Array([EnvironmentWorkflowPhase.startingFX, .connecting, .detecting, .deploying, .verifying, .launching].prefix(workflow.totalSteps).enumerated()), id: \.offset) { index, phase in
             let stepKeys = ["ui.setup.fx", "ui.setup.connect", "ui.setup.detect", "ui.setup.deploy", "ui.workflow.result", "ui.176"]
@@ -281,6 +291,15 @@ struct EnvironmentWorkflowProgressView: View {
     }
     private var stepDetails: some View {
         Group {
+            if workflow.active && workflow.phase == .deploying {
+                Text(state.t("ui.fx.installing"))
+            } else if workflow.failure != nil,
+                      state.environmentWorkflow.evidence["fx_runtime_repair_attempted"]?.boolean == true {
+                Text(state.t("ui.fx.repairFailed"))
+            } else if workflow.failure == nil, !workflow.active,
+                      state.environmentWorkflow.evidence["fx_runtime_repair_attempted"]?.boolean == true {
+                Text(state.t("ui.fx.repaired"))
+            }
             if let status = state.firstRunPlan?.snapshot.facts["fex_status"] {
                 Text(state.t(status == "unverified" ? "ui.fex.integrated" : status == "normal" ? "ui.fex.normal" : status == "compatible" ? "ui.fex.compatible" : status == "confirmation" ? "ui.fex.unverified" : "ui.fex.repair"))
             }
@@ -306,8 +325,8 @@ struct EnvironmentWorkflowProgressView: View {
                     ProgressView(value: workflow.fraction).tint(.yellow)
                 }
                 if let failure = workflow.failure {
-                    Text(failure.code == "ARTIFACT_UNAPPROVED" && failure.details["component"]?.text == "fex"
-                         ? "FEX · " + state.t("ui.setup.artifactUnavailable")
+                    Text(["ARTIFACT_UNAVAILABLE", "ARTIFACT_UNAPPROVED"].contains(failure.code) && failure.details["component"]?.text == "fex"
+                         ? "FX · " + state.t("ui.setup.artifactUnavailable")
                          : failure.message(state.languageCode))
                         .foregroundStyle(.orange)
                     DisclosureGroup(state.t("ui.setup.details")) {
@@ -316,6 +335,11 @@ struct EnvironmentWorkflowProgressView: View {
                     }
                     HStack {
                         Button(state.t("ui.workflow.retry")) { state.startEnvironmentWorkflow(launchGame: workflow.launchesGame) }.disabled(tasks.busy)
+                        Button(state.t(diagnosticCopied ? "ui.setup.diagnosticCopied" : "ui.setup.copyDiagnostic")) {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(state.firstRunDiagnosticReport(), forType: .string)
+                            diagnosticCopied = true
+                        }
                         Button(state.t("ui.setup.launch")) {
                             if let returnToDashboard { returnToDashboard() } else { state.selection = .dashboard }
                         }

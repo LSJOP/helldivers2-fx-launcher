@@ -6,6 +6,7 @@
 - [Update integration / 自动更新](NATIVE_UPDATES.md)
 - [Release readiness / 发布状态](acceptance/RELEASE_READINESS_REPORT.md)
 - [Known issues / 已知问题](acceptance/KNOWN_ISSUES.md)
+- [First-run FX runtime failure analysis / 首次配置 FX 运行环境故障分析](environment/FIRST_RUN_FX_RUNTIME_FAILURE_20261122.md)
 
 ## Historical reports / 历史报告
 

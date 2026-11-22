@@ -48,8 +48,13 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
         switch code {
         case "FEX_KNOWN_LAUNCH_INCOMPATIBILITY": return NativeStrings.text("ui.fex.knownLaunchIncompatibility", language: language)
         case "FEX_CONFIRMATION_REQUIRED": return NativeStrings.text("ui.fex.unverified", language: language)
-        case "FEX_MISSING", "FEX_NOT_EXECUTABLE", "FEX_ARCHITECTURE", "FEX_INTEGRATION_MISSING", "FEX_ROOTFS_UNAVAILABLE", "FEX_CHANGED", "FEX_RUNTIME_FAILED", "FEX_DEPENDENCY_FAILED", "FEX_TIMEOUT", "FEX_INTEGRITY_FAILED":
-            return NativeStrings.text("ui.fex.repair", language: language)
+        case "FEX_MISSING": return NativeStrings.text("ui.fx.componentMissing", language: language)
+        case "FEX_PERMISSION_DENIED": return NativeStrings.text("ui.fx.permissionDenied", language: language)
+        case "FEX_NOT_EXECUTABLE": return NativeStrings.text("ui.fx.notExecutable", language: language)
+        case "FEX_ARCHITECTURE": return NativeStrings.text("ui.fx.architectureMismatch", language: language)
+        case "FEX_CHANGED", "FEX_INTEGRITY_FAILED": return NativeStrings.text("ui.fx.integrityFailed", language: language)
+        case "FEX_INTEGRATION_MISSING", "FEX_ROOTFS_UNAVAILABLE", "FEX_RUNTIME_FAILED", "FEX_DEPENDENCY_FAILED", "FEX_TIMEOUT":
+            return NativeStrings.text("ui.fx.checkFailed", language: language)
         case "TIMEOUT": return NativeStrings.text("ui.344", language: language)
         case "CANCELLED": return NativeStrings.text("ui.345", language: language)
         case "PYTHON_UNAVAILABLE": return NativeStrings.text("ui.240", language: language)
@@ -83,6 +88,7 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
         case "GUEST_INSPECTION_FAILED": return NativeStrings.text("ui.146", language: language)
         case "FEX_LOCAL_RUNTIME_MISSING": return "SteamLinuxRuntime_4 · " + NativeStrings.text("ui.setup.artifactUnavailable", language: language)
         case "FEX_PROTON_INTEGRATED_UNVERIFIED": return NativeStrings.text("ui.fex.integrated", language: language)
+        case "ARTIFACT_UNAVAILABLE", "ARTIFACT_UNAPPROVED": return NativeStrings.text("ui.setup.artifactUnavailable", language: language)
         case "SSH_AUTH_FAILED": return NativeStrings.text("ui.289", language: language)
         case "SUDO_AUTH_FAILED": return NativeStrings.text("ui.147", language: language)
         case "SENSITIVE_CONFIGURATION", "SENSITIVE_CHANGE_BLOCKED": return NativeStrings.text("ui.231", language: language)

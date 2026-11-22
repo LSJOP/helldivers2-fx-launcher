@@ -220,3 +220,15 @@ source gate is pending renewed visual review of the changed completion view.
 - [ ] 在该构建上另外验收真实游戏启动，并记录结果。
 - [ ] 确认 RF 及伴随组件来源、许可和再分发权限。
 - [ ] 验收正式 Release 安装和应用内更新。
+
+## 基线恢复前的首次配置回归准备 · 2026-11-22
+
+本轮尚未恢复或写入 FX 1.9.9 测试镜像。原因不是跳过测试，而是当前 App Bundle 和备用下载都没有批准的完整 RF payload；此时恢复基线只会稳定复现资源阻塞，并给现有成功环境增加不必要风险。历史 FX 1.9.12 成功镜像、Steam 登录、游戏文件、ARM64 Proton/Runtime 均未改动。
+
+只读预检：`steamos-1.img` 当前无相关进程或打开文件，完整 SHA-256 为 `bdfe63971dccf533264a251f27938a69c3675cb43ba3f5c6d64f98ee8df62a02`。但 2026-11-15 基线报告明确标记当时镜像正在运行、记录不是离线备份；本轮未找到能够确认与当前镜像对应的完整备份。不得把 `steamos.img` 或 `steamos_test.img` 按文件名猜作备份。
+
+已完成静态/隔离验证：15 项运行探针、21 项 RF 事务、161 项部署检查、107 项 Native Core 检查通过；十语言 625/625，新增身份/品牌/资源门禁通过；arm64 Debug Xcode 构建通过。诊断脱敏覆盖 SteamID64、macOS/SteamOS 用户目录、SSH 用户/密钥路径、令牌和既有凭据规则。上述结果不构成 SSH、Guest 写入、基线恢复、重启或游戏验收。
+
+当前状态：场景 A（缺失）已验证会进入修复代码路径，但因 `RF_BUNDLE_PAYLOAD_UNAVAILABLE` **BLOCKED**；B 的不同 SteamID/库路径为隔离 VDF 测试 **PASS**，真实不同 UID/GID/SSH 身份 **NOT_TESTED**；C 至 G 的事务与错误分类仅为 fixture **PASS**，真实 App/Guest **NOT_TESTED**。两次重启、游戏进程、窗口、主菜单、单人、EAC 和多人均 **NOT_TESTED**。
+
+视觉复核：当前 arm64 Debug App 的主窗口、运行环境页和首次配置页已在简体中文下人工检查，未输入凭据、未连接 Guest。另用明确标记为 fixture 的 zh-CN/en 失败态检查 FX 文案、「复制诊断报告」入口与布局；该证据不代表真实 Guest 失败或修复验收。

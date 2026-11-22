@@ -16,7 +16,7 @@
 
 HELLDIVERS 2 FX Launcher is an unofficial community launcher and management tool for Apple Silicon Macs. Built with SwiftUI and a native core, it helps users inspect FX, configure the runtime environment and manage game performance settings.
 
-FX 1.9.9 test-Guest repair now reaches the game through the GUI with the historically verified RF FEX components. Main menu/ship was confirmed by the user; single-player, multiplayer and end-to-end updating remain untested. Production FX 1.9.12 was inspected offline without writes. See [repair evidence](docs/environment/FX199_RF_REPAIR_20261114.md).
+FX 1.9.9 test-Guest repair now reaches the game through the GUI with the historically verified RF runtime components. Main menu/ship was confirmed by the user; single-player, multiplayer and end-to-end updating remain untested. Production FX 1.9.12 was inspected offline without writes. See [repair evidence](docs/environment/FX199_RF_REPAIR_20261114.md).
 
 ### Screenshots
 
@@ -44,7 +44,7 @@ The Logs page displays local system time, streams bounded task events, supports 
 
 - Dashboard starts the guarded HELLDIVERS 2 launch workflow. FX Manager inspects the selected FX installation and exposes supported FX/Steam actions.
 - First-Run Setup checks Guest identity, runtime capabilities and component integrity. Approved configuration can install the pinned Proton-JE package, select a verified Steam compatibility tool and merge launch options while retaining custom arguments. Detection is read-only. Deployment and recovery require their own checks.
-- Environment reports FEX and Proton-JE evidence. SSH and sudo credentials can be stored separately in encrypted local storage for a verified target; reuse after restart still requires real-world acceptance.
+- Environment reports FX runtime and Proton-JE evidence. SSH and sudo credentials can be stored separately in encrypted local storage for a verified target; reuse after restart still requires real-world acceptance.
 - The Swift App provides seven native pages, logs, scoped performance controls and ten interface languages. Optional SteamOS installation steps require Python 3.
 - In v1.0.1, open Settings → Software Update to check for and install later stable releases. Upgrade once from v1.0.0 using the official DMG.
 
@@ -67,7 +67,8 @@ Earlier FX 1.9.9 testing reached the game menu and ship. Single-player, EAC, mul
 
 
 - FX and SteamOS compatibility depends on the selected build and runtime evidence. The current launch path has a recorded proxy mismatch. Safe FX stop/restart remains unavailable.
-- A real Guest built an experimental FEX candidate. Its executable hash failed deployment review. Candidate installation, recovery and game compatibility remain unverified. Alternate Proton-JE builds and fresh SteamOS deployment require validation.
+- A real Guest built an experimental FX runtime candidate. Its executable hash failed deployment review. Candidate installation, recovery and game compatibility remain unverified. Alternate Proton-JE builds and fresh SteamOS deployment require validation.
+- First-run setup now enters automatic repair when the FX runtime is missing and distinguishes permission, executable, architecture, integrity and runtime failures. The public RF payload and verified fallback are still awaiting provenance and redistribution approval, so real fresh-user installation remains blocked rather than using an unreviewed binary.
 - A historical Native build reached the game menu/ship on November 5. Final-package launch, single-player missions, EAC and multiplayer remain separately unverified.
 - Gatekeeper handling and signed automatic updates remain pending. The inspected local App uses ad hoc signing, without verified notarization.
 - [Acceptance report](docs/acceptance/RELEASE_READINESS_REPORT.md) · [Known issues detail](docs/acceptance/KNOWN_ISSUES.md) · [First-run acceptance](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md) · [Update integration](docs/NATIVE_UPDATES.md) · [Performance limits](docs/GAME_PERFORMANCE.md)
@@ -76,7 +77,7 @@ Earlier FX 1.9.9 testing reached the game menu and ship. Single-player, EAC, mul
 
 [v1.0.1 — 2026-11-14](https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/v1.0.1) · Stable release, build `2026111406`. See [release notes](CHANGELOG.md).
 
-Unreleased changes include Dashboard launch, first-run Proton-JE verification and Steam configuration, experimental FEX review and recovery, and SSH authentication fixes. See the [changelog](CHANGELOG.md) and [original launcher history](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script).
+Unreleased changes include Dashboard launch, first-run Proton-JE verification and Steam configuration, experimental FX runtime review and recovery, and SSH authentication fixes. See the [changelog](CHANGELOG.md) and [original launcher history](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script).
 
 ### Disclaimer
 
@@ -92,10 +93,10 @@ Update development: v1.0.1 candidate pins a stable Ed25519 public key, with the 
 
 Interrupted native update transactions can be recovered on the next App launch. The production feed remains disabled pending full upgrade acceptance.
 
-FX 1.9.9 environment observations are recorded in the [FEX baseline report](docs/environment/FEX_BASELINE_REPORT_20261115.md).
+FX 1.9.9 environment observations are recorded in the [runtime baseline report](docs/environment/FEX_BASELINE_REPORT_20261115.md).
 
-First-run detection distinguishes Proton-integrated FEX from a missing standalone runtime. It records the Proton version, config digest and library hashes, and reports compatibility as unverified until an approved plan is available.
+First-run detection distinguishes a Proton-integrated FX runtime from a missing standalone runtime. It records the Proton version, config digest and library hashes, and reports compatibility as unverified until an approved plan is available.
 
 The recovery branch now installs the pinned Runtime through the isolated Debug replay (verified local archive or Valve HTTPS, SHA-256, SFTP, retained ARM64 Runtime, transaction recovery). Public one-click deployment remains blocked by RF binary provenance/redistribution review; the Debug replay requires explicitly supplied test image and resource paths. See [first-run acceptance](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md). The RF replay uses its own persistent directory and the audited empty RootFS registration. A no-game Runtime probe checks the selected RF executable and records its observed RootFS separately.
 
-Persistence candidate: Steam was observed updating its FEX depot after reboot. The recovery branch now stages RF in an App-owned directory and verifies the real Runtime container RootFS. Main-window launch/reopen and current bilingual idle screenshots are repaired; final repeated-setup/reboot acceptance and lawful complete RF distribution remain pending.
+Persistence candidate: Steam was observed updating its runtime depot after reboot. The recovery branch now stages RF in an App-owned directory and verifies the real Runtime container RootFS. Main-window launch/reopen and current bilingual idle screenshots are repaired; final repeated-setup/reboot acceptance and lawful complete RF distribution remain pending.

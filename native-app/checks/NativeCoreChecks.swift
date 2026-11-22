@@ -25,6 +25,22 @@ func runChecks() {
     setenv("HD2FX_LAUNCH_RESOURCES", resources.path, 1)
     defer { try? FileManager.default.removeItem(at: root) }
 
+    let diagnosticFixture = """
+    username: deck-user
+    SteamID: 76561199012345678
+    guest: /home/deck-user/.local/share/Steam
+    host: /Users/developer/Library/Application Support
+    ssh_key=/Users/developer/.ssh/id_ed25519
+    token=fixture-secret
+    """
+    let redactedDiagnostic = CoreRedaction.scrub(diagnosticFixture)
+    check(!redactedDiagnostic.contains("deck-user") && !redactedDiagnostic.contains("developer"),
+          "diagnostic report removes usernames and personal paths")
+    check(!redactedDiagnostic.contains("76561199012345678") && redactedDiagnostic.contains("[STEAM_ID]"),
+          "diagnostic report removes SteamID64")
+    check(!redactedDiagnostic.contains("fixture-secret") && !redactedDiagnostic.contains("id_ed25519"),
+          "diagnostic report removes credentials and SSH key paths")
+
     for method in ["first_run_fex_build", "first_run_fex_install", "first_run_fex_recover"] {
         checkThrows("CONFIRMATION_REQUIRED", "FEX action requires explicit initiation: " + method) {
             _ = try NativeCoreService.perform(method, params: [:], context: CoreContext(timeout: 1), onEvent: nil)

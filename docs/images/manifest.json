@@ -7,7 +7,7 @@
   "timezone": "Asia/Shanghai",
   "fx_guest_actions": "none",
   "credential_autoload": "disabled by isolated capture arguments",
-  "reviewed_ui_source_sha256": "19df709dc76e66abf3e2a8455284cd8517d000130752bce7b02df08779af104f",
+  "reviewed_ui_source_sha256": "5533e8896825993d6335d96c5e34488dbc20ce2526f00fe6fd5e603f53437f93",
   "screenshots": [
     {
       "path": "docs/images/en/dashboard.png",
@@ -434,5 +434,6 @@
   "review_note": "2026-11-14: refreshed English and Simplified Chinese real windows; reviewed dashboard simplification and shared idle workflow details. Active/failure/narrow states remain separate acceptance. Removed 27 unused keys in every catalog; surviving translations and idle pixels unchanged. Steam status now prefers the actual completed login event over the earlier snapshot; dynamic status remains separate from idle captures. Final terminal-only retry button added inside the workflow panel; source reviewed, idle README captures unchanged. Terminal state visual acceptance remains pending.",
   "motr7_header_review_20261114": "Fourteen README page viewports and four supplemental Chinese viewports captured from the dirty Debug source based on ada4e03. Header and dashboard hero match the base; welcome art, attribution, and wide/narrow dark/light layouts were reviewed. This fingerprint does not establish the appearance or function of unobserved completion and active-launch states.",
   "motr7_pending_scenes_20261114": "NOT_TESTED: real successful setup and active game launch, including their requested screenshots. No real FX, SSH, Guest write or game launch was initiated to manufacture those states. State gate checks use isolated fixtures.",
-  "persistence_review_20261115": "Twenty real read-only Debug page/viewports recaptured in en/zh-CN and visually reviewed. Main window lifecycle now explicitly reopens the shared SwiftUI scene. No Guest, credential, successful setup or gameplay claim is established by these idle captures."
+  "persistence_review_20261115": "Twenty real read-only Debug page/viewports recaptured in en/zh-CN and visually reviewed. Main window lifecycle now explicitly reopens the shared SwiftUI scene. No Guest, credential, successful setup or gameplay claim is established by these idle captures.",
+  "first_run_fx_review_20261122": "The current arm64 Debug App main window, Environment page and First-Run page were visually reviewed in Simplified Chinese with no Guest action or credential entry. Clearly labelled synthetic zh-CN/en failure panels were separately reviewed for FX wording, Copy Diagnostic Report visibility and clipping; they are not live Guest evidence. Existing README screenshots retain their original byte and capture provenance."
 }
