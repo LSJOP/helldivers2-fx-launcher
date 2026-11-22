@@ -1,7 +1,10 @@
 import SwiftUI
 
 enum Page: String, CaseIterable, Identifiable {
-    case dashboard, environment, fx, performance, logs, settings, setup
+    case setup, dashboard, environment, fx, performance, logs, settings
+    // FX remains an internal routing destination for a pending launch/setup
+    // choice. Its controls are presented in the dashboard, not as a menu item.
+    static let navigationPages: [Page] = [.setup, .dashboard, .environment, .performance, .logs, .settings]
     var id: String { rawValue }
     var menuTitle: String { title("en") }
     var symbol: String {
@@ -67,7 +70,11 @@ struct NativeOperation: Identifiable {
     }
     static var isolatedUXSmoke: Bool {
         #if DEBUG
-        return artworkPreviewRequested || ProcessInfo.processInfo.arguments.contains("--takeover-smoke") || ProcessInfo.processInfo.arguments.contains("--ux-refinement-smoke") || ProcessInfo.processInfo.arguments.contains("--readme-screenshots")
+        let args = ProcessInfo.processInfo.arguments
+        let isolatedInteractiveReview = args.contains("--ui-review-interactive")
+            && (Bundle.main.bundleIdentifier ?? "").hasPrefix("com.lsjop.helldivers2fx.native.readme.")
+            && Bundle.main.object(forInfoDictionaryKey: "HD2UpdateServiceEnabled") as? String == "NO"
+        return isolatedInteractiveReview || artworkPreviewRequested || args.contains("--takeover-smoke") || args.contains("--ux-refinement-smoke") || args.contains("--readme-screenshots")
         #else
         return false
         #endif

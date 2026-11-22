@@ -120,6 +120,7 @@ struct HD2FXNativeApp: App {
                 regularContent
                 #endif
             }
+            .tacticalHiddenScrollIndicators()
             .frame(minWidth: 850, minHeight: 560)
             .preferredColorScheme(state.appearance.scheme)
         }
@@ -130,6 +131,7 @@ struct HD2FXNativeApp: App {
         }
         Settings {
             ScrollView { SettingsView(state: state).padding(24) }
+                .tacticalHiddenScrollIndicators()
                 .disabled(NativeLocalization.artworkPreviewRequested)
                 .frame(width: 650, height: 700)
                 .preferredColorScheme(state.appearance.scheme)
@@ -174,7 +176,7 @@ struct NavigationCommands: Commands {
                 .keyboardShortcut("n", modifiers: .command)
         }
         CommandMenu(state.t("ui.193")) {
-            ForEach(Array(Page.allCases.enumerated()), id: \.element.id) { index, page in
+            ForEach(Array(Page.navigationPages.enumerated()), id: \.element.id) { index, page in
                 Button(state.pageTitle(page)) { state.selection = page }
                     .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: .command)
                     .disabled(NativeLocalization.artworkPreviewRequested)
@@ -208,7 +210,7 @@ struct NavigationCommands: Commands {
                 .padding(8)
                 .background(.yellow)
             HStack(spacing: 0) {
-                SidebarView(state: state).frame(width: 210)
+                SidebarView(state: state).frame(width: 240)
                 ScrollView {
                     Group {
                         if option("--artwork-fixture-preview", fallback: "") == "failure" {

@@ -2,6 +2,8 @@ import SwiftUI
 
 struct EnvironmentView: View {
     @ObservedObject var state: AppState
+    @State private var showFXDiagnostics = false
+
     private func snapshotStatus(_ method: String, fact: InspectionStatus = .uncertain) -> InspectionStatus {
         if state.refreshing { return .checking }
         if state.error?.method == method { return .failed }
@@ -31,6 +33,11 @@ struct EnvironmentView: View {
             TacticalButton(title: state.t("ui.ssh.test"), symbol: "network", disabledReason: state.tasks.busy ? state.t("ui.016") : nil) {
                 state.operationSelection = NativeOperation(method: "test_ssh")
             }
+            DisclosureGroup(state.t("ui.fx.details"), isExpanded: $showFXDiagnostics) {
+                FXTechnicalDetails(state: state, tasks: state.tasks)
+                LegacyOperationsView(state: state, scope: "fx")
+            }
+            .accessibilityIdentifier("environment.fx-diagnostics")
             SteamOSNetworkPanel(state: state, tasks: state.tasks, credentials: state.credentials)
             TacticalAdaptiveLayout(minimumWidth: 140, maximumColumns: 4) {
                 TacticalMetric(title: "macOS", value: state.value("get_system_info", "os_version"), symbol: "apple.logo")
@@ -78,6 +85,16 @@ struct EnvironmentView: View {
                     .font(TacticalTypography.caption).foregroundStyle(.secondary)
             }
         }
+        #if DEBUG
+        .task {
+            let arguments = ProcessInfo.processInfo.arguments
+            if arguments.contains("--readme-screenshots"), arguments.contains("--environment-diagnostics"),
+               Bundle.main.bundleIdentifier?.hasPrefix("com.lsjop.helldivers2fx.native.readme.") == true,
+               UserDefaults.standard.bool(forKey: "NativeCredentialAutoLoadDisabled") {
+                showFXDiagnostics = true
+            }
+        }
+        #endif
     }
 }
 

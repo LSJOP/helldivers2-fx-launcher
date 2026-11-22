@@ -147,6 +147,17 @@ struct DashboardStatus: Equatable {
     enum Tone { case success, working, failed, unknown }
     let tone: Tone
     let textKey: String
+    /// Presentation-only target binding: completed workflow evidence must not
+    /// follow a later selection to another FX installation.
+    static func boundInputs(root: String, session: LaunchSession, workflow: EnvironmentWorkflow,
+                            evidence: [String: JSONValue]) -> (LaunchSession, EnvironmentWorkflow, [String: JSONValue]) {
+        let matchingLaunch = !root.isEmpty && session.root == root
+        let boundSession = matchingLaunch ? session : LaunchSession()
+        let boundWorkflow = !root.isEmpty && (workflow.active || (workflow.launchesGame && matchingLaunch))
+            ? workflow : EnvironmentWorkflow()
+        let boundEvidence = !root.isEmpty && (workflow.phase == .idle || boundWorkflow.phase != .idle) ? evidence : [:]
+        return (boundSession, boundWorkflow, boundEvidence)
+    }
     static func resolve(key: String, stage: LaunchStage?, session: LaunchSession,
                         workflow: EnvironmentWorkflow, evidence: [String: JSONValue], stale: Bool) -> Self {
         let stages: [LaunchStage] = key == "fx_host_running"

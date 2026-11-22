@@ -42,9 +42,9 @@ private final class RetryStore: SavedCredentialStore {
     let manualStore = RetryStore()
     let manualManager = SessionCredentialManager(store: manualStore)
     await manualManager.prepare(for: "manual-process", savedTarget: "manual-target")
-    manualManager.password = "manual-input"
+    manualManager.password = "fixture-invalid-manual-input"
     await manualManager.prepare(for: "manual-process", savedTarget: "manual-target")
-    try check(manualManager.password == "manual-input", "retry never overwrites manual input")
+    try check(manualManager.password == "fixture-invalid-manual-input", "retry never overwrites manual input")
     let root = URL(fileURLWithPath:NSTemporaryDirectory()).appendingPathComponent("hd2-saved-credentials-" + UUID().uuidString)
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true, attributes: [.posixPermissions:0o700])
     defer { try? FileManager.default.removeItem(at:root) }

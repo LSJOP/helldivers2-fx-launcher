@@ -32,6 +32,29 @@ final class AppState: ObservableObject {
                 environmentWorkflow = EnvironmentWorkflow(phase: .completed, completedSteps: 5)
             }
             selection = .setup
+        } else if scenario == "fx" || scenario.hasPrefix("fx-") {
+            let fixtures: [[String: JSONValue]] = [
+                ["path": .string("/ui-preview-fixture/One/FX Steam Launcher.app"), "name": .string("FX Steam Launcher"), "version": .string("1.9.9"), "identity_valid": .bool(true), "structure": .string("metadata_valid")],
+                ["path": .string("/ui-preview-fixture/Two/FX Steam Launcher.app"), "name": .string("FX Steam Launcher"), "version": .string("1.9.9"), "identity_valid": .bool(true), "structure": .string("metadata_valid")],
+                ["path": .string("/ui-preview-fixture/Three/FX Steam Launcher.app"), "name": .string("FX Steam Launcher"), "version": .string("1.9.8"), "identity_valid": .bool(true), "structure": .string("metadata_valid")]
+            ]
+            let count = ["fx", "fx-switch"].contains(scenario) ? 3 : min(5, max(0, Int(scenario.dropFirst(3)) ?? 1))
+            let additional: [[String: JSONValue]] = (4...5).map { index in
+                ["path": .string("/ui-preview-fixture/Archive/\(index)/FX Steam Launcher.app"),
+                 "name": .string("FX Steam Launcher Archive \(index)"), "version": .string("1.9.8"),
+                 "identity_valid": .bool(true), "structure": .string("metadata_valid")]
+            }
+            let rows = Array((fixtures + additional).prefix(count))
+            fxSelection.reconcile(rows, incomplete: false)
+            fxSelection.select(rows.first?["path"]?.text)
+            if scenario == "fx-loading", let target = fxSelection.selectedPath {
+                let method = GUIAction.startFX.rawValue
+                guiRecords[method] = GUIOperationRecord(method: method, target: target)
+            }
+            runtimeRoot = fxSelection.selectedPath ?? ""
+            if scenario == "fx-switch", let path = rows.last?["path"]?.text { selectFX(path) }
+            results["list_fx_versions"] = ["candidates": .array(rows.map(JSONValue.object)), "scan_incomplete": .bool(false)]
+            selection = .dashboard
         } else if scenario == "launch" {
             environmentWorkflow = EnvironmentWorkflow(phase: .detecting, completedSteps: 2, launchesGame: true)
             selection = .dashboard
