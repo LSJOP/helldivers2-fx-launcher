@@ -18,7 +18,7 @@ from pathlib import Path
 parser = argparse.ArgumentParser()
 parser.add_argument('app', type=Path, help='Built DEBUG .app')
 parser.add_argument('output', type=Path, help='New PNG destination')
-parser.add_argument('--scenario', required=True, choices=['completion', 'launch'])
+parser.add_argument('--scenario', required=True, choices=['completion', 'launch', 'fx', 'fx-0', 'fx-1', 'fx-2', 'fx-3', 'fx-4', 'fx-5', 'fx-loading', 'fx-switch'])
 parser.add_argument('--language', required=True, choices=['zh-CN', 'en'])
 parser.add_argument('--appearance', required=True, choices=['dark', 'light'])
 parser.add_argument('--width', type=int, default=1280)

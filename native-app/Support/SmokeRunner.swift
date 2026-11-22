@@ -90,7 +90,7 @@ import ApplicationServices
                 state.chinese = zh
                 for appearance in [Appearance.light, .dark] {
                     state.appearance = appearance
-                    for page in Page.allCases {
+                    for page in Page.navigationPages {
                         // Dispatch the real native Navigate menu action, not a test-only navigation function.
                         state.selection = page == .dashboard ? .logs : .dashboard
                         try await Task.sleep(nanoseconds: 100_000_000)
@@ -261,7 +261,14 @@ import ApplicationServices
             guard state.hasLoaded, state.error == nil else { throw ErrorState("SNAPSHOT_FAILED") }
             // The bundle guard above keeps language changes confined to the capture copy.
             if state.languageCode != language { state.languageCode = language }
-            state.appearance = ProcessInfo.processInfo.arguments.contains("--capture-light") ? .light : .dark
+            let args = ProcessInfo.processInfo.arguments
+            func captureOption(_ name: String, fallback: String) -> String {
+                guard let index = args.firstIndex(of: name), args.indices.contains(index + 1) else { return fallback }
+                return args[index + 1]
+            }
+            state.appearance = captureOption("--capture-appearance", fallback: args.contains("--capture-light") ? "light" : "dark") == "light" ? .light : .dark
+            let width = max(850, Double(captureOption("--capture-width", fallback: "1180")) ?? 1180)
+            let height = max(560, Double(captureOption("--capture-height", fallback: "850")) ?? 850)
             if ProcessInfo.processInfo.arguments.contains("--capture-update-candidate") {
                 state.updates.checkForUpdates()
                 while !state.updates.canCheck { try await Task.sleep(nanoseconds: 200_000_000) }
@@ -271,29 +278,97 @@ import ApplicationServices
             guard state.operationError == nil else { throw ErrorState("PERFORMANCE_READ_FAILED") }
             guard let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
             var files: [String] = []
-            let pages: [(Page, String)] = [(.dashboard,"dashboard"),(.environment,"environment"),(.fx,"fx-manager"),(.performance,"performance"),(.logs,"logs"),(.settings,"settings"),(.setup,"first-run-setup")]
-            let capturePages = ProcessInfo.processInfo.arguments.contains("--fx-only") ? pages.filter { $0.0 == .fx } : ProcessInfo.processInfo.arguments.contains("--credentials-only") ? pages.filter { $0.0 == .settings || $0.0 == .setup } : pages
+            let pages: [(Page, String)] = [(.dashboard,"dashboard"),(.environment,"environment"),(.performance,"performance"),(.logs,"logs"),(.settings,"settings"),(.setup,"first-run-setup")]
+            let capturePages = args.contains("--environment-diagnostics") ? [(Page.environment, "environment-fx-diagnostics")] : args.contains("--fx-only") ? [(Page.dashboard, "dashboard-fx")] : ProcessInfo.processInfo.arguments.contains("--credentials-only") ? pages.filter { $0.0 == .settings || $0.0 == .setup } : pages
+            var scrollAudit: [String: [[String: Any]]] = [:]
+            func scrollViews(_ view: NSView) -> [NSScrollView] {
+                let nested = view.subviews.flatMap(scrollViews)
+                return (view as? NSScrollView).map { [$0] + nested } ?? nested
+            }
+            func visibleScroller(_ scroll: NSScrollView) -> Bool {
+                [scroll.hasVerticalScroller ? scroll.verticalScroller : nil,
+                 scroll.hasHorizontalScroller ? scroll.horizontalScroller : nil]
+                    .compactMap { $0 }.contains { !$0.isHiddenOrHasHiddenAncestor && $0.alphaValue > 0.01 }
+            }
             for (page, name) in capturePages {
                 state.selection = page
-                window.setContentSize(NSSize(width: 1180, height: page == .fx ? (ProcessInfo.processInfo.arguments.contains("--fx-only") ? 1100 : 700) : 850))
+                window.setContentSize(NSSize(width: width, height: height))
+                window.center()
                 try await Task.sleep(nanoseconds: 700_000_000)
                 window.contentView?.layoutSubtreeIfNeeded()
-                if language == "en", let root = window.contentView {
-                    func splitViews(_ view: NSView) -> [NSSplitView] {
-                        (view as? NSSplitView).map { [$0] } ?? view.subviews.flatMap(splitViews)
+                #if DEBUG
+                if page == .dashboard && args.contains("--dashboard-confirmation") {
+                    state.pendingAction = .startFX
+                    try await Task.sleep(nanoseconds: 800_000_000)
+                    let detail = "dashboard-confirmation.png"
+                    guard try await capture(window, name: detail, directory: directory, external: true) else {
+                        throw ErrorState("CAPTURE_FAILED")
                     }
-                    if let split = splitViews(root).first(where: { $0.isVertical && $0.arrangedSubviews.count > 1 }) {
-                        split.setPosition(250, ofDividerAt: 0)
-                        split.layoutSubtreeIfNeeded()
-                        try await Task.sleep(nanoseconds: 200_000_000)
-                    }
+                    state.pendingAction = nil
+                    files.append(detail)
+                    continue
                 }
+                #endif
                 guard try await capture(window, name: name + ".png", directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
                 files.append(name + ".png")
-                if page == .performance || page == .settings || page == .environment {
-                    func scrollViews(_ view: NSView) -> [NSScrollView] {
-                        (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews)
+                if args.contains("--scroll-audit"), let root = window.contentView {
+                    let views = scrollViews(root)
+                    guard !views.isEmpty else { throw ErrorState("SCROLL_VIEW_UNAVAILABLE") }
+                    var measurements: [[String: Any]] = []
+                    for scroll in views {
+                        guard let document = scroll.documentView else { continue }
+                        let clip = scroll.contentView
+                        let maximum = max(0, document.bounds.height - clip.bounds.height)
+                        var positions: [CGFloat] = []
+                        for fraction: CGFloat in [0, 0.5, 1] {
+                            clip.scroll(to: NSPoint(x: clip.bounds.origin.x,
+                                                    y: maximum * (document.isFlipped ? fraction : 1 - fraction)))
+                            scroll.reflectScrolledClipView(clip)
+                            await Task.yield()
+                            guard !visibleScroller(scroll) else { throw ErrorState("SCROLLER_VISIBLE_" + name.uppercased()) }
+                            positions.append(clip.bounds.origin.y)
+                        }
+                        if maximum > 2 && !(abs(positions[0] - positions[2]) > 1) {
+                            throw ErrorState("SCROLL_POSITION_UNCHANGED")
+                        }
+                        var measurement: [String: Any] = ["positions": positions, "vertical_extent": maximum]
+                        if maximum > 2,
+                           let event = CGEvent(scrollWheelEvent2Source: nil, units: .line,
+                                               wheelCount: 1, wheel1: -6, wheel2: 0, wheel3: 0),
+                           let wheel = NSEvent(cgEvent: event) {
+                            let bottom = clip.bounds.origin
+                            clip.scroll(to: NSPoint(x: bottom.x, y: positions[0]))
+                            scroll.reflectScrolledClipView(clip)
+                            scroll.scrollWheel(with: wheel)
+                            try await Task.sleep(nanoseconds: 190_000_000)
+                            measurement["wheel_moved"] = abs(clip.bounds.origin.y - positions[0]) > 1
+                            measurement["wheel_scroller_visible"] = visibleScroller(scroll)
+                            clip.scroll(to: bottom)
+                            scroll.reflectScrolledClipView(clip)
+                        }
+                        measurements.append(measurement)
                     }
+                    scrollAudit[name] = measurements
+                    if page == .dashboard || page == .logs {
+                        let bottom = name + "-bottom.png"
+                        guard try await capture(window, name: bottom, directory: directory, external: true) else {
+                            throw ErrorState("CAPTURE_FAILED")
+                        }
+                        files.append(bottom)
+                    }
+                }
+                if args.contains("--fx-only"), width <= 850, let root = window.contentView {
+                    guard let scroll = scrollViews(root).filter({ $0.bounds.width > 300 }).max(by: { $0.bounds.width < $1.bounds.width }),
+                          let document = scroll.documentView else { throw ErrorState("SCROLL_VIEW_UNAVAILABLE") }
+                    let maximum = max(0, document.bounds.height - scroll.contentView.bounds.height)
+                    scroll.contentView.scroll(to: NSPoint(x: 0, y: document.isFlipped ? maximum : 0))
+                    scroll.reflectScrolledClipView(scroll.contentView)
+                    try await Task.sleep(nanoseconds: 500_000_000)
+                    let detail = "dashboard-fx-scrolled.png"
+                    guard try await capture(window, name: detail, directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
+                    files.append(detail)
+                }
+                if !args.contains("--environment-diagnostics") && (page == .performance || page == .settings || page == .environment) {
                     if let root = window.contentView,
                        let scroll = scrollViews(root).filter({ $0.bounds.width > 600 }).max(by: { $0.bounds.width < $1.bounds.width }),
                        let document = scroll.documentView {
@@ -309,11 +384,13 @@ import ApplicationServices
                 }
             }
             result = ["result":"PASS", "language":language, "files":files,
-                      "captured_at":ISO8601DateFormatter().string(from:Date()),
+                      "captured_at":ISO8601DateFormatter().string(from:Date()), "appearance":state.appearance.rawValue,
+                      "requested_size":[width,height],
                       "app_version":Bundle.main.object(forInfoDictionaryKey:"CFBundleShortVersionString") ?? "unknown",
                       "app_build":Bundle.main.object(forInfoDictionaryKey:"CFBundleVersion") ?? "unknown",
                       "hardware":"real_read_only", "guest_actions":"none", "credential_autoload":"disabled_by_process_argument",
-                      "production_app_preferences":"unchanged", "capture_bundle_identifier":Bundle.main.bundleIdentifier ?? "unknown", "interactive_clicks":"NOT_TESTED"]
+                      "production_app_preferences":"unchanged", "capture_bundle_identifier":Bundle.main.bundleIdentifier ?? "unknown", "interactive_clicks":"NOT_TESTED",
+                      "scroll_audit": scrollAudit]
         } catch { result = ["result":"FAIL", "code":(error as? ErrorState)?.code ?? "README_CAPTURE_FAILED"] }
         if let data = try? JSONSerialization.data(withJSONObject:result, options:[.prettyPrinted,.sortedKeys]) {
             try? data.write(to:directory.appendingPathComponent("readme-capture.json"))
@@ -325,7 +402,7 @@ import ApplicationServices
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             try await waitForTask(state)
-            guard state.hasLoaded, state.error == nil, Page.allCases.count == 6 else { throw ErrorState("SNAPSHOT_FAILED") }
+            guard state.hasLoaded, state.error == nil, Page.navigationPages.count == 6 else { throw ErrorState("SNAPSHOT_FAILED") }
             state.runtimeRoot = "" // Never start/connect a real target during UI acceptance.
             state.chinese = true; state.appearance = .dark
             state.runOperation("read_performance"); try await waitForTask(state)
@@ -375,7 +452,7 @@ import ApplicationServices
                 for key in ["ui.build.about", "ui.build.copy", "ui.ssh.test", "ui.ssh.scope"] {
                     guard !state.t(key).contains("⟦") else { throw ErrorState("LOCALE_MISSING") }
                 }
-                for page in Page.allCases {
+                for page in Page.navigationPages {
                     state.selection = page
                     window.setContentSize(NSSize(width: 1060, height: 850))
                     try await Task.sleep(nanoseconds: 100_000_000)
@@ -387,7 +464,7 @@ import ApplicationServices
                 state.languageCode = language
                 for width in [850.0, 1180.0] {
                     window.setContentSize(NSSize(width: width, height: 600))
-                    for page in Page.allCases {
+                    for page in Page.navigationPages {
                         state.selection = page
                         try await Task.sleep(nanoseconds: 100_000_000)
                         window.contentView?.layoutSubtreeIfNeeded()
@@ -435,7 +512,7 @@ import ApplicationServices
                 state.languageCode = language
                 guard NativeStrings.catalog[language]?.values.allSatisfy({ !$0.contains("⟦") }) == true else { throw ErrorState("LOCALE_MISSING") }
                 window.setContentSize(NSSize(width: language == "en" ? 1180 : 850, height: 850))
-                for page in Page.allCases {
+                for page in Page.navigationPages {
                     state.selection = page
                     try await Task.sleep(nanoseconds: 100_000_000)
                     window.contentView?.layoutSubtreeIfNeeded()
@@ -533,7 +610,7 @@ import ApplicationServices
                 menu.delegate?.menuWillOpen?(menu)
                 menu.update()
                 let titles = menu.items.filter { !$0.isSeparatorItem && !$0.title.isEmpty }.map(\.title)
-                let expected = Page.allCases.map { $0.title(zh) } + [state.t("ui.262")]
+                let expected = Page.navigationPages.map { $0.title(zh) } + [state.t("ui.262")]
                 result[zh ? "chinese_menu" : "english_menu"] = titles
                 result[zh ? "chinese_expected" : "english_expected"] = expected
                 guard titles == expected else { throw ErrorState("MENU_LABELS_MISMATCH") }
@@ -575,7 +652,7 @@ import ApplicationServices
             window.setContentSize(NSSize(width: 1180, height: 850))
             try await Task.sleep(nanoseconds: 300_000_000)
             var files: [String] = []
-            for page in (heroOnly ? [.dashboard] : Page.allCases) {
+            for page in (heroOnly ? [.dashboard] : Page.navigationPages) {
                 NSApp.mainMenu?.update()
                 guard let menu = NSApp.mainMenu?.items.compactMap(\.submenu).first(where: { $0.title == "导航" }) else { throw ErrorState("MENU_UNAVAILABLE") }
                 menu.delegate?.menuNeedsUpdate?(menu); menu.delegate?.menuWillOpen?(menu); menu.update()
@@ -599,7 +676,7 @@ import ApplicationServices
                 files.append(file)
             }
             result["files"] = files
-            result["native_menu_pages"] = heroOnly ? 1 : Page.allCases.count
+            result["native_menu_pages"] = heroOnly ? 1 : Page.navigationPages.count
             result["snapshot_preserved"] = state.observedAt == snapshot
             result["runtime_evidence"] = state.results["get_environment_status"]?["status"]?.text ?? "unknown"
             result["soldier_asset"] = "HelldiverHero asset catalog image loaded"

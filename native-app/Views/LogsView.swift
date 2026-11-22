@@ -87,6 +87,7 @@ struct LogsView: View {
                 Color.clear.frame(height: 1).id("log-bottom")
             }.frame(maxWidth: .infinity, minHeight: 320, alignment: .topLeading)
             }
+            .tacticalHiddenScrollIndicators()
             .frame(height: 420)
             .onAppear { if autoScroll { proxy.scrollTo("log-bottom", anchor: .bottom) } }
             .onChange(of: state.runtimeLogs.last?["id"]?.text ?? state.runtimeLogs.last?["at"]?.text) { _, _ in

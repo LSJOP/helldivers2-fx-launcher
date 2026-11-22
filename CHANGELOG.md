@@ -8,6 +8,8 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 
 ## Unreleased
 
+- Refine the Dashboard with compact status cards, understated FX selection, a larger compact emblem, concise FX confirmation and a softer light hero. Hide scroll indicators across the App.
+
 ### v1.0.4 — 2026-11-16
 
 - Preserve the reviewed FX 1.9.12 environment evidence and comparison as historical documentation; this does not validate a new deployment.

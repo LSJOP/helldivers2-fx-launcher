@@ -1,5 +1,8 @@
 # HD2FXNative 开发状态
 
+> 2026-11-22 · Dashboard V003 已在 PR #22 的整合候选上验证。见[整合报告](Dashboard_UI_V003_Final_Integration_Report.md)及[六页滚动数据](images/reviews/dashboard-v003/scroll-audit.json)。
+
+
 > **开发协作规则（2026-11-16）：** 长期分支为 `main`、`dev/environment`、`dev/ui`、`dev/core` 和 `legacy-script`；按 [AGENTS](../AGENTS.md) 及 [功能索引](FEATURE_REGISTRY.md) 先核对对应分支、实际代码和现有证据，再增量开发及更新交接。每个固定开发分支最多一个常驻工作树；历史工作区和未合并成果保留，临时分支须事先获得用户授权。自动更新、发布安全及用户数据保护不因额度优化而降低。
 
 > **当前入口（2026-11-16）：** 以 [功能索引](FEATURE_REGISTRY.md) 和当前 Git/代码为准。v1.0.4（2026111601）已按用户明确决定发布，PR #14 已合并，标签指向 `6987fae`；真实跨版本应用内升级、升级后自动重启及生产环境失败恢复均未验证。`fix/first-run-ssh-access` `c32ce24` 为未合入的开发分支，RF 实际打包、新镜像安装和许可待验证。以下 2026-11-14 章节为历史阶段记录；旧的“main 仅内存凭据”“无正式更新包/服务关闭”等判断不能用于当前主线。后续先核对远端和索引，再按范围更新索引与本交接。

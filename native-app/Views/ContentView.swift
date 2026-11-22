@@ -4,10 +4,11 @@ struct ContentView: View {
     @ObservedObject var state: AppState
     @ObservedObject var tasks: TaskManager
     @Environment(\.colorScheme) private var scheme
+    @State private var compactSidebar = false
     var body: some View {
         NavigationSplitView {
-            SidebarView(state: state)
-                .navigationSplitViewColumnWidth(min: 210, ideal: 210, max: 250)
+            SidebarView(state: state, compact: compactSidebar)
+                .navigationSplitViewColumnWidth(compactSidebar ? 64 : 240)
         } detail: {
             VStack(alignment: .leading, spacing: 16) {
                 if let error = state.error, state.selection != .dashboard {
@@ -26,7 +27,7 @@ struct ContentView: View {
                         case .setup: FirstRunSetupView(state: state, tasks: tasks, credentials: state.credentials)
                         case .dashboard: DashboardView(state: state, tasks: tasks)
                         case .environment: EnvironmentView(state: state)
-                        case .fx: FXManagerView(state: state)
+                        case .fx: DashboardView(state: state, tasks: tasks)
                         case .performance: GamePerformanceView(state: state)
                         case .logs: LogsView(state: state)
                         case .settings: SettingsView(state: state)
@@ -34,6 +35,7 @@ struct ContentView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.bottom)
                 }
+                .tacticalHiddenScrollIndicators()
                 .id(state.selection)
                 if tasks.busy && !(state.selection == .dashboard && state.environmentWorkflow.active) {
                     HStack(spacing: 10) {
@@ -56,6 +58,7 @@ struct ContentView: View {
             .tint(TacticalColors(scheme: scheme).accent)
 
         }
+        .onGeometryChange(for: Bool.self) { $0.size.width < 960 } action: { compactSidebar = $0 }
         .task(id: state.targetInspectionIdentity + (tasks.busy ? "|busy" : "|idle")) {
             state.inspectTargetIfNeeded()
         }
@@ -65,7 +68,7 @@ struct ContentView: View {
             }
             Button(state.t("ui.037"), role: .cancel) { state.pendingAction = nil }
         } message: {
-            Text(state.t("ui.358"))
+            Text(state.t(state.pendingAction == .startFX ? "ui.dashboard.confirmFX" : "ui.358"))
         }
         .sheet(item: $state.operationSelection) { item in
             LegacyOperationSheet(state: state, operation: item.method)

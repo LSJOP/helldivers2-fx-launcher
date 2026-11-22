@@ -1,5 +1,55 @@
+import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
+
+extension View {
+    func tacticalHiddenScrollIndicators() -> some View {
+        scrollIndicators(.hidden)
+            .background(ScrollIndicatorPolicy().allowsHitTesting(false).accessibilityHidden(true))
+    }
+}
+
+/// Applies the same policy to native scroll views hosted within this window.
+private struct ScrollIndicatorPolicy: NSViewRepresentable {
+    func makeNSView(context: Context) -> Marker { Marker() }
+
+    func updateNSView(_ view: Marker, context: Context) {
+        view.scheduleUpdate()
+    }
+
+    final class Marker: NSView {
+        private var updateScheduled = false
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            scheduleUpdate()
+        }
+
+        override func layout() {
+            super.layout()
+            scheduleUpdate()
+        }
+
+        func scheduleUpdate() {
+            guard !updateScheduled else { return }
+            updateScheduled = true
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.updateScheduled = false
+                guard let root = self.window?.contentView else { return }
+                Self.hideScrollers(in: root)
+            }
+        }
+
+        private static func hideScrollers(in view: NSView) {
+            if let scroll = view as? NSScrollView {
+                if scroll.hasVerticalScroller { scroll.hasVerticalScroller = false }
+                if scroll.hasHorizontalScroller { scroll.hasHorizontalScroller = false }
+            }
+            for child in view.subviews { hideScrollers(in: child) }
+        }
+    }
+}
 
 /// Selected FX plus app-bundled launch resources; no user script directory is required.
 struct RuntimeTargetPanel: View {
@@ -53,7 +103,7 @@ struct RuntimeTargetPanel: View {
     }
 }
 
-/// Full FX diagnostics, relocated from the Dashboard top into FX Manager.
+/// Path-bound resource and compatibility evidence for the Environment page.
 struct FXTechnicalDetails: View {
     @ObservedObject var state: AppState
     @ObservedObject var tasks: TaskManager
@@ -214,22 +264,69 @@ struct TacticalWarningBanner: View {
     }
 }
 
+enum TacticalControlMetrics {
+    static let cardRadius: CGFloat = 12
+    static let buttonRadius: CGFloat = 8
+    static let border: CGFloat = 1
+    static let emphasisBorder: CGFloat = 2
+    static let transition: Double = 0.2
+}
+
+struct TacticalCommandFrame: Shape {
+    var accentsOnly = false
+
+    func path(in rect: CGRect) -> Path {
+        let r = rect.insetBy(dx: 1, dy: 1)
+        let cut: CGFloat = 12
+        let arm: CGFloat = 30
+        var path = Path()
+        path.move(to: CGPoint(x: r.minX, y: r.minY + (accentsOnly ? arm : cut)))
+        if accentsOnly { path.addLine(to: CGPoint(x: r.minX, y: r.minY + cut)) }
+        path.addLine(to: CGPoint(x: r.minX + cut, y: r.minY))
+        path.addLine(to: CGPoint(x: r.minX + (accentsOnly ? arm : r.width - cut), y: r.minY))
+        if accentsOnly {
+            path.move(to: CGPoint(x: r.maxX, y: r.maxY - arm))
+        } else {
+            path.addLine(to: CGPoint(x: r.maxX, y: r.minY + cut))
+        }
+        path.addLine(to: CGPoint(x: r.maxX, y: r.maxY - cut))
+        path.addLine(to: CGPoint(x: r.maxX - cut, y: r.maxY))
+        path.addLine(to: CGPoint(x: r.maxX - (accentsOnly ? arm : r.width - cut), y: r.maxY))
+        if !accentsOnly {
+            path.addLine(to: CGPoint(x: r.minX, y: r.maxY - cut))
+            path.closeSubpath()
+        }
+        return path
+    }
+}
+
 struct TacticalButtonStyle: ButtonStyle {
     var primary = false
+    var emphasized = false
     @Environment(\.colorScheme) private var scheme
     @Environment(\.isEnabled) private var enabled
     @Environment(\.isFocused) private var focused
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hovered = false
+
     func makeBody(configuration: Configuration) -> some View {
         let c = TacticalColors(scheme: scheme)
-        let filled = enabled && (primary || configuration.isPressed)
+        let surface = if !enabled { c.disabled }
+            else if primary { configuration.isPressed ? c.primaryPressed : hovered ? c.primaryHover : c.yellow }
+            else if configuration.isPressed { c.pressed }
+            else if hovered { c.hover }
+            else { emphasized ? c.selected : c.elevated }
+        let shape = RoundedRectangle(cornerRadius: TacticalControlMetrics.buttonRadius)
         configuration.label.font(TacticalTypography.body.weight(.semibold))
-            .foregroundColor(filled ? c.ink : enabled ? c.text : c.muted)
-            .padding(.horizontal, 14).padding(.vertical, 11)
-            .background(filled ? c.yellow : hovered && enabled ? c.line.opacity(0.35) : c.secondary)
-            .overlay(Rectangle().stroke(focused ? c.accent : primary ? c.accent.opacity(enabled ? 1 : 0.5) : c.line, lineWidth: focused ? 2 : 1))
-            .drawingGroup()
-            .contentShape(Rectangle()).onHover { hovered = $0 }
+            .foregroundStyle(primary && enabled ? c.ink : enabled ? c.text : c.muted)
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .frame(minHeight: 40)
+            .background(surface, in: shape)
+            .overlay(shape.strokeBorder(focused || (emphasized && enabled) ? c.accent : c.line,
+                                        lineWidth: focused ? TacticalControlMetrics.emphasisBorder : TacticalControlMetrics.border))
+            .contentShape(shape)
+            .onHover { hovered = $0 }
+            .animation(reduceMotion ? nil : .easeOut(duration: TacticalControlMetrics.transition), value: hovered)
     }
 }
 
@@ -240,6 +337,7 @@ struct TacticalButton: View {
     var loading = false
     var disabledReason: String? = nil
     var fillsWidth = false
+    var emphasized = false
     let action: () -> Void
     var body: some View {
         Button(action: action) {
@@ -250,7 +348,7 @@ struct TacticalButton: View {
             }
             .frame(maxWidth: fillsWidth ? .infinity : nil)
         }
-        .buttonStyle(TacticalButtonStyle(primary: primary))
+        .buttonStyle(TacticalButtonStyle(primary: primary, emphasized: emphasized))
         .disabled(loading || disabledReason != nil)
         .help(disabledReason ?? title)
         .accessibilityLabel(title).accessibilityHint(disabledReason ?? "")
@@ -263,6 +361,7 @@ struct TacticalNavigationItem: View {
     let symbol: String
     var selected = false
     var shortcut: String = ""
+    var compact = false
     let action: () -> Void
     @Environment(\.colorScheme) private var scheme
     @Environment(\.isFocused) private var focused
@@ -271,20 +370,25 @@ struct TacticalNavigationItem: View {
         let c = TacticalColors(scheme: scheme)
         Button(action: action) {
             HStack(spacing: 8) {
-                Text(number).font(TacticalTypography.log).frame(width: 22, alignment: .leading)
-                Image(systemName: symbol).frame(width: 16).accessibilityHidden(true)
-                Text(title).font(TacticalTypography.body.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Text(shortcut).font(TacticalTypography.log).frame(width: 22, alignment: .trailing)
+                if !compact { Text(number).font(TacticalTypography.log).frame(width: 20, alignment: .leading) }
+                Image(systemName: symbol).font(.system(size: 16, weight: .medium))
+                    .frame(width: 20).accessibilityHidden(true)
+                if !compact {
+                    Text(title).font(TacticalTypography.body.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(shortcut).font(TacticalTypography.log).frame(width: 22, alignment: .trailing)
+                }
             }
             .foregroundColor(selected ? c.ink : c.text)
-            .padding(.horizontal, 10).padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: compact ? .center : .leading)
+            .padding(.horizontal, 8).padding(.vertical, 10)
             .background(selected ? c.yellow : hovered ? c.line.opacity(0.25) : c.secondary)
             .overlay(alignment: .leading) { if selected { Rectangle().fill(c.ink).frame(width: 3).padding(.vertical, 9) } }
             .overlay(Rectangle().stroke(focused ? c.accent : .clear, lineWidth: 2))
             .drawingGroup()
             .contentShape(Rectangle())
         }.buttonStyle(.plain).onHover { hovered = $0 }
+            .help(title + " " + shortcut)
             .accessibilityLabel(title).accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
@@ -498,11 +602,15 @@ struct TacticalMetric: View {
 
 /// Keeps complete rows across the proposed width; never reserves empty grid slots.
 struct TacticalAdaptiveLayout: Layout {
+    static let compactWidth: CGFloat = 760
     var minimumWidth: CGFloat
     var maximumColumns: Int
+    var fillsPartialRows = true
+    var compactColumns: Int? = nil
     private let gap: CGFloat = 12
     private func columns(_ width: CGFloat, count: Int) -> Int {
-        let n = min(count, maximumColumns, max(1, Int((width + gap) / (minimumWidth + gap))))
+        let limit = width < Self.compactWidth ? compactColumns ?? maximumColumns : maximumColumns
+        let n = min(count, limit, max(1, Int((width + gap) / (minimumWidth + gap))))
         if count == 4 && n == 3 { return 2 }
         if count == 5 && n == 4 { return 3 }
         if count == 6 && n > 3 && n < 6 { return 3 }
@@ -514,7 +622,8 @@ struct TacticalAdaptiveLayout: Layout {
         var height: CGFloat = 0
         for start in stride(from: 0, to: subviews.count, by: cols) {
             let row = start..<min(start+cols, subviews.count)
-            let w = (width - gap * CGFloat(row.count-1)) / CGFloat(row.count)
+            let usedColumns = fillsPartialRows ? row.count : cols
+            let w = (width - gap * CGFloat(usedColumns - 1)) / CGFloat(usedColumns)
             let h = row.map { subviews[$0].sizeThatFits(ProposedViewSize(width: w, height: nil)).height }.max() ?? 0
             height += h + (start == 0 ? 0 : gap)
         }
@@ -589,32 +698,22 @@ enum InspectionStatus {
 struct GUIOperationsPanel: View {
     @ObservedObject var state: AppState
     @ObservedObject var tasks: TaskManager
-    var environment = true
-    private var methods: [GUIAction] { environment ? [.inspect, .connect] : [.startFX, .steam, .fxState, .connect] }
+    private let methods: [GUIAction] = [.inspect, .connect, .fxState]
     private var facts: [String: JSONValue] { state.latestGUIEvidence }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if environment {
-                HStack {
-                    TacticalButton(title: state.t("ui.159"), symbol: "checklist", primary: true,
-                        loading: state.guiRecords[GUIAction.inspect.rawValue]?.status == .running, disabledReason: tasks.busy ? state.t("ui.224") : nil) { state.perform(.inspect) }
-                    Spacer()
-                }
-                Text(state.t("ui.379"))
-                    .font(TacticalTypography.caption).foregroundStyle(.secondary)
-                TacticalAdaptiveLayout(minimumWidth: 145, maximumColumns: 4) {
-                    TacticalMetric(title: "FX Runtime", value: booleanFact("fx_host_running"), symbol: "shippingbox")
-                    TacticalMetric(title: state.t("ui.144"), value: booleanFact("ssh_connected"), symbol: "link")
-                    TacticalMetric(title: "Steam", value: processFact("steam_process_count"), symbol: "play.circle")
-                    TacticalMetric(title: state.t("ui.138"), value: fileFact("game_executable"), symbol: "folder")
-                }
-            } else {
-                TacticalAdaptiveLayout(minimumWidth: 245, maximumColumns: 2) {
-                    actionCard(.startFX, description: state.t("ui.375"))
-                    unavailableCard(state.t("ui.323"), symbol: "stop.fill")
-                    unavailableCard(state.t("ui.272"), symbol: "arrow.clockwise")
-                    actionCard(.steam, description: state.t("ui.077"))
-                }
+            HStack {
+                TacticalButton(title: state.t("ui.159"), symbol: "checklist", primary: true,
+                               loading: state.guiRecords[GUIAction.inspect.rawValue]?.status == .running,
+                               disabledReason: tasks.busy ? state.t("ui.224") : nil) { state.perform(.inspect) }
+                Spacer()
+            }
+            Text(state.t("ui.379")).font(TacticalTypography.caption).foregroundStyle(.secondary)
+            TacticalAdaptiveLayout(minimumWidth: 145, maximumColumns: 4) {
+                TacticalMetric(title: "FX Runtime", value: booleanFact("fx_host_running"), symbol: "shippingbox")
+                TacticalMetric(title: state.t("ui.144"), value: booleanFact("ssh_connected"), symbol: "link")
+                TacticalMetric(title: "Steam", value: processFact("steam_process_count"), symbol: "play.circle")
+                TacticalMetric(title: state.t("ui.138"), value: fileFact("game_executable"), symbol: "folder")
             }
             GUIActionFeedback(state: state, methods: methods.map(\.rawValue))
             DisclosureGroup(state.t("ui.080")) {
@@ -623,7 +722,6 @@ struct GUIOperationsPanel: View {
                     Button(state.t("ui.079")) { state.perform(.connect) }
                     Button(state.t("ui.048")) { state.perform(.fxState) }
                 }.disabled(tasks.busy)
-                if !environment { Button(state.t("ui.142")) { state.selection = .dashboard } }
                 if let os = facts["guest_os"]?.text { TacticalInfoRow(title: state.t("ui.149"), value: os) }
                 ForEach(["steam_files","game_manifest","game_directory","game_executable","proton_files","fex_files"], id: \.self) { key in
                     TacticalInfoRow(title: component(key), value: fileFact(key))
@@ -644,21 +742,6 @@ struct GUIOperationsPanel: View {
     private func fileFact(_ key: String) -> String {
         guard let value = facts["components"]?.object[key]?.boolean else { return state.t("ui.208") }
         return value ? state.t("ui.130") : state.t("ui.209")
-    }
-    private func actionCard(_ action: GUIAction, description: String) -> some View {
-        TacticalPanel(number: "", title: state.t(action.labelKey), symbol: "play.circle") {
-            Text(description).font(TacticalTypography.caption)
-            Text(state.guiRecords[action.rawValue].map { $0.status.title(state) } ?? state.t("ui.216")).font(TacticalTypography.caption).foregroundStyle(.secondary)
-            TacticalButton(title: state.t("ui.315"), symbol: "play.fill", primary: true, loading: state.guiRecords[action.rawValue]?.status == .running,
-                disabledReason: tasks.busy && !(action == .game && state.networkDiagnosticRunning) ? state.t("ui.224") : nil) { state.perform(action) }
-        }
-    }
-    private func unavailableCard(_ title: String, symbol: String) -> some View {
-        TacticalPanel(number: "", title: title, symbol: symbol) {
-            Text(state.t("ui.363"))
-                .font(TacticalTypography.caption).foregroundStyle(.secondary)
-            TacticalButton(title: state.t("ui.362"), symbol: symbol, disabledReason: state.t("ui.032")) {}
-        }
     }
     private func component(_ key: String) -> String {
         switch key {

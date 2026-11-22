@@ -52,6 +52,17 @@ import Foundation
         for key in ["eac", "multiplayer"] {
             try check(DashboardStatus.resolve(key: key, stage: key == "eac" ? .checkingEAC : nil, session: completed, workflow: EnvironmentWorkflow(), evidence: ["game_process_detected": .bool(true), "eac": .bool(true), "multiplayer": .bool(true)], stale: false), .unknown, "ui.368", "\(key): process/menu/single-player/generic flags cannot establish success")
         }
+        var previous = LaunchSession(); previous.begin(root: "/fixture/A.app"); previous.running = false
+        let completedWorkflow = EnvironmentWorkflow(phase: .completed, launchesGame: true)
+        let oldEvidence: [String: JSONValue] = ["fx_host_running": .bool(true)]
+        for (root, expected, label) in [("/fixture/A.app", DashboardStatus.Tone.success, "same selected target"),
+                                       ("/fixture/B.app", .unknown, "different selected target"),
+                                       ("", .unknown, "no selected target")] {
+            let input = DashboardStatus.boundInputs(root: root, session: previous, workflow: completedWorkflow, evidence: oldEvidence)
+            try check(DashboardStatus.resolve(key: "fx_host_running", stage: .startingFX, session: input.0,
+                                              workflow: input.1, evidence: input.2, stale: false),
+                      expected, expected == .success ? "ui.dashboard.process" : "ui.368", "workflow evidence: \(label)")
+        }
         print("PASS \(count) dashboard state matrix assertions (isolated; no live FX/game acceptance)")
     }
 }

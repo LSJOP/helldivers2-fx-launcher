@@ -13,3 +13,11 @@ The shared `SuperEarthSpaceHeader` artwork was supplied by the user for integrat
 ## FEX source-build candidate recipe
 
 The development first-run workflow pins StonkGuy/FEX commit `87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8` and the historical PR20 core RF patch (SHA-256 `85999c4f3a82063c66095d5315a661f0eed8369ed7b4b03191ed5dc8521d7926`). The patch retains its original author and attribution. FEX is MIT licensed; the pinned source license is bundled as `LICENSE-FEX.txt` and copied into built runtime notices. Upstream submodule notices remain in the retained source checkout. No prebuilt FEX binary is distributed by this change. Source: https://github.com/StonkGuy/FEX/pull/20 .
+
+## Super Earth city banner
+
+`SuperEarthCityCinematic.png` is the user-approved Plan A AI-generated concept artwork, supplied without the blue arc. The original supplied PNG is stored in the Xcode asset catalog. The Dashboard displays it with proportional clipping. Provenance and reference inventory are recorded in [Dashboard UI V002](docs/design/Dashboard_UI_V002/README.md). This concept artwork has no official game-art attribution.
+
+## Super Earth command emblem
+
+`super_earth_command_emblem.png` is the user-approved AI-generated gold emblem delivered as a transparent PNG attachment. The checked-in image retains the supplied attachment bytes. The original generation filename was unavailable on the Mac.

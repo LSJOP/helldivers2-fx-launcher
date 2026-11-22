@@ -35,6 +35,11 @@ class ScreenshotChecks(unittest.TestCase):
         p=self.root/'docs/images/manifest.json';data=json.loads(p.read_text());data['ui_source_sha256']=module.ui_fingerprint(self.root);p.write_text(json.dumps(data))
         self.assertEqual(module.check(self.root)[0],[])
         view.write_text('new visible text');self.assertTrue(module.check(self.root)[0])
+    def test_asset_drift_requires_review(self):
+        asset=self.root/'native-app/Assets.xcassets/Art.imageset/art.png';asset.parent.mkdir(parents=True);asset.write_bytes(b'old artwork')
+        p=self.root/'docs/images/manifest.json';data=json.loads(p.read_text());data['ui_source_sha256']=module.ui_fingerprint(self.root);p.write_text(json.dumps(data))
+        self.assertEqual(module.check(self.root)[0],[])
+        asset.write_bytes(b'changed artwork');self.assertTrue(module.check(self.root)[0])
     def test_missing_build_provenance_rejected(self):
         p = self.root/'docs/images/manifest.json'
         data = json.loads(p.read_text())

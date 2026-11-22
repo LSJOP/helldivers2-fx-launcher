@@ -111,6 +111,7 @@ struct SoldierBackdrop: View {
     @Environment(\.colorScheme) private var scheme
     var body: some View {
         let c = TacticalColors(scheme: scheme)
+        let blend = scheme == .light ? c.background : c.panel
         GeometryReader { geometry in
             // Preserve the complete vertical composition: fist, helmet and flag.
             // Only surplus scenery on the left may leave the header's bounds.
@@ -125,15 +126,15 @@ struct SoldierBackdrop: View {
                 ], startPoint: .leading, endPoint: .trailing))
                 .frame(width: geometry.size.width, height: geometry.size.height, alignment: .trailing)
                 .overlay(LinearGradient(stops: [
-                    .init(color: c.panel, location: 0),
-                    .init(color: c.panel.opacity(0.96), location: 0.25),
-                    .init(color: c.panel.opacity(0.12), location: 0.62),
+                    .init(color: blend, location: 0),
+                    .init(color: blend.opacity(scheme == .dark ? 0.96 : 0.8), location: 0.25),
+                    .init(color: blend.opacity(scheme == .dark ? 0.12 : 0.08), location: 0.62),
                     .init(color: .clear, location: 0.82)
                 ], startPoint: .leading, endPoint: .trailing))
                 .overlay(LinearGradient(stops: [
                     .init(color: .clear, location: 0.60),
-                    .init(color: c.panel.opacity(0.35), location: 0.83),
-                    .init(color: c.panel, location: 1)
+                    .init(color: blend.opacity(scheme == .dark ? 0.35 : 0.08), location: 0.83),
+                    .init(color: blend.opacity(scheme == .dark ? 1 : 0.28), location: 1)
                 ], startPoint: .top, endPoint: .bottom))
                 .clipped()
         }.accessibilityHidden(true).allowsHitTesting(false)
