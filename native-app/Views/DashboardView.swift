@@ -7,7 +7,6 @@ struct DashboardView: View {
     @Environment(\.colorScheme) private var scheme
     @State private var showingOverview = false
     @State private var locatingFX = false
-    @State private var showingFXDetails = false
     @State private var scanningFX = false
     private var c: TacticalColors { TacticalColors(scheme: scheme) }
     var body: some View {
@@ -21,14 +20,6 @@ struct DashboardView: View {
         .foregroundStyle(c.text).font(TacticalTypography.body)
         .fileImporter(isPresented: $locatingFX, allowedContentTypes: [.applicationBundle]) { result in
             if case .success(let url) = result { state.scanFX(manualPath: url.path) }
-        }
-        .sheet(isPresented: $showingFXDetails) {
-            VStack(alignment: .trailing, spacing: 0) {
-                TacticalButton(title: state.t("ui.037"), symbol: "xmark") { showingFXDetails = false }
-                    .padding([.top, .trailing])
-                ScrollView { FXManagerView(state: state).padding(TacticalSpacing.page) }
-            }
-            .frame(minWidth: 680, minHeight: 560)
         }
         .onChange(of: state.environmentWorkflow.taskID) { _, _ in
             if state.environmentWorkflow.launchesGame { showingOverview = false }
@@ -55,7 +46,7 @@ struct DashboardView: View {
     private var overview: some View {
         VStack(alignment: .leading, spacing: TacticalSpacing.panel) {
             hero
-            TacticalAdaptiveLayout(minimumWidth: 170, maximumColumns: 4) {
+            TacticalAdaptiveLayout(minimumWidth: 154, maximumColumns: 4, compactColumns: 2) {
                 statusCard("FX", "shippingbox", "fx_host_running", .startingFX)
                 statusCard("Steam", "play.circle", "steam_running", .startingSteam)
                 statusCard("EAC", "shield.lefthalf.filled", "eac", .checkingEAC)
@@ -76,7 +67,10 @@ struct DashboardView: View {
                 EnvironmentWorkflowProgressView(state: state, tasks: tasks)
             }
             fxControl
-            horizon
+            ViewThatFits(in: .horizontal) {
+                cityBanner.frame(minWidth: 760)
+                Color.clear.frame(height: 0).accessibilityHidden(true)
+            }
             if let error = state.error {
                 TacticalWarningBanner(text: error.message(state.languageCode) + " · " + error.code, isError: true)
                     .accessibilityIdentifier("bridge.error")
@@ -88,8 +82,7 @@ struct DashboardView: View {
         let status = DashboardStatus.resolve(key: key, stage: stage, session: statusSession,
                                              workflow: statusWorkflow, evidence: statusEvidence,
                                              stale: state.stale)
-        return DashboardStatusCard(title: title, value: state.t(status.textKey), symbol: symbol, tone: status.tone,
-                                   unverified: key == "eac" || key == "multiplayer")
+        return DashboardStatusCard(title: title, value: state.t(status.textKey), symbol: symbol, tone: status.tone)
     }
     private var statusInputs: (LaunchSession, EnvironmentWorkflow, [String: JSONValue]) {
         DashboardStatus.boundInputs(root: state.runtimeRoot, session: state.launchSession,
@@ -101,11 +94,11 @@ struct DashboardView: View {
 
     private var hero: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 14) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("HELLDIVERS 2").font(TacticalTypography.brand).foregroundStyle(c.accent).lineLimit(1).minimumScaleFactor(0.75)
                         .accessibilityIdentifier("page.title").accessibilityAddTraits(.isHeader)
-                    Text(state.t("ui.brand.name")).font(.system(size: 19, weight: .bold)).foregroundStyle(c.text)
+                    Text(state.t("ui.brand.name")).font(.system(size: 18, weight: .semibold)).foregroundStyle(c.text)
                         .lineLimit(2).minimumScaleFactor(0.75)
                 }.frame(maxWidth: 380, alignment: .leading)
                 HStack(spacing: 10) {
@@ -115,7 +108,7 @@ struct DashboardView: View {
                 }
             }
             .padding(20)
-            .frame(maxWidth: .infinity, minHeight: 260, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 214, alignment: .leading)
             .background { SoldierBackdrop() }
         }
         .background(c.panel).overlay(Rectangle().stroke(c.line, lineWidth: 1))
@@ -124,8 +117,14 @@ struct DashboardView: View {
     private var fxControl: some View {
         VStack(alignment: .leading, spacing: 14) {
             ViewThatFits(in: .horizontal) {
-                HStack { fxHeading; Spacer(); fxScanActions }
-                VStack(alignment: .leading, spacing: 10) { fxHeading; fxScanActions }
+                HStack { fxHeading; Spacer(minLength: 16); fxScanActions.fixedSize(horizontal: true, vertical: false) }
+                VStack(alignment: .leading, spacing: 10) {
+                    fxHeading
+                    ViewThatFits(in: .horizontal) {
+                        fxScanActions.fixedSize(horizontal: true, vertical: false)
+                        VStack(alignment: .leading, spacing: 8) { scanButton; locateButton }
+                    }
+                }
             }
             TacticalDivider()
             if state.results["list_fx_versions"]?["scan_incomplete"]?.boolean == true {
@@ -137,29 +136,35 @@ struct DashboardView: View {
                     .font(TacticalTypography.body).foregroundStyle(c.muted)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8)
             } else {
-                TacticalAdaptiveLayout(minimumWidth: 230, maximumColumns: 3) {
+                TacticalAdaptiveLayout(minimumWidth: 285, maximumColumns: 3, fillsPartialRows: false, compactColumns: 1) {
                     ForEach(state.fxSelection.candidates, id: \.overviewCandidatePath) { candidate in
                         fxCandidate(candidate)
                     }
                 }
             }
+            TacticalDivider()
+            Label(operationTarget, systemImage: "scope")
+                .font(TacticalTypography.body.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+                .help(state.fxSelection.selectedPath ?? "")
+                .accessibilityIdentifier("dashboard.fx-target")
+            if state.fxSelection.candidates.count > 1, let path = state.fxSelection.selected?["path"]?.text {
+                Text(path).font(TacticalTypography.caption).foregroundStyle(c.muted)
+                    .lineLimit(1).truncationMode(.middle).help(path)
+            }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) { fxActions }.fixedSize(horizontal: true, vertical: false)
-                TacticalAdaptiveLayout(minimumWidth: 145, maximumColumns: 3) { fxActions }
+                VStack(alignment: .leading, spacing: 8) { fxActions }
             }
-            GUIActionFeedback(state: state, methods: [GUIAction.startFX.rawValue, GUIAction.steam.rawValue])
+            .accessibilityIdentifier("dashboard.fx-actions")
+            GUIActionFeedback(state: state, methods: [GUIAction.startFX.rawValue])
         }
         .padding(TacticalSpacing.panel)
-        .background {
-            ZStack {
-                RoundedRectangle(cornerRadius: 6).fill(c.panel)
-                if scheme == .dark {
-                    Image("OverviewFXPanelFrame")
-                        .resizable(capInsets: EdgeInsets(top: 22, leading: 24, bottom: 22, trailing: 24), resizingMode: .stretch)
-                } else {
-                    RoundedRectangle(cornerRadius: 6).stroke(c.accent, lineWidth: 1.5)
-                }
-            }.allowsHitTesting(false).accessibilityHidden(true)
+        .background { TacticalCommandFrame().fill(c.panel) }
+        .overlay {
+            TacticalCommandFrame().stroke(c.line, lineWidth: TacticalControlMetrics.border)
+                .overlay { TacticalCommandFrame(accentsOnly: true).stroke(c.yellow, lineWidth: TacticalControlMetrics.emphasisBorder) }
+                .allowsHitTesting(false).accessibilityHidden(true)
         }
         .accessibilityIdentifier("dashboard.fx-control")
     }
@@ -171,17 +176,20 @@ struct DashboardView: View {
         }
     }
     private var fxScanActions: some View {
-        HStack(spacing: 8) {
-            TacticalButton(title: state.t("ui.fx.rescan"), symbol: "arrow.clockwise", loading: scanningFX && tasks.busy,
-                           disabledReason: tasks.busy ? state.t("ui.224") : nil) { scanningFX = true; state.scanFX() }
-            TacticalButton(title: state.t("ui.fx.locate"), symbol: "folder.badge.plus",
-                           disabledReason: tasks.busy ? state.t("ui.224") : nil) { locatingFX = true }
-        }
+        HStack(spacing: 8) { scanButton; locateButton }
+    }
+    private var scanButton: some View {
+        TacticalButton(title: state.t("ui.fx.rescan"), symbol: "arrow.clockwise", loading: scanningFX && tasks.busy,
+                       disabledReason: tasks.busy ? state.t("ui.224") : nil) { scanningFX = true; state.scanFX() }
+    }
+    private var locateButton: some View {
+        TacticalButton(title: state.t("ui.fx.locate"), symbol: "folder.badge.plus",
+                       disabledReason: tasks.busy ? state.t("ui.224") : nil) { locatingFX = true }
     }
     private func fxCandidate(_ candidate: [String: JSONValue]) -> some View {
         let path = candidate["path"]?.text ?? ""
         let selected = !path.isEmpty && state.fxSelection.selectedPath == path
-        let version = candidate["version"]?.text.flatMap { $0 == "unknown" || $0.isEmpty ? nil : $0 } ?? state.t("ui.366")
+        let version = displayVersion(candidate)
         let status = selected ? DashboardStatus.resolve(key: "fx_host_running", stage: .startingFX, session: statusSession,
                                                         workflow: statusWorkflow, evidence: statusEvidence,
                                                         stale: state.stale) : DashboardStatus(tone: .unknown, textKey: "ui.368")
@@ -197,51 +205,39 @@ struct DashboardView: View {
                         Text(candidate["name"]?.text ?? "FX Steam Launcher").font(TacticalTypography.body.weight(.bold)).lineLimit(2)
                         Text(version).font(TacticalTypography.caption).foregroundStyle(c.muted)
                     }
-                    Spacer(minLength: 15)
+                    Spacer(minLength: 0)
+                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(selected ? c.accent : c.muted)
+                        .accessibilityHidden(true)
                 }
                 HStack(spacing: 5) {
                     DashboardLED(tone: status.tone)
                     Text(state.t(status.textKey)).font(TacticalTypography.caption).foregroundStyle(c.text)
-                    if selected { Text("· " + state.t("ui.dashboard.selected")).font(TacticalTypography.caption).foregroundStyle(c.accent) }
                 }
                 Text((path as NSString).abbreviatingWithTildeInPath).font(TacticalTypography.caption).foregroundStyle(c.muted)
                     .lineLimit(1).truncationMode(.middle).help(path)
+                Text(state.t("ui.dashboard.selected")).font(TacticalTypography.caption.weight(.semibold))
+                    .foregroundStyle(c.ink)
+                    .padding(.horizontal, 7).padding(.vertical, 2)
+                    .background(c.yellow, in: RoundedRectangle(cornerRadius: 4))
+                    .opacity(selected ? 1 : 0)
+                    .accessibilityHidden(true)
             }
-            .padding(12).frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
-            .background {
-                ZStack(alignment: .trailing) {
-                    RoundedRectangle(cornerRadius: 5).fill(c.secondary)
-                    if scheme == .dark {
-                        Image(selected ? "OverviewFXSelectedFrame" : "OverviewFXIdleFrame")
-                            .resizable(capInsets: EdgeInsets(top: 28, leading: 15, bottom: 15, trailing: 28), resizingMode: .stretch)
-                    } else {
-                        RoundedRectangle(cornerRadius: 5).stroke(selected ? c.accent : c.line, lineWidth: selected ? 2 : 1)
-                    }
-                    Image("OverviewFXWatermark").resizable().scaledToFit().frame(width: 90).opacity(0.1).accessibilityHidden(true)
-                }
-            }
-            .overlay(alignment: .topTrailing) {
-                if selected && scheme == .light {
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(c.accent).padding(8).accessibilityHidden(true)
-                }
-            }
-            .contentShape(Rectangle())
+            .padding(12)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(FXCandidateStyle(selected: selected))
         .disabled(tasks.busy || path.isEmpty)
         .help(path)
         .accessibilityLabel((candidate["name"]?.text ?? "FX Steam Launcher") + ", " + version + ", " + state.t(status.textKey) + ", " + path)
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
     @ViewBuilder private var fxActions: some View {
-        TacticalButton(title: state.t("ui.316"), symbol: "play.fill", primary: true,
+        TacticalButton(title: state.t("ui.316"), symbol: "play.fill",
                        loading: state.guiRecords[GUIAction.startFX.rawValue]?.status == .running,
-                       disabledReason: actionDisabledReason, fillsWidth: true) { state.perform(.startFX) }
-        TacticalButton(title: state.t("ui.323"), symbol: "stop.fill", disabledReason: state.t("ui.363"), fillsWidth: true) {}
-        TacticalButton(title: state.t("ui.272"), symbol: "arrow.clockwise", disabledReason: state.t("ui.363"), fillsWidth: true) {}
-        TacticalButton(title: state.t("ui.317"), symbol: "play.circle", loading: state.guiRecords[GUIAction.steam.rawValue]?.status == .running,
-                       disabledReason: actionDisabledReason, fillsWidth: true) { state.perform(.steam) }
-        TacticalButton(title: state.t("ui.dashboard.more"), symbol: "ellipsis", fillsWidth: true) { showingFXDetails = true }
+                       disabledReason: actionDisabledReason, emphasized: true) { state.perform(.startFX) }
+        TacticalButton(title: state.t("ui.323"), symbol: "stop.fill", disabledReason: state.t("ui.363")) {}
+        TacticalButton(title: state.t("ui.272"), symbol: "arrow.clockwise", disabledReason: state.t("ui.363")) {}
     }
     private var actionDisabledReason: String? {
         if tasks.busy { return state.t("ui.224") }
@@ -252,13 +248,34 @@ struct DashboardView: View {
         let issues = state.results["list_fx_versions"]?["issues"]?.array.compactMap(\.text) ?? []
         return state.t(issues.contains("DIRECTORY_UNAVAILABLE") ? "ui.227" : "ui.228")
     }
-    private var horizon: some View {
+    private var cityBanner: some View {
         GeometryReader { geometry in
-            Image("OverviewHorizon").resizable().aspectRatio(contentMode: .fill)
-                .frame(width: geometry.size.width, height: 150, alignment: .bottom).clipped()
-                .opacity(scheme == .dark ? 0.65 : 0.55)
+            Image("SuperEarthCityCinematic")
+                .resizable()
+                .scaledToFill()
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .offset(y: geometry.size.width * 0.026)
+                .clipped()
+                .mask {
+                    LinearGradient(stops: [.init(color: .white, location: 0.88), .init(color: .white.opacity(0.7), location: 1)],
+                                   startPoint: .top, endPoint: .bottom)
+                }
         }
-        .frame(height: 150).accessibilityHidden(true).allowsHitTesting(false)
+        .frame(height: 160)
+        .clipShape(RoundedRectangle(cornerRadius: TacticalControlMetrics.cardRadius))
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
+    }
+    private var operationTarget: String {
+        guard let target = state.fxSelection.selected else { return state.t("ui.fx.choose") }
+        let name = target["name"]?.text ?? "FX Steam Launcher"
+        return state.t("ui.dashboard.operationTarget") + " " + name + " · " + displayVersion(target)
+    }
+    private func displayVersion(_ candidate: [String: JSONValue]) -> String {
+        guard let version = candidate["version"]?.text, !version.isEmpty, version != "unknown" else {
+            return state.t("ui.366")
+        }
+        return version
     }
     private var launchButton: some View {
         TacticalButton(title: state.t("ui.176"), symbol: "play.fill", primary: true, loading: tasks.busy && !state.networkDiagnosticRunning, fillsWidth: true) { showingOverview = false; state.perform(.game) }
@@ -276,12 +293,34 @@ private extension Dictionary where Key == String, Value == JSONValue {
     var overviewCandidatePath: String { self["path"]?.text ?? "" }
 }
 
+private struct FXCandidateStyle: ButtonStyle {
+    let selected: Bool
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.isFocused) private var focused
+    @Environment(\.isEnabled) private var enabled
+    @State private var hovered = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        let c = TacticalColors(scheme: scheme)
+        let shape = RoundedRectangle(cornerRadius: TacticalControlMetrics.cardRadius)
+        let fill = if selected { enabled && configuration.isPressed ? c.pressed : enabled && hovered ? c.selectedHover : c.selected }
+            else if enabled && configuration.isPressed { c.pressed }
+            else if enabled && hovered { c.hover }
+            else { c.elevated }
+        configuration.label
+            .background(fill, in: shape)
+            .overlay(shape.strokeBorder(selected || focused ? c.accent : c.line,
+                                        lineWidth: focused ? TacticalControlMetrics.emphasisBorder : TacticalControlMetrics.border))
+            .contentShape(shape)
+            .onHover { hovered = $0 }
+    }
+}
+
 private struct DashboardStatusCard: View {
     let title: String
     let value: String
     let symbol: String
     let tone: DashboardStatus.Tone
-    let unverified: Bool
     @Environment(\.colorScheme) private var scheme
     var body: some View {
         let c = TacticalColors(scheme: scheme)
@@ -297,15 +336,11 @@ private struct DashboardStatusCard: View {
                 Text(value).font(TacticalTypography.caption.weight(.semibold)).foregroundStyle(c.text).lineLimit(2).minimumScaleFactor(0.8)
             }
             Spacer(minLength: 0)
-            if tone == .success || (tone == .unknown && unverified) || tone == .unknown {
-                Image(tone == .success ? "OverviewStatusCheck" : unverified ? "OverviewStatusWarning" : "OverviewStatusUnknown")
-                    .resizable().scaledToFit().frame(width: 16, height: 16).accessibilityHidden(true)
-            } else {
-                DashboardLED(tone: tone)
-            }
-        }.padding(12).frame(maxWidth: .infinity, minHeight: 76, maxHeight: 76, alignment: .leading)
-            .background(c.panel, in: RoundedRectangle(cornerRadius: 5))
-            .overlay(RoundedRectangle(cornerRadius: 5).stroke(c.line, lineWidth: 1))
+            DashboardLED(tone: tone)
+        }.padding(12).frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
+            .background(c.panel, in: RoundedRectangle(cornerRadius: TacticalControlMetrics.cardRadius))
+            .overlay(RoundedRectangle(cornerRadius: TacticalControlMetrics.cardRadius)
+                .strokeBorder(c.line, lineWidth: TacticalControlMetrics.border))
             .accessibilityElement(children: .combine)
     }
 }
@@ -317,11 +352,10 @@ private struct DashboardLED: View {
     @State private var pulse = false
     private var color: Color {
         let c = TacticalColors(scheme: scheme)
-        switch tone { case .success: return c.success; case .working: return c.accent; case .failed: return c.error; case .unknown: return c.muted }
+        switch tone { case .success: return c.success; case .working: return c.accent; case .failed: return c.error; case .unknown: return c.unknown }
     }
     var body: some View {
         Circle().fill(color).frame(width: 8, height: 8)
-            .shadow(color: color.opacity(tone == .unknown ? 0 : 0.35), radius: 3)
             .opacity(tone == .working && pulse && !reduceMotion ? 0.45 : 1)
             .animation(tone == .working && !reduceMotion ? .easeInOut(duration: 1.3).repeatForever(autoreverses: true) : .default, value: pulse)
             .onAppear { pulse = tone == .working && !reduceMotion }

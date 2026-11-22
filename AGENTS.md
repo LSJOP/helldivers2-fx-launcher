@@ -1,7 +1,7 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.31** · Updated: **2026-11-21**.
-Change: integrate the six-item overview navigation and evidence-bound FX controls. Instruction version is independent of App version.
+Instruction version: **v1.2.32** · Updated: **2026-11-22**.
+Change: document Dashboard V002 and its visual review boundaries. Instruction version is independent of App version.
 
 ## Authority and task lifecycle
 
@@ -62,3 +62,5 @@ All subsequent UI work must first follow `docs/UI_DESIGN_GUIDELINES.md`: read th
 - Build the three artwork flows as cohesive command-terminal compositions with reusable lower-left tactical decoration, clear evidence and action hierarchy, and full-size right-hand artwork; do not settle for unrelated standard cards beside a poster.
 - Use the approved overview reference for composition, not as an App background or proof of live state. The overview shows four evidence-bound FX, Steam, EAC and multiplayer cards, an emphasized game launch action, and FX instance controls. Instance identity is path-based; selection is not runtime evidence. Keep detailed resource and compatibility diagnostics available without crowding the default overview. Do not change Core behavior for visual fidelity.
 - User-facing product names are `绝地潜兵 2 FX 启动器` and `HELLDIVERS 2 FX Launcher`; localize product naming consistently and reserve `HD2FXNative` for engineering. Treat approved reference images as visual guidance, not evidence of functionality or state. Reuse tactical decoration components, avoid isolated miniature posters and meaningless image padding, and preserve complete authorized artwork.
+
+- Apply the Dashboard V002 tokens, compact layout and path-bound action target documented in the UI guide. Keep FX selection, scanning and all three controls in Dashboard. Keep resource and compatibility diagnostics in Environment and technical events in Logs. Preserve the independent Steam service and evidence. Keep capture fixtures explicitly identified and submit V002 for draft PR visual review before integrating with main.

@@ -8,16 +8,25 @@ struct TacticalColors {
         return Color(red: Double((hex >> 16) & 255) / 255,
                      green: Double((hex >> 8) & 255) / 255, blue: Double(hex & 255) / 255)
     }
-    var background: Color { adaptive(0x101114, 0xEEEFE9) }
-    var secondary: Color { adaptive(0x181A1E, 0xE3E5DD) }
-    var panel: Color { adaptive(0x202328, 0xFAFBF6) }
-    var yellow: Color { adaptive(0xFFD600, 0xFFD600) }
-    var accent: Color { adaptive(0xFFD600, 0x695600) }
+    var background: Color { adaptive(0x111316, 0xE8E9E4) }
+    var secondary: Color { adaptive(0x181C21, 0xDADDD5) }
+    var panel: Color { adaptive(0x22272E, 0xF6F7F2) }
+    var yellow: Color { adaptive(0xFFD500, 0xFFD500) }
+    var accent: Color { adaptive(0xFFD500, 0x695600) }
     var ink: Color { adaptive(0x101114, 0x101114) }
-    var text: Color { adaptive(0xDFE2E8, 0x202328) }
-    var muted: Color { adaptive(0xA5A8AD, 0x565C63) }
-    var line: Color { adaptive(0x41454D, 0xBCC0B7) }
-    var success: Color { adaptive(0x55D68A, 0x237247) }
-    var warning: Color { adaptive(0xFF6B4A, 0xA43B22) }
-    var error: Color { adaptive(0xFF5757, 0xAF2929) }
+    var text: Color { adaptive(0xE8EBEF, 0x20252A) }
+    var muted: Color { adaptive(0xA0A7B0, 0x596168) }
+    var line: Color { adaptive(0x414750, 0xB9BEB5) }
+    var success: Color { adaptive(0x2EC27E, 0x237247) }
+    var warning: Color { adaptive(0xFFD500, 0x795C00) }
+    var error: Color { adaptive(0xFF5C5C, 0xAF2929) }
+    var elevated: Color { adaptive(0x2B3138, 0xFFFFFF) }
+    var hover: Color { adaptive(0x2F353D, 0xEBEEE5) }
+    var pressed: Color { adaptive(0x262B31, 0xDFE3D6) }
+    var selected: Color { adaptive(0x2D2E27, 0xF9F3DC) }
+    var selectedHover: Color { adaptive(0x34352B, 0xFFF0C7) }
+    var disabled: Color { adaptive(0x3A3F46, 0xE3E5DE) }
+    var unknown: Color { adaptive(0x8B919A, 0x686F76) }
+    var primaryHover: Color { adaptive(0xFFE053, 0xF8E28B) }
+    var primaryPressed: Color { adaptive(0xDDB800, 0xE2C648) }
 }

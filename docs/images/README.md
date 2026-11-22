@@ -86,3 +86,5 @@ The fourteen README page images were recaptured from isolated Debug build 202611
 2026-11-15 重新设计审核：中英文七个空闲页面已按新侧边栏顺序审核；欢迎页在状态标签最后调整后重拍。构建 1.0.2 / 2026111501，基于 `f862623` 的未提交源码。保留窗口原始像素，未执行 FX、SSH、Guest 或游戏操作；模拟完成及启动预览单独标注，不代表真实成功。
 
 The cancellation-label and duplicate-retry follow-up changes only non-idle workflow states; the reviewed idle screenshots above are retained with their original bytes and capture metadata. Live cancellation and retry remain unverified.
+
+Dashboard V002 visual review is indexed in [Dashboard V002 screenshots](reviews/dashboard-v002/README.md). The review includes the final three-action FX area, the gold emblem, the Environment diagnostics and the existing confirmation. The bilingual README windows were recaptured with the shared styling and new sidebar.

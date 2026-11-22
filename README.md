@@ -36,7 +36,7 @@ The Dashboard shows four cards: FX, Steam, EAC and multiplayer; Guest/VM detecti
 
 Unreleased setup and launch workflow artwork is by **MOTR7**, used with the artist’s permission as supplied by the user. The Dashboard hero and shared page header are unchanged. First-Run Setup is first in the sidebar (⌘1); Dashboard remains the default (⌘2).
 
-**Unreleased UI:** Dashboard integrates FX scanning, path-based instance selection and supported FX/Steam controls. More opens the existing resource and compatibility diagnostics. Stop and restart remain unavailable without a verified graceful-exit backend. Environment and Logs retain their shared content-area refresh.
+**Unreleased UI:** Dashboard V002 uses a compact sidebar at narrow widths, a native FX command panel with an explicit operation target, and the approved Super Earth city banner. Dashboard owns FX scanning, path-based selection, and the start, stop and restart controls. Environment hosts FX resource and compatibility diagnostics. Logs provides technical events and errors. The Steam status card continues to show service evidence. Stop and restart remain unavailable without a verified graceful-exit backend. Environment and Logs retain their shared content-area refresh.
 
 The Logs page displays local system time, streams bounded task events, supports auto-scroll and exports redacted raw ISO 8601 timestamps. Launch command success, process detection, window and gameplay remain separate; game-window and gameplay evidence are not automatic.
 

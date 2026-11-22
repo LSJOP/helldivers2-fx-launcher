@@ -8,6 +8,8 @@ v1.0.1 (2026111406) is the latest published stable release. Fresh SteamOS deploy
 
 ## Unreleased
 
+- Refine the Dashboard with theme tokens, native FX frames, a path-bound operation target, compact navigation and the approved cinematic city artwork.
+
 - Integrate path-based FX selection and diagnostics into Dashboard; show four evidence-bound status cards and six navigation entries. Safe FX stop/restart remain unavailable pending a verified backend.
 
 - Redesign the setup and launch-preparation scenes as tactical workflow layouts; move First-Run Setup to sidebar position 01 and synchronize Command shortcuts. Dashboard remains the default.

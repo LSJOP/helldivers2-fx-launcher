@@ -132,8 +132,8 @@ struct SoldierBackdrop: View {
                 ], startPoint: .leading, endPoint: .trailing))
                 .overlay(LinearGradient(stops: [
                     .init(color: .clear, location: 0.60),
-                    .init(color: c.panel.opacity(0.35), location: 0.83),
-                    .init(color: c.panel, location: 1)
+                    .init(color: c.panel.opacity(scheme == .dark ? 0.35 : 0.08), location: 0.83),
+                    .init(color: c.panel.opacity(scheme == .dark ? 1 : 0.28), location: 1)
                 ], startPoint: .top, endPoint: .bottom))
                 .clipped()
         }.accessibilityHidden(true).allowsHitTesting(false)

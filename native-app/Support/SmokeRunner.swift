@@ -272,13 +272,26 @@ import ApplicationServices
             guard let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) else { throw ErrorState("WINDOW_UNAVAILABLE") }
             var files: [String] = []
             let pages: [(Page, String)] = [(.dashboard,"dashboard"),(.environment,"environment"),(.performance,"performance"),(.logs,"logs"),(.settings,"settings"),(.setup,"first-run-setup")]
-            let capturePages = ProcessInfo.processInfo.arguments.contains("--fx-only") ? [(Page.dashboard, "dashboard-fx")] : ProcessInfo.processInfo.arguments.contains("--credentials-only") ? pages.filter { $0.0 == .settings || $0.0 == .setup } : pages
+            let capturePages = args.contains("--environment-diagnostics") ? [(Page.environment, "environment-fx-diagnostics")] : args.contains("--fx-only") ? [(Page.dashboard, "dashboard-fx")] : ProcessInfo.processInfo.arguments.contains("--credentials-only") ? pages.filter { $0.0 == .settings || $0.0 == .setup } : pages
             for (page, name) in capturePages {
                 state.selection = page
                 window.setContentSize(NSSize(width: width, height: height))
                 window.center()
                 try await Task.sleep(nanoseconds: 700_000_000)
                 window.contentView?.layoutSubtreeIfNeeded()
+                #if DEBUG
+                if page == .dashboard && args.contains("--dashboard-confirmation") {
+                    state.pendingAction = .startFX
+                    try await Task.sleep(nanoseconds: 800_000_000)
+                    let detail = "dashboard-confirmation.png"
+                    guard try await capture(window, name: detail, directory: directory, external: true) else {
+                        throw ErrorState("CAPTURE_FAILED")
+                    }
+                    state.pendingAction = nil
+                    files.append(detail)
+                    continue
+                }
+                #endif
                 guard try await capture(window, name: name + ".png", directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
                 files.append(name + ".png")
                 if args.contains("--fx-only"), width <= 850, let root = window.contentView {
@@ -295,7 +308,7 @@ import ApplicationServices
                     guard try await capture(window, name: detail, directory: directory, external: true) else { throw ErrorState("CAPTURE_FAILED") }
                     files.append(detail)
                 }
-                if page == .performance || page == .settings || page == .environment {
+                if !args.contains("--environment-diagnostics") && (page == .performance || page == .settings || page == .environment) {
                     func scrollViews(_ view: NSView) -> [NSScrollView] {
                         (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews)
                     }
