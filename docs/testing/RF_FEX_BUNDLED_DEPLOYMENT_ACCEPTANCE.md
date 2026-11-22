@@ -19,7 +19,7 @@ python3 -I -B native-app/script/rf_fex_bundle.py import \
   --destination native-app/PrivateResources/Deployment/RF-FEX
 ```
 
-使用独立构建输出目录，以 Xcode arm64 Debug 配置和 `HD2_PRIVATE_RF_DEBUG=YES` 构建。App 运行时从 `Contents/Resources/Deployment/RF-FEX` 读取，并验证编译时固定的清单哈希。带私有资源的 App 仅本机使用。
+使用独立构建输出目录，以 Xcode arm64 Debug 配置和 `HD2_PRIVATE_RF_DEBUG=YES HD2_UPDATE_ENABLED=NO HD2_UPDATE_DISTRIBUTION_READY=NO` 构建。App 运行时从 `Contents/Resources/Deployment/RF-FEX` 读取，并验证编译时固定的清单哈希。带私有资源的 App 仅本机使用。
 
 历史 wrapper 从 6,536 字节转为 6,498 字节，移除环境打印。脱敏后 SHA-256 为 `e65da61350150ca527da3da9da5e5ecc1bf97ac9807d2e6ac22a09ffcf6f2045`。保留 ARM64 stock GDB reader。重复的 ThunksDB 使用同哈希的伴随资源副本。运行生成的 Python 缓存以及 stage 专用 GDB reader 均排除。
 
