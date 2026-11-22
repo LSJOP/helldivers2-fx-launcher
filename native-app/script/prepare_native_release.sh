@@ -8,6 +8,13 @@ fi
 RELEASE_VERSION="$1"; RELEASE_BUILD="$2"; CHANNEL="$3"; TEAM="$4"; IDENTITY="$5"
 NOTARY_PROFILE="$6"; NOTES="$7"; STAGING="$8"; EXISTING_FEED="$9"
 APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+(cd "$APP_ROOT/.." && /usr/bin/python3 -I -B - <<'PY'
+from pathlib import Path
+root=Path('native-app/Resources/Deployment')
+blocked=[root/'RF-FEX',root/'RF-FEX.manifest.json']
+assert not any(path.exists() for path in blocked), 'Unapproved RF payload must not enter Release resources'
+PY
+)
 (cd "$APP_ROOT/.." && /usr/bin/python3 -I -B "$APP_ROOT/script/check_release_secrets.py" --tracked)
 [[ "$CHANNEL" == stable || "$CHANNEL" == preview ]] || exit 2
 [[ "$IDENTITY" == 'Developer ID Application: '* ]] || { echo 'Developer ID Application identity required' >&2; exit 2; }

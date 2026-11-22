@@ -731,6 +731,13 @@ final class AppState: ObservableObject {
                             self.workflowEvent(event, taskID: taskID)
                         }
                     }
+                    if let approval = repaired.result["approval"]?.text,
+                       approval.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil {
+                        let retained = approvals.compactMap(\.text).filter { $0 != approval } + [approval]
+                        UserDefaults.standard.set(retained, forKey: "FEXBuildApprovals")
+                        approvals = retained.map(JSONValue.string)
+                        input["fex_approvals"] = .array(approvals)
+                    }
                     self.environmentWorkflow.evidence["fx_runtime_repair_attempted"] = repaired.result["repair_attempted"] ?? .bool(true)
                     self.environmentWorkflow.evidence["fx_runtime_resource_source"] = repaired.result["repair_source"] ?? .string("unknown")
                     self.environmentWorkflow.evidence["fx_runtime_verification"] = repaired.result["verification"] ?? .null

@@ -8,6 +8,8 @@ v1.0.1 (2026111406) is the latest published stable release. Fresh SteamOS deploy
 
 ## Unreleased
 
+- Local opt-in Debug builds can carry the verified 41-file FX runtime package and use it during first-run repair. Public distribution approval remains pending.
+
 - First-run setup now enters automatic FX runtime repair for missing or damaged components, discovers Steam libraries and the active account without a developer SteamID, reports distinct permission/architecture/integrity failures, and can copy a redacted diagnostic report. Public RF Bundle and fallback payloads remain blocked pending provenance and redistribution approval; no unreviewed binary is installed.
 
 - Preserve the audited empty RF RootFS registration and verify that the isolated Steam Runtime probe loads the installed RF executable. Migrate the previous Debug registration through the existing recovery transaction. Wait for the SwiftUI main-scene action during launch or reopen.

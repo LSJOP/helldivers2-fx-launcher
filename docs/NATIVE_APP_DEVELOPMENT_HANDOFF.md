@@ -237,3 +237,5 @@ Swift 服务保留签名清单原始字节和签名，将已经下载的 ZIP 交
 源码追踪确认旧流程在检测到缺失后直接抛错，未进入既有安装事务；同时游戏检测只看当前 SSH 用户默认 Steam 目录。候选将缺失和可修复损坏状态自动送入修复阶段，分别记录组件不存在、二进制缺失、权限、可执行位、架构、完整性、注册、RootFS 与实际运行失败。Steam 游戏目录从 `libraryfolders.vdf` 发现，当前账户由 `loginusers.vdf` 的唯一 MostRecent SteamID64 推导账户 ID；没有个人 SteamID 白名单或固定生产 UID/GID。SSH HOME 和账户仍以已认证会话及 `id -un` 验证为准。
 
 当前公开 RF Bundle 仍为空，JSON 清单继续标记 `BLOCKED_PUBLIC_RF_DISTRIBUTION`，网络备用源为 `UNVERIFIED`。自动修复不会把新的固定源码构建输出误认作历史批准哈希；没有准确匹配的已审核候选时返回 `ARTIFACT_UNAVAILABLE / RF_BUNDLE_PAYLOAD_UNAVAILABLE`，保留重试和脱敏诊断。P1 及后续真实恢复、App 首配、两次重启和游戏验收因此仍受阻，不得破坏现有成功盘或冒充完成。详见[故障分析](environment/FIRST_RUN_FX_RUNTIME_FAILURE_20261122.md)。
+
+受控 Debug 内置、导入命令与验收状态见[专项报告](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。

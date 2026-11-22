@@ -24,7 +24,7 @@ class PipelineChecks(unittest.TestCase):
  def provenance(self):
   self.work.mkdir(parents=True,exist_ok=True)
   (self.work/'provenance.json').write_text(json.dumps({'source':'87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8','patch':'85999c4f3a82063c66095d5315a661f0eed8369ed7b4b03191ed5dc8521d7926','runtime':self.inventory(self.stage)}))
- def run_pipeline(self,mode,audit=None,files=None,legacy_tree=None,probe_ok=False):
+ def run_pipeline(self,mode,audit=None,files=None,legacy_tree=None,probe_ok=False,bundle_package=False):
   tree=ast.parse(source)
   for n in tree.body:
    if isinstance(n,ast.FunctionDef) and n.name in ['identity','idle','runtime_smoke','stop_replay_steam']:n.body=[ast.Return(value=None)]
@@ -32,7 +32,7 @@ class PipelineChecks(unittest.TestCase):
    if mode=='local_replay' and isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='EXPECTED' for t in n.targets):
     n.value=ast.Constant(self.expected)
   ast.fix_missing_locations(tree)
-  request={'mode':mode,'boot':'fixture-boot','ticket':self.ticket,'audit':audit,'files':files}
+  request={'mode':mode,'boot':'fixture-boot','ticket':self.ticket,'audit':audit,'files':files,'bundle_package':bundle_package}
   if legacy_tree is not None:request['legacy_tree']=legacy_tree
   out=io.StringIO()
   with patch.object(pathlib.Path,'home',return_value=self.home),contextlib.redirect_stdout(out):
@@ -152,6 +152,23 @@ class PipelineChecks(unittest.TestCase):
   self.assertEqual(metadata.read_bytes(),new)
   self.assertTrue(self.run_pipeline('recover')['recovered'])
   self.assertEqual(self.inventory(self.installed),before)
+ def test_bundle_replaces_receipted_damage_and_keeps_backup(self):
+  shutil.rmtree(self.installed)
+  binary=(self.stage/'usr/bin/FEX').read_bytes()
+  registration=b'{"emulator_v0":{"container_environment":{"FEX_ROOTFS":""}}}'
+  files=[{'path':path,'sha256':hashlib.sha256(data).hexdigest(),'mode':mode,
+          'data':base64.b64encode(data).decode()}
+         for path,data,mode in [('usr/bin/FEX',binary,0o755),('emulator.json',registration,0o644)]]
+  self.run_pipeline('local_replay',files=files,probe_ok=True,bundle_package=True)
+  self.ticket=str(uuid.uuid4())
+  executable=self.installed/'usr/bin/FEX'
+  executable.write_bytes(b'damaged');executable.chmod(0o644)
+  damaged=self.fingerprint(self.inventory(self.installed))
+  result=self.run_pipeline('local_replay',files=files,legacy_tree=damaged,probe_ok=True,bundle_package=True)
+  self.assertEqual(executable.read_bytes(),binary)
+  self.assertEqual(executable.stat().st_mode&0o777,0o755)
+  self.assertEqual((self.installed.with_name(result['backup'])/'usr/bin/FEX').read_bytes(),b'damaged')
+
  def test_runtime_upload_uses_same_ticket_spelling_as_extraction(self):
   incoming=self.work/('incoming-'+self.ticket.lower())
   incoming.mkdir()

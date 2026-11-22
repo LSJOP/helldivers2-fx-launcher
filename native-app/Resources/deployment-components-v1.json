@@ -331,15 +331,20 @@
     }
   ],
   "rfPackagingPlan": {
-    "status": "UNVERIFIED",
+    "status": "CONTROLLED_DEBUG_READY_RELEASE_BLOCKED",
     "preferred": "APP_BUNDLE",
     "fallback": "VERIFIED_DOWNLOAD",
     "fallbackSource": "UNVERIFIED",
     "publicRedistribution": "UNVERIFIED",
-    "bundlePathStatus": "PROPOSED",
+    "bundlePathStatus": "DEBUG_IMPLEMENTED_RELEASE_APPROVAL_REQUIRED",
     "bundleRoot": "Contents/Resources/Deployment/RF-FEX",
+    "debugManifest": "rf-fex-debug-manifest-v1.json",
+    "debugExpectedFiles": 41,
+    "debugPayloadFingerprint": "0ddd70d9b19e0a6abac26d9edb442fe43557376670c46d9489890f7eef913cd7",
+    "debugBinaryTracking": "GIT_IGNORED_LOCAL_IMPORT_ONLY",
+    "releaseBuildGate": "REJECT_UNAPPROVED_RF_PAYLOAD",
     "guestRoot": "~/.local/share/HD2FXLauncher/compatibility/FEX-RF",
     "arm64Runtime": "PRESERVE_SYSTEM_COMPONENT",
-    "inventoryScope": "Historical pinned sample files. Complete public payload, companion dependencies and approved package hashes are UNVERIFIED."
+    "inventoryScope": "Complete 41-file controlled-Debug inventory is pinned. Public payload provenance, companion redistribution and an approved fallback package remain UNVERIFIED."
   }
 }

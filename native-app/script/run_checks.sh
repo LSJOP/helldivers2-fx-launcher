@@ -11,6 +11,17 @@ SDK="$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
 /usr/bin/python3 -I -B checks/bundle_name_checks.py >evidence/bundle-name-checks.txt
 /usr/bin/python3 -I -B checks/localization_checks.py >evidence/localization-negative-checks.txt 2>&1
 /usr/bin/python3 -I -B checks/first_run_portability_checks.py >evidence/first-run-portability-checks.txt 2>&1
+if [[ -d PrivateResources/Deployment/RF-FEX ]]; then
+  /usr/bin/python3 -I -B script/rf_fex_bundle.py verify \
+    --manifest Resources/rf-fex-debug-manifest-v1.json \
+    --payload PrivateResources/Deployment/RF-FEX >evidence/rf-fex-bundle-checks.txt 2>&1
+else
+  printf '%s\n' 'NOT_TESTED: private controlled-Debug RF payload is not present' >evidence/rf-fex-bundle-checks.txt
+fi
+if /usr/bin/git ls-files --error-unmatch PrivateResources >/dev/null 2>&1; then
+  echo 'Private RF payload must never be tracked' >&2
+  exit 1
+fi
 /usr/bin/python3 -I -B script/check_readme_screenshots.py >evidence/readme-screenshot-paths.txt 2>&1
 /usr/bin/python3 -I -B checks/readme_screenshot_checks.py >evidence/readme-screenshot-checks.txt 2>&1
 /usr/bin/python3 -I -B checks/release_history_checks.py >evidence/release-history-checks.txt 2>&1

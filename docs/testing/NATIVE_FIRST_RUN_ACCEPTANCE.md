@@ -225,6 +225,8 @@ source gate is pending renewed visual review of the changed completion view.
 
 本轮尚未恢复或写入 FX 1.9.9 测试镜像。原因不是跳过测试，而是当前 App Bundle 和备用下载都没有批准的完整 RF payload；此时恢复基线只会稳定复现资源阻塞，并给现有成功环境增加不必要风险。历史 FX 1.9.12 成功镜像、Steam 登录、游戏文件、ARM64 Proton/Runtime 均未改动。
 
+后续 Debug Bundle 集成及真实回归状态见[专项报告](RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
+
 只读预检：`steamos-1.img` 当前无相关进程或打开文件，完整 SHA-256 为 `bdfe63971dccf533264a251f27938a69c3675cb43ba3f5c6d64f98ee8df62a02`。但 2026-11-15 基线报告明确标记当时镜像正在运行、记录不是离线备份；本轮未找到能够确认与当前镜像对应的完整备份。不得把 `steamos.img` 或 `steamos_test.img` 按文件名猜作备份。
 
 已完成静态/隔离验证：15 项运行探针、21 项 RF 事务、161 项部署检查、107 项 Native Core 检查通过；十语言 625/625，新增身份/品牌/资源门禁通过；arm64 Debug Xcode 构建通过。诊断脱敏覆盖 SteamID64、macOS/SteamOS 用户目录、SSH 用户/密钥路径、令牌和既有凭据规则。上述结果不构成 SSH、Guest 写入、基线恢复、重启或游戏验收。

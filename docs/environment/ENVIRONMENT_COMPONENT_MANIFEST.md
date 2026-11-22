@@ -21,6 +21,8 @@ No alternate FEX, Proton, renderer, or network proxy is an approved substitute.
 ## 2026-11-22 实现核对
 
 - App Bundle 中仍只有配置、补丁、许可文本和清单，没有完整 RF 可执行文件组。构建门禁会核对所有声明为 `bundled: true` 的文件大小和 SHA-256，并拒绝未登记的 RF 目录内容。
+
+- 本机受控 Debug 另有完整的 [41 文件清单](../../native-app/Resources/rf-fex-debug-manifest-v1.json)。公开分发仍受许可与来源审核门禁约束。
 - FEX 上游及固定 fork 提交的根许可证为 MIT，但这不足以证明历史完整二进制、辅助文件、子模块及依赖的可复现来源和公开再分发资格。PR 20 仍未形成已审核发布归档。因此不得把历史测试盘文件加入公开包。
 - 自动首次配置现在会尝试修复，但只允许精确匹配历史批准哈希且已有身份绑定审核记录的候选进入既有备份/切换/回滚事务。新的源码构建不能仅因编译成功获得批准。
 - `APP_BUNDLE` 仍是首选、`VERIFIED_DOWNLOAD` 仍是备用策略；两者的实际 RF payload 目前均未批准。当前失败必须报告 `RF_BUNDLE_PAYLOAD_UNAVAILABLE`，不能降级成“文件不存在”或伪造下载地址。

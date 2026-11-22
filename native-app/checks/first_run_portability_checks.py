@@ -52,6 +52,8 @@ def main() -> int:
         fail(errors, 'automatic repair treats an unapproved source build as a verified download')
     if 'RF_BUNDLE_PAYLOAD_UNAVAILABLE' not in repair or 'BLOCKED_PUBLIC_RF_DISTRIBUTION' not in repair:
         fail(errors, 'automatic repair does not preserve the RF distribution blocker')
+    if 'bundleReplay(backend:' not in repair or 'resource_source' not in adapter:
+        fail(errors, 'automatic repair does not consume the verified App Bundle payload')
 
     plist = plistlib.loads((ROOT / 'Info.plist').read_bytes())
     project = (ROOT / 'HD2FXNative.xcodeproj/project.pbxproj').read_text()
@@ -60,6 +62,10 @@ def main() -> int:
         fail(errors, 'Info.plist no longer uses the stable bundle identifier setting')
     if project.count('PRODUCT_BUNDLE_IDENTIFIER = "' + expected_id + '";') != 2:
         fail(errors, 'Debug/Release bundle identifier compatibility changed')
+    for marker in ('PrivateResources/Deployment/RF-FEX', 'RF-FEX.manifest.json',
+                   'Unapproved RF payload in Release resources'):
+        if marker not in project:
+            fail(errors, 'Debug/Release RF resource gate missing: ' + marker)
 
     manifest = json.loads((ROOT / 'Resources/deployment-components-v1.json').read_text())
     for item in manifest.get('bundled', []):
@@ -89,6 +95,29 @@ def main() -> int:
     if manifest.get('status') == 'BLOCKED_PUBLIC_RF_DISTRIBUTION' and claimed_rf:
         fail(errors, 'blocked RF payload must not be included in a public Bundle')
 
+    debug_manifest_path = ROOT / 'Resources/rf-fex-debug-manifest-v1.json'
+    debug_manifest = json.loads(debug_manifest_path.read_text())
+    debug_files = debug_manifest.get('files', [])
+    debug_paths = [item.get('path') for item in debug_files]
+    if (debug_manifest.get('schema') != 1 or debug_manifest.get('expectedFiles') != 41
+            or len(debug_files) != 41 or len(set(debug_paths)) != 41
+            or debug_manifest.get('debugOnly') is not True
+            or debug_manifest.get('distributionApproved') is not False):
+        fail(errors, 'controlled-Debug RF manifest policy or inventory is invalid')
+    for item in debug_files:
+        path = item.get('path', '')
+        if (not path or path.startswith('/') or '..' in Path(path).parts or '\\' in path
+                or item.get('mode') not in (0o644, 0o755)
+                or not re.fullmatch(r'[a-f0-9]{64}', item.get('sha256', ''))
+                or item.get('publicDistributionAllowed') is not False
+                or item.get('controlledDebugOnly') is not True):
+            fail(errors, 'invalid controlled-Debug RF entry: ' + repr(path))
+    plan = manifest.get('rfPackagingPlan', {})
+    if (plan.get('debugExpectedFiles') != 41
+            or plan.get('debugPayloadFingerprint') != debug_manifest.get('payloadFingerprint')
+            or plan.get('releaseBuildGate') != 'REJECT_UNAPPROVED_RF_PAYLOAD'):
+        fail(errors, 'component catalogue and controlled-Debug RF manifest disagree')
+
     if errors:
         print('\n'.join('FAIL ' + error for error in errors))
         return 1
@@ -96,6 +125,7 @@ def main() -> int:
     print('PASS: no literal SteamID, fixed UID/GID or personal production path')
     print('PASS: stable Bundle ID and all declared Bundle resource hashes')
     print('PASS: FEX_MISSING enters repair without approving a non-reproducible source build')
+    print('PASS: 41-file controlled-Debug RF manifest and Release isolation gate')
     if claimed_rf:
         print(f'PASS: {len(claimed_rf)} RF Bundle files match the approved manifest')
     else:

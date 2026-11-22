@@ -384,7 +384,7 @@ enum FEXWorkflow {
         let staticResult = try probe()
         snapshot.facts["fex_status"] = "repair"
         snapshot.facts["fex_reason"] = staticResult["reason"]?.text ?? "FEX_RUNTIME_FAILED"
-        for key in ["diagnostic_reason", "source_type", "root", "path"] {
+        for key in ["diagnostic_reason", "source_type", "root", "path", "repair_tree", "managed_emulator"] {
             if let value = staticResult[key]?.text { snapshot.facts["fex_" + key] = value }
         }
         if let present = staticResult["root_present"]?.boolean {
@@ -416,6 +416,20 @@ enum FEXWorkflow {
         let reviewed = verifyInstalled(tree: tree, snapshot: snapshot)
         if reviewed { snapshot.facts["fex_provenance"] = "verified" }
         guard reviewed || approvals.contains(approval) else {
+            #if DEBUG
+            // A previously accepted bundled tree may now have a readable but
+            // changed file. The install transaction still requires its receipt,
+            // a known inventory shape, and an unchanged pre-swap fingerprint.
+            if staticResult["managed_emulator"]?.text != nil,
+               tree != controlledDebugTree,
+               approvals.contains(runtimeApproval(tree: controlledDebugTree, snapshot: snapshot)),
+               let resources = Bundle.main.resourceURL,
+               FileManager.default.fileExists(atPath: resources.appendingPathComponent("Deployment/RF-FEX.manifest.json").path) {
+                snapshot.facts["fex_reason"] = "FEX_CHANGED"
+                snapshot.facts["fex_diagnostic_reason"] = "FEX_MANAGED_TREE_CHANGED"
+                return
+            }
+            #endif
             snapshot.facts["fex_status"] = "confirmation"
             snapshot.facts["fex_reason"] = "FEX_CONFIRMATION_REQUIRED"
             return
@@ -452,6 +466,14 @@ exe=root/'usr/bin/FEX'
 def failure(reason,diagnostic=None,**details):
  result={'reason':reason,'diagnostic_reason':diagnostic or reason,'source_type':source_type,
          'root':str(root),'path':str(exe)}
+ try:
+  # Only an exact inventory of the App-owned tree may authorize replacement.
+  # A symlink, unreadable tree or concurrently changing tree remains blocked.
+  if managed and root.is_dir() and not root.is_symlink() and os.access(root,os.R_OK|os.X_OK):
+   repair_inventory=inventory(root)
+   result['repair_tree']=fingerprint(repair_inventory)
+   result['managed_emulator']=str(root/'emulator.json')
+ except (OSError,PermissionError):pass
  result.update(details);return result
 def check():
  if pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip()!=EXPECTED_BOOT:return {'reason':'TARGET_CHANGED'}
@@ -596,7 +618,221 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
         }
         return false
     }
+
+    private struct RFBundleFile: Decodable {
+        let path: String, name: String, sha256: String
+        let bytes: Int, mode: Int
+        let publicDistributionAllowed: Bool, controlledDebugOnly: Bool
+    }
+    private struct RFBundleManifest: Decodable {
+        let schema: Int, packageID: String, version: String, expectedFiles: Int
+        let payloadFingerprint: String, debugOnly: Bool, distributionApproved: Bool
+        let guestRoot: String, files: [RFBundleFile]
+    }
+    private struct RFBundlePackage {
+        let id: String, fingerprint: String, files: [JSONValue]
+    }
+
+    /// Validate the complete Bundle tree before any Guest upload. Release builds use the
+    /// same path, but reject controlled-Debug manifests unless redistribution was approved.
+    private static func bundledPackage() throws -> RFBundlePackage {
+        guard let resources = Bundle.main.resourceURL?.resolvingSymlinksInPath() else {
+            throw CoreError("ARTIFACT_UNAVAILABLE")
+        }
+        let deployment = resources.appendingPathComponent("Deployment", isDirectory: true)
+        let root = deployment.appendingPathComponent("RF-FEX", isDirectory: true)
+        let manifestURL = deployment.appendingPathComponent("RF-FEX.manifest.json")
+        let manifestValues = try? manifestURL.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+        let rootValues = try? root.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+        guard manifestValues?.isRegularFile == true, manifestValues?.isSymbolicLink != true,
+              let manifestSize = manifestValues?.fileSize, manifestSize < 1_048_576,
+              rootValues?.isDirectory == true, rootValues?.isSymbolicLink != true,
+              manifestURL.path == manifestURL.resolvingSymlinksInPath().path,
+              root.path == root.resolvingSymlinksInPath().path else {
+            throw CoreError("ARTIFACT_UNAVAILABLE")
+        }
+        let manifestData = try Data(contentsOf: manifestURL)
+        #if DEBUG
+        guard replayHash(manifestData) == "60117fc8cce144dbeb3be0b39b54675c72539619f3d089562bf5b5733508e88c" else {
+            throw CoreError("ARTIFACT_HASH")
+        }
+        #else
+        // Release approval requires a separately reviewed, compiled-in manifest hash.
+        let approvedManifestHashes: Set<String> = []
+        guard approvedManifestHashes.contains(replayHash(manifestData)) else {
+            throw CoreError("ARTIFACT_UNAPPROVED")
+        }
+        #endif
+        let manifest = try JSONDecoder().decode(RFBundleManifest.self, from: manifestData)
+        guard manifest.schema == 1, manifest.expectedFiles == 41, manifest.files.count == 41,
+              manifest.guestRoot == "~/.local/share/HD2FXLauncher/compatibility/FEX-RF",
+              ApprovedArtifact.hash(manifest.payloadFingerprint) else { throw CoreError("ARTIFACT_FORMAT") }
+        #if DEBUG
+        guard manifest.debugOnly, !manifest.distributionApproved else { throw CoreError("ARTIFACT_UNAPPROVED") }
+        #else
+        guard !manifest.debugOnly, manifest.distributionApproved else { throw CoreError("ARTIFACT_UNAPPROVED") }
+        #endif
+
+        var expected = Set<String>(), actual = Set<String>()
+        var payload: [JSONValue] = [], total = 0
+        var fingerprint = Data()
+        for entry in manifest.files.sorted(by: { $0.path < $1.path }) {
+            guard ApprovedArtifact.safe(entry.path), expected.insert(entry.path).inserted,
+                  entry.name == URL(fileURLWithPath: entry.path).lastPathComponent,
+                  entry.bytes >= 0, entry.bytes <= 8 * 1_048_576, [0o644, 0o755].contains(entry.mode),
+                  ApprovedArtifact.hash(entry.sha256) else {
+                throw CoreError("ARTIFACT_FORMAT")
+            }
+            #if DEBUG
+            guard entry.controlledDebugOnly, !entry.publicDistributionAllowed else { throw CoreError("ARTIFACT_UNAPPROVED") }
+            #else
+            guard !entry.controlledDebugOnly, entry.publicDistributionAllowed else { throw CoreError("ARTIFACT_UNAPPROVED") }
+            #endif
+            let file = root.appendingPathComponent(entry.path)
+            let values = try file.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+            guard values.isRegularFile == true, values.isSymbolicLink != true, values.fileSize == entry.bytes,
+                  file.path == file.resolvingSymlinksInPath().path,
+                  file.path.hasPrefix(root.path + "/") else { throw CoreError("UNSAFE_PATH") }
+            let attributes = try FileManager.default.attributesOfItem(atPath: file.path)
+            guard (attributes[.posixPermissions] as? NSNumber)?.intValue == entry.mode else {
+                throw CoreError("ARTIFACT_MODE")
+            }
+            let contents = try Data(contentsOf: file)
+            guard contents.count == entry.bytes, replayHash(contents) == entry.sha256 else {
+                throw CoreError("ARTIFACT_HASH")
+            }
+            total += contents.count
+            guard total <= 48 * 1_048_576 else { throw CoreError("OUTPUT_LIMIT") }
+            fingerprint.append(Data(entry.path.utf8)); fingerprint.append(0)
+            fingerprint.append(Data(entry.sha256.utf8)); fingerprint.append(0)
+            fingerprint.append(Data(String(entry.mode).utf8)); fingerprint.append(10)
+            payload.append(.object(["path": .string(entry.path), "sha256": .string(entry.sha256),
+                                    "mode": .number(Double(entry.mode)), "data": .string(contents.base64EncodedString())]))
+        }
+        guard replayHash(fingerprint) == manifest.payloadFingerprint,
+              let iterator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey]) else {
+            throw CoreError("ARTIFACT_HASH")
+        }
+        var scanned = 0
+        for case let file as URL in iterator {
+            scanned += 1
+            guard scanned <= 128 else { throw CoreError("OUTPUT_LIMIT") }
+            let values = try file.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            guard values.isSymbolicLink != true else { throw CoreError("UNSAFE_PATH") }
+            if values.isRegularFile == true {
+                let relative = String(file.path.dropFirst(root.path.count + 1))
+                guard ApprovedArtifact.safe(relative) else { throw CoreError("UNSAFE_PATH") }
+                actual.insert(relative)
+            }
+        }
+        guard actual == expected else { throw CoreError("ARTIFACT_HASH") }
+        return RFBundlePackage(id: manifest.packageID, fingerprint: manifest.payloadFingerprint, files: payload)
+    }
+
+    private static func replayHash(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func deployReplay(backend: SSHEnvironmentBackend, snapshot: DeploymentSnapshot,
+                                     request original: [String: JSONValue], files: [JSONValue],
+                                     runtimeArchive: URL? = nil) throws -> [String: JSONValue] {
+        let preflight = try runLocalReplay(backend: backend, request: original, phase: "preflight")
+        var install = original
+        install["mode"] = .string("local_replay")
+        install["ticket"] = .string(UUID().uuidString.lowercased())
+        let payload = Data(CoreJSON.encode(.array(files)).utf8)
+        guard payload.count <= 48 * 1_048_576 else { throw CoreError("OUTPUT_LIMIT") }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let payloadFile = directory.appendingPathComponent("files.json")
+        try payload.write(to: payloadFile, options: .atomic)
+        install["files_sha256"] = .string(replayHash(payload))
+        let staging = try runLocalReplay(backend: backend, request: install, phase: "upload")
+        defer { _ = try? runLocalReplay(backend: backend, request: install, phase: "cleanup") }
+        guard let destination = staging["destination"]?.text, let remotePayload = staging["files"]?.text else {
+            throw CoreError("PROTOCOL_ERROR")
+        }
+        try backend.transport.upload(payloadFile, to: remotePayload, context: backend.context)
+        if preflight["runtime_ready"]?.boolean != true, let archive = runtimeArchive {
+            let values = try archive.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+            guard archive.path == archive.resolvingSymlinksInPath().path, values.isRegularFile == true,
+                  values.isSymbolicLink != true, values.fileSize == 717_803_520 else { throw CoreError("ARTIFACT_HASH") }
+            let source = try FileHandle(forReadingFrom: archive)
+            defer { try? source.close() }
+            var hasher = SHA256(), bytes = 0
+            while let chunk = try source.read(upToCount: 1_048_576), !chunk.isEmpty {
+                try backend.context.check(); bytes += chunk.count
+                guard bytes <= 717_803_520 else { throw CoreError("ARTIFACT_HASH") }
+                hasher.update(data: chunk)
+            }
+            let hash = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+            guard bytes == 717_803_520,
+                  hash == "31a43e6e6ff78509eb1cdb762cfff8e9d89fc83c118d5d723bead42b9b18ca5c" else {
+                throw CoreError("ARTIFACT_HASH")
+            }
+            try backend.transport.upload(archive, to: destination, context: backend.context)
+            install["local_runtime_uploaded"] = .bool(true)
+        }
+        let result = try runLocalReplay(backend: backend, request: install, phase: "install")
+        guard result["verified"]?.boolean == true, let tree = result["installed_manifest"]?.text,
+              ApprovedArtifact.hash(tree) else { throw CoreError("VERIFY_FAILED") }
+        return ["approval": .string(runtimeApproval(tree: tree, snapshot: snapshot)),
+                "installed_manifest": .string(tree), "verified": .bool(true)]
+    }
+
+    private static func runLocalReplay(backend: SSHEnvironmentBackend, request: [String: JSONValue],
+                                       phase: String) throws -> [String: JSONValue] {
+        let payload = Data(CoreJSON.encode(.object(request)).utf8).base64EncodedString()
+        let code: String
+        if phase == "install" {
+            let probe = runtimeProbe.components(separatedBy: "try:print(json.dumps(check()))")[0]
+            code = "import pathlib\n" + probe + "\n" + pipeline
+        } else {
+            code = pipeline.components(separatedBy: "work=pathlib.Path.home()")[0]
+                + "\nlocal_replay_prepare(" + CoreJSON.encode(.string(phase)) + ")"
+        }
+        let script = "python3 - <<'HD2_FEX_LOCAL'\nimport base64,json\nREQUEST=json.loads(base64.b64decode('" + payload + "'))\n" + code + "\nHD2_FEX_LOCAL\n"
+        _ = try backend.hostIdentity()
+        let outcome = try backend.transport.run(script, timeout: phase == "install" ? 350 : 15, context: backend.context)
+        guard outcome.status == 0 else {
+            let reasons = ["FEX_LOCAL_RUNTIME_MISSING", "FEX_ROOTFS_UNAVAILABLE", "TARGET_CHANGED", "STEAM_RUNNING",
+                           "EXTERNAL_DRIFT", "ARTIFACT_HASH", "ARTIFACT_FORMAT", "UNSAFE_PATH", "VERIFY_FAILED",
+                           "INSUFFICIENT_SPACE", "COMPONENT_CONFLICT", "TIMEOUT", "FEX_CHANGED", "FEX_TIMEOUT",
+                           "FEX_DEPENDENCY_FAILED", "FEX_RUNTIME_FAILED"]
+            let code = reasons.first { outcome.stderr.contains($0) } ?? "COMPONENT_INSTALL_FAILED"
+            let reason = CoreRedaction.scrub(String(outcome.stderr.split(whereSeparator: \.isNewline).last?.suffix(300) ?? ""))
+            throw CoreError(code, ["reason": .string(reason)])
+        }
+        return try JSONDecoder().decode([String: JSONValue].self, from: Data(outcome.stdout.utf8))
+    }
+
+    private static func bundleReplay(backend: SSHEnvironmentBackend, package: RFBundlePackage) throws -> [String: JSONValue] {
+        let snapshot = try backend.snapshot()
+        guard snapshot.architecture == "aarch64", !snapshot.gameRunning,
+              let machineID = snapshot.facts["machine_id"], !machineID.isEmpty else { throw CoreError("TARGET_CHANGED") }
+        var request: [String: JSONValue] = ["boot": .string(snapshot.boot),
+            "machine": .string(CoreHash.sha256(Data(machineID.utf8))), "bundle_package": .bool(true)]
+        if let managed = snapshot.facts["fex_managed_emulator"] {
+            guard managed.hasSuffix("/HD2FXLauncher/compatibility/FEX-RF/emulator.json"),
+                  let tree = snapshot.facts["fex_tree"] ?? snapshot.facts["fex_repair_tree"],
+                  ApprovedArtifact.hash(tree) else { throw CoreError("EXTERNAL_DRIFT") }
+            request["legacy_tree"] = .string(tree)
+        } else if snapshot.facts["fex_source_type"] == "app-managed" {
+            guard let tree = snapshot.facts["fex_repair_tree"], ApprovedArtifact.hash(tree) else {
+                throw CoreError("EXTERNAL_DRIFT")
+            }
+            request["legacy_tree"] = .string(tree)
+        }
+        var result = try deployReplay(backend: backend, snapshot: snapshot, request: request, files: package.files)
+        result["resource_source"] = .string("app-bundle")
+        result["package_id"] = .string(package.id)
+        result["package_fingerprint"] = .string(package.fingerprint)
+        return result
+    }
+
     #if DEBUG
+    private static let controlledDebugTree = "23b5d17d9bcdd332ce57d2fcbdfece90279106d845b52c84c77bd31bf10fd655"
     private static let localRFInventory: [(String, String, Int)] = [
         ("usr/bin/FEX", "ce93cadae7b7d3ef01376ba2acd58aedb602a7fc077e49592179766d13c294bf", 493),
         ("usr/bin/FEXBash", "ec3e084e8ace83eee1de61d052b5d6b61f19d4ca6ca8d17180aeb39ccf512ddd", 493),
@@ -658,8 +894,6 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
             }
             request["legacy_tree"] = .string(tree)
         }
-        let preflight = try runLocalReplay(backend: backend, request: request, phase: "preflight")
-
         let base = try resourceArgument("--hd2-rf-resources")
         let support = base.appendingPathComponent("rf-replay-support")
         let manifest = try localArtifact(support.appendingPathComponent("SHA256SUMS"),
@@ -687,55 +921,12 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
             return .object(["path": .string(path), "sha256": .string(replayHash(contents)), "mode": .number(Double(mode)),
                             "data": .string(contents.base64EncodedString())])
         }
-        var install = request
-        install["mode"] = .string("local_replay")
-        install["ticket"] = .string(UUID().uuidString.lowercased())
-        let payload = Data(CoreJSON.encode(.array(files)).utf8)
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let payloadFile = directory.appendingPathComponent("files.json")
-        try payload.write(to: payloadFile, options: .atomic)
-        install["files_sha256"] = .string(replayHash(payload))
-        let staging = try runLocalReplay(backend: backend, request: install, phase: "upload")
-        defer { _ = try? runLocalReplay(backend: backend, request: install, phase: "cleanup") }
-        guard let destination = staging["destination"]?.text, let remotePayload = staging["files"]?.text else {
-            throw CoreError("PROTOCOL_ERROR")
+        var runtimeArchive: URL?
+        if let flag = arguments.firstIndex(of: "--hd2-runtime-archive"), arguments.indices.contains(flag + 1) {
+            runtimeArchive = URL(fileURLWithPath: arguments[flag + 1]).standardizedFileURL
         }
-        try backend.transport.upload(payloadFile, to: remotePayload, context: backend.context)
-        if preflight["runtime_ready"]?.boolean != true,
-           let flag = ProcessInfo.processInfo.arguments.firstIndex(of: "--hd2-runtime-archive"),
-           ProcessInfo.processInfo.arguments.indices.contains(flag + 1) {
-            let archive = URL(fileURLWithPath: ProcessInfo.processInfo.arguments[flag + 1]).standardizedFileURL
-            let values = try archive.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
-            guard archive.path == archive.resolvingSymlinksInPath().path, values.isRegularFile == true,
-                  values.fileSize == 717_803_520 else { throw CoreError("ARTIFACT_HASH") }
-            let source = try FileHandle(forReadingFrom: archive)
-            defer { try? source.close() }
-            var hasher = SHA256()
-            var bytes = 0
-            while let chunk = try source.read(upToCount: 1_048_576), !chunk.isEmpty {
-                try backend.context.check()
-                bytes += chunk.count
-                guard bytes <= 717_803_520 else { throw CoreError("ARTIFACT_HASH") }
-                hasher.update(data: chunk)
-            }
-            let hash = hasher.finalize().map { String(format: "%02x", $0) }.joined()
-            guard bytes == 717_803_520,
-                  hash == "31a43e6e6ff78509eb1cdb762cfff8e9d89fc83c118d5d723bead42b9b18ca5c" else {
-                throw CoreError("ARTIFACT_HASH")
-            }
-            try backend.transport.upload(archive, to: destination, context: backend.context)
-            install["local_runtime_uploaded"] = .bool(true)
-        }
-        let result = try runLocalReplay(backend: backend, request: install, phase: "install")
-        guard result["verified"]?.boolean == true, let tree = result["installed_manifest"]?.text,
-              ApprovedArtifact.hash(tree) else { throw CoreError("VERIFY_FAILED") }
-        return ["approval": .string(runtimeApproval(tree: tree, snapshot: snapshot))]
-    }
-
-    private static func replayHash(_ data: Data) -> String {
-        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        return try deployReplay(backend: backend, snapshot: snapshot, request: request,
+                                files: files, runtimeArchive: runtimeArchive)
     }
 
     private static func localArtifact(_ file: URL, hash: String) throws -> Data {
@@ -747,30 +938,6 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
         return contents
     }
 
-    private static func runLocalReplay(backend: SSHEnvironmentBackend, request: [String: JSONValue],
-                                       phase: String) throws -> [String: JSONValue] {
-        let payload = Data(CoreJSON.encode(.object(request)).utf8).base64EncodedString()
-        let code: String
-        if phase == "install" {
-            let probe = runtimeProbe.components(separatedBy: "try:print(json.dumps(check()))")[0]
-            code = "import pathlib\n" + probe + "\n" + pipeline
-        } else {
-            code = pipeline.components(separatedBy: "work=pathlib.Path.home()")[0]
-                + "\nlocal_replay_prepare(" + CoreJSON.encode(.string(phase)) + ")"
-        }
-        let script = "python3 - <<'HD2_FEX_LOCAL'\nimport base64,json\nREQUEST=json.loads(base64.b64decode('" + payload + "'))\n" + code + "\nHD2_FEX_LOCAL\n"
-        _ = try backend.hostIdentity()
-        let outcome = try backend.transport.run(script, timeout: phase == "install" ? 350 : 15, context: backend.context)
-        guard outcome.status == 0 else {
-            let reasons = ["FEX_LOCAL_RUNTIME_MISSING", "FEX_ROOTFS_UNAVAILABLE", "TARGET_CHANGED", "STEAM_RUNNING",
-                           "EXTERNAL_DRIFT", "ARTIFACT_HASH", "ARTIFACT_FORMAT", "UNSAFE_PATH", "VERIFY_FAILED",
-                           "INSUFFICIENT_SPACE", "COMPONENT_CONFLICT", "TIMEOUT", "FEX_CHANGED", "FEX_TIMEOUT", "FEX_DEPENDENCY_FAILED", "FEX_RUNTIME_FAILED"]
-            let code = reasons.first { outcome.stderr.contains($0) } ?? "COMPONENT_INSTALL_FAILED"
-            let reason = CoreRedaction.scrub(String(outcome.stderr.split(whereSeparator: \.isNewline).last?.suffix(300) ?? ""))
-            throw CoreError(code, ["reason": .string(reason)])
-        }
-        return try JSONDecoder().decode([String: JSONValue].self, from: Data(outcome.stdout.utf8))
-    }
     #endif
 
     static func run(_ method: String, backend: SSHEnvironmentBackend, params: [String: JSONValue]) throws -> [String: JSONValue] {
@@ -871,7 +1038,36 @@ extension FEXWorkflow {
 
         emit("INFO", "FX runtime repair preflight", ["deployment_state": .string("Checking"),
              "component": .string("fex"), "status": .string("running"),
-             "source": .string("pinned-source-fallback")])
+             "source": .string("app-bundle")])
+        let package: RFBundlePackage?
+        do {
+            package = try bundledPackage()
+        } catch let error as CoreError where error.code == "ARTIFACT_UNAVAILABLE" {
+            package = nil
+        }
+        if let package {
+            emit("INFO", "FX runtime Bundle verified", ["deployment_state": .string("Deploying"),
+                 "component": .string("fex"), "status": .string("running"), "source": .string("app-bundle")])
+            var bundled = try bundleReplay(backend: backend, package: package)
+            guard let approval = bundled["approval"]?.text, ApprovedArtifact.hash(approval) else {
+                throw CoreError("VERIFY_FAILED")
+            }
+            backend.fexApprovals.append(approval)
+            let after = try backend.snapshot()
+            try requireCompatible(after)
+            emit("INFO", "FX runtime repair verified", ["deployment_state": .string("Verifying"),
+                 "component": .string("fex"), "status": .string("done"), "source": .string("app-bundle")])
+            bundled["repair_attempted"] = .bool(true)
+            bundled["repair_source"] = .string("app-bundle")
+            bundled["repair_reason"] = .string(reason)
+            bundled["verification"] = .object([
+                "status": .string(after.facts["fex_status"] ?? "unknown"),
+                "runtime": .string(after.facts["fex_runtime"] ?? "unknown"),
+                "executable_sha256": .string(after.facts["fex_executable_sha256"] ?? ""),
+                "tree_sha256": .string(after.facts["fex_tree"] ?? "")
+            ])
+            return bundled
+        }
         let candidate = try run("first_run_fex_audit", backend: backend, params: params)
         let audit = candidate["fex_audit"]?.object ?? [:]
         let source = "existing-reviewed-build"
@@ -1288,9 +1484,26 @@ try:
    if container_environment.get('FEX_ROOTFS')!='':fail('ARTIFACT_UNAPPROVED')
    if REQUEST.get('legacy_tree'):
     prior=inventory(stage)
-    container_environment['FEX_ROOTFS']='/'
-    prior['emulator.json'][1]=hashlib.sha256((json.dumps(config,indent=2)+'\n').encode()).hexdigest()
-    if fingerprint(prior)!=REQUEST['legacy_tree']:fail('EXTERNAL_DRIFT')
+    legacy_config=json.loads(registration.read_text())
+    legacy_config['emulator_v0']['container_environment']['FEX_ROOTFS']='/'
+    legacy=dict(prior)
+    legacy['emulator.json']=['file',hashlib.sha256((json.dumps(legacy_config,indent=2)+'\n').encode()).hexdigest(),prior['emulator.json'][2]]
+    if fingerprint(legacy)!=REQUEST['legacy_tree']:
+     observed=inventory(installed)
+     if (REQUEST.get('bundle_package') is not True or fingerprint(observed)!=REQUEST['legacy_tree']
+         or any(key not in prior or prior[key][0]!=value[0] for key,value in observed.items())):fail('EXTERNAL_DRIFT')
+     approved=fingerprint(prior)
+     receipts=list(work.glob('*.json'))
+     if len(receipts)>1024:fail('EXTERNAL_DRIFT')
+     def owned_receipt(path):
+      try:
+       uuid.UUID(path.stem)
+       meta=path.lstat()
+       if not stat.S_ISREG(meta.st_mode) or meta.st_nlink!=1 or meta.st_uid!=os.getuid() or meta.st_size>65536:return False
+       record=json.loads(path.read_text())
+       return record.get('ticket')==path.stem and record.get('state')=='completed' and record.get('installed')==approved
+      except (ValueError,OSError,AttributeError):return False
+     if not any(owned_receipt(path) for path in receipts):fail('EXTERNAL_DRIFT')
    if not runtime_ready:
     if os.path.lexists(rt_acf):fail('COMPONENT_CONFLICT')
     rt_stage,rt_tree=stage_runtime(runtime_common(),REQUEST['ticket'])
@@ -1306,8 +1519,12 @@ try:
   prepared=installed.with_name(installed.name+'.hd2-stage-'+token)
   if os.path.lexists(backup) or os.path.lexists(prepared):fail('EXTERNAL_DRIFT')
   safe(installed.parent);installed.parent.mkdir(parents=True,exist_ok=True)
-  # Preserve Steam integration metadata and all original files; overlay only reviewed runtime.
-  if installed.exists():shutil.copytree(installed,prepared,symlinks=True)
+  # A bundled/local replay is the complete reviewed standalone tree. Keep the
+  # prior App-owned tree as the rollback backup, but do not carry unknown or
+  # damaged files into the prepared replacement. Source-build installs retain
+  # their historical overlay behavior and Steam metadata.
+  if mode=='local_replay':prepared.mkdir(mode=0o700)
+  elif installed.exists():shutil.copytree(installed,prepared,symlinks=True)
   else:prepared.mkdir(mode=0o700)
   for d,dirs,files in os.walk(stage,followlinks=False):
    for n in dirs+files:

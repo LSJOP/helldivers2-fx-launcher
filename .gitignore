@@ -22,5 +22,6 @@ node_modules/
 *.private
 *.ed25519
 **/UpdateSigning.local.xcconfig
+native-app/PrivateResources/
 settings.json
 runtime-paths.json

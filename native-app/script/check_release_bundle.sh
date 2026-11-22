@@ -38,6 +38,14 @@ else
 fi
 has "$APP/Contents/Frameworks/Sparkle.framework" "SPARKLE EMBEDDED"
 
+# Historical RF payloads are controlled-Debug inputs until every binary and
+# companion file has approved provenance and redistribution rights.
+if [ -e "$APP/Contents/Resources/Deployment/RF-FEX" ] || [ -e "$APP/Contents/Resources/Deployment/RF-FEX.manifest.json" ]; then
+  bad "NO UNAPPROVED RF RELEASE PAYLOAD"
+else
+  ok "NO UNAPPROVED RF RELEASE PAYLOAD"
+fi
+
 # Info.plist identity.
 plist="$APP/Contents/Info.plist"
 bid=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist" 2>/dev/null)
