@@ -20,7 +20,7 @@ sp=$(pgrep -x steam 2>/dev/null | wc -l | tr -d ' ')
 login='"unknown"'
 log="$S/logs/connection_log.txt"
 if [ -f "$log" ]; then
-  last=$(tail -c 65536 "$log" 2>/dev/null | grep -o '\[\(Logged On\|Logged Off\|Connecting\|Connected\|Logging On\|Disconnected\),' | tail -1)
+  last=$(tail -c 65536 "$log" 2>/dev/null | LC_ALL=C grep -aoE '\[(Logged On|Logged Off|Connecting|Connected|Logging On|Disconnected),' | tail -1)
   case "$last" in *"Logged On"*) login=true ;; "") ;; *) login=false ;; esac
 fi
 apps=$(pgrep -a -x reaper 2>/dev/null | grep -o 'SteamLaunch AppId=[0-9]*' | grep -o '[0-9]*$' | sort -u | tr '\n' ' ')

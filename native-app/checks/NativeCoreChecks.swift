@@ -297,6 +297,13 @@ func runChecks() {
     let unreadLogin = try! GuestService.parse(noSteamLog.stdout, expected: "GUEST_INSPECTION_FAILED")
     check(unreadLogin["steam_logged_on"]?.text == "unknown" && !GuestService.steamReady(unreadLogin),
           "missing Steam login log returns valid JSON and does not establish readiness")
+    let steamLogs = guestHome.appendingPathComponent(".local/share/Steam/logs", isDirectory: true)
+    try! FileManager.default.createDirectory(at: steamLogs, withIntermediateDirectories: true)
+    try! Data("[Disconnected, fixture]\n\0[Logging On, fixture]\n[Logged On, fixture]\n".utf8)
+        .write(to: steamLogs.appendingPathComponent("connection_log.txt"))
+    let binarySteamLog = try! CoreProcess.run("/bin/sh", ["-c", "HOME=\"$1\"\n" + GuestScripts.state, "guest-fixture", guestHome.path])
+    let loggedIn = try! GuestService.parse(binarySteamLog.stdout, expected: "GUEST_INSPECTION_FAILED")
+    check(loggedIn["steam_logged_on"]?.boolean == true, "Steam login marker is found even when the log contains binary bytes")
     checkThrows("GUEST_INSPECTION_FAILED", "corrupt guest output rejected") {
         _ = try GuestService.parse("not json", expected: "GUEST_INSPECTION_FAILED")
     }
