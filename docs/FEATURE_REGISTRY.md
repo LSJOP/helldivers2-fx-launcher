@@ -2,6 +2,8 @@
 
 > 2026-11-22 · PR #22 已合入 main。环境分支保留总览 V003、六项导航、滚动策略与多实例 UI，继续验证受控 Debug Bundle 的真实部署。见 [V003 整合报告](Dashboard_UI_V003_Final_Integration_Report.md)与[部署验收](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
 
+> 2026-11-24 · `fix/first-run-ssh-access` 的 FX 1.9.9 独立副本通过既有环境两次重启复验。缺失场景和真实 Bundle 上传仍待验证。启动和持久化证据见[部署验收](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
+
 
 核对日期：2026-11-16（Asia/Shanghai）；主线基线 `04f9fb40c7832c50b107210fd3a5a7f70fadd3b6`。这是可供后续 Codex 接续的索引，不替代实际代码、当前 Git 状态或具体验收记录。检查顺序：AGENTS → 本索引 → 开发状态与交接 → 当前代码和相关固定分支/PR → 判断是否需要开发。完成开发、修复、测试或合并时同步更新本表和交接；勿将隔离测试、文件存在或历史成功当作当前实机通过。
 

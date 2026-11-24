@@ -1,5 +1,7 @@
 # Environment component manifest
 
+The [2026-11-24 acceptance record](../testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md) confirms that the opt-in arm64 Debug Bundle still contains all 41 verified files after the Dashboard V003 integration. The isolated FX 1.9.9 copy passed runtime checks with its existing managed installation over two normal reboots. Bundle upload on a missing installation and public payload approval remain open.
+
 | Component | Source / identity | Integrity | Automatic action |
 |---|---|---|---|
 | FEX RF candidate | StonkGuy FEX PR 20, head `97583564c7983321f974f867eeab52bf25702079` | successful executable SHA-256 is locked in the baseline | **Blocked**: PR is open and no reviewed release archive exists |

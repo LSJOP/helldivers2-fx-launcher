@@ -27,13 +27,23 @@
 | 既有 RF 环境复验（D） | PASS，匹配完整树后完成实际运行探针和最终环境验证，未执行 RF 上传 |
 | Proton-JE、Runtime 4、Steam 和启动参数 | PASS，既有环境通过 App 最终验证。Runtime 4 通过 App 管理的 FX 容器探针。本轮未重新安装这些组件 |
 | 第一次正常重启 | PASS，boot 从 `d3199b25` 变为 `b0922ad4`，重新连接后通过实际运行探针与配置完整性检查，已装组件保持原样 |
-| 第二次正常重启 | BLOCKED，已正常关机并由 App 启动同一副本。宿主锁屏，暂无法读取 App 最终复验结果 |
-| A 缺失、B 损坏、C 权限、E 中断、G 用户与库路径、H 离线 | NOT_TESTED，现有副本的 RF 安装完整，未执行真实故障注入 |
+| 第二次正常重启 | PASS，解锁后读取原 App 结果，Guest boot 从 `b0922ad4` 变为 `8fbc8f5f`。App 显示配置完成，FX、Proton-JE、Steam 与启动参数检查通过。VM 文件句柄仍指向独立副本 |
+| A 缺失、B 损坏、C 权限、E 中断 | BLOCKED，现有副本的 RF 安装完整，当前启动没有可用于现有恢复事务的安装回执，未执行真实故障注入 |
+| G 用户与库路径、H 离线 | NOT_TESTED，未切换真实测试身份或隔离 Guest 网络 |
 | F 重复执行 | PASS，第一次重启后再次执行配置并完成校验，未见 RF 重新部署 |
-| 游戏启动、主菜单、单人、退出、EAC 与联机 | NOT_TESTED，待完成第二次环境复验后从总览发起 |
+| 游戏启动前置复验 | 首次在 Guest 休眠期间返回 `SSH_HANDSHAKE_INTERRUPTED`，诊断指明凭据提交前中断。唤醒后从总览重试，通过环境复验，在 `StartingSteam` 返回 `GUEST_INSPECTION_FAILED` |
+| Steam 启动请求、接受、进程、游戏窗口、主菜单、单人、退出、EAC 与联机 | 尚无成功证据，详见下方复测记录 |
 | Release RF 资源和 RF 网络备用 | BLOCKED，公开来源及再分发审批未完成 |
 
 真实副本原先已装有与 Debug 完整清单一致的 RF 树，App 显示指纹 `23b5d17d9bcdd332ce57d2fcbdfece90279106d845b52c84c77bd31bf10fd655`。本轮修订允许受控 Debug Bundle 核对这个精确匹配并进入运行探针，未批准的其他树仍走原有确认。修订后的 arm64 Debug 源码为 `564d31274056a02dfdad5abfd4ad10a055625e97`。
+
+2026-11-24 第一次游戏尝试使用首次配置完成页按钮进入总览的启动流程。当时总览会保留设置结果并隐藏主启动按钮。修订后用真实 arm64 Debug App 重新运行配置，确认既有环境通过，点击总览后观察到 `dashboard.launch` 和 `dashboard.inspect`，并实际点击前者发起游戏。自动化覆盖配置进行中、配置成功和游戏启动完成三种状态。Guest 状态脚本修复了无可用 Steam 登录记录时生成无效 JSON 的确定性缺陷，并用实际脚本回归覆盖；早先实机报错未包含原始状态内容，无法单凭错误码确认其具体输入。
+
+第一版修订的 App 源码为 `74295b9d2058464b3c9d1a8ecc19b62d3c9d9195`。完整 `run_checks.sh` 退出 0，Native Core 108 项通过。本机 Debug App 重新校验 41 文件，Bundle 指纹仍为 `0ddd70d9b19e0a6abac26d9edb442fe43557376670c46d9489890f7eef913cd7`。
+
+新版在等待 Steam 登录时，通过绑定到同一 Guest boot 的既有 App SSH 会话执行只读诊断。Steam 服务为 active，日志末尾可提取 `Logged On`。原 grep 将日志判为二进制，退出前不返回匹配标签。修订将有界尾部按文本读取，仅提取已知的登录状态标签。回归执行实际状态脚本，覆盖无日志及包含二进制字节两种输入。
+
+Steam 状态修订的 App 源码为 `cd316819177fb06a0ab9a8d34219a4dc5d5e3860`。arm64 Debug 重建、签名、本机 41 文件及完整 `run_checks.sh` 通过，Native Core 109 项通过。已用真实总览启动按钮发起启动复测，宿主随后锁屏，暂无法继续观察交互结果。恢复观察前，Steam 派发、接单、游戏进程、窗口、主菜单、单人、正常退出、EAC 和联机均记为 NOT_TESTED。
 
 以下原有记录属于合并前构建。合并后验收另列。
 
