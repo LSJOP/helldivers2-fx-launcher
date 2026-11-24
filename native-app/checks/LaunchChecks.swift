@@ -75,6 +75,9 @@ import Foundation
         workflow.phase = .cancelled
         try check(!workflow.active && !workflow.showsProgress, "cancelled workflow ends without displaying a stale percentage")
         workflow = EnvironmentWorkflow(phase: .completed, completedSteps: 5, launchesGame: false)
+        try check(workflow.showsDashboardLaunchControls, "completed setup returns the Dashboard launch controls")
+        try check(!EnvironmentWorkflow(phase: .detecting).showsDashboardLaunchControls, "active setup preserves the workflow view")
+        try check(!EnvironmentWorkflow(phase: .completed, launchesGame: true).showsDashboardLaunchControls, "completed game launch preserves the result view")
         try check(workflow.totalSteps == 5 && workflow.fraction == 1, "setup-only workflow completes without a game stage")
         try check(!workflow.canShowSetupCompletion(busy: false, deploymentCompleted: true, hasCurrentBinding: true, hasRequiredObservations: true, inspectionReady: false), "completed workflow alone cannot claim unverified setup is ready")
         try check(!workflow.canShowSetupCompletion(busy: true, deploymentCompleted: true, hasCurrentBinding: true, hasRequiredObservations: true, inspectionReady: true), "busy state cannot display setup completion")

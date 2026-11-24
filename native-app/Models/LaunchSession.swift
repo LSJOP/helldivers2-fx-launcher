@@ -133,6 +133,9 @@ struct EnvironmentWorkflow {
     var evidence: [String: JSONValue] = [:]
     var totalSteps: Int { launchesGame ? 6 : 5 }
     var active: Bool { ![.idle, .completed, .failed, .cancelled].contains(phase) }
+    var showsDashboardLaunchControls: Bool {
+        phase == .idle || (phase == .completed && !launchesGame)
+    }
     var showsProgress: Bool { phase != .failed && phase != .cancelled }
     var fraction: Double { phase == .completed ? 1 : min(Double(completedSteps) / Double(totalSteps), 0.99) }
     // Presentation gate only: completion requires a ready inspection bound to

@@ -10,6 +10,9 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 
 - Refine the Dashboard with compact status cards, understated FX selection, a larger compact emblem, concise FX confirmation and a softer light hero. Hide scroll indicators across the App.
 
+- Restore the Dashboard launch button after first-run setup completes.
+- Keep waiting for Steam sign-in when the Guest connection log has no usable login record.
+
 - Local opt-in Debug builds can carry the verified 41-file FX runtime package and use it during first-run repair. Public distribution approval remains pending.
 
 - Controlled Debug builds recognize an exact installed match to the verified bundled runtime and still run the compatibility probe before continuing setup.

@@ -53,7 +53,7 @@ struct DashboardView: View {
                 statusCard("EAC", "shield.lefthalf.filled", "eac", .checkingEAC)
                 statusCard(state.t("ui.191"), "person.2", "multiplayer", nil)
             }
-            if state.environmentWorkflow.phase == .idle {
+            if state.environmentWorkflow.showsDashboardLaunchControls {
                 VStack(alignment: .leading, spacing: 12) {
                     ViewThatFits(in: .horizontal) {
                         HStack(spacing: 10) { launchButton.frame(maxWidth: 570); inspectButton; Spacer(minLength: 0) }

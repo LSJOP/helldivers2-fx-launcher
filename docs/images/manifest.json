@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "source_base_commit": "4a67637c1e4e8a68eca70b19c774e49251f6e610",
-  "source_integration": "Dashboard V003 and FX environment branch merged. Twelve referenced bilingual idle windows recaptured from the clean merge build and reviewed. Unreferenced historical captures retain their provenance.",
+  "source_integration": "Dashboard V003 and FX environment branch merged. Twelve referenced bilingual idle windows recaptured from the clean merge build and reviewed. Unreferenced historical captures retain their provenance. The subsequent launch-control fix only changes the Dashboard after successful setup. Idle capture provenance is unchanged.",
   "capture_method": "macOS screencapture of real App window IDs",
   "pixel_processing": "none",
   "timezone": "Asia/Shanghai",
   "fx_guest_actions": "none",
   "credential_autoload": "disabled by isolated capture arguments",
-  "reviewed_ui_source_sha256": "fd3eb9eacf989538e1d8190836d297a749d70a18000e0d546af46ecbadd5602b",
+  "reviewed_ui_source_sha256": "22913af2eba2a1f426d2be79f5a2afff91a094afcadcd0981a20381df2559da5",
   "screenshots": [
     {
       "path": "docs/images/en/dashboard.png",

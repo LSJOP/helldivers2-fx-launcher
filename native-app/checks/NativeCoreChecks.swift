@@ -290,6 +290,13 @@ func runChecks() {
     let guest = try! GuestService.parse(guestFixture, expected: "GUEST_INSPECTION_FAILED")
     check(guest["boot"]?.text == "abc", "guest state parsed")
     check(guest["service"]?.text == "stopped", "guest service parsed")
+    let guestHome = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try! FileManager.default.createDirectory(at: guestHome, withIntermediateDirectories: false)
+    defer { try? FileManager.default.removeItem(at: guestHome) }
+    let noSteamLog = try! CoreProcess.run("/bin/sh", ["-c", "HOME=\"$1\"\n" + GuestScripts.state, "guest-fixture", guestHome.path])
+    let unreadLogin = try! GuestService.parse(noSteamLog.stdout, expected: "GUEST_INSPECTION_FAILED")
+    check(unreadLogin["steam_logged_on"]?.text == "unknown" && !GuestService.steamReady(unreadLogin),
+          "missing Steam login log returns valid JSON and does not establish readiness")
     checkThrows("GUEST_INSPECTION_FAILED", "corrupt guest output rejected") {
         _ = try GuestService.parse("not json", expected: "GUEST_INSPECTION_FAILED")
     }
