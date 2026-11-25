@@ -43,7 +43,7 @@ def verify_component_assets(manifest, release, directory):
     modules = components["modules"]
     if (components["protocolVersion"] != 1 or not 0 < components["minimumBaseBuild"] < manifest["build"]
             or not 0 < target <= 2_147_483_648 or not re.fullmatch(r"[a-f0-9]{64}", components["targetTreeSHA256"])
-            or len(modules) != 3 or set(item["id"] for item in modules) != set(destinations)):
+            or (modules and (len(modules) != 3 or set(item["id"] for item in modules) != set(destinations)))):
         raise ValueError("Invalid component manifest")
     core = components["core"]
     expanded = core["expandedBytes"]
@@ -89,6 +89,9 @@ def validate_release(release, assets_dir):
     archive = f"HD2FXNative-{tag}-arm64.zip"
     names = [dmg, archive, "SHA256SUMS.txt", "update-manifest.json", "update-manifest.sig"]
     assets = release["assets"]
+    modern = any(item["name"] in ("update-manifest-v3.json", "update-manifest-v3.sig") for item in assets)
+    if modern:
+        names += ["update-manifest-v3.json", "update-manifest-v3.sig"]
     for name in names:
         matches = [item for item in assets if item["name"] == name]
         if len(matches) != 1 or matches[0]["state"] != "uploaded" or matches[0]["size"] <= 0 or matches[0]["browser_download_url"] != f"{BASE}/download/{tag}/{name}":
@@ -134,6 +137,14 @@ def validate_release(release, assets_dir):
     run("swift", str(ROOT / "script/verify_stable_signatures.swift"), str(assets_dir), key_match.group(1), archive)
     if manifest["schema"] == 3:
         verify_component_assets(manifest, release, assets_dir)
+    if modern:
+        run("swift", str(ROOT / "script/verify_stable_signatures.swift"), str(assets_dir), key_match.group(1), archive, "update-manifest-v3")
+        alternate = json.loads((assets_dir / "update-manifest-v3.json").read_bytes())
+        binding = ("version", "build", "platform", "architecture", "channel", "bundleID", "sourceCommit",
+                   "minimumSystemVersion", "archive", "length", "sha256")
+        if alternate.get("schema") != 3 or any(alternate.get(key) != manifest.get(key) for key in binding):
+            raise ValueError("The two signed manifests disagree on release identity")
+        verify_component_assets(alternate, release, assets_dir)
     dates = []
     for name in ("CHANGELOG.md", "CHANGELOG.zh-CN.md"):
         match = re.search(r"(?m)^### " + re.escape(tag) + r"\s+[—-]\s+(\d{4}-\d{2}-\d{2})\s*$", (ROOT / name).read_text())

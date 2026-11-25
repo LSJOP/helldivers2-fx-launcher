@@ -97,6 +97,44 @@ final class ProgressRecorder: @unchecked Sendable {
         try Data("changed".utf8).write(to: library)
         let after = try ComponentUpdate.tree(treeRoot, limit: 4096)
         try check(before.bytes == after.bytes && before.hash != after.hash, "framework symlinks preserve traversal of real signed files")
+        let bridge = ComponentUpdate(protocolVersion: 1, minimumBaseBuild: 100,
+                                     targetTreeSHA256: digest, targetBytes: 100,
+                                     core: model.core, modules: [])
+        try bridge.validate(version: "1.1.0", build: 101)
+        try check(try bridge.plan(currentBuild: 100, fullBytes: 300) { _ in fatalError("empty bridge") } == nil,
+                  "a bridge with no distributable runtime modules uses the full ZIP")
+        let modernTransport = FixtureTransport()
+        let modernKey = Curve25519.Signing.PrivateKey()
+        let modernService = NativeReleaseService(transport: modernTransport, publicKey: modernKey.publicKey.rawRepresentation)
+        let modernBase = "https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.1.0/"
+        let modernManifestURL = URL(string: modernBase + "update-manifest-v3.json")!
+        let modernSignatureURL = URL(string: modernBase + "update-manifest-v3.sig")!
+        let encodedBridge = try JSONSerialization.jsonObject(with: JSONEncoder().encode(bridge))
+        let modernManifest = try JSONSerialization.data(withJSONObject: [
+            "schema": 3, "bundleID": NativeReleaseService.bundleID, "version": "1.1.0", "build": 101,
+            "channel": "stable", "platform": "macOS", "architecture": "arm64", "minimumSystemVersion": "14.0",
+            "archive": "HD2FXNative-v1.1.0-arm64.zip", "length": 300, "sha256": digest,
+            "sourceCommit": String(repeating: "a", count: 40), "components": encodedBridge])
+        modernTransport.responses[modernManifestURL] = modernManifest
+        modernTransport.responses[modernSignatureURL] = try modernKey.signature(for: modernManifest).base64EncodedData()
+        let modernAssets = ["update-manifest.json", "update-manifest.sig", "update-manifest-v3.json",
+                            "update-manifest-v3.sig", "HD2FXNative-v1.1.0-arm64.zip"].map {
+            ["name": $0, "browser_download_url": modernBase + $0, "size": 300] as [String: Any]
+        }
+        func modernRelease(_ assets: [[String: Any]]) throws -> Data {
+            try JSONSerialization.data(withJSONObject: [["tag_name": "v1.1.0", "draft": false, "prerelease": false,
+                "html_url": "https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/v1.1.0", "assets": assets]])
+        }
+        modernTransport.responses[NativeReleaseService.api] = try modernRelease(modernAssets)
+        let modern = try await modernService.check(version: "1.0.4", build: 100, channel: "stable",
+                                                   osVersion: "14.0", architecture: "arm64")
+        if case .available(let candidate) = modern {
+            try check(candidate.manifest.schema == 3 && candidate.signatureVerified, "dual-manifest release selects signed schema 3")
+        } else { try check(false, "dual-manifest candidate") }
+        modernTransport.responses[NativeReleaseService.api] = try modernRelease(modernAssets.filter { $0["name"] as? String != "update-manifest-v3.sig" })
+        try await failure(.missingAsset, "incomplete modern signature pair fails closed") {
+            _ = try await modernService.check(version: "1.0.4", build: 100, channel: "stable", osVersion: "14.0", architecture: "arm64")
+        }
         let transport = FixtureTransport()
         let key = Curve25519.Signing.PrivateKey() // Ephemeral test key, never written or used for publication.
         let service = NativeReleaseService(transport: transport, publicKey: key.publicKey.rawRepresentation)

@@ -1,5 +1,7 @@
 # HD2FXNative 接续开发交接
 
+v1.0.5 过渡发行保留受控 Debug 资源，仅公开分发签名更新引擎及获准内容。公开端点和实际升级证据以发行验收记录为准。
+
 > 2026-11-22 · Dashboard V003 接续入口见[整合报告](Dashboard_UI_V003_Final_Integration_Report.md)。保留 main 的 1.0.4 业务和签名基础，真实 FX、Guest、SSH 和游戏仍需要独立实机验收。
 
 环境分支已整合合并 PR #22 的远端 main，继续使用原有工作树。真实 RF 部署状态和合并冲突处理见[专项验收](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。

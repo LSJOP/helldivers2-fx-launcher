@@ -106,6 +106,79 @@ def published_asset(item, expected_name):
     return item
 
 
+def sign(output, stem, key, info, archive):
+    operator = ROOT / "script/update_signing.swift"
+    public_key = subprocess.check_output(["/usr/bin/swift", str(operator), "public", str(key)], text=True).strip()
+    if public_key != info.get("SUPublicEDKey"):
+        raise ValueError("Signing key does not match the App trust root")
+    signature = subprocess.check_output(["/usr/bin/swift", str(operator), "sign", str(key),
+                                         str(output / (stem + ".json"))], text=True)
+    (output / (stem + ".sig")).write_text(signature)
+    subprocess.run(["/usr/bin/swift", str(ROOT.parent / "script/verify_stable_signatures.swift"),
+                    str(output), public_key, archive.name, stem], check=True)
+
+
+def bridge(app, output, minimum, signing_key, make_dmg):
+    with (app / "Contents/Info.plist").open("rb") as stream:
+        info = plistlib.load(stream)
+    version = info["CFBundleShortVersionString"]
+    build = int(info["CFBundleVersion"])
+    if (app.resolve() != app or app.name != "HD2FXNative.app" or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version)
+            or not 0 < minimum < build or info.get("CFBundleIdentifier") != BUNDLE_ID or not signing_key):
+        raise ValueError("A signed stable transition App and the pinned signing key are required")
+    subprocess.run([str(ROOT / "script/check_release_bundle.sh"), str(app)], check=True)
+    resources = app / "Contents/Resources"
+    with (resources / "BuildMetadata.json").open() as f:
+        meta = json.load(f)
+    commit = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip()
+    if (meta["commit"] != commit or meta["version"] != version or str(meta["build"]) != str(build)
+            or meta["configuration"] != "Release" or meta["source_dirty"]):
+        raise ValueError("App build does not match the clean release source")
+    tag = "v" + version
+    output.mkdir(mode=0o700)
+    try:
+        archive = output / f"HD2FXNative-{tag}-arm64.zip"
+        subprocess.run([str(ROOT / "script/package_update_zip.sh"), str(app), str(archive)], check=True)
+        archive_asset = asset(archive, tag)
+        if archive_asset["length"] > 536_870_912:
+            raise ValueError("Transition archive exceeds the legacy client limit")
+        core = output / f"HD2FXNative-{tag}-core-arm64.zip"
+        shutil.copyfile(archive, core)
+        tree, size = inventory(app)
+        with tempfile.TemporaryDirectory(dir=output) as tmp:
+            subprocess.run(["/usr/bin/ditto", "-x", "-k", str(core), tmp], check=True)
+            assembled = Path(tmp) / app.name
+            if inventory(assembled) != (tree, size):
+                raise ValueError("Core round trip does not match the target")
+            subprocess.run(["/usr/bin/codesign", "--verify", "--deep", "--strict", str(assembled)], check=True)
+        if archive_asset["expandedBytes"] != size:
+            raise ValueError("Transition archive expansion differs from the target")
+        manifest = dict(schema=2, bundleID=BUNDLE_ID, version=version, build=build, channel="stable",
+                        platform="macOS", architecture="arm64", minimumSystemVersion=info["LSMinimumSystemVersion"],
+                        archive=archive.name, length=archive_asset["length"], sha256=archive_asset["sha256"],
+                        sourceCommit=commit)
+        signature = subprocess.check_output(["/usr/bin/swift", str(ROOT / "script/update_signing.swift"),
+                                             "sign", str(signing_key), str(archive)], text=True).strip()
+        (output / "update-manifest.json").write_text(json.dumps(dict(manifest, archiveEdSignature=signature),
+                                                                sort_keys=True, separators=(",", ":")) + "\n")
+        sign(output, "update-manifest", signing_key, info, archive)
+        manifest.update(schema=3, components=dict(protocolVersion=1, minimumBaseBuild=minimum,
+                        targetTreeSHA256=tree, targetBytes=size, core=asset(core, tag), modules=[]))
+        (output / "update-manifest-v3.json").write_text(json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n")
+        sign(output, "update-manifest-v3", signing_key, info, archive)
+        if make_dmg:
+            dmg = output / f"HD2FXNative-{tag}-macOS-arm64.dmg"
+            subprocess.run(["/usr/bin/hdiutil", "create", "-srcfolder", str(app), "-format", "UDZO",
+                            "-volname", "HELLDIVERS 2 FX Launcher", str(dmg)], check=True)
+        artifacts = sorted(path for path in output.iterdir() if path.is_file())
+        (output / "SHA256SUMS.txt").write_text("".join(f"{digest(path)}  {path.name}\n" for path in artifacts))
+        for path in artifacts:
+            print(path.name, path.stat().st_size)
+    except BaseException:
+        shutil.rmtree(output)
+        raise
+
+
 def run(app, output, minimum, local_test, previous=None, dmg=False, signing_key=None):
     if app.name != "HD2FXNative.app" or app.resolve() != app or output.exists():
         raise ValueError("An absolute signed App path and a new output directory are required")
@@ -241,6 +314,12 @@ if __name__ == "__main__":
     parser.add_argument("--previous", type=Path, help="Previously signed manifest and signature directory")
     parser.add_argument("--dmg", action="store_true")
     parser.add_argument("--signing-key", type=Path, help="Reviewed existing operator key matching the App trust root")
+    parser.add_argument("--bridge", action="store_true", help="Publish two signed manifest schemas without private modules")
     args = parser.parse_args()
+    if args.bridge:
+        if args.local_test or args.previous:
+            parser.error("A release bridge cannot use local test or previous component inputs")
+        bridge(args.app.absolute(), args.output.absolute(), args.minimum_base_build, args.signing_key, args.dmg)
+        raise SystemExit(0)
     run(args.app.absolute(), args.output.absolute(), args.minimum_base_build, args.local_test,
         args.previous, args.dmg, args.signing_key)

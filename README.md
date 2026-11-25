@@ -7,11 +7,11 @@
 [简体中文](README.zh-CN.md) | [English](README.md)
 
 <!-- stable-download:start -->
-### [🟨 ⬇️ Download HD2 FX Launcher — Latest Stable](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.4-macOS-arm64.dmg)
+### [🟨 ⬇️ Download HD2 FX Launcher — Latest Stable](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.5-macOS-arm64.dmg)
 
-**🟨 Stable Release · v1.0.4** · **macOS · Apple Silicon / arm64**
+**🟨 Stable Release · v1.0.5** · **macOS · Apple Silicon / arm64**
 
-**[⬇️ Download DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.4-macOS-arm64.dmg)** · [All Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**[⬇️ Download DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.5-macOS-arm64.dmg)** · [All Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
 <!-- stable-download:end -->
 
 ## English
@@ -51,7 +51,7 @@ The Logs page displays local system time, streams bounded task events, supports 
 ### Installation
 
 <!-- stable-install:start -->
-Current App: `1.0.4` (build `2026111601`), macOS 14+ Apple Silicon arm64. Ad-hoc signed; no Apple Developer ID signature or Apple notarization. Gatekeeper may block the download. Verify the [SHA-256 file](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt) before opening. If blocked, use Privacy & Security → Open Anyway for the verified App.
+Current App: `1.0.5` (build `2026112501`), macOS 14+ Apple Silicon arm64. Ad-hoc signed; no Apple Developer ID signature or Apple notarization. Gatekeeper may block the download. Verify the [SHA-256 file](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt) before opening. If blocked, use Privacy & Security → Open Anyway for the verified App.
 <!-- stable-install:end -->
 
 1. Download the macOS arm64 DMG from the published release.
@@ -78,7 +78,7 @@ Earlier FX 1.9.9 testing reached the game menu and ship. Single-player, EAC, mul
 ### Changelog
 
 <!-- stable-version:start -->
-[v1.0.4 — 2026-11-16](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · Stable release, build `2026111601`. See [release notes](CHANGELOG.md).
+[v1.0.5 — 2026-11-25](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · Stable release, build `2026112501`. See [release notes](CHANGELOG.md).
 <!-- stable-version:end -->
 
 For current feature status, verification and unmerged work, see the [feature registry](docs/FEATURE_REGISTRY.md), [changelog](CHANGELOG.md) and [original launcher history](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script).
@@ -101,7 +101,7 @@ FX 1.9.9 environment observations are recorded in the [runtime baseline report](
 
 First-run detection distinguishes a Proton-integrated FX runtime from a missing standalone runtime. It records the Proton version, config digest and library hashes, and reports compatibility as unverified until an approved plan is available.
 
-The development branch tests one-click component updates. A complete approved installation supplies the runtime resources. Subsequent compatible updates can reuse matching local resources, with a verified full ZIP as fallback. The current Stable installer and update protocol are unchanged. See [component update acceptance](docs/testing/COMPONENT_UPDATES_ACCEPTANCE.md).
+v1.0.5 installs the component-update engine and provides a compact ZIP for existing Stable clients. Later compatible releases can reuse matching Bundle components and retain a verified full ZIP fallback. The three historical runtime payloads remain reserved for controlled testing. If in-app updating fails, mount the verified full DMG, quit the launcher, and replace the existing App. Your saved settings and SteamOS image remain in place. See [component update acceptance](docs/testing/COMPONENT_UPDATES_ACCEPTANCE.md).
 
 The environment branch targets Bundle-first deployment of the pinned FX runtime, Proton-JE and SteamLinuxRuntime_4 combination, with hash-verified fixed-version network fallback where approved. The local Debug build carries all three. Public package approval and real offline deployment remain open. See the [deployment acceptance report](docs/testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md).
 

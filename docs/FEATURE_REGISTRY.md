@@ -1,5 +1,7 @@
 # 功能与开发状态索引
 
+v1.0.5 Stable 集成组件更新引擎和 Dashboard V003。正式过渡包面向旧客户端，公开核心资源审批和 Guest 验收保持开放。
+
 > 2026-11-22 · PR #22 已合入 main。环境分支保留总览 V003、六项导航、滚动策略与多实例 UI，继续验证受控 Debug Bundle 的真实部署。见 [V003 整合报告](Dashboard_UI_V003_Final_Integration_Report.md)与[部署验收](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
 
 > 2026-11-24 · `fix/first-run-ssh-access` 的 FX 1.9.9 独立副本通过既有环境两次重启复验。缺失场景和真实 Bundle 上传仍待验证。启动和持久化证据见[部署验收](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。

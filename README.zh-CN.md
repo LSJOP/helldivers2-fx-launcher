@@ -7,11 +7,11 @@
 [简体中文](README.zh-CN.md) | [English](README.md)
 
 <!-- stable-download:start -->
-### [🟨 ⬇️ 下载 绝地潜兵 2 FX 启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.4-macOS-arm64.dmg)
+### [🟨 ⬇️ 下载 绝地潜兵 2 FX 启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.5-macOS-arm64.dmg)
 
-**🟨 Stable Release · v1.0.4** · **macOS · Apple Silicon / arm64**
+**🟨 Stable Release · v1.0.5** · **macOS · Apple Silicon / arm64**
 
-**[⬇️ 立即下载 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.4-macOS-arm64.dmg)** · [查看所有版本](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**[⬇️ 立即下载 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.5-macOS-arm64.dmg)** · [查看所有版本](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
 <!-- stable-download:end -->
 
 ## 简体中文
@@ -51,7 +51,7 @@ FX 1.9.9 测试盘已恢复历史验证的 RF 运行组件，通过 GUI 启动�
 ### 安装说明
 
 <!-- stable-install:start -->
-当前 App：`1.0.4`（构建 `2026111601`），适用于 macOS 14+ Apple Silicon arm64。采用 ad-hoc 签名，无 Apple Developer ID 签名，未经 Apple 公证。Gatekeeper 可能拦截下载副本；打开前核对 [SHA-256 文件](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt)。若被拦截，对已核验 App 使用「隐私与安全性 → 仍要打开」。
+当前 App：`1.0.5`（构建 `2026112501`），适用于 macOS 14+ Apple Silicon arm64。采用 ad-hoc 签名，无 Apple Developer ID 签名，未经 Apple 公证。Gatekeeper 可能拦截下载副本；打开前核对 [SHA-256 文件](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt)。若被拦截，对已核验 App 使用「隐私与安全性 → 仍要打开」。
 <!-- stable-install:end -->
 
 1. 从正式 Release 下载 macOS arm64 DMG。
@@ -78,7 +78,7 @@ FX 1.9.9 历史实测记录了游戏主菜单及飞船。单人、EAC、多人�
 ### 更新日志
 
 <!-- stable-version:start -->
-[v1.0.4 — 2026-11-16](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · 正式稳定版，构建 `2026111601`。见[发布说明](CHANGELOG.zh-CN.md)。
+[v1.0.5 — 2026-11-25](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · 正式稳定版，构建 `2026112501`。见[发布说明](CHANGELOG.zh-CN.md)。
 <!-- stable-version:end -->
 
 当前功能状态、验证范围和未合并成果见[功能索引](docs/FEATURE_REGISTRY.md)、[更新日志](CHANGELOG.zh-CN.md)及[原版启动器历史](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script)。
@@ -101,7 +101,7 @@ FX 1.9.9 环境实测记录见[运行环境基线报告](docs/environment/FEX_BA
 
 首次配置会区分 Proton 内置 FX 运行环境与独立运行组件缺失，记录 Proton 版本、配置及库文件哈希；取得已审核方案之前明确显示兼容性未验证。
 
-开发分支正在验收一键组件更新。完整获批安装包提供运行组件，后续兼容更新可复用校验匹配的本地组件，并保留经过验证的全量 ZIP 备用。当前正式安装包和更新协议保持现状。见[组件更新验收](docs/testing/COMPONENT_UPDATES_ACCEPTANCE.md)。
+v1.0.5 提供组件更新引擎，并为旧正式版保留小体积 ZIP。后续兼容版本可复用校验匹配的内置组件，并保留已验证的全量 ZIP 备用。三个历史运行组件仍限受控测试。若应用内更新失败，请核验并挂载完整 DMG，退出启动器后替换现有 App。已保存设置和 SteamOS 镜像继续使用。见[组件更新验收](docs/testing/COMPONENT_UPDATES_ACCEPTANCE.md)。
 
 环境配置分支采用已锁定的 FX 运行环境、Proton-JE 和 SteamLinuxRuntime_4 组合，以 App 内置优先，以获批的固定版本和哈希校验下载为备用。本机 Debug 构建已内置三项。公开分发审批和真实离线部署仍待验收。见[部署验收报告](docs/testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
 

@@ -2,10 +2,12 @@ import CryptoKit
 import Foundation
 
 let arguments = CommandLine.arguments
-guard arguments.count == 4, let publicKey = Data(base64Encoded: arguments[2]) else { fatalError("Invalid verification arguments") }
+guard [4, 5].contains(arguments.count), let publicKey = Data(base64Encoded: arguments[2]) else { fatalError("Invalid verification arguments") }
 let directory = URL(fileURLWithPath: arguments[1], isDirectory: true)
-let manifest = try Data(contentsOf: directory.appendingPathComponent("update-manifest.json"))
-let encoded = try String(contentsOf: directory.appendingPathComponent("update-manifest.sig"), encoding: .utf8)
+let stem = arguments.count == 5 ? arguments[4] : "update-manifest"
+guard ["update-manifest", "update-manifest-v3"].contains(stem) else { fatalError("Invalid manifest identity") }
+let manifest = try Data(contentsOf: directory.appendingPathComponent(stem + ".json"))
+let encoded = try String(contentsOf: directory.appendingPathComponent(stem + ".sig"), encoding: .utf8)
 guard manifest.count <= 65_536,
       let signature = Data(base64Encoded: encoded.trimmingCharacters(in: .whitespacesAndNewlines)),
       let object = try JSONSerialization.jsonObject(with: manifest) as? [String: Any],

@@ -8,14 +8,7 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 
 ## Unreleased
 
-- Add a component-update candidate that reuses verified installed runtime resources and assembles the signed target App before the existing update helper replaces it. Retain a verified full update up to 2 GiB for schema-3 clients.
-
 - Local controlled Debug can bundle the pinned Proton-JE and Runtime 4 archives alongside the FX runtime. First-run repair prefers verified Bundle resources, with pinned downloads retained as fallback where available. Public distribution and live offline deployment still require acceptance.
-
-- Refine the Dashboard with compact status cards, understated FX selection, a larger compact emblem, concise FX confirmation and a softer light hero. Hide scroll indicators across the App.
-
-- Restore the Dashboard launch button after first-run setup completes.
-- Keep waiting for Steam sign-in when the Guest connection log has no usable login record.
 
 - Local opt-in Debug builds can carry the verified 41-file FX runtime package and use it during first-run repair. Public distribution approval remains pending.
 
@@ -42,6 +35,14 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 - Record Proton-integrated FX runtime evidence during first-run detection and preserve the sudo credential kind when requesting authentication.
 
 - Add original MOTR7 artwork to setup and launch workflows and an artwork credit in Settings; preserve the Dashboard hero and shared header.
+
+### v1.0.5 — 2026-11-25
+
+- Introduce the component-level update engine with one-click download and installation. Compatible targets reuse verified matching components, assemble the complete App in isolation, and verify Ed25519 manifest signatures, SHA-256, and the assembled code signature.
+- Retain verified full-package fallback, atomic replacement, automatic restart, and recovery when startup fails. The new protocol permits full ZIPs up to 2 GiB. This transition release provides a compact legacy-compatible ZIP and keeps existing settings, credentials and SteamOS installations.
+- Include Dashboard V003 and restore the launch button after setup. Fix Steam sign-in detection when its connection log contains binary bytes or lacks a usable login record.
+- Controlled localhost acceptance measured a 25.50 MB Core download against a 574.08 MB full ZIP, saving 95.56%, with approximately 9 seconds from the first ZIP request to startup confirmation. The three unchanged components had zero download requests in that test.
+- Public packages exclude the three historical runtime payloads pending redistribution review. Guest detection timeout, fresh deployment, offline operation, two-reboot persistence and gameplay remain open.
 
 ### v1.0.4 — 2026-11-16
 

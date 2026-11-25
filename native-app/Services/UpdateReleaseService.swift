@@ -205,8 +205,11 @@ struct NativeReleaseService {
         guard let (release,remote) = eligible.first else { return .noReleases }
         guard release.html_url.scheme == "https", release.html_url.host == "github.com", release.html_url.path == "/\(NativeUpdateHTTP.repository)/releases/tag/\(release.tag_name)", release.html_url.query == nil, release.html_url.user == nil else { throw NativeUpdateFailure.malformed }
         let legacy = release.tag_name.hasPrefix("native-v")
-        let manifestName = legacy ? "native-update.json" : "update-manifest.json"
-        let signatureName = legacy ? "native-update.json.sig" : "update-manifest.sig"
+        let modern = !legacy && release.assets.contains {
+            $0.name == "update-manifest-v3.json" || $0.name == "update-manifest-v3.sig"
+        }
+        let manifestName = legacy ? "native-update.json" : modern ? "update-manifest-v3.json" : "update-manifest.json"
+        let signatureName = legacy ? "native-update.json.sig" : modern ? "update-manifest-v3.sig" : "update-manifest.sig"
         guard release.assets.filter({ $0.name == manifestName }).count == 1, release.assets.filter({ $0.name == signatureName }).count == 1,
               let manifestAsset = release.assets.first(where: { $0.name == manifestName }), let signatureAsset = release.assets.first(where: { $0.name == signatureName }) else { throw NativeUpdateFailure.missingAsset }
         func assetURL(_ asset: NativeRelease.Asset) throws -> URL {
@@ -225,7 +228,8 @@ struct NativeReleaseService {
         }
         let manifest: NativeUpdateManifest
         do { manifest = try JSONDecoder().decode(NativeUpdateManifest.self, from: manifestBytes) } catch { throw NativeUpdateFailure.malformed }
-        guard [1, 2, 3].contains(manifest.schema), manifest.bundleID == (isTest ? Self.testBundleID : Self.bundleID), manifest.version == String(release.tag_name.dropFirst(legacy ? 8 : 1)), manifest.build > 0,
+        guard [1, 2, 3].contains(manifest.schema), !modern || manifest.schema == 3,
+              manifest.bundleID == (isTest ? Self.testBundleID : Self.bundleID), manifest.version == String(release.tag_name.dropFirst(legacy ? 8 : 1)), manifest.build > 0,
               manifest.channel == (release.prerelease ? "preview" : "stable"), manifest.sha256.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil,
               manifest.length > 0, manifest.length <= Self.archiveLimit(manifest.schema), manifest.archive == (legacy ? "HD2FXLauncher-\(manifest.version).zip" : "HD2FXNative-v\(manifest.version)-arm64.zip"),
               legacy || manifest.sourceCommit?.range(of: "^[a-f0-9]{40}$", options: .regularExpression) != nil else { throw NativeUpdateFailure.malformed }
@@ -388,8 +392,11 @@ struct ComponentUpdate: Codable {
     func validate(version: String, build: Int) throws {
         guard protocolVersion == 1, minimumBaseBuild > 0, minimumBaseBuild < build,
               (1...NativeReleaseService.maximumArchiveBytes).contains(targetBytes),
-              Self.validHash(targetTreeSHA256), modules.count == Self.destinations.count,
-              Set(modules.map(\.id)) == Set(Self.destinations.keys) else { throw NativeUpdateFailure.malformed }
+              Self.validHash(targetTreeSHA256),
+              modules.isEmpty || (modules.count == Self.destinations.count &&
+                                  Set(modules.map(\.id)) == Set(Self.destinations.keys)) else {
+            throw NativeUpdateFailure.malformed
+        }
         func validateArtifact(_ item: Artifact, name: String, currentTagOnly: Bool) throws {
             let parts = item.url.path.split(separator: "/")
             guard NativeUpdateHTTP.trusted(item.url), parts.count == 6,
@@ -417,7 +424,7 @@ struct ComponentUpdate: Codable {
     }
 
     func plan(currentBuild: Int, fullBytes: Int64, fingerprint: (Module) throws -> String?) throws -> Plan? {
-        guard currentBuild >= minimumBaseBuild else { return nil }
+        guard !modules.isEmpty, currentBuild >= minimumBaseBuild else { return nil }
         var reused: [Module] = [], downloads: [Module] = []
         var bytes = core.length
         for item in modules {
