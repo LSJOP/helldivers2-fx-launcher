@@ -16,6 +16,8 @@
 
 ## English
 
+The launcher configures the FX runtime and compatibility settings, dispatches the Steam launch, and reports observed runtime state. It does not modify the game installation, game logic, process memory, or anti-cheat. The intended first-run flow prepares the runtime before Steam sign-in and game installation. Steam applies per-game settings after installation.
+
 HELLDIVERS 2 FX Launcher is an unofficial community launcher and management tool for Apple Silicon Macs. Built with SwiftUI and a native core, it helps users inspect FX, configure the runtime environment and manage game performance settings.
 
 FX 1.9.9 test-Guest repair now reaches the game through the GUI with the historically verified RF runtime components. Main menu/ship was confirmed by the user; single-player, multiplayer and end-to-end updating remain untested. Production FX 1.9.12 was inspected offline without writes. See [repair evidence](docs/environment/FX199_RF_REPAIR_20261114.md).

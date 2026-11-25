@@ -843,7 +843,7 @@ final class AppState: ObservableObject {
                 if let pending = fresh.executable.first {
                     throw ErrorState("VERIFY_FAILED", details: ["component": .string(pending.component)])
                 }
-                if let blocked = fresh.operations.first(where: {
+                if launchGame, let blocked = fresh.operations.first(where: {
                     ["fex", "proton", "tool", "launch", "steam", "game"].contains($0.component) && $0.blocked != nil
                 }) { throw ErrorState(blocked.blocked ?? "VERIFY_FAILED", details: ["component": .string(blocked.component)]) }
                 if !launchGame, let unverified = fresh.firstUnverifiedSetupOperation {

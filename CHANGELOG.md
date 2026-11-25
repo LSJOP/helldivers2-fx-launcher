@@ -8,6 +8,8 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 
 ## Unreleased
 
+- Runtime setup can finish before game installation. Per-game Steam configuration waits for the game, and launch uses verified Steam connection state without requiring a host proxy on port 7890.
+
 - First-run verification detects the confirmed FX 1.9.12 stock FEX incompatibility by executable hash before game dispatch.
 
 - Local controlled Debug can bundle the pinned Proton-JE and Runtime 4 archives alongside the FX runtime. First-run repair prefers verified Bundle resources, with pinned downloads retained as fallback where available. Public distribution and live offline deployment still require acceptance.

@@ -685,10 +685,7 @@ printf '{"guest_os":"%s","guest_arch":"%s","components":{"steam_files":%s,"game_
         let fexSnapshot = try backend.snapshot()
         try FEXWorkflow.requireCompatible(fexSnapshot)
         try LaunchService.compatibility(state)
-        guard LaunchService.checkProxyPort() else {
-            throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("host_proxy_7890_unavailable")])
-        }
-        guard LaunchService.launchOptionsReady(state) else {
+        guard LaunchService.launchOptionsReady(fexSnapshot.values["launch"]) else {
             throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("steam_launch_options_action_required")])
         }
         if let apps = state["apps"]?.text, !apps.isEmpty, !apps.split(separator: " ").allSatisfy({ $0 == "553850" }) {

@@ -404,8 +404,8 @@ enum LaunchService {
         }
     }
 
-    static func launchOptionsReady(_ state: [String: JSONValue]) -> Bool {
-        let launch = state["launch"]?.text ?? ""
+    static func launchOptionsReady(_ launch: String?) -> Bool {
+        guard let launch else { return false }
         return requiredLaunchTokens.allSatisfy { launch.contains($0) }
     }
 

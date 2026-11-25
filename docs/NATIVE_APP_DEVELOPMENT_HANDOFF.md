@@ -268,3 +268,12 @@ Swift 服务保留签名清单原始字节和签名，将已经下载的 ZIP 交
 fae00bb 本机 arm64 Release 实测通过 UI 进入修复服务并显示 ARTIFACT_UNAVAILABLE / RF_BUNDLE_PAYLOAD_UNAVAILABLE。展开详情得到 BLOCKED_PUBLIC_RF_DISTRIBUTION 和 UNVERIFIED fallback，未派发 Steam 游戏。Native Core 112 项、文档 15 项、Release Bundle 核验通过。正式安装仍为 1.0.4。
 
 2026-11-26 · dev/environment 基线 b6ee432。新本机构建入口复用历史完整 App 或资源目录，前后走既有固定清单校验。现存 Proton-JE 已核对，历史 RF 与 Runtime 在另一台电脑。正例构建、Guest 部署和独立首装等待转入资源。见 [RF 资源内置与部署验收](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
+
+### 环境先行与限制核查（2026-11-26）
+
+dev/environment 基于 1079c06。App 范围为 FX 运行环境、兼容性配置、Steam 启动及状态反馈。检测明确发现游戏缺失时，首装计划仍验证运行库，并延后 per-game Steam 设置。缺游戏仍阻止游戏派发。派发不再要求宿主监听 7890，Steam 登录状态仍须实测。启动参数校验读取部署后端绑定的 Steam 配置视图，消除扫描另一 Steam 账户文件导致的重复来源冲突。
+
+- FX 版本：通用部署按架构和运行证据，1.9.9 版本限制属于独立 Debug 历史回放。已知故障匹配有实机证据，继续交给现有修复路径。
+- 组件哈希和回执：候选 Bundle 在导入和部署时验完整性。精确匹配受信 Bundle 的已安装 RF 树允许执行探针；回执主要用于确认事务归属与恢复。替换前复验和实际运行探针保留。
+- 联网与确认：内置部署无需远程授权。批准缺失时仍禁止执行来源不明的二进制；身份绑定及影响运行中的 Steam／Guest 的重启确认保留。用户登录 Steam 是正常平台步骤。
+- 检查项和操作改变已用 DeploymentChecks 夹具验证。尚缺另一台电脑上的完整 RF、Runtime 归档和独立镜像。未进行新的游戏实测，也未改变公开发行审批。
