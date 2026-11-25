@@ -22,6 +22,7 @@ actor NativeCoreService {
         Operation(method: "first_run_fex_audit", scope: "setup", confirmation: true, external: true),
         Operation(method: "first_run_fex_build", scope: "setup", confirmation: true, external: true),
         Operation(method: "first_run_fex_install", scope: "setup", confirmation: true, external: true),
+        Operation(method: "first_run_fex_repair", scope: "setup", confirmation: true, external: true),
         Operation(method: "first_run_fex_recover", scope: "setup", confirmation: true, external: true),
         Operation(method: "first_run_detect", scope: "setup", confirmation: true, external: true),
         Operation(method: "first_run_deploy", scope: "setup", confirmation: true, external: true),
@@ -149,6 +150,12 @@ actor NativeCoreService {
         switch method {
         case "first_run_detect", "first_run_deploy", "first_run_recover", "first_run_receipts", "first_run_fex_audit", "first_run_fex_build", "first_run_fex_install", "first_run_fex_recover":
             guard method == "first_run_receipts" || params["confirmed"]?.boolean == true else { throw CoreError("CONFIRMATION_REQUIRED") }
+            return try deployment(method, params: params, context: context, emit: emit)
+        case "first_run_fex_repair":
+            guard params["confirmed"]?.boolean == true else { throw CoreError("CONFIRMATION_REQUIRED") }
+            guard let boot = params["credential_guest_boot"]?.text, UUID(uuidString: boot) != nil else {
+                throw CoreError("CREDENTIAL_SCOPE_CHANGED")
+            }
             return try deployment(method, params: params, context: context, emit: emit)
         #if DEBUG
         case "first_run_fex_local_replay":

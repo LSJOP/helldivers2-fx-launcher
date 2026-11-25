@@ -41,10 +41,15 @@ func runChecks() {
     check(!redactedDiagnostic.contains("fixture-secret") && !redactedDiagnostic.contains("id_ed25519"),
           "diagnostic report removes credentials and SSH key paths")
 
-    for method in ["first_run_fex_build", "first_run_fex_install", "first_run_fex_recover"] {
+    for method in ["first_run_fex_build", "first_run_fex_install", "first_run_fex_recover", "first_run_fex_repair"] {
         checkThrows("CONFIRMATION_REQUIRED", "FEX action requires explicit initiation: " + method) {
             _ = try NativeCoreService.perform(method, params: [:], context: CoreContext(timeout: 1), onEvent: nil)
         }
+    }
+
+    checkThrows("CREDENTIAL_SCOPE_CHANGED", "automatic FEX repair requires the verified Guest boot") {
+        _ = try NativeCoreService.perform("first_run_fex_repair", params: ["confirmed": .bool(true)],
+                                          context: CoreContext(timeout: 1), onEvent: nil)
     }
 
     let fexSnapshot = DeploymentSnapshot(target: "fixture", boot: UUID().uuidString, revision: "fixture", fxVersion: "fixture", osVersion: "fixture", architecture: "aarch64", steamRunning: false, gameRunning: false, freeBytes: 0,
