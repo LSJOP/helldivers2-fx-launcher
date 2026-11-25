@@ -5,13 +5,7 @@ app="${1:?usage: package_update_zip.sh HD2FXNative.app OUTPUT.zip}"
 archive="${2:?usage: package_update_zip.sh HD2FXNative.app OUTPUT.zip}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 [[ "$(basename "$app")" = HD2FXNative.app && -d "$app" && "$archive" = /* && ! -e "$archive" ]]
-resources="$app/Contents/Resources"
-[[ ! -e "$resources/Deployment/RF-FEX" && ! -L "$resources/Deployment/RF-FEX" &&
-   ! -e "$resources/Deployment/RF-FEX.manifest.json" && ! -L "$resources/Deployment/RF-FEX.manifest.json" ]] ||
-    { echo 'Unapproved FX payload cannot be packaged for updates.' >&2; exit 1; }
-/usr/bin/python3 -I -B "$root/script/deployment_archives.py" reject \
-    --catalogue "$root/Resources/deployment-components-v1.json" --destination "$resources"
-codesign --verify --deep --strict "$app"
+"$root/script/check_release_bundle.sh" "$app"
 temporary="$(mktemp -d "${TMPDIR:-/tmp}/hd2-zip-preflight.XXXXXX")"
 trap 'rm -rf "$temporary"' EXIT
 cat > "$temporary/check.swift" <<'SWIFT'

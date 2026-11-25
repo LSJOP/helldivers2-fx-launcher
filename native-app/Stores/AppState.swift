@@ -1,3 +1,4 @@
+import OSLog
 import SwiftUI
 
 @MainActor
@@ -590,8 +591,13 @@ final class AppState: ObservableObject {
         }
     }
 
+    private static let launchLogger = Logger(subsystem: "com.lsjop.helldivers2fx.native.phase1", category: "launch")
+
     private func workflowLog(_ id: UUID, _ message: String, level: String = "INFO", at: String? = nil) {
         let safe = credentials.redactor.text(message)
+        if environmentWorkflow.launchesGame {
+            Self.launchLogger.notice("task=\(id.uuidString, privacy: .public) level=\(level, privacy: .public) \(safe, privacy: .private)")
+        }
         runtimeLogs.append(["id": .string(UUID().uuidString), "at": .string(at ?? ISO8601DateFormatter().string(from: Date())),
                             "source": .string("Workflow"), "level": .string(level),
                             "message": .string("[\(id.uuidString)] " + safe)])
@@ -617,6 +623,7 @@ final class AppState: ObservableObject {
         let at = event["at"]?.text
         if let raw = event["stage"]?.text, let stage = LaunchStage(rawValue: raw),
            let status = event["status"]?.text, ["running", "waiting", "done", "passed", "failed"].contains(status) {
+            Self.launchLogger.notice("task=\(taskID.uuidString, privacy: .public) stage=\(raw, privacy: .public) status=\(status, privacy: .public)")
             let now = ProcessInfo.processInfo.systemUptime
             let started = workflowStageStarted[raw]
             if status == "running", started == nil { workflowStageStarted[raw] = now }
@@ -876,7 +883,12 @@ final class AppState: ObservableObject {
                 let failure = error as? ErrorState ?? ErrorState(error is CancellationError ? "CANCELLED" : "PROTOCOL_ERROR")
                 self.environmentWorkflow.failure = ErrorState(failure.code, details: self.credentials.redactor.diagnostic(failure.details))
                 let reason = self.environmentWorkflow.failure?.details["reason"]?.text.map { String($0.prefix(300)) }
-                self.workflowLog(taskID, "\(self.t(self.environmentWorkflow.phase.titleKey)): \(failure.code)\(reason.map { " / " + $0 } ?? "") (\(Int(max(0, ProcessInfo.processInfo.systemUptime - self.workflowPhaseStarted)))s)", level: "ERROR")
+                let exitCode = failure.details["steam_exit_code"]?.integer ?? failure.details["exit_code"]?.integer
+                let exitNote = exitCode.map { " / exit_code=" + String($0) } ?? ""
+                if launchGame {
+                    Self.launchLogger.error("task=\(taskID.uuidString, privacy: .public) failure=\(failure.code, privacy: .public) exit_code=\(exitCode ?? -1, privacy: .public)")
+                }
+                self.workflowLog(taskID, "\(self.t(self.environmentWorkflow.phase.titleKey)): \(failure.code)\(reason.map { " / " + $0 } ?? "")\(exitNote) (\(Int(max(0, ProcessInfo.processInfo.systemUptime - self.workflowPhaseStarted)))s)", level: "ERROR")
                 self.environmentWorkflow.phase = failure.code == "CANCELLED" ? .cancelled : .failed
                 self.workflowLog(taskID, "\(self.environmentWorkflow.phase.rawValue): \(failure.code) (\(Int(max(0, ProcessInfo.processInfo.systemUptime - self.workflowStarted)))s)", level: "ERROR")
                 self.appendLog("environment_workflow: " + failure.code)

@@ -111,7 +111,7 @@ boot_now=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || printf 'unknown')
 [ "$boot_now" = "\#(boot)" ] || { printf '{"ok":false,"reason":"guest_identity_changed"}\n'; exit 0; }
 if pgrep -x helldivers2.exe >/dev/null 2>&1; then printf '{"ok":true,"started":false,"reason":"already_running"}\n'; exit 0; fi
 uid=$(id -u)
-DISPLAY=:0 XDG_RUNTIME_DIR="/run/user/$uid" steam -applaunch 553850 >/dev/null 2>&1 || { printf '{"ok":false,"reason":"steam_rejected_launch"}\n'; exit 0; }
+DISPLAY=:0 XDG_RUNTIME_DIR="/run/user/$uid" steam -applaunch 553850 >/dev/null 2>&1 || { printf '{"ok":false,"reason":"steam_rejected_launch","steam_exit_code":%s}\n' "$?"; exit 0; }
 printf '{"ok":true,"started":true}\n'
 """#
     }
@@ -190,10 +190,17 @@ enum GuestService {
 
     static func launchGame(_ transport: SSHTransport, session: GuestSession, context: CoreContext?) throws -> [String: JSONValue] {
         let result = try transport.run(GuestScripts.launchGame(boot: session.boot), timeout: 40, context: context)
-        guard result.status == 0 else { throw CoreError("GAME_START_FAILED") }
+        guard result.status == 0 else {
+            throw CoreError("GAME_START_FAILED", ["reason": .string("guest_launch_command_failed"),
+                                                 "exit_code": .number(Double(result.status))])
+        }
         let value = try parse(result.stdout, expected: "GAME_START_FAILED")
         guard value["ok"]?.boolean == true else {
-            throw CoreError("GAME_START_FAILED", ["reason": .string(value["reason"]?.text ?? "unknown")])
+            var details: [String: JSONValue] = ["reason": .string(value["reason"]?.text ?? "unknown")]
+            if let code = value["steam_exit_code"]?.integer, (1...255).contains(code) {
+                details["steam_exit_code"] = .number(Double(code))
+            }
+            throw CoreError("GAME_START_FAILED", details)
         }
         return value
     }

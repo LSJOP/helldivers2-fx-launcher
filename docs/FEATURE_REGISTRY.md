@@ -63,3 +63,10 @@ v1.0.5 Stable 集成组件更新引擎和 Dashboard V003。正式过渡包面向
 本机独有分支和各独立 Git 仓库的 refs 见上述本地审计清单；它们没有因远端分类自动合并或删除。固定分支初始基于当时 main；后续开发前重新 fetch 和核对各自状态。
 
 复用测试基线：2026-11-16、`ba7e495`（与 main `04f9fb4` 的文件树相同，仅提交历史不同），独立 worktree 执行 arm64 Debug、`native-app/script/run_checks.sh`、`run_update_checks.sh`、十语言和 `script/check_docs.py`（15/15）通过。具体输出位于该 worktree 的 `native-app/evidence/`；该目录为本机证据，不承诺存在于其他机器。隔离安装助手及实际 v1.0.3 检测/下载证据属于 2026-11-16 本机测试；均不证明新版本生产升级。后续代码、依赖或环境变化时按受影响范围重验。
+
+
+## 启动诊断（2026-11-25）
+
+`dev/core` 基于正式 1.0.5（`b19f23e`）。启动工作流以同一 UUID 关联阶段和失败，Guest 返回 Steam 派发命令退出码。该退出码只描述命令，游戏窗口、游戏进程退出原因和五分钟运行仍需真实 Guest 证据。本机已备份并尝试安装正式 1.0.5，尚未获得关联的实际点击与 Guest 日志。公开 RF 制品和干净镜像验收仍待完成。
+
+正式 1.0.5 本机打开失败。macOS 27.2.1 崩溃报告为 DYLD，Sparkle 已嵌入但 App 和框架均为 ad-hoc hardened runtime 签名且都没有 Team ID。本机回退至备份的 1.0.4。候选发布门禁拒绝 hardened runtime 与 Sparkle 签名队伍不匹配的制品。正式重打包及正常打开验收仍待完成。

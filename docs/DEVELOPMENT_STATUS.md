@@ -191,3 +191,10 @@ PR #4 已发布隔离签名更新测试包 v1.0.1-update-test.1 和 v1.0.2-updat
 
 
 Runtime 自动安装恢复候选：见 docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md 的 2026-11-15 Recovery candidate。保留原 6 个未提交文件并备份；Runtime/FEX 本地事务完成，Proton 下载安装、Steam 设置及受控重启已执行。重启后 FEX 与 RootFS 注册回到原版，最终 VERIFY_FAILED，重复配置明确阻塞于 FEX_KNOWN_LAUNCH_INCOMPATIBILITY。未达到 100%，不可宣称公开一键安装完成；RF 再分发及跨重启持久部署仍阻塞。
+
+
+## 启动诊断进度（2026-11-25）
+
+`dev/core` 基于正式 1.0.5（`b19f23e`）。启动工作流以同一 UUID 关联阶段和失败，Guest 返回 Steam 派发命令退出码。该退出码只描述命令，游戏窗口、游戏进程退出原因和五分钟运行仍需真实 Guest 证据。本机已备份并尝试安装正式 1.0.5，尚未获得关联的实际点击与 Guest 日志。公开 RF 制品和干净镜像验收仍待完成。
+
+正式 1.0.5 本机打开失败。macOS 27.2.1 崩溃报告为 DYLD，Sparkle 已嵌入但 App 和框架均为 ad-hoc hardened runtime 签名且都没有 Team ID。本机回退至备份的 1.0.4。候选发布门禁拒绝 hardened runtime 与 Sparkle 签名队伍不匹配的制品。正式重打包及正常打开验收仍待完成。

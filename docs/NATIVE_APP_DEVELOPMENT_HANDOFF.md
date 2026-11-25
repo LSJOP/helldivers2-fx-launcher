@@ -259,3 +259,10 @@ Swift 服务保留签名清单原始字节和签名，将已经下载的 ZIP 交
 当前公开 RF Bundle 仍为空，JSON 清单继续标记 `BLOCKED_PUBLIC_RF_DISTRIBUTION`，网络备用源为 `UNVERIFIED`。自动修复不会把新的固定源码构建输出误认作历史批准哈希；没有准确匹配的已审核候选时返回 `ARTIFACT_UNAVAILABLE / RF_BUNDLE_PAYLOAD_UNAVAILABLE`，保留重试和脱敏诊断。P1 及后续真实恢复、App 首配、两次重启和游戏验收因此仍受阻，不得破坏现有成功盘或冒充完成。详见[故障分析](environment/FIRST_RUN_FX_RUNTIME_FAILURE_20261122.md)。
 
 受控 Debug 内置、导入命令与验收状态见[专项报告](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
+
+
+## 启动诊断接续（2026-11-25）
+
+`dev/core` 基于正式 1.0.5（`b19f23e`）。启动工作流以同一 UUID 关联阶段和失败，Guest 返回 Steam 派发命令退出码。该退出码只描述命令，游戏窗口、游戏进程退出原因和五分钟运行仍需真实 Guest 证据。本机已备份并尝试安装正式 1.0.5，尚未获得关联的实际点击与 Guest 日志。公开 RF 制品和干净镜像验收仍待完成。
+
+正式 1.0.5 本机打开失败。macOS 27.2.1 崩溃报告为 DYLD，Sparkle 已嵌入但 App 和框架均为 ad-hoc hardened runtime 签名且都没有 Team ID。本机回退至备份的 1.0.4。候选发布门禁拒绝 hardened runtime 与 Sparkle 签名队伍不匹配的制品。正式重打包及正常打开验收仍待完成。

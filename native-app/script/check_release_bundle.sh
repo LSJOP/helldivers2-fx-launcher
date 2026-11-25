@@ -89,5 +89,18 @@ if find "$APP" -maxdepth 4 -type d -name 'bridge' 2>/dev/null | grep -q .; then 
 # Code signature.
 /usr/bin/codesign --verify --deep --strict "$APP" >/dev/null 2>&1 && ok "CODE SIGNATURE VERIFY" || bad "CODE SIGNATURE VERIFY"
 
+# A structurally valid signature can still fail dyld library validation.
+app_signature=$(/usr/bin/codesign -dv --verbose=4 "$APP" 2>&1)
+if printf '%s\n' "$app_signature" | grep -Eq '^CodeDirectory .*flags=.*\([^)]*runtime'; then
+  app_team=$(printf '%s\n' "$app_signature" | sed -n 's/^TeamIdentifier=//p')
+  sparkle_signature=$(/usr/bin/codesign -dv --verbose=4 "$APP/Contents/Frameworks/Sparkle.framework" 2>&1)
+  sparkle_team=$(printf '%s\n' "$sparkle_signature" | sed -n 's/^TeamIdentifier=//p')
+  if [ -n "$app_team" ] && [ "$app_team" != "not set" ] && [ "$app_team" = "$sparkle_team" ]; then
+    ok "HARDENED RUNTIME SPARKLE SIGNING TEAM"
+  else
+    bad "HARDENED RUNTIME REQUIRES MATCHING APP AND SPARKLE SIGNING TEAMS"
+  fi
+fi
+
 [ "$fail" -eq 0 ] && echo "RELEASE RESOURCE INTEGRITY: PASS" || echo "RELEASE RESOURCE INTEGRITY: FAIL"
 exit "$fail"
