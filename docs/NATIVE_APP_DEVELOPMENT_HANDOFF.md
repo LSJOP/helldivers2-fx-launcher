@@ -266,3 +266,5 @@ Swift 服务保留签名清单原始字节和签名，将已经下载的 ZIP 交
 `dev/core` 基于正式 1.0.5（`b19f23e`）。启动工作流以同一 UUID 关联阶段和失败，Guest 返回 Steam 派发命令退出码。该退出码只描述命令，游戏窗口、游戏进程退出原因和五分钟运行仍需真实 Guest 证据。本机已备份并尝试安装正式 1.0.5，尚未获得关联的实际点击与 Guest 日志。公开 RF 制品和干净镜像验收仍待完成。
 
 正式 1.0.5 本机打开失败。macOS 27.2.1 崩溃报告为 DYLD，Sparkle 已嵌入但 App 和框架均为 ad-hoc hardened runtime 签名且都没有 Team ID。本机回退至备份的 1.0.4。候选发布门禁拒绝 hardened runtime 与 Sparkle 签名队伍不匹配的制品。正式重打包及正常打开验收仍待完成。
+
+本机候选 `ba5ee53` 的 arm64 Release 构建、ad-hoc 签名、Bundle 门禁和更新 ZIP 打包通过。它未替换正式安装。2026-11-25 23:49:44（上海）从候选总览实际发起任务 `61E16B21-AFB4-42B4-8439-CD020094268C`，进入 SteamOS 检测及配置复验，23:50:45 以 `USER_ACTION_REQUIRED`（`component=launch`）退出。没有进入 Steam 派发阶段。该码表明 LaunchOptions 未取得可验证值，未定位到更底层的在线 Steam API 或文件读取失败原因。历史 12 秒退出仍需 Guest 日志。测试完成前不应以该候选替代正式发行。
