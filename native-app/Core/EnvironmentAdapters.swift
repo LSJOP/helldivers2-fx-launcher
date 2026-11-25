@@ -101,6 +101,7 @@ final class SSHEnvironmentBackend: DeploymentBackend {
     var fexApprovals: [String] = []
     let fxVersion: String
     var restartCompleted = false
+    var archiveProgress: (String, String) -> Void = { _, _ in }
     var sudoPassword: String? // Memory only; never included in a snapshot or receipt.
     private var documents: [String: String] = [:]
     private var paths: [String: String] = [:]
@@ -278,14 +279,41 @@ final class SSHEnvironmentBackend: DeploymentBackend {
             guard EnvironmentDeploymentService.identity(current, expected), current.revision == expected.revision,
                   current.values == expected.values else { throw CoreError("CONFIG_CHANGED") }
             try EnvironmentDeploymentService.idle(current, requiresStoppedSteam: false)
-            let script = try ProtonJERelease.script(mode: target == "missing" ? "recover" : "install", manifest: ProtonJERelease.manifest(), boot: current.boot,
-                useHostProxy: SSHTransport.localHost(transport.settings.host) && LaunchService.checkProxyPort())
-            _ = try hostIdentity()
-            let result = try transport.run(script, timeout: 750, context: context)
-            if result.status != 0 {
-                let reasons = ["ARTIFACT_HASH", "STEAM_ROOT_CONFLICT", "INSUFFICIENT_SPACE", "GAME_RUNNING", "TARGET_CHANGED", "EXTERNAL_DRIFT", "UNSAFE_PATH"]
-                throw CoreError(reasons.first { result.stderr.contains($0) } ?? "COMPONENT_INSTALL_FAILED")
+            let manifest = try ProtonJERelease.manifest()
+            let ticket = UUID().uuidString
+            let installing = target != "missing"
+            let archive = installing ? try DeploymentArchive.verified("Proton-JE", context: context) : nil
+            let useProxy = SSHTransport.localHost(transport.settings.host) && LaunchService.checkProxyPort()
+            func run(_ mode: String, timeout: TimeInterval, context operationContext: CoreContext) throws -> CoreProcessResult {
+                let script = try ProtonJERelease.script(mode: mode, manifest: manifest, boot: current.boot,
+                    suffix: ticket, useHostProxy: useProxy, bundled: archive != nil)
+                let result = try transport.run(script, timeout: timeout, context: operationContext)
+                if result.status != 0 {
+                    let reasons = ["ARTIFACT_HASH", "STEAM_ROOT_CONFLICT", "INSUFFICIENT_SPACE", "GAME_RUNNING",
+                                   "TARGET_CHANGED", "EXTERNAL_DRIFT", "UNSAFE_PATH", "VERIFY_FAILED"]
+                    throw CoreError(reasons.first { result.stderr.contains($0) } ?? "COMPONENT_INSTALL_FAILED")
+                }
+                return result
             }
+            _ = try hostIdentity()
+            defer {
+                if archive != nil {
+                    _ = try? run("cleanup", timeout: 15, context: CoreContext(timeout: 20))
+                }
+            }
+            if let archive {
+                let staged = try run("prepare", timeout: 30, context: context)
+                let remote = staged.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard remote.hasSuffix("/.hd2-proton-incoming-" + ticket + "/payload.tar.xz") else {
+                    throw CoreError("PROTOCOL_ERROR")
+                }
+                archiveProgress("Proton-JE", "sftp")
+                try transport.upload(archive, to: remote, context: context)
+                archiveProgress("Proton-JE", "install")
+                _ = try hostIdentity()
+            }
+            defer { if archive != nil { archiveProgress("Proton-JE", "finished") } }
+            _ = try run(installing ? "install" : "recover", timeout: 750, context: context)
             return
         }
         if expected.steamRunning, let key = changes.keys.first(where: { ["launch", "tool"].contains($0) }) {
@@ -497,6 +525,10 @@ extension NativeCoreService {
             emit("INFO", "SSH handshake retry", ["reason": .string(code), "attempt": .number(Double(attempt))])
         })
         let backend = try SSHEnvironmentBackend(fx: fx, transport: transport, context: context, revision: ConfigurationService.read().revision)
+        backend.archiveProgress = { component, phase in
+            emit("INFO", "Bundle archive stage", ["kind": .string("bundle_archive_stage"),
+                "component": .string(component), "archive_phase": .string(phase)])
+        }
         backend.sudoPassword = request.sudoPassword
         backend.fexApprovals = request.fexApprovals
         backend.expectedGuestBoot = params["credential_guest_boot"]?.text

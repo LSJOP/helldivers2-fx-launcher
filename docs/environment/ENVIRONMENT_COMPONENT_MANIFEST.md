@@ -2,6 +2,8 @@
 
 The [2026-11-24 acceptance record](../testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md) confirms that the opt-in arm64 Debug Bundle still contains all 41 verified files after the Dashboard V003 integration. The isolated FX 1.9.9 copy passed runtime checks with its existing managed installation over two normal reboots. Bundle upload on a missing installation and public payload approval remain open.
 
+The three-component policy now prefers the App Bundle. The [deployment catalogue](../../native-app/Resources/deployment-components-v1.json) pins original and bundled archive identities, sizes and runtime probes. The historical Runtime depot archive includes the ARM64 pressure-vessel executable used on FX while targeting the separate SteamLinuxRuntime_4 directory. Public redistribution of the exact archives and RF tree remains unapproved.
+
 | Component | Source / identity | Integrity | Automatic action |
 |---|---|---|---|
 | FEX RF candidate | StonkGuy FEX PR 20, head `97583564c7983321f974f867eeab52bf25702079` | successful executable SHA-256 is locked in the baseline | **Blocked**: PR is open and no reviewed release archive exists |

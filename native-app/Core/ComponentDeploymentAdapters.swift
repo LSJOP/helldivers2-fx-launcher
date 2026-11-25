@@ -200,6 +200,46 @@ extension ComponentDeploymentAdapter {
 
 /// Pinned upstream compressed release; full regular-file, mode, link and inventory review.
 /// Python is required only inside SteamOS, never on the Mac at App runtime.
+/// The two large archives share the same catalogue, Bundle lookup and SFTP transport.
+enum DeploymentArchive {
+    struct Entry: Decodable {
+        let name: String
+        let bundlePath: String
+        let bytes: Int
+        let sha256: String
+    }
+
+    static func verified(_ name: String, context: CoreContext) throws -> URL? {
+        #if DEBUG
+        guard let root = Bundle.main.resourceURL?.resolvingSymlinksInPath(),
+              let catalogue = Bundle.main.url(forResource: "deployment-components-v1", withExtension: "json") else { return nil }
+        struct Catalogue: Decodable { let bundleArchives: [Entry] }
+        let entries = try JSONDecoder().decode(Catalogue.self, from: Data(contentsOf: catalogue)).bundleArchives
+        guard let entry = entries.first(where: { $0.name == name }),
+              ApprovedArtifact.safe(entry.bundlePath), ApprovedArtifact.hash(entry.sha256),
+              (1...512 * 1024 * 1024).contains(entry.bytes) else { throw CoreError("ARTIFACT_UNAPPROVED") }
+        let file = root.appendingPathComponent(entry.bundlePath)
+        guard file.path == file.resolvingSymlinksInPath().path,
+              let metadata = try? file.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+              metadata.isRegularFile == true, metadata.fileSize == entry.bytes else { return nil }
+        let handle = try FileHandle(forReadingFrom: file)
+        defer { try? handle.close() }
+        var sha = SHA256()
+        var total = 0
+        while let data = try handle.read(upToCount: 1_048_576), !data.isEmpty {
+            try context.check()
+            total += data.count
+            guard total <= entry.bytes else { return nil }
+            sha.update(data: data)
+        }
+        let hash = sha.finalize().map { String(format: "%02x", $0) }.joined()
+        return total == entry.bytes && hash == entry.sha256 ? file : nil
+        #else
+        return nil
+        #endif
+    }
+}
+
 enum ProtonJERelease {
     static let version = "proton-je-11.0-20261014-3"
     static let digest = "aa5430696ca39451299e2f007ef652bc030e6419242776343d48947e21827485"
@@ -232,16 +272,17 @@ enum ProtonJERelease {
             }
         }
     }
-    static func script(mode: String, manifest: Data, boot: String = "", suffix: String = UUID().uuidString, useHostProxy: Bool = false) throws -> String {
-        guard ["probe", "install", "recover"].contains(mode), mode == "probe" || UUID(uuidString: boot) != nil,
+    static func script(mode: String, manifest: Data, boot: String = "", suffix: String = UUID().uuidString, useHostProxy: Bool = false, bundled: Bool = false) throws -> String {
+        guard ["probe", "install", "recover", "prepare", "cleanup"].contains(mode), mode == "probe" || UUID(uuidString: boot) != nil,
               UUID(uuidString: suffix) != nil else { throw CoreError("INVALID_ARGUMENT") }
         let prefix = "MANIFEST=" + CoreJSON.encode(.string(manifest.base64EncodedString())) + "\nMODE=" + CoreJSON.encode(.string(mode)) + "\nBOOT=" + CoreJSON.encode(.string(boot)) + "\nSUFFIX=" + CoreJSON.encode(.string(suffix)) + "\n"
-        return "python3 - <<'HD2_PROTON_PY'\n" + prefix + "USE_HOST_PROXY=" + (useHostProxy ? "1" : "0") + "\n" + python + "\nHD2_PROTON_PY\n"
+        return "python3 - <<'HD2_PROTON_PY'\n" + prefix + "USE_HOST_PROXY=" + (useHostProxy ? "1" : "0") + "\nBUNDLED=" + (bundled ? "1" : "0") + "\n" + python + "\nHD2_PROTON_PY\n"
     }
     static let python = #"""
 import os,sys,json,base64,hashlib,pathlib,stat,subprocess,tempfile,tarfile,shutil,posixpath,re
 m=json.loads(base64.b64decode(MANIFEST))
 mode=MODE
+BUNDLED=globals().get('BUNDLED',0)
 curl=['curl'] + (['--proxy','http://192.168.127.254:7890'] if USE_HOST_PROXY else [])
 steam=pathlib.Path.home()/'.local/share/Steam'
 alias=pathlib.Path.home()/'.steam/root'
@@ -299,6 +340,14 @@ if mode=='probe':
  print('proton_package='+state())
  sys.exit(0)
 safe_parents(root)
+incoming=root/('.hd2-proton-incoming-'+SUFFIX)
+safe_parents(incoming)
+if mode=='cleanup':
+ idle()
+ if incoming.is_dir() and incoming.stat().st_uid==os.getuid() and stat.S_IMODE(incoming.stat().st_mode)==0o700:
+  (incoming/'payload.tar.xz').unlink(missing_ok=True)
+  incoming.rmdir()
+ sys.exit(0)
 root.mkdir(parents=True,exist_ok=True)
 lock=pathlib.Path.home()/'.hd2-native-deployment-lock'
 lock.mkdir(mode=0o700)
@@ -312,25 +361,34 @@ try:
   idle();p.rename(retained)
   sys.exit(0)
  if state()!='missing':raise RuntimeError('EXTERNAL_DRIFT')
- if shutil.disk_usage(root).free < m['archiveBytes']+m['unpackedBytes']*2+67108864:raise RuntimeError('INSUFFICIENT_SPACE')
+ needed=m['unpackedBytes']+67108864
+ if mode=='prepare' or not BUNDLED:needed+=m['archiveBytes']
+ if shutil.disk_usage(root).free < needed:raise RuntimeError('INSUFFICIENT_SPACE')
+ if mode=='prepare':
+  incoming.mkdir(mode=0o700)
+  print(str(incoming/'payload.tar.xz'))
+  sys.exit(0)
  stage=pathlib.Path(tempfile.mkdtemp(prefix='.hd2-proton-stage-',dir=root))
  try:
-  archive=stage/'payload.tar.xz'
-  cache=pathlib.Path.home()/'.cache/hd2fx-native/artifacts'/(m['archiveSHA256']+'.tar.xz')
-  safe_parents(cache)
-  if cache.is_file() and cache.stat().st_nlink==1 and cache.stat().st_size==m['archiveBytes'] and digest(cache)==m['archiveSHA256']:
-   shutil.copyfile(cache,archive)
-  else:
-   subprocess.run(curl+['--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','600','--max-filesize',str(m['archiveBytes']),'--output',str(archive),m['url']],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=610)
-  if archive.stat().st_size!=m['archiveBytes'] or digest(archive)!=m['archiveSHA256']:raise RuntimeError('ARTIFACT_HASH')
-  checksum=stage/'payload.sha512sum'
-  subprocess.run(curl+['--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','30','--max-filesize','4096','--output',str(checksum),m['url'].replace('.tar.xz','.sha512sum')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=40)
-  published=checksum.read_text().split()
-  if len(published)!=2 or published[0]!=m['archiveSHA512'] or published[1] not in [m['version']+'.tar.xz','*'+m['version']+'.tar.xz']:raise RuntimeError('ARTIFACT_HASH')
+  archive=(incoming if BUNDLED else stage)/'payload.tar.xz'
+  safe_parents(archive)
+  if not BUNDLED:
+   cache=pathlib.Path.home()/'.cache/hd2fx-native/artifacts'/(m['archiveSHA256']+'.tar.xz')
+   safe_parents(cache)
+   if cache.is_file() and cache.stat().st_nlink==1 and cache.stat().st_size==m['archiveBytes'] and digest(cache)==m['archiveSHA256']:
+    shutil.copyfile(cache,archive)
+   else:
+    subprocess.run(curl+['--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','600','--max-filesize',str(m['archiveBytes']),'--output',str(archive),m['url']],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=610)
+   checksum=stage/'payload.sha512sum'
+   subprocess.run(curl+['--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','30','--max-filesize','4096','--output',str(checksum),m['url'].replace('.tar.xz','.sha512sum')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=40)
+   published=checksum.read_text().split()
+   if len(published)!=2 or published[0]!=m['archiveSHA512'] or published[1] not in [m['version']+'.tar.xz','*'+m['version']+'.tar.xz']:raise RuntimeError('ARTIFACT_HASH')
+  metadata=archive.lstat()
+  if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink!=1 or metadata.st_size!=m['archiveBytes'] or digest(archive)!=m['archiveSHA256']:raise RuntimeError('ARTIFACT_HASH')
   sha512=hashlib.sha512()
   with open(archive,'rb') as f:
    for b in iter(lambda:f.read(1048576),b''):sha512.update(b)
-  if sha512.hexdigest()!=published[0]:raise RuntimeError('ARTIFACT_HASH')
+  if sha512.hexdigest()!=m['archiveSHA512']:raise RuntimeError('ARTIFACT_HASH')
   unpack=stage/'unpack';unpack.mkdir()
   with tarfile.open(archive,'r:xz') as t:
    members=t.getmembers();seen=set()
@@ -354,7 +412,9 @@ try:
   idle();safe_parents(p)
   if os.path.lexists(p):raise RuntimeError('EXTERNAL_DRIFT')
   candidate.rename(p)
-  if not verified(p):raise RuntimeError('VERIFY_FAILED')
+  if not verified(p):
+   p.rename(candidate)
+   raise RuntimeError('VERIFY_FAILED')
  finally:
   shutil.rmtree(stage)
 finally:
@@ -745,7 +805,7 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
 
     private static func deployReplay(backend: SSHEnvironmentBackend, snapshot: DeploymentSnapshot,
                                      request original: [String: JSONValue], files: [JSONValue],
-                                     runtimeArchive: URL? = nil) throws -> [String: JSONValue] {
+                                     runtimeArchive: URL? = nil, preferBundle: Bool = false) throws -> [String: JSONValue] {
         let preflight = try runLocalReplay(backend: backend, request: original, phase: "preflight")
         var install = original
         install["mode"] = .string("local_replay")
@@ -764,7 +824,13 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
             throw CoreError("PROTOCOL_ERROR")
         }
         try backend.transport.upload(payloadFile, to: remotePayload, context: backend.context)
-        if preflight["runtime_ready"]?.boolean != true, let archive = runtimeArchive {
+        if preflight["runtime_ready"]?.boolean != true, preferBundle,
+           let archive = try DeploymentArchive.verified("SteamLinuxRuntime_4", context: backend.context) {
+            backend.archiveProgress("SteamLinuxRuntime_4", "sftp")
+            try backend.transport.upload(archive, to: destination, context: backend.context)
+            backend.archiveProgress("SteamLinuxRuntime_4", "install")
+            install["bundled_runtime_uploaded"] = .bool(true)
+        } else if preflight["runtime_ready"]?.boolean != true, let archive = runtimeArchive {
             let values = try archive.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
             guard archive.path == archive.resolvingSymlinksInPath().path, values.isRegularFile == true,
                   values.isSymbolicLink != true, values.fileSize == 717_803_520 else { throw CoreError("ARTIFACT_HASH") }
@@ -783,6 +849,11 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
             }
             try backend.transport.upload(archive, to: destination, context: backend.context)
             install["local_runtime_uploaded"] = .bool(true)
+        }
+        defer {
+            if install["bundled_runtime_uploaded"]?.boolean == true {
+                backend.archiveProgress("SteamLinuxRuntime_4", "finished")
+            }
         }
         let result = try runLocalReplay(backend: backend, request: install, phase: "install")
         guard result["verified"]?.boolean == true, let tree = result["installed_manifest"]?.text,
@@ -834,7 +905,7 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
             }
             request["legacy_tree"] = .string(tree)
         }
-        var result = try deployReplay(backend: backend, snapshot: snapshot, request: request, files: package.files)
+        var result = try deployReplay(backend: backend, snapshot: snapshot, request: request, files: package.files, preferBundle: true)
         result["resource_source"] = .string("app-bundle")
         result["package_id"] = .string(package.id)
         result["package_fingerprint"] = .string(package.fingerprint)
@@ -1040,7 +1111,7 @@ extension FEXWorkflow {
         let reason = before.facts["fex_reason"] ?? "FEX_RUNTIME_FAILED"
         let repairable = ["FEX_MISSING", "FEX_NOT_EXECUTABLE", "FEX_ARCHITECTURE",
                           "FEX_INTEGRATION_MISSING", "FEX_CHANGED", "FEX_INTEGRITY_FAILED",
-                          "FEX_RUNTIME_FAILED", "FEX_DEPENDENCY_FAILED",
+                          "FEX_RUNTIME_FAILED", "FEX_DEPENDENCY_FAILED", "FEX_LOCAL_RUNTIME_MISSING",
                           "FEX_KNOWN_LAUNCH_INCOMPATIBILITY", "FEX_PROTON_INTEGRATED_UNVERIFIED"]
         guard repairable.contains(reason) else {
             throw CoreError(reason, ["diagnostic_reason": .string(before.facts["fex_diagnostic_reason"] ?? reason)])
@@ -1211,6 +1282,7 @@ RUNTIME_NAME='SteamLinuxRuntime_4'
 RUNTIME_URL='https://repo.steampowered.com/steamrt4/images/4.0.20261021.265997/SteamLinuxRuntime_4.tar.xz'
 RUNTIME_VALVE=(175077288,'aa9dd1aab2173e65b631faae34b85e2c17fe323d941013154ddd2e1dce8a0910','db4b40a9b5c254582283b1876944f06dcdb78afea4aac90540c3b6a4f46cc9f0')
 RUNTIME_LOCAL=(717803520,'31a43e6e6ff78509eb1cdb762cfff8e9d89fc83c118d5d723bead42b9b18ca5c','11c51804ac7a94667d2bda95ba88fa21cbfdde6ada5f1e2fe6998c100cb3bfe7')
+RUNTIME_BUNDLE=(193365028,'d70d0db92512bd9cc0d200618b780fd8da37cc5cb6c5cad9326df261f20b468d',RUNTIME_LOCAL[2])
 def runtime_common():
  return pathlib.Path.home()/'.local/share/Steam/steamapps/common'
 def replay_root():
@@ -1257,8 +1329,9 @@ def stage_runtime(parent,token):
  import tarfile,posixpath
  token=str(uuid.UUID(token))
  stage=parent/('HD2-runtime-stage-'+token)
- local=REQUEST.get('local_runtime_uploaded') is True
- size,expected,tree=RUNTIME_LOCAL if local else RUNTIME_VALVE
+ bundled=REQUEST.get('bundled_runtime_uploaded') is True
+ local=REQUEST.get('local_runtime_uploaded') is True or bundled
+ size,expected,tree=RUNTIME_BUNDLE if bundled else RUNTIME_LOCAL if local else RUNTIME_VALVE
  archive=replay_work()/('incoming-'+token)/'runtime.tar' if local else replay_work()/('runtime-'+token+'.tar.xz')
  cache=replay_work()/('runtime-'+expected+'.tar.xz');safe(cache)
  safe(archive)

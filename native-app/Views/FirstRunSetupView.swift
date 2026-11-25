@@ -324,12 +324,14 @@ struct EnvironmentWorkflowProgressView: View {
     private var workflowContent: some View {
         VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    if !showStepsInline || workflow.phase == .launching {
+                    if workflow.active, let component = workflow.archiveComponent, let phase = workflow.archivePhase {
+                        Text(verbatim: component + " · " + (phase == "sftp" ? "SFTP" : state.t("ui.workflow.deploying")))
+                    } else if !showStepsInline || workflow.phase == .launching {
                         Text(workflow.phase == .launching ? state.launchSession.current.title(state.languageCode) :
                              state.t(workflow.launchesGame && workflow.phase == .failed ? "ui.179" : workflow.phase.titleKey))
                     }
                     Spacer()
-                    if workflow.showsProgress { Text(workflow.fraction, format: .percent.precision(.fractionLength(0))).monospacedDigit() }
+                    if workflow.showsProgress && workflow.archivePhase == nil { Text(workflow.fraction, format: .percent.precision(.fractionLength(0))).monospacedDigit() }
                 }
                 if workflow.active {
                     TimelineView(.periodic(from: workflow.startedAt, by: 1)) { context in
@@ -338,7 +340,11 @@ struct EnvironmentWorkflowProgressView: View {
                     }
                 }
                 if workflow.active {
-                    ProgressView(value: workflow.fraction).tint(TacticalColors(scheme: scheme).accent)
+                    if workflow.archivePhase != nil {
+                        ProgressView().controlSize(.small).tint(TacticalColors(scheme: scheme).accent)
+                    } else {
+                        ProgressView(value: workflow.fraction).tint(TacticalColors(scheme: scheme).accent)
+                    }
                 }
                 if let failure = workflow.failure {
                     Text(["ARTIFACT_UNAVAILABLE", "ARTIFACT_UNAPPROVED"].contains(failure.code) && failure.details["component"]?.text == "fex"

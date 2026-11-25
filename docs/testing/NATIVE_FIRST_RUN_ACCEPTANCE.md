@@ -2,6 +2,8 @@
 
 The 2026-11-24 [bundled deployment acceptance](RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md) records the current FX 1.9.9 isolated-copy run after the Dashboard V003 merge. The real App recognized the existing verified installation after two normal reboots. First installation from the App Bundle and fresh-image acceptance remain open. The entries below describe earlier development runs.
 
+The 2026-11-25 candidate prioritizes the three verified local Bundle components. It retains pinned downloads for Proton-JE and Runtime 4. Real missing-component and offline installation results are tracked in the [bundled deployment acceptance](RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md).
+
 Development scope: isolated source/build only. No current successful SteamOS changes, new VM creation, Latest replacement, main merge or release.
 
 | Status | Result |

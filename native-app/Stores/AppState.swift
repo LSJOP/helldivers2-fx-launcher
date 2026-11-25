@@ -601,6 +601,8 @@ final class AppState: ObservableObject {
         let now = ProcessInfo.processInfo.systemUptime
         let id = environmentWorkflow.taskID
         workflowLog(id, "\(t(environmentWorkflow.phase.titleKey)): \(logStatus("completed")) (\(Int(max(0, now - workflowPhaseStarted)))s)")
+        environmentWorkflow.archiveComponent = nil
+        environmentWorkflow.archivePhase = nil
         environmentWorkflow.phase = phase
         workflowPhaseStarted = now
         workflowLog(id, "\(t(phase.titleKey)): \(logStatus("started"))")
@@ -622,6 +624,11 @@ final class AppState: ObservableObject {
                 ? " (\(Int(max(0, now - started!)))s)" : ""
             if status == "done" || status == "passed" || status == "failed" { workflowStageStarted.removeValue(forKey: raw) }
             workflowLog(taskID, "\(stage.title(languageCode)): \(logStatus(status))\(elapsed)", level: status == "failed" ? "ERROR" : "INFO", at: at)
+        } else if event["kind"]?.text == "bundle_archive_stage", environmentWorkflow.phase == .deploying,
+                  let component = event["component"]?.text, ["Proton-JE", "SteamLinuxRuntime_4"].contains(component),
+                  let phase = event["archive_phase"]?.text, ["sftp", "install", "finished"].contains(phase) {
+            environmentWorkflow.archiveComponent = phase == "finished" ? nil : component
+            environmentWorkflow.archivePhase = phase == "finished" ? nil : phase
         } else if event["kind"]?.text == "deployment_component", let component = event["component"]?.text,
                   ["fex", "proton", "steam", "tool", "launch", "vulkan"].contains(component),
                   let status = event["status"]?.text, ["running", "done", "failed", "deferred"].contains(status) {
@@ -731,7 +738,7 @@ final class AppState: ObservableObject {
                 let repairableFXReasons: Set<String> = [
                     "FEX_MISSING", "FEX_NOT_EXECUTABLE", "FEX_ARCHITECTURE",
                     "FEX_INTEGRATION_MISSING", "FEX_CHANGED", "FEX_INTEGRITY_FAILED",
-                    "FEX_RUNTIME_FAILED", "FEX_DEPENDENCY_FAILED",
+                    "FEX_RUNTIME_FAILED", "FEX_DEPENDENCY_FAILED", "FEX_LOCAL_RUNTIME_MISSING",
                     "FEX_KNOWN_LAUNCH_INCOMPATIBILITY", "FEX_PROTON_INTEGRATED_UNVERIFIED"
                 ]
                 if let repair = plan.operations.first(where: { $0.component == "fex" })?.blocked,

@@ -46,6 +46,14 @@ else
   ok "NO UNAPPROVED RF RELEASE PAYLOAD"
 fi
 
+root="$(cd "$(dirname "$0")/.." && pwd)"
+if /usr/bin/python3 -I -B "$root/script/deployment_archives.py" reject \
+     --catalogue "$root/Resources/deployment-components-v1.json" --destination "$APP/Contents/Resources" >/dev/null 2>&1; then
+  ok "NO UNAPPROVED CORE ARCHIVES"
+else
+  bad "NO UNAPPROVED CORE ARCHIVES"
+fi
+
 # Info.plist identity.
 plist="$APP/Contents/Info.plist"
 bid=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist" 2>/dev/null)

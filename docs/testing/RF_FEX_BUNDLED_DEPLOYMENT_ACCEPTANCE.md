@@ -1,5 +1,46 @@
 # RF 资源内置与部署验收
 
+## 三组件内置 · 2026-11-25
+
+环境分支以 `9084b5ce7aec07860a2ce1aa496b64758e3d36a0` 为开发起点，远端 main 为 `dfe2c18e5fb586b918cf089e1f3900a2e85459aa`。固定版本组合来自 [FX 1.9.12 成功环境审计](../environment/FEX_SUCCESS_ENVIRONMENT_REPORT_FX1912_20261115.md)中的工具映射、归档和实际启动记录。历史镜像保持原状。没有升级或重新编译组件。
+
+| 组件 | 版本和构建 | 本机 Debug 内容 | 字节数 | SHA-256 | 本次真实部署 | 公开分发 |
+| --- | --- | --- | ---: | --- | --- | --- |
+| RF FEX | `eac-main-20261022-historical` | 41 文件树 | 26,327,173 | `0ddd70d9b19e0a6abac26d9edb442fe43557376670c46d9489890f7eef913cd7`（树指纹） | BLOCKED | 未批准 |
+| Proton-JE | `11.0-20261014-3`，`1792806463` | 上游原始 xz 归档 | 348,245,820 | `aa5430696ca39451299e2f007ef652bc030e6419242776343d48947e21827485` | BLOCKED | 未批准 |
+| SteamLinuxRuntime_4 | `4.0.20261021.265997`，构建 `26116036`，历史 depot manifest `622183911945836103` | 历史原始 tar 的确定性 xz 封装 | 193,365,028 | `d70d0db92512bd9cc0d200618b780fd8da37cc5cb6c5cad9326df261f20b468d` | BLOCKED | 未批准 |
+
+Runtime 原始 tar 为 717,803,520 字节。解压后的 tar 字节流与原始 SHA-256 `31a43e6e6ff78509eb1cdb762cfff8e9d89fc83c118d5d723bead42b9b18ca5c` 一致。历史 `VERSIONS.txt` 和两种架构的 pressure-vessel 包装器哈希与原审计一致，ELF 架构分别为 AArch64 与 x86-64。Proton-JE 的 Wine 核心为 x86-64，安装清单完整校验了 5,609 个文件和 1,896 条链接；版本和归档哈希与历史成功组合一致。
+
+### 构建、空间与更新
+
+- 最终本机 arm64 Debug 构建位于 `native-app/build/OfflineCoreVerifiedDebug/HD2FXNative.app`。签名、两个归档和 RF 41 文件核验通过。Release 和 CI 同时启用私有开关的实际构建阶段负例被拒绝。无私有开关时，构建门禁也拒绝输出目录中的残留归档。
+- 运行组件文件合计 **567,938,021 B**，含 RF 清单的 Deployment 目录为 **567,971,934 B**。App 文件逻辑大小 **614,360,282 B**。最终签名 Debug 的本机测量 DMG **577,415,332 B**，ZIP **574,060,449 B**。相较压缩归档，Proton 和 Runtime 的解压后普通文件分别为 **1,471,447,109 B** 与 **711,197,025 B**，还将增加目录及链接。保留内置压缩归档。
+- 隔离宿主夹具使用完整 Proton 归档，禁用下载后运行真实安装脚本耗时 **28.59 s**，通过校验、临时归档清理和恢复。压缩归档与安装树并存采样为 **1,789,312 KiB** 的实际分配空间。Runtime 完整归档的同一 staging 脚本耗时 **8.53 s**，比对完整树指纹通过。未测 Guest 峰值、实际 SFTP 吞吐、断点续传或首次缺失配置总耗时。
+- 本机测量 ZIP 已超过签名清单、验证器与更新助手共同的 **536,870,912 B** 上限。保留这一门禁及现有更新协议。正式分发前要另行协调更新端到端上限与内存预算，或将签名 App 更新与核准的组件制品拆分。没有生成正式更新签名或发布文件。
+
+### 本机导入与部署
+
+按已审核归档导入。Runtime 输入是原始 tar，工具重封装并核验固定哈希。RF 继续使用下文的原有导入工具。
+
+```sh
+python3 -I -B native-app/script/deployment_archives.py import \
+  --catalogue native-app/Resources/deployment-components-v1.json \
+  --destination native-app/PrivateResources \
+  --proton "$VERIFIED_PROTON_ARCHIVE" --runtime "$VERIFIED_HISTORICAL_RUNTIME_TAR"
+```
+
+Xcode 在原本机 Debug 开关之外设置 `HD2_PRIVATE_CORE_DEBUG=YES`。App 两个入口共用现有环境流程。完整的已安装树跳过归档读取。缺失时先校验 App 内置归档，再通过同一认证 SSH/SFTP 通道上传。Proton 复用完整清单及原部署回执，Runtime 复用 RF 事务的安全解压、Steam 注册与实际探针，目标是 `SteamLinuxRuntime_4`，保留原有 ARM64 版本。上传和安装阶段分别显示。有效内置文件安装时不请求上游归档或 Proton 校验文件。现有固定联网来源仅作备用。RF 仍无获批下载包。来源不明或已漂移的已安装树仍由冲突检查保护。
+
+### 许可及实机边界
+
+- Proton 的 [固定发行页](https://github.com/jegglest/proton-je/releases/tag/proton-je-11.0-20261014-3)指向对应 Proton/Wine 来源。归档含许可证，确切完整对应源码、第三方组件和通知义务尚待逐项核准。[Valve Proton 许可说明](https://github.com/ValveSoftware/Proton/blob/proton_11.0/LICENSE)
+- [Valve Runtime 固定版本档案](https://repo.steampowered.com/steamrt4/images/4.0.20261021.265997/)包含校验、包清单及源码目录。内置内容来自历史 Steam depot。需补齐该具体归档的来源映射、各包再分发条件及 ARM64 伴随文件的权利依据。RF 的 MIT 基础源码许可已记录。完整二进制与对应源码的映射，以及 Valve 伴随内容的再分发许可仍待核准。
+- 真实 FX 1.9.9 独立副本仍有完整运行环境。之前的启动及三组件试构建重试均在 `AuthenticatingSSH` 超时。宿主只读核验确认仍是独立副本、转发端口有 SSH banner，已知主机密钥通过，无认证材料的连接被服务器拒绝。操作还建立过已认证的 App SSH master，核对仍为同一 Guest boot，最终 App 的连接并检测操作返回 `TIMEOUT`。未取得组件缺失基线，未移动或删除现有文件。
+- 完整 `run_checks.sh`、109 项 Native Core、29 项集成、161 项部署回归，以及构建签名、十语言和文档检查通过。新增离线 Proton 与 Runtime 的脚本夹具通过。
+- 新版真实离线部署、损坏替换、真实回滚、两次重启及持续性均未验收。下文两次重启属于上一轮既有安装。Steam 派发、接单、进程、窗口、主菜单、单人任务、正常退出、反作弊及多人联机均未观察到。
+
+
 ## Dashboard V003 整合
 
 整合前环境分支为 `fdca49a42774a61d273e03a6aa42c40a3f3dd14d`。远端主线 `dfe2c18e5fb586b918cf089e1f3900a2e85459aa` 为 PR #22 的合并提交，已合入现有环境分支历史。合并后当前分支 SHA 以 `git rev-parse HEAD` 为准。

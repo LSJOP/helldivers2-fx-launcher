@@ -1,5 +1,5 @@
 """Run the actual production Guest installer on isolated tiny archives; never SSH/VM."""
-import base64, hashlib, io, json, os, pathlib, subprocess, sys, tarfile, tempfile, unittest, uuid
+import base64, hashlib, io, json, os, pathlib, shutil, subprocess, sys, tarfile, tempfile, unittest, uuid
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 SOURCE=(ROOT/'Core/ComponentDeploymentAdapters.swift').read_text().split('    static let python = #"""\n',1)[1].split('"""#',1)[0]
 class ProtonReleaseChecks(unittest.TestCase):
@@ -19,9 +19,10 @@ class ProtonReleaseChecks(unittest.TestCase):
  def refresh_checksum(self):
   sha=hashlib.sha512(self.archive.read_bytes()).hexdigest();self.manifest['archiveSHA512']=sha;self.checksum.write_text(sha+'  '+self.manifest['version']+'.tar.xz\n')
  def tearDown(self):self.temp.cleanup()
- def run_script(self,mode,use_proxy=False):
-  prefix='MANIFEST='+repr(base64.b64encode(json.dumps(self.manifest).encode()).decode())+'\nMODE='+repr(mode)+'\nBOOT='+repr(self.boot.read_text())+'\nSUFFIX='+repr(str(uuid.uuid4()))+'\n'
+ def run_script(self,mode,use_proxy=False,bundled=False,ticket=None):
+  prefix='MANIFEST='+repr(base64.b64encode(json.dumps(self.manifest).encode()).decode())+'\nMODE='+repr(mode)+'\nBOOT='+repr(self.boot.read_text())+'\nSUFFIX='+repr(ticket or str(uuid.uuid4()))+'\n'
   prefix+='USE_HOST_PROXY='+repr(use_proxy)+'\n'
+  prefix+='BUNDLED='+repr(bundled)+'\n'
   source=SOURCE.replace('/proc/sys/kernel/random/boot_id',str(self.boot))
   env=dict(os.environ,HOME=str(self.home),PATH=str(self.bin)+':/usr/bin:/bin',FIXTURE_ARCHIVE=str(self.archive),FIXTURE_CHECKSUM=str(self.checksum))
   return subprocess.run([sys.executable,'-'],input=prefix+source,env=env,capture_output=True,text=True,timeout=15)
@@ -32,6 +33,17 @@ class ProtonReleaseChecks(unittest.TestCase):
   self.assertIn(self.manifest['archiveSHA256'],self.run_script('probe').stdout)
   self.assertNotEqual(self.run_script('install').returncode,0)
   r=self.run_script('recover');self.assertEqual(r.returncode,0,r.stderr);self.assertFalse(self.p.exists());self.assertEqual(len(list(self.p.parent.glob(self.version+'.hd2-recovered-*'))),1)
+ def test_bundle_install_has_no_network_or_retained_archive(self):
+  (self.bin/'curl').write_text('#!/bin/sh\nexit 99\n')
+  ticket=str(uuid.uuid4())
+  r=self.run_script('prepare',bundled=True,ticket=ticket);self.assertEqual(r.returncode,0,r.stderr)
+  remote=pathlib.Path(r.stdout.strip());shutil.copyfile(self.archive,remote)
+  r=self.run_script('install',bundled=True,ticket=ticket);self.assertEqual(r.returncode,0,r.stderr)
+  self.assertEqual(self.run_script('cleanup',bundled=True,ticket=ticket).returncode,0)
+  self.assertFalse(remote.parent.exists())
+  self.assertIn(self.manifest['archiveSHA256'],self.run_script('probe').stdout)
+  self.assertEqual(self.run_script('recover').returncode,0)
+  self.assertFalse(self.p.exists())
  def test_corrupt_tree_not_overwritten_or_recovered(self):
   self.assertEqual(self.run_script('install').returncode,0)
   (self.p/'proton').write_text('external-change')

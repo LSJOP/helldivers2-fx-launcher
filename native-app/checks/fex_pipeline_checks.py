@@ -185,6 +185,20 @@ class PipelineChecks(unittest.TestCase):
    stage,tree=self.helpers['stage_runtime'](self.installed.parent,self.ticket.upper())
   self.assertEqual((stage/'runtime-file').read_bytes(),data)
   self.assertEqual(tree,expected)
+ def test_bundled_runtime_without_network(self):
+  incoming=self.work/('incoming-'+self.ticket.lower());incoming.mkdir()
+  archive=incoming/'runtime.tar'
+  data=b'pinned compressed depot fixture'
+  with tarfile.open(archive,'w:xz') as tar:
+   entry=tarfile.TarInfo('runtime-file');entry.size=len(data);entry.mode=0o755
+   tar.addfile(entry,io.BytesIO(data))
+  expected=self.fingerprint({'runtime-file':['file',hashlib.sha256(data).hexdigest(),0o755]})
+  self.helpers['RUNTIME_BUNDLE']=(archive.stat().st_size,hashlib.sha256(archive.read_bytes()).hexdigest(),expected)
+  self.helpers['REQUEST']={'bundled_runtime_uploaded':True}
+  with patch.object(pathlib.Path,'home',return_value=self.home),patch('subprocess.run',side_effect=AssertionError('network invoked')):
+   stage,tree=self.helpers['stage_runtime'](self.installed.parent,self.ticket)
+  self.assertEqual((stage/'runtime-file').read_bytes(),data)
+  self.assertEqual(tree,expected)
  def test_runtime_recovery_leaves_arm64_and_checks_registered_data(self):
   common=self.common
   runtime=common/'SteamLinuxRuntime_4';runtime.mkdir()

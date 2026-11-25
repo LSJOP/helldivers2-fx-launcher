@@ -130,6 +130,8 @@ struct EnvironmentWorkflow {
     var failure: ErrorState?
     var needsRestartApproval = false
     var deploymentStage: String?
+    var archiveComponent: String?
+    var archivePhase: String?
     var evidence: [String: JSONValue] = [:]
     var totalSteps: Int { launchesGame ? 6 : 5 }
     var active: Bool { ![.idle, .completed, .failed, .cancelled].contains(phase) }

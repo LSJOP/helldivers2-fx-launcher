@@ -15,6 +15,8 @@ blocked=[root/'RF-FEX',root/'RF-FEX.manifest.json']
 assert not any(path.exists() for path in blocked), 'Unapproved RF payload must not enter Release resources'
 PY
 )
+/usr/bin/python3 -I -B "$APP_ROOT/script/deployment_archives.py" reject \
+    --catalogue "$APP_ROOT/Resources/deployment-components-v1.json" --destination "$APP_ROOT/Resources"
 (cd "$APP_ROOT/.." && /usr/bin/python3 -I -B "$APP_ROOT/script/check_release_secrets.py" --tracked)
 [[ "$CHANNEL" == stable || "$CHANNEL" == preview ]] || exit 2
 [[ "$IDENTITY" == 'Developer ID Application: '* ]] || { echo 'Developer ID Application identity required' >&2; exit 2; }

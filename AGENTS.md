@@ -1,6 +1,6 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.34** · Updated: **2026-11-22**.
+Instruction version: **v1.2.35** · Updated: **2026-11-25**.
 Change: fixed development branches, bounded worktrees and explicit release exceptions, and integrated Dashboard V003 and controlled Debug FX runtime repair. Instruction version is independent of App version.
 
 ## Authority and task lifecycle
@@ -28,11 +28,11 @@ Change: fixed development branches, bounded worktrees and explicit release excep
 
 ## First-run component deployment
 
-- Bundle reviewed RF FEX and configuration templates in the App by default. Use a verified network download as the fallback for RF FEX. First-run setup must not ask ordinary users to supply RF files or point to a developer's local directory.
+- Bundle the reviewed RF FEX, Proton-JE and SteamLinuxRuntime_4 combination plus configuration templates in the App by default. Use only a pinned verified download as fallback when approved for that component. First-run setup must not ask ordinary users to supply RF files or point to a developer's local directory.
 - For all bundled deployment resources record source, build/version, license, bytes and SHA-256. Public artifacts require confirmed redistribution rights and verified package provenance. Historical samples and unresolved companion files stay out of public bundles and download endpoints.
 
 - Historical RF binaries are opt-in local Debug inputs only. Keep them Git-ignored and exclude their App from CI artifacts, Releases and update feeds. See [acceptance](docs/testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md).
-- Continue using the existing pinned automatic downloads for Proton-JE and SteamLinuxRuntime_4. Preserve the original SteamLinuxRuntime_4-arm64. Reuse FEX staging, identity checks, transactions and recovery. Keep managed RF in its own persistent path under Guest /home, outside Steam's managed depot.
+- Prefer verified compressed Bundle archives for Proton-JE and SteamLinuxRuntime_4, reusing the existing SSH/SFTP transactions. Historical archives stay local and opt-in until approved individually for redistribution. Preserve the original SteamLinuxRuntime_4-arm64. Reuse FEX staging, identity checks, transactions and recovery. Keep managed RF in its own persistent path under Guest /home, outside Steam's managed depot.
 - Preserve valid RootFS configuration. Treat emulator registration, provider-derived configuration, and effective runtime environment as separate evidence. Do not force an unverified FEX_ROOTFS=/ or edit historical success images.
 - A missing or damaged FX runtime must enter the repair stage instead of terminating at detection. Distinguish absence, path, access, executable bit, architecture, integrity, registration, RootFS and runtime failures internally. If neither the Bundle nor the fallback has an approved payload, fail with the exact artifact blocker and allow retry; never approve a new source-build output merely because compilation completed.
 - Verify first installation from a clean test image, actual FEX loading, and unchanged approved state after two normal restarts. Re-run setup to confirm verified components are skipped. Configuration completion and game startup are separate acceptance results.
