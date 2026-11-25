@@ -259,3 +259,6 @@ Swift 服务保留签名清单原始字节和签名，将已经下载的 ZIP 交
 当前公开 RF Bundle 仍为空，JSON 清单继续标记 `BLOCKED_PUBLIC_RF_DISTRIBUTION`，网络备用源为 `UNVERIFIED`。自动修复不会把新的固定源码构建输出误认作历史批准哈希；没有准确匹配的已审核候选时返回 `ARTIFACT_UNAVAILABLE / RF_BUNDLE_PAYLOAD_UNAVAILABLE`，保留重试和脱敏诊断。P1 及后续真实恢复、App 首配、两次重启和游戏验收因此仍受阻，不得破坏现有成功盘或冒充完成。详见[故障分析](environment/FIRST_RUN_FX_RUNTIME_FAILURE_20261122.md)。
 
 受控 Debug 内置、导入命令与验收状态见[专项报告](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
+
+
+2026-11-26（上海）· dev/environment（基线 b19f23e）：已认证的 FX 1.9.12 aarch64 Guest 在 23:59:20→23:59:25 复现 Steam 进程早退。次日 00:00:23→00:00:28 的 Proton 日志记录有效 RootFS 为空以及 start_protected_game.exe 返回 731，官方 RootFS 和 loader 在 Guest 存在。显式传入 RootFS 的试验仍为空，原启动选项已复读确认恢复。官方 FEX 可执行 SHA-256 以 f9cbb7a7 开头，与历史 1.9.9 失败项相同。候选将已实测 1.9.12 元组接入既有兼容阻断和安全修复路径。公开受信 RF 制品、正式签名重打包、游戏主菜单以及干净镜像五分钟验收仍未完成。

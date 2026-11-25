@@ -63,3 +63,6 @@ v1.0.5 Stable 集成组件更新引擎和 Dashboard V003。正式过渡包面向
 本机独有分支和各独立 Git 仓库的 refs 见上述本地审计清单；它们没有因远端分类自动合并或删除。固定分支初始基于当时 main；后续开发前重新 fetch 和核对各自状态。
 
 复用测试基线：2026-11-16、`ba7e495`（与 main `04f9fb4` 的文件树相同，仅提交历史不同），独立 worktree 执行 arm64 Debug、`native-app/script/run_checks.sh`、`run_update_checks.sh`、十语言和 `script/check_docs.py`（15/15）通过。具体输出位于该 worktree 的 `native-app/evidence/`；该目录为本机证据，不承诺存在于其他机器。隔离安装助手及实际 v1.0.3 检测/下载证据属于 2026-11-16 本机测试；均不证明新版本生产升级。后续代码、依赖或环境变化时按受影响范围重验。
+
+
+2026-11-26（上海）· dev/environment（基线 b19f23e）：已认证的 FX 1.9.12 aarch64 Guest 在 23:59:20→23:59:25 复现 Steam 进程早退。次日 00:00:23→00:00:28 的 Proton 日志记录有效 RootFS 为空以及 start_protected_game.exe 返回 731，官方 RootFS 和 loader 在 Guest 存在。显式传入 RootFS 的试验仍为空，原启动选项已复读确认恢复。官方 FEX 可执行 SHA-256 以 f9cbb7a7 开头，与历史 1.9.9 失败项相同。候选将已实测 1.9.12 元组接入既有兼容阻断和安全修复路径。公开受信 RF 制品、正式签名重打包、游戏主菜单以及干净镜像五分钟验收仍未完成。

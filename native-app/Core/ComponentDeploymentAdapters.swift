@@ -424,10 +424,10 @@ finally:
 
 /// Pinned-source build review and independent installed-runtime compatibility probes.
 enum FEXWorkflow {
-    // The FX 1.9.9 stock binary passed the synthetic probe but failed the
-    // recorded Wine launch comparison. A tree approval cannot override this.
+    // These exact FX releases shipped the same stock FEX binary and failed
+    // the recorded Wine launch. A synthetic probe or approval cannot override this.
     static func hasKnownLaunchIncompatibility(fxVersion: String, architecture: String, executableSHA256: String?) -> Bool {
-        fxVersion == "1.9.9" && architecture == "aarch64" &&
+        ["1.9.9", "1.9.12"].contains(fxVersion) && architecture == "aarch64" &&
             executableSHA256 == "f9cbb7a70e804b9930fed02fd9d1349d49d7808faace703063a9b4944bc3568e"
     }
 
@@ -464,6 +464,7 @@ enum FEXWorkflow {
         if hasKnownLaunchIncompatibility(fxVersion: snapshot.fxVersion, architecture: snapshot.architecture,
                                          executableSHA256: staticResult["executable_sha256"]?.text) {
             snapshot.facts["fex_reason"] = "FEX_KNOWN_LAUNCH_INCOMPATIBILITY"
+            snapshot.facts["fex_diagnostic_reason"] = "FEX_KNOWN_LAUNCH_INCOMPATIBILITY"
             return
         }
         let approval = runtimeApproval(tree: tree, snapshot: snapshot)

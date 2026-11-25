@@ -71,8 +71,11 @@ func runChecks() {
     let stock199 = "f9cbb7a70e804b9930fed02fd9d1349d49d7808faace703063a9b4944bc3568e"
     check(FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.9", architecture: "aarch64", executableSHA256: stock199),
           "known failing stock FX 1.9.9 FEX cannot inherit probe success")
-    check(!FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.12", architecture: "aarch64", executableSHA256: stock199)
-          && !FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.9", architecture: "aarch64", executableSHA256: LaunchService.verifiedFEX),
+    check(FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.12", architecture: "aarch64", executableSHA256: stock199),
+          "reproduced FX 1.9.12 stock FEX failure cannot inherit probe success")
+    check(!FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.13", architecture: "aarch64", executableSHA256: stock199)
+          && !FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.12", architecture: "aarch64", executableSHA256: LaunchService.verifiedFEX)
+          && !FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.12", architecture: "x86_64", executableSHA256: stock199),
           "known incompatibility does not apply to other FX versions or FEX binaries")
 
     var installedFEX = fexSnapshot

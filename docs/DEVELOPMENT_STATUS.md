@@ -191,3 +191,6 @@ PR #4 已发布隔离签名更新测试包 v1.0.1-update-test.1 和 v1.0.2-updat
 
 
 Runtime 自动安装恢复候选：见 docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md 的 2026-11-15 Recovery candidate。保留原 6 个未提交文件并备份；Runtime/FEX 本地事务完成，Proton 下载安装、Steam 设置及受控重启已执行。重启后 FEX 与 RootFS 注册回到原版，最终 VERIFY_FAILED，重复配置明确阻塞于 FEX_KNOWN_LAUNCH_INCOMPATIBILITY。未达到 100%，不可宣称公开一键安装完成；RF 再分发及跨重启持久部署仍阻塞。
+
+
+2026-11-26（上海）· dev/environment（基线 b19f23e）：已认证的 FX 1.9.12 aarch64 Guest 在 23:59:20→23:59:25 复现 Steam 进程早退。次日 00:00:23→00:00:28 的 Proton 日志记录有效 RootFS 为空以及 start_protected_game.exe 返回 731，官方 RootFS 和 loader 在 Guest 存在。显式传入 RootFS 的试验仍为空，原启动选项已复读确认恢复。官方 FEX 可执行 SHA-256 以 f9cbb7a7 开头，与历史 1.9.9 失败项相同。候选将已实测 1.9.12 元组接入既有兼容阻断和安全修复路径。公开受信 RF 制品、正式签名重打包、游戏主菜单以及干净镜像五分钟验收仍未完成。
