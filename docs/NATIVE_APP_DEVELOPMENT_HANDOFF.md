@@ -266,3 +266,5 @@ Swift 服务保留签名清单原始字节和签名，将已经下载的 ZIP 交
 154f070 的本机 Release 实际走到自动修复并返回 NOT_IMPLEMENTED。定位为 first_run_fex_repair 已有后端服务和界面调用，但缺少 Native Core 操作注册及分派。补齐时保留显式确认和当前 Guest boot 约束。公开制品缺失时，自动修复应报告资源不可用或更具体的已验证错误。
 
 fae00bb 本机 arm64 Release 实测通过 UI 进入修复服务并显示 ARTIFACT_UNAVAILABLE / RF_BUNDLE_PAYLOAD_UNAVAILABLE。展开详情得到 BLOCKED_PUBLIC_RF_DISTRIBUTION 和 UNVERIFIED fallback，未派发 Steam 游戏。Native Core 112 项、文档 15 项、Release Bundle 核验通过。正式安装仍为 1.0.4。
+
+2026-11-26 · dev/environment 基线 b6ee432。新本机构建入口复用历史完整 App 或资源目录，前后走既有固定清单校验。现存 Proton-JE 已核对，历史 RF 与 Runtime 在另一台电脑。正例构建、Guest 部署和独立首装等待转入资源。见 [RF 资源内置与部署验收](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。

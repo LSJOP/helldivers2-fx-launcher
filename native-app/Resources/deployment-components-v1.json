@@ -332,6 +332,7 @@
   ],
   "rfPackagingPlan": {
     "status": "CONTROLLED_DEBUG_READY_RELEASE_BLOCKED",
+    "architecture": "aarch64 FEX host with x86-64 guest support",
     "preferred": "APP_BUNDLE",
     "fallback": "VERIFIED_DOWNLOAD",
     "fallbackSource": "UNVERIFIED",
