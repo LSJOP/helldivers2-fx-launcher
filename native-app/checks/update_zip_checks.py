@@ -75,6 +75,12 @@ enum NativeUpdateFailure: Error { case integrity }
         link.external_attr = 0o120777 << 16
         self.assertFalse(self.accepted(self.archive([(link, "../../escape")])))
 
+    def test_archive_over_two_gib_rejected_before_mapping(self):
+        archive = self.directory / "oversized.zip"
+        with archive.open("wb") as stream:
+            stream.truncate(2_147_483_649)
+        self.assertFalse(self.accepted(archive))
+
     def test_truncated_directory(self):
         archive = self.archive([("HD2FXNative.app/file", "data")])
         archive.write_bytes(archive.read_bytes()[:-6])

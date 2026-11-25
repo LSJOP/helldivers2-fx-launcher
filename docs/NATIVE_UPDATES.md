@@ -1,5 +1,25 @@
 # Launcher updates / 启动器更新
 
+## Component update schema 3
+
+Schema 3 extends the Ed25519-signed `update-manifest.json`. Sign the exact bytes with the existing update key. The signed manifest authorizes the full ZIP by exact length and SHA-256. Keep the independent whole-ZIP Ed25519 signature and 512 MiB limit for schema 2. Schema 3 caps signed, transport and installer ZIP sizes at 2 GiB. ZIP preflight also caps expansion at 2 GiB and fewer than 20,000 entries.
+
+The inherited manifest fields carry channel, target version, increasing build number, minimum macOS version, bundle ID, architecture, source commit and full archive identity. The new `components` object carries:
+
+| Signed field | Validation |
+| --- | --- |
+| `protocolVersion` and `minimumBaseBuild` | Schema 3 component protocol 1, older bases use the full ZIP |
+| `targetTreeSHA256` and `targetBytes` | Complete target inventory digest and total bytes of files and symlink targets |
+| `core` | Fixed current-release Core ZIP URL, exact byte length, SHA-256 and expanded size |
+| `modules` | Exactly RF, Proton-JE and Runtime 4, each with pinned version, fixed Bundle-relative directory, tree fingerprint and artifact |
+| `artifact` | Immutable GitHub repository release URL, archive length, expanded byte length and SHA-256 |
+
+The inventory sorts relative paths by UTF-8 bytes. Each record includes path, octal mode expressed as its decimal value, type, and regular-file length and digest or symlink destination, separated by NUL bytes. The version and build select one signed combination. The target's complete code signature, nested code, expected executable, arm64, bundle identity and update trust key are mandatory. Download or assembly failure attempts the signed full ZIP once. Untrusted manifest signatures stop the update. The Helper independently verifies the staged target before exchange. Guest deployment remains separate.
+
+Use `native-app/script/package_component_update.py APP STAGING --minimum-base-build BUILD --dmg` to prepare private staging from the already signed App. It generates a complete ZIP, Core ZIP and module ZIPs, measures sizes, reconstructs a target in scratch and checks its inventory and code signature. Use `--signing-key` for optional signing with the existing operator key after checking it matches the App trust root, or sign the exact manifest separately. `--previous` can omit unchanged published module assets after validating the earlier signed manifest and GitHub asset length/digest. The CI release verifier checks these references against their pinned release. Unapproved resources are rejected by production packaging; `--local-test` is restricted to a test identity and ignored local build directory.
+
+Legacy clients cannot read schema 3 and cannot download ZIPs above 512 MiB. The compatibility option is an engine-only bridge under that limit published with schema 2, followed by the full target once supported. No production bridge was signed or released. An approved full DMG provides the manual upgrade route when the bridge is unavailable. Preserve the existing installed App until the target identity, version and signature are verified. See [acceptance](testing/COMPONENT_UPDATES_ACCEPTANCE.md) for the tested scope.
+
 ## Current release policy / 发布规则
 
 Development changes require proportionate tests, a commit and push, a corresponding PR update when applicable, and remote SHA verification. Ordinary verified PRs may be merged under repository rules; emergency fixes still require necessary tests. A Release is not required for each change. Preserve other work. Stable Release creation requires explicit user authorization.

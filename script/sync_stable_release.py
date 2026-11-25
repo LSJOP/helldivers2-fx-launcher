@@ -28,6 +28,58 @@ def release_for(tag):
         return json.loads(run("gh", "api", f"repos/{REPO}/releases/tags/{tag}"))
     return json.loads(run("gh", "api", f"repos/{REPO}/releases/latest"))
 
+def sha256_file(path):
+    with path.open("rb") as stream:
+        sha = hashlib.sha256()
+        for chunk in iter(lambda: stream.read(1_048_576), b""):
+            sha.update(chunk)
+        return sha.hexdigest()
+
+
+def verify_component_assets(manifest, release, directory):
+    components = manifest["components"]
+    target = components["targetBytes"]
+    destinations = {"rf-fex": "RF-FEX", "proton-je": "Proton-JE", "runtime4": "SteamLinuxRuntime_4"}
+    modules = components["modules"]
+    if (components["protocolVersion"] != 1 or not 0 < components["minimumBaseBuild"] < manifest["build"]
+            or not 0 < target <= 2_147_483_648 or not re.fullmatch(r"[a-f0-9]{64}", components["targetTreeSHA256"])
+            or len(modules) != 3 or set(item["id"] for item in modules) != set(destinations)):
+        raise ValueError("Invalid component manifest")
+    core = components["core"]
+    expanded = core["expandedBytes"]
+    archive_names = [(core, f"HD2FXNative-v{manifest['version']}-core-arm64.zip", True)]
+    for item in modules:
+        tree = item["treeSHA256"]
+        if (item["path"] != "Contents/Resources/Deployment/" + destinations[item["id"]]
+                or not re.fullmatch(r"[a-f0-9]{64}", tree)):
+            raise ValueError("Invalid component destination or fingerprint")
+        expanded += item["artifact"]["expandedBytes"]
+        archive_names.append((item["artifact"], f"{item['id']}-{tree}.zip", False))
+    if expanded != target:
+        raise ValueError("Target expanded length mismatch")
+    seen = {release["tag_name"]: release}
+    for item, name, core_only in archive_names:
+        match = re.fullmatch(re.escape(BASE) + r"/download/(v[0-9]+\.[0-9]+\.[0-9]+)/" + re.escape(name), item["url"])
+        if (not match or (core_only and match[1] != release["tag_name"])
+                or not 0 < item["length"] <= 2_147_483_648 or not 0 < item["expandedBytes"] <= target
+                or not re.fullmatch(r"[a-f0-9]{64}", item["sha256"])):
+            raise ValueError("Invalid pinned component asset")
+        pinned = match[1]
+        if pinned not in seen:
+            previous = release_for(pinned)
+            if previous["tag_name"] != pinned or previous["draft"] or previous["prerelease"]:
+                raise ValueError("Component points to an unavailable stable release")
+            seen[pinned] = previous
+        matches = [entry for entry in seen[pinned]["assets"] if entry["name"] == name]
+        if (len(matches) != 1 or matches[0]["state"] != "uploaded" or matches[0]["size"] != item["length"]
+                or matches[0]["browser_download_url"] != item["url"] or matches[0].get("digest") != "sha256:" + item["sha256"]):
+            raise ValueError("Pinned component missing or wrong digest")
+        if pinned == release["tag_name"]:
+            local = directory / name
+            if local.stat().st_size != item["length"] or sha256_file(local) != item["sha256"]:
+                raise ValueError("Component downloaded bytes differ from the signed release")
+
+
 def validate_release(release, assets_dir):
     tag = release["tag_name"]
     if not TAG.fullmatch(tag) or release["prerelease"]:
@@ -42,12 +94,12 @@ def validate_release(release, assets_dir):
         if len(matches) != 1 or matches[0]["state"] != "uploaded" or matches[0]["size"] <= 0 or matches[0]["browser_download_url"] != f"{BASE}/download/{tag}/{name}":
             raise ValueError(f"Missing, duplicate or invalid release asset: {name}")
         file = assets_dir / name
-        digest = hashlib.sha256(file.read_bytes()).hexdigest()
+        digest = sha256_file(file)
         if file.stat().st_size != matches[0]["size"] or matches[0].get("digest") != "sha256:" + digest:
             raise ValueError(f"Release asset checksum mismatch: {name}")
     sums = (assets_dir / "SHA256SUMS.txt").read_text()
     for name in (dmg, archive):
-        expected = hashlib.sha256((assets_dir / name).read_bytes()).hexdigest()
+        expected = sha256_file(assets_dir / name)
         if not re.search(r"(?m)^" + expected + r"\s+\*?(?:\./)?" + re.escape(name) + r"$", sums):
             raise ValueError(f"Checksum file does not match {name}")
     manifest = json.loads((assets_dir / "update-manifest.json").read_bytes())
@@ -57,13 +109,14 @@ def validate_release(release, assets_dir):
     builds = re.findall(r'CURRENT_PROJECT_VERSION = "([^"]+)"', source)
     if not versions or set(versions) != {version} or not builds or set(builds) != {str(manifest["build"])}:
         raise ValueError("Tagged App project version or build does not match release")
-    if (manifest.get("schema") != 2 or manifest.get("platform") != "macOS"
+    if (manifest.get("schema") not in (2, 3) or manifest.get("platform") != "macOS"
             or manifest.get("architecture") != "arm64"
             or manifest.get("version") != version or manifest.get("sourceCommit") != commit
             or manifest.get("channel") != "stable" or manifest.get("archive") != archive
             or manifest.get("bundleID") != "com.lsjop.helldivers2fx.native.phase1"
+            or not 0 < manifest.get("length", 0) <= (2_147_483_648 if manifest.get("schema") == 3 else 536_870_912)
             or manifest.get("length") != (assets_dir / archive).stat().st_size
-            or manifest.get("sha256") != hashlib.sha256((assets_dir / archive).read_bytes()).hexdigest()):
+            or manifest.get("sha256") != sha256_file(assets_dir / archive)):
         raise ValueError("Update manifest does not match the tag and archive")
     with zipfile.ZipFile(assets_dir / archive) as zipped:
         plist = plistlib.loads(zipped.read("HD2FXNative.app/Contents/Info.plist"))
@@ -76,8 +129,11 @@ def validate_release(release, assets_dir):
     if not key_match or plist.get("SUPublicEDKey") != key_match.group(1):
         raise ValueError("App update key does not match the tagged source")
     base64.b64decode((assets_dir / "update-manifest.sig").read_text().strip(), validate=True)
-    base64.b64decode(manifest["archiveEdSignature"], validate=True)
+    if manifest["schema"] == 2:
+        base64.b64decode(manifest["archiveEdSignature"], validate=True)
     run("swift", str(ROOT / "script/verify_stable_signatures.swift"), str(assets_dir), key_match.group(1), archive)
+    if manifest["schema"] == 3:
+        verify_component_assets(manifest, release, assets_dir)
     dates = []
     for name in ("CHANGELOG.md", "CHANGELOG.zh-CN.md"):
         match = re.search(r"(?m)^### " + re.escape(tag) + r"\s+[—-]\s+(\d{4}-\d{2}-\d{2})\s*$", (ROOT / name).read_text())

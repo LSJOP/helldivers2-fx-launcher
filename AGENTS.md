@@ -1,6 +1,6 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.35** · Updated: **2026-11-25**.
+Instruction version: **v1.2.36** · Updated: **2026-11-25**.
 Change: fixed development branches, bounded worktrees and explicit release exceptions, and integrated Dashboard V003 and controlled Debug FX runtime repair. Instruction version is independent of App version.
 
 ## Authority and task lifecycle
@@ -25,6 +25,11 @@ Change: fixed development branches, bounded worktrees and explicit release excep
 - FEX readiness requires helper/integration/integrity and runtime capability evidence, not existence alone. Preserve official FX FEX. Restore only identity-bound owned changes with integrity receipts and conflict checks.
 - SessionCredentialManager owns independent SSH/sudo secrets. Main includes optional AES-GCM persistence alongside session memory; this does not authorize Keychain access. Persistent storage uses installation-random authenticated encryption, per-target/per-role binding, private directories/files, durable rejected/forgotten markers and visible errors. Never store secrets in source, bundle, defaults, argv, environment or logs; actual challenge plus verified identity is required before saving. No automatic legacy credential migration/deletion.
 - Launcher updates retain the independent Update Helper, project-trusted Ed25519/SHA-256 verification, HTTPS, safe archive paths, verified metadata binding and worker-aware relaunch. Do not update FX/Guest/game through the launcher updater. Unconfigured service stays visibly unconfigured, never “up to date.” Do not disable verification to make installation work. Developer ID/notarization and project signature trust are separate concerns.
+
+## Component updates
+
+- Full installation includes all distribution-approved core components. A signed component update downloads only the destination App Core and components whose content mismatches the target. Retain a verified full ZIP and one download-and-install action. Use an isolated assembly directory and verify the entire target inventory, identity and strict nested code signature before the existing Helper exchanges the App and confirms startup. Do not re-sign on the client, edit the running bundle, or write to SteamOS through launcher updates.
+- Each component-capable release uses measured sizes, regenerates its signed manifest and reuses verified immutable assets with matching fingerprints where available. Never publish unapproved components in any artifact or feed. Keep fixed branches and the existing Ed25519 trust root. See [schema and release procedure](docs/NATIVE_UPDATES.md#component-update-schema-3).
 
 ## First-run component deployment
 

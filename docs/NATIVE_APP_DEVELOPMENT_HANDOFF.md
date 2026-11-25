@@ -9,6 +9,8 @@
 
 2026-11-25：RF FEX、Proton-JE 和 SteamLinuxRuntime_4 统一内置优先。沿用 Proton 的完整树校验和 Runtime 的事务，保留原有 ARM64 Runtime。受控构建导入、大小、更新上限和验收见[专项报告](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
 
+组件级更新与 Guest 部署独立。协议、原交易机制、隔离测试方式和旧版限制见[更新文档](NATIVE_UPDATES.md#component-update-schema-3)和[验收](testing/COMPONENT_UPDATES_ACCEPTANCE.md)。
+
 > **协作入口（2026-11-16）：** 从 `main`、`dev/environment`、`dev/ui`、`dev/core`、`legacy-script` 五种固定职责选择已有分支；共享规范归 `dev/core`。先查 [功能索引](FEATURE_REGISTRY.md)、开发状态、实际代码及对应分支/PR，再动手；每次开发、修复、测试或合并后更新索引和本交接，记录提交、范围、结果、日期与未完成项。不要为会话或发布创建新分支；临时分支须用户事先授权。保护已有工作树和未合并成果。
 
 > 固定分支规范及历史分支分类由 `dev/core` 的 PR #18/#19 合入；2026-11-16 文档检查 15/15、相对链接、diff、敏感信息模式扫描和工作流 YAML 语法通过。未重跑 App 回归或实际触发工作流。首次配置及其他独有历史成果未自动迁移；后续按功能复核并记录。

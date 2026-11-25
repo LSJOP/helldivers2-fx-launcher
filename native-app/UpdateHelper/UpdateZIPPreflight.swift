@@ -2,15 +2,21 @@ import Foundation
 
 /// Validate both ZIP directory and local names before any installer can extract it.
 enum UpdateZIPPreflight {
+    static let maximumArchiveBytes: Int64 = 2_147_483_648
     @discardableResult
     static func validate(_ archive: URL) throws -> Int {
+        let metadata = try archive.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+        guard metadata.isRegularFile == true, metadata.isSymbolicLink == false,
+              let size = metadata.fileSize, (22...maximumArchiveBytes).contains(Int64(size)) else {
+            throw NativeUpdateFailure.integrity
+        }
         let data = try Data(contentsOf: archive, options: .mappedIfSafe)
         func reject() throws -> Never { throw NativeUpdateFailure.integrity }
         func integer(_ offset: Int, _ size: Int) throws -> Int {
             guard offset >= 0, offset <= data.count - size else { try reject() }
             return (0..<size).reduce(0) { $0 | Int(data[offset + $1]) << (8 * $1) }
         }
-        guard data.count >= 22, data.count <= 536_870_912 else { try reject() }
+        guard data.count >= 22, Int64(data.count) <= maximumArchiveBytes else { try reject() }
         var end: Int?
         for offset in stride(from: data.count - 22, through: max(0, data.count - 65557), by: -1) {
             if try integer(offset, 4) == 0x06054b50,
@@ -43,13 +49,18 @@ enum UpdateZIPPreflight {
             let local = try integer(cursor + 42, 4)
             let next = cursor + 46 + nameLength + extraLength + commentLength
             guard flags & ~0x0808 == 0, [0, 8].contains(method), nameLength > 0,
-                  next <= end, compressed < 536_870_912, uncompressed < 2_147_483_648 else { try reject() }
+                  next <= end, Int64(compressed) <= maximumArchiveBytes, uncompressed < 2_147_483_648 else { try reject() }
             let nameBytes = data[(cursor + 46)..<(cursor + 46 + nameLength)]
             guard let name = String(data: nameBytes, encoding: .utf8),
                   !name.contains("*"), !name.contains("?"), !name.contains("[") else { try reject() }
             guard try integer(local, 4) == 0x04034b50,
                   try integer(local + 6, 2) == flags, try integer(local + 8, 2) == method,
                   try integer(local + 26, 2) == nameLength else { try reject() }
+            if flags & 8 == 0 {
+                guard try integer(local + 14, 4) == integer(cursor + 16, 4),
+                      try integer(local + 18, 4) == compressed,
+                      try integer(local + 22, 4) == uncompressed else { try reject() }
+            }
             let localExtra = try integer(local + 28, 2)
             let payload = local + 30 + nameLength + localExtra
             guard local + 30 + nameLength <= directoryOffset,
@@ -57,8 +68,8 @@ enum UpdateZIPPreflight {
                   payload + compressed <= directoryOffset else { try reject() }
             let range = local..<(payload + compressed)
             ranges.append(range)
+            guard uncompressed <= 2_147_483_648 - expanded else { try reject() }
             expanded += uncompressed
-            guard expanded <= 2_147_483_648 else { try reject() }
             let kind: UpdateArchiveEntry.Kind
             switch mode & 0xf000 {
             case 0xa000:

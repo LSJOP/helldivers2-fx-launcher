@@ -194,7 +194,29 @@ enum UpdateInstaller {
                                 oldVersion: currentVersion, oldBuild: currentBuild, key: encoded)
         try persist(state, in: transaction, fd: transactionFD)
         defer { if !finished { try? record("transaction ended with error") } }
-        let request = URL(fileURLWithPath: arguments[1], isDirectory: true)
+        let request = URL(fileURLWithPath: arguments[1], isDirectory: true).standardizedFileURL
+        let cacheRoot = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent(identifier == NativeReleaseService.testBundleID
+                ? "HD2FXNativeUpdateTest/VerifiedUpdates" : "Helldivers2FXLauncher/VerifiedUpdates", isDirectory: true)
+            .resolvingSymlinksInPath().standardizedFileURL
+        let requestParent = request.deletingLastPathComponent()
+        let requestFD = open(request.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+        guard requestFD >= 0 else { throw NativeUpdateFailure.integrity }
+        defer { close(requestFD) }
+        var requestIdentity = stat()
+        guard request.path == request.resolvingSymlinksInPath().path,
+              requestParent.path == cacheRoot.path, UUID(uuidString: request.lastPathComponent) != nil,
+              fstat(requestFD, &requestIdentity) == 0, requestIdentity.st_uid == getuid(),
+              requestIdentity.st_mode & 0o7777 == 0o700 else { throw NativeUpdateFailure.integrity }
+        defer {
+            // The parent App exits before exchange. The surviving Helper owns
+            // cleanup and only removes the original private request inode.
+            var live = stat()
+            if lstat(request.path, &live) == 0, live.st_dev == requestIdentity.st_dev,
+               live.st_ino == requestIdentity.st_ino, live.st_mode & S_IFMT == S_IFDIR {
+                try? FileManager.default.removeItem(at: request)
+            }
+        }
         let manifestBytes = try readRegularFile(request.appendingPathComponent("manifest.json"), limit: 65_536)
         let signature = try readRegularFile(request.appendingPathComponent("manifest.sig"), limit: 64)
         let key = try Curve25519.Signing.PublicKey(rawRepresentation: publicBytes)
@@ -211,14 +233,44 @@ enum UpdateInstaller {
             let available = UInt64(volume.f_bavail) * UInt64(volume.f_bsize)
             guard available > UInt64(bytes) + 1_048_576 else { throw NativeUpdateFailure.diskSpace }
         }
-        try requireSpace(manifest.length)
-        try copyArchive(request.appendingPathComponent("archive.zip"), to: archive, length: manifest.length)
-        let expanded = try NativeReleaseService.verifyArchive(manifest, publicKey: publicBytes, archive: archive)
-        try requireSpace(Int64(expanded))
+        let prepared = request.appendingPathComponent(ComponentUpdate.rootName, isDirectory: true)
+        let componentUpdate = manifest.schema == 3 ? manifest.components : nil
+        if manifest.schema == 3 {
+            guard let componentUpdate, manifest.platform == "macOS", manifest.architecture == "arm64",
+                  ["stable", "preview"].contains(manifest.channel) else { throw NativeUpdateFailure.incompatible }
+            try componentUpdate.validate(version: manifest.version, build: manifest.build)
+            let os = ProcessInfo.processInfo.operatingSystemVersion
+            let version = "\(os.majorVersion).\(os.minorVersion).\(os.patchVersion)"
+            guard manifest.minimumSystemVersion.range(of: #"^[0-9]+\.[0-9]+(\.[0-9]+)?$"#, options: .regularExpression) != nil,
+                  version.compare(manifest.minimumSystemVersion, options: .numeric) != .orderedAscending else {
+                throw NativeUpdateFailure.incompatible
+            }
+        }
+        if let componentUpdate, FileManager.default.fileExists(atPath: prepared.path) {
+            try requireSpace(componentUpdate.targetBytes)
+            try record("checking assembled target")
+            try componentUpdate.verifyTarget(prepared, manifest: manifest, publicKey: publicBytes)
+            try record("staging assembled target")
+            try FileManager.default.copyItem(at: prepared, to: staged)
+        } else {
+            guard (1...NativeReleaseService.archiveLimit(manifest.schema)).contains(manifest.length) else {
+                throw NativeUpdateFailure.integrity
+            }
+            try record("staging full archive")
+            try requireSpace(manifest.length)
+            try copyArchive(request.appendingPathComponent("archive.zip"), to: archive, length: manifest.length)
+            let expanded = try NativeReleaseService.verifyArchive(manifest, publicKey: publicBytes, archive: archive)
+            if let componentUpdate, expanded != componentUpdate.targetBytes { throw NativeUpdateFailure.integrity }
+            try requireSpace(Int64(expanded))
+            let extractor = try spawn("/usr/bin/ditto", ["-x", "-k", archive.path, transaction.path])
+            extractor.waitUntilExit()
+            guard extractor.terminationStatus == 0 else { throw NativeUpdateFailure.integrity }
+        }
+        if let componentUpdate {
+            try record("checking staged target")
+            try componentUpdate.verifyTarget(staged, manifest: manifest, publicKey: publicBytes)
+        }
         try record("verified")
-        let extractor = try spawn("/usr/bin/ditto", ["-x", "-k", archive.path, transaction.path])
-        extractor.waitUntilExit()
-        guard extractor.terminationStatus == 0 else { throw NativeUpdateFailure.integrity }
         let newExecutable = try validate(staged, version: manifest.version, build: String(manifest.build), key: encoded, identifier: identifier)
         let oldExecutable = try validate(installed, version: currentVersion, build: currentBuild, key: encoded, identifier: identifier)
         let installedIdentity = try identity(parentFD, installed.lastPathComponent)
@@ -283,7 +335,7 @@ enum UpdateInstaller {
     }
 
     private static func copyArchive(_ source: URL, to archive: URL, length: Int64) throws {
-        guard length > 0, length <= 536_870_912 else { throw NativeUpdateFailure.integrity }
+        guard length > 0, length <= NativeReleaseService.maximumArchiveBytes else { throw NativeUpdateFailure.integrity }
         let inputFD = open(source.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
         guard inputFD >= 0 else { throw NativeUpdateFailure.integrity }
         let input = FileHandle(fileDescriptor: inputFD, closeOnDealloc: true)

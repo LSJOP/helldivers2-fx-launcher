@@ -52,6 +52,51 @@ final class ProgressRecorder: @unchecked Sendable {
             do { try await action(); throw NSError(domain: "missing failure: " + name, code: 1) }
             catch let error as NativeUpdateFailure { try check(error == code, name) }
         }
+        let digest = String(repeating: "a", count: 64)
+        let assetBase = "https://github.com/LSJOP/helldivers2-fx-launcher/releases/download/v1.1.0/"
+        func artifact(_ name: String, size: Int64 = 90) -> ComponentUpdate.Artifact {
+            .init(url: URL(string: assetBase + name)!, length: size, sha256: digest, expandedBytes: 100)
+        }
+        let modules = ComponentUpdate.destinations.sorted { $0.key < $1.key }.map { id, path in
+            ComponentUpdate.Module(id: id, version: "fixed-1", path: path, treeSHA256: digest,
+                                   artifact: artifact(id + "-" + digest + ".zip"))
+        }
+        let model = ComponentUpdate(protocolVersion: 1, minimumBaseBuild: 100, targetTreeSHA256: digest, targetBytes: 400,
+                                    core: artifact("HD2FXNative-v1.1.0-core-arm64.zip", size: 30), modules: modules)
+        try model.validate(version: "1.1.0", build: 101)
+        let allReused = try model.plan(currentBuild: 100, fullBytes: 300) { _ in digest }
+        try check(allReused?.bytes == 30 && allReused?.downloads.isEmpty == true && allReused?.reused.count == 3,
+                  "only the Core is downloaded for three unchanged components")
+        for id in ComponentUpdate.destinations.keys.sorted() {
+            let plan = try model.plan(currentBuild: 100, fullBytes: 300) { $0.id == id ? nil : digest }
+            try check(plan?.downloads.map(\.id) == [id] && plan?.bytes == 120, "changed or damaged component: " + id)
+        }
+        let multi = try model.plan(currentBuild: 100, fullBytes: 300) { $0.id == "rf-fex" ? digest : nil }
+        try check(multi?.downloads.count == 2 && multi?.bytes == 210, "multi-component delta accounts for signed byte totals")
+        try check(try model.plan(currentBuild: 100, fullBytes: 299) { _ in nil } == nil, "prefer full when modules cost more")
+        try check(try model.plan(currentBuild: 99, fullBytes: 300) { _ in digest } == nil, "incompatible base uses full ZIP")
+        let wrongVersion = ComponentUpdate(protocolVersion: 2, minimumBaseBuild: 100, targetTreeSHA256: digest,
+                                           targetBytes: 400, core: model.core, modules: modules)
+        try await failure(.malformed, "unknown component protocol refused") {
+            try wrongVersion.validate(version: "1.1.0", build: 101)
+        }
+        try check(NativeReleaseService.archiveLimit(2) == 536_870_912
+                  && NativeReleaseService.archiveLimit(3) == 2_147_483_648, "legacy and schema-3 limits are distinct")
+        let treeRoot = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let realDirectory = treeRoot.appendingPathComponent("Versions/B", isDirectory: true)
+        try FileManager.default.createDirectory(at: realDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: treeRoot) }
+        let library = realDirectory.appendingPathComponent("Library")
+        try Data("library".utf8).write(to: library)
+        try FileManager.default.createSymbolicLink(atPath: treeRoot.appendingPathComponent("Alias").path,
+                                                   withDestinationPath: "Versions/Current/Library")
+        try FileManager.default.createSymbolicLink(atPath: treeRoot.appendingPathComponent("Versions/Current").path,
+                                                   withDestinationPath: "B")
+        let before = try ComponentUpdate.tree(treeRoot, limit: 4096)
+        try Data("changed".utf8).write(to: library)
+        let after = try ComponentUpdate.tree(treeRoot, limit: 4096)
+        try check(before.bytes == after.bytes && before.hash != after.hash, "framework symlinks preserve traversal of real signed files")
         let transport = FixtureTransport()
         let key = Curve25519.Signing.PrivateKey() // Ephemeral test key, never written or used for publication.
         let service = NativeReleaseService(transport: transport, publicKey: key.publicKey.rawRepresentation)

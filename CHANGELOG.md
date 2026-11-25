@@ -8,6 +8,8 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 
 ## Unreleased
 
+- Add a component-update candidate that reuses verified installed runtime resources and assembles the signed target App before the existing update helper replaces it. Retain a verified full update up to 2 GiB for schema-3 clients.
+
 - Local controlled Debug can bundle the pinned Proton-JE and Runtime 4 archives alongside the FX runtime. First-run repair prefers verified Bundle resources, with pinned downloads retained as fallback where available. Public distribution and live offline deployment still require acceptance.
 
 - Refine the Dashboard with compact status cards, understated FX selection, a larger compact emblem, concise FX confirmation and a softer light hero. Hide scroll indicators across the App.

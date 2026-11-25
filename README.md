@@ -101,6 +101,8 @@ FX 1.9.9 environment observations are recorded in the [runtime baseline report](
 
 First-run detection distinguishes a Proton-integrated FX runtime from a missing standalone runtime. It records the Proton version, config digest and library hashes, and reports compatibility as unverified until an approved plan is available.
 
+The development branch tests one-click component updates. A complete approved installation supplies the runtime resources. Subsequent compatible updates can reuse matching local resources, with a verified full ZIP as fallback. The current Stable installer and update protocol are unchanged. See [component update acceptance](docs/testing/COMPONENT_UPDATES_ACCEPTANCE.md).
+
 The environment branch targets Bundle-first deployment of the pinned FX runtime, Proton-JE and SteamLinuxRuntime_4 combination, with hash-verified fixed-version network fallback where approved. The local Debug build carries all three. Public package approval and real offline deployment remain open. See the [deployment acceptance report](docs/testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md).
 
 Earlier recovery work installed the pinned Runtime through the isolated Debug replay (verified local archive or Valve HTTPS, SHA-256, SFTP, retained ARM64 Runtime, transaction recovery). Public one-click deployment remains blocked by RF binary provenance/redistribution review; the Debug replay requires explicitly supplied test image and resource paths. See [first-run acceptance](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md). The RF replay uses its own persistent directory and the audited empty RootFS registration. A no-game Runtime probe checks the selected RF executable and records its observed RootFS separately.

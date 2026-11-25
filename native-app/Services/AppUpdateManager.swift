@@ -129,19 +129,29 @@ struct UpdateConfiguration {
     var isConfigured: Bool { configuration.isValid && configuration.distributionReady && UpdateConfiguration.trustedDistribution() }
     var canDownload: Bool { candidate?.signatureVerified == true && cachedArchive == nil && canCheck }
     var canInstall: Bool {
-        guard candidate?.manifest.schema == 2, let cachedArchive,
+        guard [2, 3].contains(candidate?.manifest.schema ?? 0), let cachedArchive,
               FileManager.default.fileExists(atPath: cachedArchive.path),
               isConfigured, canCheck, !CoreWorkerStatus.isActive else { return false }
         return FileManager.default.isWritableFile(atPath: Bundle.main.bundleURL.deletingLastPathComponent().path)
     }
     var canStartInstall: Bool {
-        guard candidate?.signatureVerified == true, candidate?.manifest.schema == 2,
+        guard candidate?.signatureVerified == true, [2, 3].contains(candidate?.manifest.schema ?? 0),
               isConfigured, canCheck, operation == nil, !CoreWorkerStatus.isActive else { return false }
         return FileManager.default.isWritableFile(atPath: Bundle.main.bundleURL.deletingLastPathComponent().path)
     }
     var version: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?" }
     var build: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?" }
-    var service: NativeReleaseService { NativeReleaseService(publicKey: Data(base64Encoded: configuration.publicKey).flatMap { $0.count == 32 ? $0 : nil }) }
+    var service: NativeReleaseService {
+        let key = Data(base64Encoded: configuration.publicKey).flatMap { $0.count == 32 ? $0 : nil }
+        #if DEBUG
+        if Bundle.main.bundleIdentifier == NativeReleaseService.testBundleID,
+           let port = Bundle.main.object(forInfoDictionaryKey: "HD2UpdateFixturePort") as? Int,
+           (1024...65535).contains(port) {
+            return NativeReleaseService(transport: LoopbackUpdateFixture(port: port), publicKey: key)
+        }
+        #endif
+        return NativeReleaseService(publicKey: key)
+    }
     override convenience init() { self.init(preferences: .standard) }
     init(preferences: UserDefaults) {
         self.preferences = preferences
@@ -200,22 +210,23 @@ struct UpdateConfiguration {
     }
     func downloadVerifiedArchive(installAfterDownload: Bool = false) {
         guard canDownload, let candidate, operation == nil else { return }
-        canCheck = false; status = .downloading; errorCode = nil; downloadProgress = nil
+        canCheck = false; status = .checking; errorCode = nil; downloadProgress = nil
         operation = Task { [weak self] in
             guard let self else { return }
             var readyToInstall = false
             do {
                 let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
                     .appendingPathComponent(self.channel == NativeReleaseService.testChannel ? "HD2FXNativeUpdateTest/VerifiedUpdates" : "Helldivers2FXLauncher/VerifiedUpdates", isDirectory: true)
-                self.cachedArchive = try await self.service.download(candidate, to: base) { [weak self] received, total in
+                self.cachedArchive = try await self.service.prepareUpdate(candidate, installed: Bundle.main.bundleURL, to: base) { [weak self] received, total in
                     Task { @MainActor [weak self] in
-                        guard let self, self.status == .downloading, total > 0,
-                              received >= 0, total == candidate.manifest.length else { return }
+                        guard let self, [.checking, .downloading, .verifying].contains(self.status), total > 0,
+                              received >= 0, total <= candidate.manifest.length else { return }
+                        self.status = .downloading
                         self.downloadProgress = min(1, Double(received) / Double(total))
                     }
                 } verifying: {
                     await MainActor.run {
-                        guard self.status == .downloading else { return }
+                        guard [.checking, .downloading].contains(self.status) else { return }
                         self.status = .verifying
                     }
                 }
@@ -242,14 +253,24 @@ struct UpdateConfiguration {
         status = .installing
         errorCode = nil
         do {
-            try service.verifyForInstallation(candidate, archive: cachedArchive)
-            let request = cachedArchive.deletingLastPathComponent().appendingPathComponent(UUID().uuidString)
+            let assembled = cachedArchive.hasDirectoryPath
+            if !assembled { try service.verifyForInstallation(candidate, archive: cachedArchive) }
+            let parent = cachedArchive.deletingLastPathComponent()
+            let request = (assembled ? parent.deletingLastPathComponent() : parent).appendingPathComponent(UUID().uuidString)
             try FileManager.default.createDirectory(at: request, withIntermediateDirectories: false,
                                                     attributes: [.posixPermissions: 0o700])
             do {
                 try candidate.manifestBytes.write(to: request.appendingPathComponent("manifest.json"))
                 try candidate.manifestSignature.write(to: request.appendingPathComponent("manifest.sig"))
-                try FileManager.default.linkItem(at: cachedArchive, to: request.appendingPathComponent("archive.zip"))
+                if assembled {
+                    try FileManager.default.moveItem(at: cachedArchive, to: request.appendingPathComponent(ComponentUpdate.rootName, isDirectory: true))
+                    try? FileManager.default.removeItem(at: cachedArchive.deletingLastPathComponent())
+                    self.cachedArchive = nil
+                } else {
+                    try FileManager.default.linkItem(at: cachedArchive, to: request.appendingPathComponent("archive.zip"))
+                    try? FileManager.default.removeItem(at: cachedArchive)
+                    self.cachedArchive = nil
+                }
                 let helper = Process()
                 helper.executableURL = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/HD2UpdateInstaller")
                 helper.arguments = [request.path, String(ProcessInfo.processInfo.processIdentifier)]

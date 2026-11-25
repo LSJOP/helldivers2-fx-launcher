@@ -7,6 +7,8 @@
 
 > 2026-11-25 · 环境分支本机 Debug 采用三组件内置优先策略，复用现有 Proton 与 Runtime 部署事务。实机离线安装及公开分发待验收。见[构建与验收](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
 
+组件级 App 更新候选位于现有环境分支，包含签名 Schema 3、目标组装、原 Helper 接管和全量备用。详细区分测试、本机实机和生产交付，见[验收](testing/COMPONENT_UPDATES_ACCEPTANCE.md)。
+
 核对日期：2026-11-16（Asia/Shanghai）；主线基线 `04f9fb40c7832c50b107210fd3a5a7f70fadd3b6`。这是可供后续 Codex 接续的索引，不替代实际代码、当前 Git 状态或具体验收记录。检查顺序：AGENTS → 本索引 → 开发状态与交接 → 当前代码和相关固定分支/PR → 判断是否需要开发。完成开发、修复、测试或合并时同步更新本表和交接；勿将隔离测试、文件存在或历史成功当作当前实机通过。
 
 后续固定分支：`dev/environment` 管理 FX/SteamOS/FEX/Proton/Runtime/首次配置，`dev/ui` 管理界面、设计与本地化，`dev/core` 管理启动、SSH、凭据、日志、更新及共享规范；`main` 为稳定发布，`legacy-script` 保留原终端脚本。开发前先检查相应固定分支及其工作树，并核对下表历史分支；存在未合并的独有成果不代表可以覆盖或直接整枝合入。每个固定开发分支最多一个常驻 worktree；新临时分支须用户事先授权。已完成工作应按功能更新本表和交接，记录文件、分支/提交、main 归属、测试范围/结果/日期及剩余事项。

@@ -101,6 +101,8 @@ FX 1.9.9 环境实测记录见[运行环境基线报告](docs/environment/FEX_BA
 
 首次配置会区分 Proton 内置 FX 运行环境与独立运行组件缺失，记录 Proton 版本、配置及库文件哈希；取得已审核方案之前明确显示兼容性未验证。
 
+开发分支正在验收一键组件更新。完整获批安装包提供运行组件，后续兼容更新可复用校验匹配的本地组件，并保留经过验证的全量 ZIP 备用。当前正式安装包和更新协议保持现状。见[组件更新验收](docs/testing/COMPONENT_UPDATES_ACCEPTANCE.md)。
+
 环境配置分支采用已锁定的 FX 运行环境、Proton-JE 和 SteamLinuxRuntime_4 组合，以 App 内置优先，以获批的固定版本和哈希校验下载为备用。本机 Debug 构建已内置三项。公开分发审批和真实离线部署仍待验收。见[部署验收报告](docs/testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
 
 早期恢复工作已接入固定版本 Runtime 的隔离 Debug 安装（已验证本地归档或 Valve HTTPS、SHA-256、SFTP、保留 ARM64 Runtime、事务恢复）。公开版一键配置仍受 RF 二进制来源／再分发许可审核阻塞；Debug 回放需明确传入测试镜像与资源目录。见[首次配置验收](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md)。
