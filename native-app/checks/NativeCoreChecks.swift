@@ -305,9 +305,12 @@ func runChecks() {
     check(SteamRuntime4.installPhase(4 | 0x0010_0000) == "downloading", "an old installed Runtime is not ready during download")
     check(SteamRuntime4.installPhase(4 | 0x0040_0000) == "installing", "pending Steam commit is not readiness")
     check(SteamRuntime4.installPhase(4 | 2) == "pending", "Runtime requiring update remains pending")
-    let runtimeRequest = GuestScripts.requestRuntime4(boot: "fixture")
+    let runtimeRequest = GuestScripts.requestRuntime4(boot: "fixture", verify: false)
     check(runtimeRequest.contains("steam 'steam://install/4183110'") && runtimeRequest.contains("/proc/sys/kernel/random/boot_id"),
           "Runtime installation is requested through identity-bound Guest Steam")
+    let runtimeValidation = GuestScripts.requestRuntime4(boot: "fixture", verify: true)
+    check(runtimeValidation.contains("steam 'steam://validate/4183110'") && !runtimeValidation.contains("4185400"),
+          "Steam validates only the required Runtime and leaves the original ARM64 Runtime alone")
     let noSteamLog = try! CoreProcess.run("/bin/sh", ["-c", "HOME=\"$1\"\n" + GuestScripts.state, "guest-fixture", guestHome.path])
     let unreadLogin = try! GuestService.parse(noSteamLog.stdout, expected: "GUEST_INSPECTION_FAILED")
     check(unreadLogin["steam_logged_on"]?.text == "unknown" && !GuestService.steamReady(unreadLogin),
