@@ -35,17 +35,30 @@ DMG="$OUTPUT/HD2-FX-Launcher-v1.0.7-RC-arm64.dmg"
 /usr/bin/ditto -c -k --norsrc --keepParent "$APP" "$ZIP"
 
 PREFLIGHT="$OUTPUT/zip-preflight"
+cat > "$OUTPUT/check.swift" <<'SWIFT'
+import Foundation
+@main struct Check {
+    static func main() throws {
+        try UpdateZIPPreflight.validate(URL(fileURLWithPath: CommandLine.arguments[1]))
+    }
+}
+SWIFT
 /usr/bin/xcrun swiftc "$ROOT/UpdateHelper/ArchivePathPolicy.swift" \
   "$ROOT/UpdateHelper/UpdateZIPPreflight.swift" \
   "$ROOT/Services/UpdateReleaseService.swift" \
+  "$OUTPUT/check.swift" \
   -o "$PREFLIGHT"
 "$PREFLIGHT" "$ZIP"
 
+DMG_ROOT="$OUTPUT/dmg-root"
+mkdir "$DMG_ROOT"
+/usr/bin/ditto "$APP" "$DMG_ROOT/HD2FXNative.app"
 /usr/bin/hdiutil create -quiet -fs HFS+ -format UDZO -imagekey zlib-level=9 \
-  -volname "HD2 FX Launcher v1.0.7 RC" -srcfolder "$APP" "$DMG"
+  -volname "HD2 FX Launcher v1.0.7 RC" -srcfolder "$DMG_ROOT" "$DMG"
 /usr/bin/codesign --verify --deep --strict "$APP" > "$OUTPUT/code-signature-verification.txt" 2>&1
 /usr/bin/shasum -a 256 "$DMG" "$ZIP" > "$OUTPUT/SHA256SUMS"
 /usr/bin/stat -f '%N %z bytes' "$DMG" "$ZIP" > "$OUTPUT/SIZES.txt"
 /usr/bin/du -sk "$APP" > "$OUTPUT/APP-SIZE-KIB.txt"
-rm -f "$PREFLIGHT"
+rm -f "$PREFLIGHT" "$OUTPUT/check.swift"
+rm -r "$DMG_ROOT"
 printf '%s\n' "$DMG" "$ZIP"
