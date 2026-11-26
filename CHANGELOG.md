@@ -8,33 +8,14 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 
 ## Unreleased
 
-- Share the first-run installer across Debug and Release. Use verified bundled RF FEX and Proton-JE automatically, use signed release fallback for missing RF, and ask Steam to install or verify Runtime 4. Preserve original ARM64 tools and signed update compatibility. Fresh Guest and game acceptance remain pending.
+No unreleased entries.
 
-- v1.0.7 review candidate work separates upstream redistribution rights from provenance, internal approval and live acceptance. The reviewed RF tree excludes two recovered Steam scripts whose rights were not established, replacing them with a project-owned wrapper and the FEX MIT notice. Proton-JE is bound to its exact upstream release plus a 62-submodule corresponding-source lock and verified corresponding-source archive. A local arm64 RC with both components passed resource, ZIP and strict ad-hoc signature checks. Stable publication remains blocked on public source co-location, existing-key update signatures and real Guest/game acceptance.
+### v1.0.7 — 2026-11-27
 
-- Local opt-in Debug builds can carry the verified 41-file FX runtime package and use it during first-run repair. Public distribution approval remains pending.
-
-- Controlled Debug builds recognize an exact installed match to the verified bundled runtime and still run the compatibility probe before continuing setup.
-
-- First-run setup now enters automatic FX runtime repair for missing or damaged components, discovers Steam libraries and the active account without a developer SteamID, reports distinct permission/architecture/integrity failures, and can copy a redacted diagnostic report. Public RF Bundle and fallback payloads remain blocked pending provenance and redistribution approval; no unreviewed binary is installed.
-
-- Preserve the audited empty RF RootFS registration and verify that the isolated Steam Runtime probe loads the installed RF executable. Migrate the previous Debug registration through the existing recovery transaction. Wait for the SwiftUI main-scene action during launch or reopen.
-
-- Verify the active FX Vulkan driver and Guest Steam HTTPS during first-run setup. Preserve the component name when final verification detects a pending change.
-
-- Persistence candidate: keep the RF compatibility tree outside the Steam-managed FX runtime depot, verify RootFS inside a real Runtime container, and restore the shared main window on launch/reopen. Final reboot acceptance and distributable RF build remain pending.
-
-- Recovery continuation adds verified Runtime cache/retry, explicit Debug resource paths and a bundled component integrity catalogue. Real setup installed Proton and configured Steam, but failed final verification after reboot restored the incompatible stock FX runtime and empty container RootFS; public one-click setup remains blocked.
-
-- Add an opt-in Debug path for replaying pinned local RF samples on the isolated FX 1.9.9 test image. It checks the matching Steam Linux Runtime before writing and runs the FX runtime probe inside the recovery transaction. Fresh-guest deployment is pending.
-
-- Retry transient SteamOS SSH startup failures before authentication, with FX endpoint verification on each attempt.
-
-- Show first-run progress as completed stages and require current verification evidence before marking setup complete.
-
-- Record Proton-integrated FX runtime evidence during first-run detection and preserve the sudo credential kind when requesting authentication.
-
-- Add original MOTR7 artwork to setup and launch workflows and an artwork credit in Settings; preserve the Dashboard hero and shared header.
+- Dashboard launch and First-Run Setup use the same automatic setup path. Debug and Release verify and use bundled RF FEX and Proton-JE without developer-only flags, local approval files or an extra deployment prompt. The updater's signed RF module provides the fallback; Proton-JE keeps its pinned upstream fallback.
+- Steam installs or validates Runtime 4 (4183110). The original ARM64 Runtime (4185400), stock FEX and Steam game files remain managed by Steam and FX. The RF registration keeps the audited provider configuration.
+- Downloads include the arm64 App, DMG, full ZIP and signed App Core, RF FEX and Proton-JE update packages. The signed full ZIP supports older clients. Source and notices for the bundled compatibility tools accompany the release.
+- Fresh FX 1.9.9 setup, actual in-App upgrades and HELLDIVERS 2 gameplay remain pending live acceptance.
 
 ### v1.0.6 — 2026-11-26
 
