@@ -305,12 +305,19 @@ func runChecks() {
     check(SteamRuntime4.installPhase(4 | 0x0010_0000) == "downloading", "an old installed Runtime is not ready during download")
     check(SteamRuntime4.installPhase(4 | 0x0040_0000) == "installing", "pending Steam commit is not readiness")
     check(SteamRuntime4.installPhase(4 | 2) == "pending", "Runtime requiring update remains pending")
-    let runtimeRequest = GuestScripts.requestRuntime4(boot: "fixture", verify: false)
-    check(runtimeRequest.contains("steam 'steam://install/4183110'") && runtimeRequest.contains("/proc/sys/kernel/random/boot_id"),
-          "Runtime installation is requested through identity-bound Guest Steam")
-    let runtimeValidation = GuestScripts.requestRuntime4(boot: "fixture", verify: true)
-    check(runtimeValidation.contains("steam 'steam://validate/4183110'") && !runtimeValidation.contains("4185400"),
-          "Steam validates only the required Runtime and leaves the original ARM64 Runtime alone")
+    check(SteamSetupClient.runtime4InstallExpression.contains("app_install 4183110")
+              && !SteamSetupClient.runtime4InstallExpression.contains("4185400"),
+          "Steam client queue request targets only the required Runtime")
+    let runtimeValidation = GuestScripts.requestRuntime4Validation(boot: "fixture")
+    check(runtimeValidation.contains("steam 'steam://validate/4183110'")
+              && runtimeValidation.contains("/proc/sys/kernel/random/boot_id") && !runtimeValidation.contains("4185400"),
+          "Steam validates the dedicated Runtime only on the expected Guest boot")
+    let libraryRuntime = #"/home/steamos/Library "Games" 雪\archive/steamapps/common/SteamLinuxRuntime_4"#
+    let input = FEXWorkflow.runtimeProbeInput(boot: "fixture", tree: "tree", runtimePath: libraryRuntime)
+    let decoded = try! CoreProcess.run("/usr/bin/python3", ["-c",
+        "import base64,json,sys; print(json.loads(base64.b64decode(sys.argv[1]))['runtime_path'])", input])
+    check(decoded.status == 0 && decoded.stdout.trimmingCharacters(in: .newlines) == libraryRuntime,
+          "FEX Runtime path survives Swift JSON encoding and Guest Python decoding")
     let noSteamLog = try! CoreProcess.run("/bin/sh", ["-c", "HOME=\"$1\"\n" + GuestScripts.state, "guest-fixture", guestHome.path])
     let unreadLogin = try! GuestService.parse(noSteamLog.stdout, expected: "GUEST_INSPECTION_FAILED")
     check(unreadLogin["steam_logged_on"]?.text == "unknown" && !GuestService.steamReady(unreadLogin),

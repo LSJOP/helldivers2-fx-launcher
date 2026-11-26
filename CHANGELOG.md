@@ -8,7 +8,8 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 
 ## Unreleased
 
-No unreleased entries.
+- Queue a missing Steam Linux Runtime 4.0 through the authenticated Steam client. Wait for Steam to finish before deploying the bundled compatibility tools.
+- Preserve the Steam library path when passing Runtime 4 to the RF FEX verification probe.
 
 ### v1.0.7 — 2026-11-27
 

@@ -461,11 +461,27 @@ enum FEXWorkflow {
             executableSHA256 == "f9cbb7a70e804b9930fed02fd9d1349d49d7808faace703063a9b4944bc3568e"
     }
 
+    static func runtimeProbeInput(boot: String, tree: String, runtimePath: String) -> String {
+        let input: JSONValue = .object(["boot": .string(boot), "tree": .string(tree), "runtime_path": .string(runtimePath)])
+        return Data(CoreJSON.encode(input).utf8).base64EncodedString()
+    }
+
     /// Recompute the full installed tree before running the compatibility probe.
     static func observe(_ backend: SSHEnvironmentBackend, snapshot: inout DeploymentSnapshot) throws {
         let helpers = SteamRuntime4.evidence + "\n" + pipeline.components(separatedBy: "work=pathlib.Path.home()")[0]
         func probe(_ expected: String = "", runtimePath: String = "") throws -> [String: JSONValue] {
-            let script = "python3 - <<'HD2_FEX_PROBE'\n" + helpers + "\nEXPECTED_BOOT=" + CoreJSON.encode(.string(snapshot.boot)) + "\nEXPECTED_TREE=" + CoreJSON.encode(.string(expected)) + "\nRUNTIME_PATH=" + CoreJSON.encode(.string(runtimePath)) + "\n" + runtimeProbe + "\nHD2_FEX_PROBE\n"
+            let input = runtimeProbeInput(boot: snapshot.boot, tree: expected, runtimePath: runtimePath)
+            let script = """
+            python3 - <<'HD2_FEX_PROBE'
+            import base64,json
+            request=json.loads(base64.b64decode('\(input)'))
+            EXPECTED_BOOT=request['boot']
+            EXPECTED_TREE=request['tree']
+            RUNTIME_PATH=request['runtime_path']
+            \(helpers)
+            \(runtimeProbe)
+            HD2_FEX_PROBE
+            """
             let result = try backend.transport.run(script, timeout: 150, context: backend.context)
             guard result.status == 0, let bytes = result.stdout.data(using: .utf8),
                   let value = try? JSONDecoder().decode([String: JSONValue].self, from: bytes) else { throw CoreError("FEX_RUNTIME_FAILED") }

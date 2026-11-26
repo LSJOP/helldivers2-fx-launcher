@@ -182,8 +182,14 @@ enum SteamRuntime4 {
                 }
             } else if !requested {
                 progress("requesting")
-                try GuestService.requestRuntime4(backend.transport, boot: snapshot.boot,
-                                                 verify: runtime.phase == "incompatible", context: backend.context)
+                if runtime.phase == "incompatible" {
+                    try GuestService.requestRuntime4Validation(backend.transport, boot: snapshot.boot, context: backend.context)
+                } else {
+                    try backend.verifySteamTunnel()
+                    let request = try SteamSetupClient.evaluate(SteamSetupClient.runtime4InstallExpression,
+                        port: backend.transport.settings.cdpLocalPort, context: backend.context)
+                    guard request["requested"]?.boolean == true else { throw CoreError("STEAM_RUNTIME_REQUEST_FAILED") }
+                }
                 requested = true
                 lastPhase = "requesting"
             }
@@ -958,6 +964,15 @@ enum SteamSetupClient {
             throw CoreError("STEAM_API_UNAVAILABLE")
         }
     }
+    static let runtime4InstallExpression = #"""
+    (() => {
+      const console = globalThis.SteamClient?.Console;
+      if (typeof console?.ExecCommand !== "function") return JSON.stringify({requested: false});
+      console.ExecCommand("app_install 4183110");
+      return JSON.stringify({requested: true});
+    })()
+    """#
+
     static func launchExpression(previous: String? = nil, desired: String? = nil) -> String {
         let input = CoreJSON.encode(.object(["previous": previous.map(JSONValue.string) ?? .null, "desired": desired.map(JSONValue.string) ?? .null]))
         return #"""
