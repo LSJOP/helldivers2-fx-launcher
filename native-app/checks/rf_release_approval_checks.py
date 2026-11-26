@@ -113,7 +113,8 @@ class ReleaseApprovalChecks(unittest.TestCase):
 
     def test_unicode_path_is_not_mistaken_for_a_symlink(self):
         module = load_bundle_module()
-        with tempfile.TemporaryDirectory(prefix="rf-资源-") as temporary:
+        (ROOT / "build").mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=ROOT / "build", prefix="rf-资源-") as temporary:
             root = Path(temporary) / "组件"
             root.mkdir()
             self.assertFalse(module.has_symlink_component(root))
