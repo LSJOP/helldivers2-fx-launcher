@@ -1,6 +1,6 @@
 <div align="center">
 
-v1.0.7 uses one automatic setup transaction for the Dashboard and First-run Setup. It prefers verified bundled RF FEX and Proton-JE. Steam manages Runtime 4. See the [FX 1.9.9 acceptance record](docs/testing/FX199_FRESH_USER_BASELINE.md) for live verification status.
+v1.0.8 fixes automatic Steam Runtime 4 installation and the RF FEX verification path on a restored FX 1.9.9 environment. The Dashboard and First-Run Setup share the same transaction, with verified bundled RF FEX and Proton-JE. See the [FX 1.9.9 acceptance record](docs/testing/FX199_FRESH_USER_BASELINE.md) for live results.
   <img src="docs/assets/app-icon.png" width="128" alt="HD2 FX Launcher icon">
   <h1>HELLDIVERS 2 FX Launcher</h1>
   <p>HELLDIVERS 2 FX Launcher · Apple Silicon macOS</p>

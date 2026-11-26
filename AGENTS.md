@@ -1,7 +1,7 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.38** · Updated: **2026-11-26**.
-Change: unify Debug and Release component deployment, keep public distribution checks in build/release, and require fresh Release acceptance against a protected FX 1.9.9 baseline.
+Instruction version: **v1.2.39** · Updated: **2026-11-27**.
+Change: document reconstruction and live verification of the protected FX 1.9.9 baseline.
 
 ## Authority and task lifecycle
 
@@ -40,6 +40,7 @@ Change: unify Debug and Release component deployment, keep public distribution c
 - Keep App Core, RF FEX and Proton-JE as the shipped update modules. Continue accepting older schema-3 manifests with Runtime 4 and retain the signed full fallback for older clients.
 - Preserve valid RootFS configuration. Treat emulator registration, provider-derived configuration, and effective runtime environment as separate evidence. Do not force an unverified FEX_ROOTFS=/ or edit historical success images.
 - A missing or damaged FX runtime must enter the repair stage instead of terminating at detection. Distinguish absence, path, access, executable bit, architecture, integrity, registration, RootFS and runtime failures internally. If neither the Bundle nor the fallback has an approved payload, fail with the exact artifact blocker and allow retry; never approve a new source-build output merely because compilation completed.
+- When the original clean image is unavailable, reconstruct an independent copy using historical inventories, configuration backups and verified deployment receipts. Use Steam to remove its own Runtime. Record differences from the historical environment, verify all three target components are absent and verify retained stock components, Steam login and game data before protecting and hashing the new master. Keep the source images and existing backups untouched.
 - First-run acceptance uses the actual GitHub Stable Release App. Prefer restoring a working copy from the protected, hashed FX199_FRESH_USER_BASELINE. Keep FX 1.9.12 historical success and the FX 1.9.9 master read-only. Verify restore, fresh install, actual FEX loading and verified reuse across restarts. The initial release can precede live verification when explicitly requested. Final delivery requires live setup and game verification, with any subsequent fixes released from main and retested from the clean baseline.
 
 ## UI, localization and documentation

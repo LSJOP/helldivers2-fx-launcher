@@ -1,6 +1,6 @@
 # HD2FXNative 开发状态
 
-> 2026-11-27 · 基于 GitHub main v1.0.6 与 PR #23 审查候选。现有 FX 1.9.9 离线备份在制作前已安装三个目标组件，无法作为首次配置母本。分支范围、记录和恢复条件见[基线验收](testing/FX199_FRESH_USER_BASELINE.md)。
+> 2026-11-27 · 正式 v1.0.7 已发布。FX 1.9.9 功能等效母本已恢复，完整 SHA-256 恢复演练通过。v1.0.7 实机自动首配失败，现有分支 `c686f7b` 修复 Steam 排队入口和 RF 复验。详见[基线验收](testing/FX199_FRESH_USER_BASELINE.md)。
 
 > 2026-11-22 · Dashboard V003 已在 PR #22 的整合候选上验证。见[整合报告](Dashboard_UI_V003_Final_Integration_Report.md)及[六页滚动数据](images/reviews/dashboard-v003/scroll-audit.json)。
 

@@ -1,5 +1,7 @@
 # First-run acceptance
 
+> 2026-11-27 · 当前正式版和候选的 FX 1.9.9 实机结果见[功能等效基线与验收](FX199_FRESH_USER_BASELINE.md)。已验证保护母本的恢复流程、正式 v1.0.7 故障与修复依据。以下为历史记录。
+
 The 2026-11-24 [bundled deployment acceptance](RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md) records the current FX 1.9.9 isolated-copy run after the Dashboard V003 merge. The real App recognized the existing verified installation after two normal reboots. First installation from the App Bundle and fresh-image acceptance remain open. The entries below describe earlier development runs.
 
 The current v1.0.6 candidate delegates Runtime 4 downloads, installation and updates to Guest Steam. Offline RF and Proton deployment requires Runtime already installed and qualified. Steam and game acceptance remain independently tracked.

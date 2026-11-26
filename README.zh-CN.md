@@ -1,6 +1,6 @@
 <div align="center">
 
-v1.0.7 的首页和首次配置共用自动配置事务，优先使用已校验的内置 RF FEX 与 Proton-JE，Runtime 4 由 Steam 管理。实机进度见 [FX 1.9.9 验收记录](docs/testing/FX199_FRESH_USER_BASELINE.md)。
+v1.0.8 修复 FX 1.9.9 新用户环境的 Steam Runtime 4 自动安装和 RF FEX 复验。首页和首次配置共用部署事务，优先使用已校验的内置 RF FEX 与 Proton-JE。见 [FX 1.9.9 验收记录](docs/testing/FX199_FRESH_USER_BASELINE.md)。
   <img src="docs/assets/app-icon.png" width="128" alt="绝地潜兵 2 FX 启动器 icon">
   <h1>绝地潜兵 2 FX 启动器</h1>
   <p>HELLDIVERS 2 FX Launcher · Apple Silicon macOS</p>

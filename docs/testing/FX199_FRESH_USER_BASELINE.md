@@ -1,39 +1,43 @@
 # FX 1.9.9 首次配置基线与验收
 
-核对日期为 2026-11-27（Asia/Shanghai）。GitHub 稳定版基线为 v1.0.6，main 为 `c5e26e92072469da486ef9859e844597e0c7ad90`。开发验收使用 PR #23。四份参照资料为 [FX 1.9.9 新镜像报告](../environment/FEX_BASELINE_REPORT_20261115.md)、[FX 1.9.12 历史环境报告](../environment/FEX_SUCCESS_ENVIRONMENT_REPORT_FX1912_20261115.md) 和本地审计目录中的 `FX_PREVIOUS_OPERATIONS_AUDIT.md`、`STEAMOS_ENVIRONMENT_TRACE_20261104.zh-CN.md`。
+核对日期为 2026-11-27（Asia/Shanghai）。本机使用 GitHub 正式 v1.0.7（2026112702）实测。恢复依据为 [FX 1.9.9 新镜像报告](../environment/FEX_BASELINE_REPORT_20261115.md)、[FX 1.9.12 历史环境报告](../environment/FEX_SUCCESS_ENVIRONMENT_REPORT_FX1912_20261115.md)、本地审计目录中的 `FX_PREVIOUS_OPERATIONS_AUDIT.md`、`STEAMOS_ENVIRONMENT_TRACE_20261104.zh-CN.md`，以及 Guest 部署回执、配置备份和历史操作记录。
 
-## 三个环境
+## 新用户基线
 
 | 环境 | 结果 | 证据 |
 | --- | --- | --- |
-| FX 1.9.12 历史成功环境 | PASS（只读参考） | 本次采用既有历史报告。正式原盘留在原位。 |
-| FX 1.9.9 `FX199_FRESH_USER_BASELINE` | BLOCKED | 当前可见完整镜像和离线备份均无法还原为首次配置前状态。外置 APFS 卷未找到快照。 |
-| FX 1.9.9 工作测试环境 | BLOCKED（新用户验收） | FX 1.9.9 测试实例绑定原有独立工作镜像，SSH 配置端口 2223。离线检查显示已配置。 |
+| FX 1.9.12 历史成功环境 | 只读参考 | 沿用历史报告，原盘留在原位。 |
+| FX 1.9.9 `FX199_FRESH_USER_BASELINE` | PASS（功能等效） | 独立副本撤回后续部署，经正常关机后进行离线核对，母本设为只读并加 macOS 用户不可变标记。 |
+| FX 1.9.9 恢复演练 | PASS（两次） | 恢复副本具备独立 inode，启动前完整 SHA-256 与母本一致。正式 App 已从第一份副本启动并连接到所选 Guest。 |
 
-离线以只读文件句柄读取 GPT 与 ext4 Home 分区，无挂载和日志重放。已有 `FX199-RF-acceptance.ARpYR0/backup.img` 和 `test.img` 已包含受管理 RF、Steam FEX-Emu、Proton-JE 与 Runtime 4。备份的 Steam Runtime 4 Build ID 为 `26116036`，ARM64 Runtime Build ID 为 `26116077`，游戏 Build ID 为 `26568081`。备份中游戏可执行文件和原始 ARM64 Proton 的 SHA-256 与 11 月 15 日报告一致。工作盘的 ARM64 Proton 启动脚本已变化。11 月 15 日的未配置观测记录属于在线镜像观测，缺少可直接恢复的原盘快照。上述 Build ID 是既有镜像证据。
+`FX199-RF-acceptance.ARpYR0/backup.img` 采用 APFS 写时复制，源与该初始工作副本完整 SHA-256 为 `bdfe63971dccf533264a251f27938a69c3675cb43ba3f5c6d64f98ee8df62a02`。只在工作副本中变更 Guest。先核验 RF 安装树与历史备份指纹，沿部署回执恢复原状态，再将完整校验过的 Proton-JE 移出 Steam 工具目录。通过 Steam 客户端卸载 4183110，Steam 日志记录 06:34:01 `finished uninstall (No Error)`。启动参数恢复为空，兼容工具恢复为最早匹配回执中的 `proton_11-arm64`。确认系统 FEX、Steam 原版 FEX、ARM64 Proton、4185400 Runtime、Steam 登录和游戏可执行文件均保留。
 
-引入新母本之前，对照原始报告验证三个新增目标的缺失、原始 ARM64 组件、FEX 注册、Steam 映射和启动项、游戏、Steam 登录及操作前状态。保存镜像校验值、来源、FX 版本、Guest 身份指纹和备份日期。将母本设为只读。恢复时确认 FX 停止且工作盘未打开，从母本生成新工作副本并核对完整 SHA-256。FX 只绑定工作副本。使用独立启动器数据区域清除本轮首次配置记录。用正式 App 核对恢复前快照，再执行首页启动。每次测试前重复同一恢复过程。
+母本位于本机外置卷的 `/Volumes/Thunderbolt2TB/FX199_FRESH_USER_BASELINE/master.img`，完整 SHA-256 为 `62504434271bde46c3ee4b361b0aebc3c97224226f50652c5668e49f34f4de1a`。同目录保存镜像来源、前后清单、卸载事件、恢复结果与 `restore-working-copy.sh`。正常关闭 FX 后，从该目录运行 `./restore-working-copy.sh attempt-N.img`，确认 SHA-256 后将 FX 1.9.9 测试实例绑定到 `runs/attempt-N.img`。每轮使用新的 App 数据目录和首次配置状态。测试实例使用本机 2223 SSH 端点。
 
-备份 `backup.img` 的 144.29 GB 逻辑内容经 APFS 写时复制，生成独立 inode 的临时副本。源与副本完整 SHA-256 均为 `bdfe63971dccf533264a251f27938a69c3675cb43ba3f5c6d64f98ee8df62a02`。复制和完整性验证为 PASS。副本验证后清理，现有备份和工作盘均留在原位。干净母本恢复仍为 BLOCKED。
+与 11 月 15 日观测环境相比，基线保留后来由 Steam 安装的原版 FEX depot（3127680）、明确的 ARM64 Proton 映射、游戏 prefix、Steam 历史及缓存、Guest 私有回退留档。回退留档处于组件扫描路径之外。保留备份中的网络与性能状态，历史报告缺少足以定向撤回这些设置的变更前记录。候选重启后观测到 Guest 的 `all`、`default`、`eth0` 与 `lo` IPv6 disable 值均为 0。现有证据支持三个目标组件在首次配置前缺失，未能证明与历史任一时刻逐字节相同。
 
-钉住的 Proton-JE 归档中 `toolmanifest.vdf` 要求 4183110，归档内部版本为 `1792806463 proton-je-11.0-20261014-3`。这与 Runtime 4 官方安装选用的 AppID 一致。
+## 正式 v1.0.7 实机
 
-## 实机状态
+首页操作启动了绑定恢复副本的 FX，完成真实 SSH 与 Guest 识别。06:38:59 调用 Steam 安装 4183110，出现 Steam 的兼容性未知确认框，首次配置无法自行继续。另作诊断时通过已认证 Steam 客户端排队，官方 Runtime 下载 250,976,848 字节后成功安装，Build `26116036`、版本 `4.0.20261021.265997`，Steam depot `4183111`，manifest `622183911945836103`。随后 App 内置 RF FEX 事务完成并写入已验证回执，Guest 树指纹为 `518185cf0713a01224d38c04897897547d8ec5e80f04426a45662b5bdd64e09f`。
 
-| 项目 | 结果 |
+RF 部署后的观察探针返回 `STEAM_RUNTIME_INCOMPATIBLE`。实机复现表明 Swift JSON 编码的 `\/` 嵌入 Python 字符串常量后保留了反斜杠，导致探针检查错误的路径。对相同数据执行 JSON 解码后，安装路径、运行库检查和 RF 容器探针均通过。修复用身份核验后的 Steam 客户端直接排队缺失组件，并通过 Base64 封装 JSON，将原样路径传给 Guest。保持完整的 Steam 安装、磁盘内容和 RF 容器检查。修复源码在现有 `fix/first-run-ssh-access` 工作分支的 `c686f7b`。
+
+| 项目 | v1.0.7 实机状态 |
 | --- | --- |
-| 恢复后全缺失和三种单独缺失 | BLOCKED |
-| 内置 RF FEX、Proton-JE 自动部署与重启持久化 | NOT_TESTED |
-| Runtime 4 官方安装、版本、Build ID、耗时与下载量 | NOT_TESTED |
-| 损坏和权限修复、正确组件跳过、重复配置 | NOT_TESTED |
-| Steam 未登录、断网、空间不足与取消恢复 | NOT_TESTED |
-| 不同 Steam 库、保留 ARM64 环境、Mac 重启 | NOT_TESTED |
+| 新用户基线恢复与三个组件同时缺失 | PASS |
+| 首页自动排队并安装官方 Runtime | FAIL（Steam 确认框） |
+| 内置 RF FEX | 诊断续跑的实际事务通过，随后的 App 复验失败 |
+| 内置 Proton-JE、首次配置完成、重复配置与重启持久化 | 未完成 |
+| 首页一键启动游戏、游戏窗口、主菜单、单人任务、正常反作弊与多人 | 未验证 |
 | 正式 v1.0.4 → v1.0.7 全量自动升级 | PASS |
-| 正式 v1.0.5、v1.0.6 在本机启动 | FAIL |
-| 旧正式版真实增量升级及升级后首次配置 | NOT_TESTED |
-| 首页点击到 Steam 请求、进程、窗口、主菜单、单人任务、正常退出及再次启动、EAC 和多人 | NOT_TESTED |
+| 正式 v1.0.5、v1.0.6 在本机启动 | FAIL（Sparkle 库验证） |
+| 正式 v1.0.7 → 下一正式版的真实组件增量升级 | 待下一正式版 |
 
-先完成可核验的母本恢复，再开始上述实机矩阵。保存源码 SHA、App 构建号、镜像指纹、各阶段日志和中英文真实截图。不得使用反作弊绕过。既有环境、隔离测试、签名或 Steam 启动请求均单独记录。
+## v1.0.8 候选实机
+
+候选 arm64 build `2026112703`，源码 `c686f7b55aa59380f896e322cd9470e600ff644b`。用第二份完整 SHA-256 校验过的副本和独立 App 数据目录，在首次配置页点击自动配置。06:51:22 Steam 自行排队，06:51:55 安装完成（33 秒），下载计数 250.98 MB。版本 `4.0.20261021.265997`，Build `26116036`，depot/manifest 与 v1.0.7 的诊断下载一致。没有点击 Steam 确认框或执行手动安装。RF 事务与复验通过，内置 Proton-JE 上传、安装及复验用时 62 秒。App 实际验证 sudo，保存启动项，重启 Guest，重新认证后应用 Proton-JE 工具映射。06:57:07 App 显示配置完成，全程 369 秒。
+
+候选内置的 RF FEX、Proton-JE 自动部署与首次配置结果为 PASS。原始 ARM64 组件保留，重启后 Steam 识别 Proton-JE 和对 4183110 的依赖。记录保存在基线目录的 `candidate-first-run-app-events.txt` 与 `candidate-first-run-completed.png`。修复相关 Native Core 119 项、RF 探针 16 项和 RF 部署事务 19 项通过。正式包、首页首次配置、独立重复运行、游戏及真实增量升级另行验收。
 
 ## 发布与主机验收
 
@@ -52,4 +56,4 @@
 
 本机用 GitHub v1.0.4 原始签名包，在独立安装路径通过 App 更新按钮检测并下载 v1.0.7。Update Helper 替换 App、自动重启并写入 `confirmed` 回执。安装后重验严格签名，主程序与正式构建逐字节一致。该路径下载全量 ZIP。v1.0.5 和 v1.0.6 的原始 GitHub ZIP 均在本机启动时复现 dyld 拒绝映射 Sparkle，原因为 Team ID 不匹配。保留两版历史产物，无法打开旧版时可用 v1.0.7 DMG。
 
-两种签名更新格式、启动和更新均已在主机侧验证。当前外部阻碍仍是可核验的 FX 1.9.9 首次配置前镜像或快照。找到母本后，按本页矩阵继续进行真实 Guest 首配、修复闭环及游戏验收。
+此次 v1.0.7 实机直接使用上述升级后的已签名安装，新进程成功打开窗口并操作 Guest。此结果覆盖旧版 dyld/Sparkle 映射故障的实际启动路径。组件级端到端升级仍需以 v1.0.7 为源版本实测。
