@@ -8,8 +8,6 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 
 ## Unreleased
 
-- Guest Steam now manages Steam Linux Runtime 4.0 during environment setup. App downloads and incremental assembly exclude its archive. The original ARM64 runtime stays available. Controlled Debug still bundles the verified FX runtime and Proton-JE; their public redistribution is pending. Runtime setup on a missing installation requires Steam connectivity.
-
 - Local opt-in Debug builds can carry the verified 41-file FX runtime package and use it during first-run repair. Public distribution approval remains pending.
 
 - Controlled Debug builds recognize an exact installed match to the verified bundled runtime and still run the compatibility probe before continuing setup.
@@ -33,6 +31,13 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 - Record Proton-integrated FX runtime evidence during first-run detection and preserve the sudo credential kind when requesting authentication.
 
 - Add original MOTR7 artwork to setup and launch workflows and an artwork credit in Settings; preserve the Dashboard hero and shared header.
+
+### v1.0.6 — 2026-11-26
+
+- Environment setup checks the active Steam library for Steam Linux Runtime 4.0. If missing, setup asks Steam inside FX to install AppID 4183110 and checks readiness before continuing. Existing ARM64 Runtime remains under Steam management.
+- App packages and incremental updates exclude the Steam-managed Runtime archive. The signed Schema 2 ZIP and Schema 3 manifest preserve compatibility with the existing update engine. The public packages exclude the controlled FX and Proton-JE payloads pending redistribution approval.
+- In isolated testing, a target assembled from the Core ZIP and reused FX and Proton-JE resources passed the complete inventory and strict code-signature checks. The v1.0.4 updater code accepted the legacy signed manifest and full ZIP in a local test.
+- Live Steam download and installation, fresh Guest setup, interactive upgrade and restart, and gameplay remain unverified for this release.
 
 ### v1.0.5 — 2026-11-25
 
