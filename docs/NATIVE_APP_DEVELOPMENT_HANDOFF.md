@@ -11,6 +11,8 @@ v1.0.5 过渡发行保留受控 Debug 资源，仅公开分发签名更新引擎
 
 2026-11-26：v1.0.6 候选由 Guest Steam 负责 Runtime 4。保留历史归档作为本地证据，构建与打包拒绝已退役的 Bundle 目录。现有 Steam Runtime 和 ARM64 Runtime 保留。RF FEX 与 Proton-JE 公开分发审批仍独立待完成。
 
+2026-11-26：v1.0.7 专项已完成权利/来源分层审核。RF 历史 41 文件保持原样作证；发布候选排除未证实授权的 `fex-compat-tool` 与未使用的 `unshare.py`，改为 39 个 FEX 文件 + 项目自有 wrapper + MIT 声明，新树指纹 `79c051c4…`。Proton-JE 对上游 Release SHA-256/SHA-512、标签提交及 62 个递归子模块已固定。RC 组装路径已加入；Stable 仍需同地对应源码制品、现有 Ed25519 私钥签名及真实 Guest/游戏验收。见 `docs/audits/*Redistribution_Audit.md` 与 `docs/acceptance/v1.0.7_Release_Readiness.md`。
+
 2026-11-25（历史）：RF FEX、Proton-JE 和 SteamLinuxRuntime_4 统一内置优先。沿用 Proton 的完整树校验和 Runtime 的事务，保留原有 ARM64 Runtime。受控构建导入、大小、更新上限和验收见[专项报告](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
 
 组件级更新与 Guest 部署独立。协议、原交易机制、隔离测试方式和旧版限制见[更新文档](NATIVE_UPDATES.md#component-update-schema-3)和[验收](testing/COMPONENT_UPDATES_ACCEPTANCE.md)。

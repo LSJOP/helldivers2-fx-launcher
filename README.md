@@ -75,6 +75,10 @@ Earlier FX 1.9.9 testing reached the game menu and ship. Single-player, EAC, mul
 - v1.0.1 rejects the published v1.0.2 update archive during ZIP safety checks. Use the DMG for this upgrade. Gatekeeper may block the ad-hoc signed, unnotarized App.
 - [Acceptance report](docs/acceptance/RELEASE_READINESS_REPORT.md) · [Known issues detail](docs/acceptance/KNOWN_ISSUES.md) · [First-run acceptance](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md) · [Update integration](docs/NATIVE_UPDATES.md) · [Performance limits](docs/GAME_PERFORMANCE.md)
 
+### v1.0.7 component review
+
+The v1.0.7 review candidate records RF FEX and Proton-JE rights, provenance and runtime acceptance independently. The candidate RF package removes two recovered Steam scripts with unverified rights and uses a project-owned wrapper plus the FEX MIT notice. The Proton-JE archive is bound to its upstream tag, binary checksums and 62 recursive source submodules. This work is not yet a Stable release: corresponding-source publication, existing-key update signatures and real Guest/game acceptance remain required. See the [RF audit](docs/audits/RF_FEX_Redistribution_Audit.md), [Proton-JE audit](docs/audits/Proton_JE_Redistribution_Audit.md) and [v1.0.7 readiness](docs/acceptance/v1.0.7_Release_Readiness.md).
+
 ### Changelog
 
 <!-- stable-version:start -->

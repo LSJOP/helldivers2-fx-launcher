@@ -75,6 +75,10 @@ FX 1.9.9 历史实测记录了游戏主菜单及飞船。单人、EAC、多人�
 - v1.0.1 会在 ZIP 安全检查时拒绝已发布的 v1.0.2 更新包，请使用 DMG 升级。App 使用 ad-hoc 签名且未经公证，可能受到 Gatekeeper 拦截。
 - [验收报告](docs/acceptance/RELEASE_READINESS_REPORT.md) · [已知问题详情](docs/acceptance/KNOWN_ISSUES.md) · [首次运行验收](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md) · [更新机制](docs/NATIVE_UPDATES.md) · [性能设置限制](docs/GAME_PERFORMANCE.md)
 
+### v1.0.7 组件审核
+
+v1.0.7 审核候选将 RF FEX 和 Proton-JE 的许可权利、制品来源与实机验收分开记录。候选 RF 包排除两个无法确认授权的 Steam 回收脚本，改用项目自有 wrapper 和 FEX MIT 声明。Proton-JE 归档绑定上游标签、二进制校验值和 62 个递归源码子模块。该工作尚不是 Stable 发布：仍须公布对应源码、使用现有密钥签名，并完成真实 Guest/游戏验收。见 [RF 审核](docs/audits/RF_FEX_Redistribution_Audit.md)、[Proton-JE 审核](docs/audits/Proton_JE_Redistribution_Audit.md) 和 [v1.0.7 就绪报告](docs/acceptance/v1.0.7_Release_Readiness.md)。
+
 ### 更新日志
 
 <!-- stable-version:start -->

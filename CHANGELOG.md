@@ -8,6 +8,8 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 
 ## Unreleased
 
+- v1.0.7 review candidate work separates upstream redistribution rights from provenance, internal approval and live acceptance. The reviewed RF tree excludes two recovered Steam scripts whose rights were not established, replacing them with a project-owned wrapper and the FEX MIT notice. Proton-JE is bound to its exact upstream release plus a 62-submodule corresponding-source lock. Stable publication remains blocked on the co-located source asset, existing-key signatures and real Guest/game acceptance.
+
 - Local opt-in Debug builds can carry the verified 41-file FX runtime package and use it during first-run repair. Public distribution approval remains pending.
 
 - Controlled Debug builds recognize an exact installed match to the verified bundled runtime and still run the compatibility probe before continuing setup.

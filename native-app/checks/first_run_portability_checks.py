@@ -126,7 +126,9 @@ def main() -> int:
     plan = manifest.get('rfPackagingPlan', {})
     if (plan.get('debugExpectedFiles') != 41
             or plan.get('debugPayloadFingerprint') != debug_manifest.get('payloadFingerprint')
-            or plan.get('releaseBuildGate') != 'REJECT_UNAPPROVED_RF_PAYLOAD'):
+            or plan.get('releaseBuildGate') != 'ALLOW_HASH_BOUND_RC_ONLY_REJECT_STABLE_UNTIL_ACCEPTED'
+            or plan.get('releaseExpectedFiles') != 41
+            or plan.get('releasePayloadFingerprint') != '79c051c4e5523513dcb5e030ac466f9b3941551e4f3109132e775b886596fbcd'):
         fail(errors, 'component catalogue and controlled-Debug RF manifest disagree')
 
     if errors:

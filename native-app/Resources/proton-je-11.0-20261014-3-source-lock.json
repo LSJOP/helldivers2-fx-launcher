@@ -1,0 +1,322 @@
+{
+  "binarySHA256": "aa5430696ca39451299e2f007ef652bc030e6419242776343d48947e21827485",
+  "build": "1792806463",
+  "commit": "a69793ad2c48dbdf0299e5ef3264b99edb96eeda",
+  "component": "Proton-JE",
+  "repository": "https://github.com/jegglest/proton-je",
+  "schema": 1,
+  "submodules": [
+    {
+      "commit": "5285020de0b30dbdae7b44d0d83541af2d13d002",
+      "origin": "https://github.com/FEX-Emu/FEX/",
+      "path": "FEX"
+    },
+    {
+      "commit": "b3fb4b9feafcd8d91c5cb510a4775143fdbef02f",
+      "origin": "https://github.com/catchorg/Catch2.git",
+      "path": "FEX/External/Catch2"
+    },
+    {
+      "commit": "ee2ec5fd83dafce291024683b50dc89219333076",
+      "origin": "https://github.com/KhronosGroup/Vulkan-Headers.git",
+      "path": "FEX/External/Vulkan-Headers"
+    },
+    {
+      "commit": "3e49836995c1dcb3df709440ad2f270b569c6a5f",
+      "origin": "https://github.com/FEX-Emu/drm-headers.git",
+      "path": "FEX/External/drm-headers"
+    },
+    {
+      "commit": "442678a134e2d25e759c430cca32e06e9e142f1f",
+      "origin": "https://github.com/FEX-Emu/fex-gcc-target-tests-bins.git",
+      "path": "FEX/External/fex-gcc-target-tests-bins"
+    },
+    {
+      "commit": "71349ae6d14ac2e3e792730e240aecd8076cee6c",
+      "origin": "https://github.com/FEX-Emu/fex-gvisor-tests-bins.git",
+      "path": "FEX/External/fex-gvisor-tests-bins"
+    },
+    {
+      "commit": "9ae29638f8000c1603f16385ed1cf6c4c23ee414",
+      "origin": "https://github.com/FEX-Emu/fex-posixtest-bins.git",
+      "path": "FEX/External/fex-posixtest-bins"
+    },
+    {
+      "commit": "c07e2aa4b130b4fd359a1c6455a5201b17af01fa",
+      "origin": "https://github.com/fmtlib/fmt.git",
+      "path": "FEX/External/fmt"
+    },
+    {
+      "commit": "8436195ad5e1bc347d9b39743af3d29abee59f06",
+      "origin": "https://github.com/FEX-Emu/jemalloc.git",
+      "path": "FEX/External/jemalloc_glibc"
+    },
+    {
+      "commit": "ca1388fb9da8e69314dda222dc7b139ca84e092f",
+      "origin": "https://github.com/ericniebler/range-v3.git",
+      "path": "FEX/External/range-v3"
+    },
+    {
+      "commit": "2dae74bb693e42d850fb0adcc9045c5b71fbdeae",
+      "origin": "https://github.com/ericniebler/range-v3.git",
+      "path": "FEX/External/range-v3/doc/gh-pages"
+    },
+    {
+      "commit": "ed227446afce6ff505b312bae1e10a3daaeeea39",
+      "origin": "https://github.com/FEX-Emu/rpmalloc.git",
+      "path": "FEX/External/rpmalloc"
+    },
+    {
+      "commit": "650c98ece70da9e155e7ba1c2b3ee16004aae118",
+      "origin": "https://github.com/wolfpld/tracy",
+      "path": "FEX/External/tracy"
+    },
+    {
+      "commit": "3234af2c03549bc85656bfd3a86993bf1cd8aef1",
+      "origin": "https://github.com/martinus/unordered_dense.git",
+      "path": "FEX/External/unordered_dense"
+    },
+    {
+      "commit": "585d860b12cdfc3a72f5fdad5e02e4d50a64c014",
+      "origin": "https://github.com/FEX-Emu/vixl.git",
+      "path": "FEX/External/vixl"
+    },
+    {
+      "commit": "e626a72bc2321cd320e953a0ccf1584cad60f363",
+      "origin": "https://github.com/Cyan4973/xxHash.git",
+      "path": "FEX/External/xxhash"
+    },
+    {
+      "commit": "9bfadd6a55fc92dbd37fa3ba089bf8b36622df4f",
+      "origin": "https://github.com/zyantific/zydis.git",
+      "path": "FEX/External/zydis"
+    },
+    {
+      "commit": "75a36c45ae1ad382b0f4e0ede0af84c11ee69928",
+      "origin": "https://github.com/zyantific/zycore-c",
+      "path": "FEX/External/zydis/dependencies/zycore"
+    },
+    {
+      "commit": "9f94388a339fcbb0bc95c17768eb786c85988f6e",
+      "origin": "https://github.com/Sonicadvance1/cpp-optparse",
+      "path": "FEX/Source/Common/cpp-optparse"
+    },
+    {
+      "commit": "f2448a8797c85814aa892efc1ab8707900fbcc78",
+      "origin": "https://github.com/KhronosGroup/OpenXR-SDK",
+      "path": "OpenXR-SDK"
+    },
+    {
+      "commit": "6cae8216a6ea19ff3f237af01e54378c1ff81fcd",
+      "origin": "https://github.com/KhronosGroup/SPIRV-Headers",
+      "path": "SPIRV-Headers"
+    },
+    {
+      "commit": "31aa7f634b052d87ede4664053e85f3f4d1d50d3",
+      "origin": "https://github.com/KhronosGroup/Vulkan-Headers",
+      "path": "Vulkan-Headers"
+    },
+    {
+      "commit": "8a6f054ef1e0f7886bc6e53e6be97c427154fe85",
+      "origin": "https://github.com/videolan/dav1d.git",
+      "path": "dav1d"
+    },
+    {
+      "commit": "a78a467cadb22bee928904290cf8e7921b121851",
+      "origin": "https://github.com/doitsujin/dxvk.git",
+      "path": "dxvk"
+    },
+    {
+      "commit": "9df86f2341616ef1888ae59919feaa6d4fad693d",
+      "origin": "https://github.com/Joshua-Ashton/mingw-directx-headers",
+      "path": "dxvk/include/native/directx"
+    },
+    {
+      "commit": "04f10f650d514df88b76d25e83db360142c7b174",
+      "origin": "https://github.com/KhronosGroup/SPIRV-Headers.git",
+      "path": "dxvk/include/spirv"
+    },
+    {
+      "commit": "6802bb4733b63ed5efd3adb308a6c885ef180ea1",
+      "origin": "https://github.com/KhronosGroup/Vulkan-Headers",
+      "path": "dxvk/include/vulkan"
+    },
+    {
+      "commit": "ecb8308fe03fcad695a6ebdacbef6e7f61e77484",
+      "origin": "https://github.com/doitsujin/dxbc-spirv.git",
+      "path": "dxvk/subprojects/dxbc-spirv"
+    },
+    {
+      "commit": "c8ad050fcb29e42a2f57d9f59e97488f465c436d",
+      "origin": "https://github.com/KhronosGroup/SPIRV-Headers.git",
+      "path": "dxvk/subprojects/dxbc-spirv/submodules/spirv_headers"
+    },
+    {
+      "commit": "275e6459c7ab1ddd4b125f28d0440716e4888078",
+      "origin": "https://github.com/doitsujin/libdisplay-info.git",
+      "path": "dxvk/subprojects/libdisplay-info"
+    },
+    {
+      "commit": "a2aa5a2efc39c299dc95968e15786db0cef62acc",
+      "origin": "https://github.com/GameTechDev/dxvk-igdext",
+      "path": "dxvk-igdext"
+    },
+    {
+      "commit": "0f26995d8126617d4d99f62c9571715fc7765da1",
+      "origin": "https://github.com/jp7677/dxvk-nvapi",
+      "path": "dxvk-nvapi"
+    },
+    {
+      "commit": "ea2799ce66647c69710a81338e828b19973e0370",
+      "origin": "https://github.com/microsoft/DirectX-Headers",
+      "path": "dxvk-nvapi/external/DirectX-Headers"
+    },
+    {
+      "commit": "e3b1eec08173d6b825cd3ac88c885a63b621504a",
+      "origin": "https://github.com/KhronosGroup/Vulkan-Headers",
+      "path": "dxvk-nvapi/external/Vulkan-Headers"
+    },
+    {
+      "commit": "87dca625e83fd89a983e19b904e5f3a580da90d2",
+      "origin": "https://github.com/NVIDIA/nvapi",
+      "path": "dxvk-nvapi/external/nvapi"
+    },
+    {
+      "commit": "ee76e620798612c52fb8dcc32a1058a0a3538930",
+      "origin": "https://github.com/misyltoad/vkroots",
+      "path": "dxvk-nvapi/external/vkroots"
+    },
+    {
+      "commit": "a77521cd5d27e955b16e8097eecefc779ffdcb6d",
+      "origin": "https://github.com/FFmpeg/FFmpeg",
+      "path": "ffmpeg"
+    },
+    {
+      "commit": "4b0192046158094654e865245832c66d2104219e",
+      "origin": "https://github.com/liberationfonts/liberation-fonts",
+      "path": "fonts/liberation-fonts"
+    },
+    {
+      "commit": "df7fec2cfa966919172ee83bfcae6c9c9b3f91b8",
+      "origin": "https://github.com/KhronosGroup/glslang",
+      "path": "glslang"
+    },
+    {
+      "commit": "4e2578450809c2099400cf85caf18eafcd7100aa",
+      "origin": "https://github.com/ebassi/graphene",
+      "path": "graphene"
+    },
+    {
+      "commit": "f0dcb2a48a4a8ef3dc1f7327bb0d4056a798c1a7",
+      "origin": "https://github.com/ebassi/mutest.git",
+      "path": "graphene/subprojects/mutest"
+    },
+    {
+      "commit": "7d5bbada3f1c6cf34182abccf47a34d79b83fa97",
+      "origin": "https://github.com/GStreamer/orc.git",
+      "path": "gst-orc"
+    },
+    {
+      "commit": "0205aa43d6d8c5d0c9d4e4f83e0a3aaa94acef89",
+      "origin": "https://github.com/sdroege/gst-plugin-rs",
+      "path": "gst-plugins-rs"
+    },
+    {
+      "commit": "bf6ce1d64a0697e7910826147b48f8f658366a5a",
+      "origin": "https://github.com/GStreamer/gstreamer.git",
+      "path": "gstreamer"
+    },
+    {
+      "commit": "06f5a5a9bad01b5cf76184aee4f430c834a9dac3",
+      "origin": "https://gitlab.freedesktop.org/gstreamer/gst-integration-testsuites.git",
+      "path": "gstreamer/subprojects/gst-integration-testsuites/medias"
+    },
+    {
+      "commit": "a25f216f5ce4eec5e45a6ab7651e20c9840a05cd",
+      "origin": "https://github.com/alphacep/kaldi",
+      "path": "kaldi"
+    },
+    {
+      "commit": "25eac153004f777581ca2d95e31a02ca96844332",
+      "origin": "https://github.com/GNOME/libsoup.git",
+      "path": "libsoup"
+    },
+    {
+      "commit": "18e94e63870ebcf79ebb42b7035cd3cb626ec090",
+      "origin": "https://github.com/alphacep/openfst",
+      "path": "openfst"
+    },
+    {
+      "commit": "91825305130f446f82054c1ec3d416321ace0072",
+      "origin": "https://github.com/ValveSoftware/openvr",
+      "path": "openvr"
+    },
+    {
+      "commit": "9d06b74959570772e8bcbe7a3f696664d2421167",
+      "origin": "https://github.com/shaunren/piper.git",
+      "path": "piper"
+    },
+    {
+      "commit": "fed0c3418f815b0bc07533f6fc6f4aa06e8712c3",
+      "origin": "https://gitlab.winehq.org/wine/vkd3d",
+      "path": "vkd3d"
+    },
+    {
+      "commit": "0bb64c56c8f0dcc11ecc0f6c56e00e4f7bd8d506",
+      "origin": "https://github.com/HansKristian-Work/vkd3d-proton",
+      "path": "vkd3d-proton"
+    },
+    {
+      "commit": "f88a2d766840fc825af1fc065977953ba1fa4a91",
+      "origin": "https://github.com/KhronosGroup/SPIRV-Headers",
+      "path": "vkd3d-proton/khronos/SPIRV-Headers"
+    },
+    {
+      "commit": "ee2ec5fd83dafce291024683b50dc89219333076",
+      "origin": "https://github.com/KhronosGroup/Vulkan-Headers",
+      "path": "vkd3d-proton/khronos/Vulkan-Headers"
+    },
+    {
+      "commit": "8434b0639fb2a48ce13aac08a420ecce5d23df0e",
+      "origin": "https://github.com/HansKristian-Work/dxil-spirv",
+      "path": "vkd3d-proton/subprojects/dxil-spirv"
+    },
+    {
+      "commit": "8dae2d8573af08378c6059aca3d5987da99d20b5",
+      "origin": "https://github.com/doitsujin/dxbc-spirv",
+      "path": "vkd3d-proton/subprojects/dxil-spirv/subprojects/dxbc-spirv"
+    },
+    {
+      "commit": "c8ad050fcb29e42a2f57d9f59e97488f465c436d",
+      "origin": "https://github.com/KhronosGroup/SPIRV-Headers.git",
+      "path": "vkd3d-proton/subprojects/dxil-spirv/subprojects/dxbc-spirv/submodules/spirv_headers"
+    },
+    {
+      "commit": "be71ee8c12cd7dc5ca8fa9581f708c2e8561fe2a",
+      "origin": "https://github.com/KhronosGroup/SPIRV-Cross",
+      "path": "vkd3d-proton/subprojects/dxil-spirv/third_party/SPIRV-Cross"
+    },
+    {
+      "commit": "199cb207b911501ddd76dcddf100a6e21c15ef23",
+      "origin": "https://github.com/KhronosGroup/SPIRV-Tools",
+      "path": "vkd3d-proton/subprojects/dxil-spirv/third_party/SPIRV-Tools"
+    },
+    {
+      "commit": "c63848ecf2200425511319fd8bf2c17b751e501e",
+      "origin": "https://github.com/KhronosGroup/SPIRV-Headers",
+      "path": "vkd3d-proton/subprojects/dxil-spirv/third_party/spirv-headers"
+    },
+    {
+      "commit": "12f29a3415e4967e088ed09202bfb0007e5a1787",
+      "origin": "https://github.com/alphacep/vosk-api",
+      "path": "vosk-api"
+    },
+    {
+      "commit": "d360cd46d58bf6d2601dba414e0f84ad3ec0bd98",
+      "origin": "https://github.com/jegglest/wine",
+      "path": "wine"
+    }
+  ],
+  "tag": "proton-je-11.0-20261014-3",
+  "version": "11.0-20261014-3"
+}

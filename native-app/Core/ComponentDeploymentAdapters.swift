@@ -736,7 +736,12 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
         }
         #else
         // Release approval requires a separately reviewed, compiled-in manifest hash.
-        let approvedManifestHashes: Set<String> = []
+        let approvedManifestHashes: Set<String> = [
+            // v1.0.7 review candidate: historical FEX outputs with the recovered
+            // Valve wrapper/unshare helper replaced by the project-owned wrapper
+            // and the FEX MIT notice. Stable packaging remains separately gated.
+            "f491ba43783d986a183592bb5fb7f3f0fc4b338e80c8b3f1089a764914135bca"
+        ]
         guard approvedManifestHashes.contains(replayHash(manifestData)) else {
             throw CoreError("ARTIFACT_UNAPPROVED")
         }

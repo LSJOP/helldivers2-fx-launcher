@@ -9,6 +9,8 @@ v1.0.5 Stable 集成组件更新引擎和 Dashboard V003。正式过渡包面向
 
 > 2026-11-26 · v1.0.6 候选切换到 Guest Steam 管理 Runtime 4（4183110）。RF FEX 与 Proton-JE 保留内置优先。Schema 3 支持旧清单及移除 Runtime 的新目标。真实安装和公开分发状态见[部署验收](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
 
+> 2026-11-26 · v1.0.7 分发审核将许可权利、二进制来源、内部发布批准和实机兼容性分开记录。RF 候选排除两个无法确认授权的 Steam 回收脚本，换用项目 wrapper 和 MIT 声明；Proton-JE 固定上游标签及 62 个递归子模块。权利审核已闭环，Stable 仍等待对应源码资产与实机验收。
+
 > 2026-11-25 · 环境分支本机 Debug 采用三组件内置优先策略，复用现有 Proton 与 Runtime 部署事务。实机离线安装及公开分发待验收。见[构建与验收](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
 
 组件级 App 更新候选位于现有环境分支，包含签名 Schema 3、目标组装、原 Helper 接管和全量备用。详细区分测试、本机实机和生产交付，见[验收](testing/COMPONENT_UPDATES_ACCEPTANCE.md)。

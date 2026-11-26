@@ -11,6 +11,7 @@ SDK="$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
 /usr/bin/python3 -I -B checks/bundle_name_checks.py >evidence/bundle-name-checks.txt
 /usr/bin/python3 -I -B checks/localization_checks.py >evidence/localization-negative-checks.txt 2>&1
 /usr/bin/python3 -I -B checks/first_run_portability_checks.py >evidence/first-run-portability-checks.txt 2>&1
+/usr/bin/python3 -I -B checks/rf_release_approval_checks.py >evidence/rf-release-approval-checks.txt 2>&1
 if [[ -d PrivateResources/Deployment/RF-FEX ]]; then
   /usr/bin/python3 -I -B script/rf_fex_bundle.py verify \
     --manifest Resources/rf-fex-debug-manifest-v1.json \

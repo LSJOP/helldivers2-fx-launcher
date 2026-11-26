@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+"""Steam compatibility-tool entry point for the launcher-managed FEX tree.
+
+Copyright (c) 2026 LSJOP. All rights reserved.
+
+This project-owned wrapper deliberately uses only documented Steam compatibility
+environment values and the audited FEX configuration templates. It replaces the
+unlicensed wrapper recovered from a Steam installation and has no dependency on
+the recovered unshare.py helper.
+"""
+
+from __future__ import annotations
+
+import atexit
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+
+
+DEFAULT_ROOTFS = Path("/usr/share/guestos/fex-mesa")
+
+
+def fail(message: str) -> "NoReturn":
+    print(message, file=sys.stderr, flush=True)
+    raise SystemExit(1)
+
+
+def selected_rootfs(environment: dict[str, str]) -> Path:
+    provider = environment.get("STEAM_COMPAT_GRAPHICS_PROVIDER")
+    if provider:
+        provider_path = Path(provider)
+        if provider_path.name != "graphics_provider.json" or not provider_path.is_file():
+            fail("FX graphics provider is missing or invalid")
+        return provider_path.parent
+
+    provider_path = DEFAULT_ROOTFS / "graphics_provider.json"
+    if not provider_path.is_file():
+        fail("FX graphics provider is unavailable")
+    environment["STEAM_COMPAT_GRAPHICS_PROVIDER"] = str(provider_path)
+    return DEFAULT_ROOTFS
+
+
+def write_config(tool_root: Path, compat_data: Path, rootfs: Path) -> None:
+    template = tool_root / "ConfigTemplate.json"
+    if not template.is_file():
+        fail("FX configuration template is missing")
+    destination = compat_data / "fex-emu" / "Config.json"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    rendered = template.read_text(encoding="utf-8")
+    rendered = rendered.replace("@FEX_COMPAT_TOOL@", str(tool_root))
+    rendered = rendered.replace("@FEX_ROOTFS_PATH@", str(rootfs))
+    temporary = destination.with_name(destination.name + f".tmp-{os.getpid()}")
+    temporary.write_text(rendered, encoding="utf-8")
+    os.chmod(temporary, 0o600)
+    os.replace(temporary, destination)
+
+
+def app_config(environment: dict[str, str]) -> dict[str, dict[str, object]]:
+    result: dict[str, dict[str, object]] = {"Config": {}, "ThunksDB": {}}
+    for source, target in (
+        ("STEAM_FEX_TSOENABLED", "TSOEnabled"),
+        ("STEAM_FEX_MULTIBLOCK", "Multiblock"),
+    ):
+        value = environment.get(source)
+        if value in ("0", "1"):
+            result["Config"][target] = value == "1"
+
+    overrides = environment.get("STEAM_COMPAT_FEX_CONFIG", "")
+    if overrides:
+        result["Config"]["TSOEnabled"] = "1" if "TSOEnabled:1" in overrides else "0"
+        result["Config"]["Multiblock"] = "1" if "Multiblock:1" in overrides else "0"
+        result["ThunksDB"]["GL"] = "1" if "ThunksDB_GL:1" in overrides else "0"
+        result["ThunksDB"]["Vulkan"] = "1" if "ThunksDB_Vulkan:1" in overrides else "0"
+    return result
+
+
+def temporary_app_config(environment: dict[str, str]) -> None:
+    if environment.get("FEX_APP_CONFIG"):
+        return
+    descriptor, name = tempfile.mkstemp(prefix="hd2fx-fex-app-", suffix=".json")
+    path = Path(name)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+        json.dump(app_config(environment), stream, indent=2, sort_keys=True)
+        stream.write("\n")
+    os.chmod(path, 0o600)
+    environment["FEX_APP_CONFIG"] = str(path)
+    atexit.register(path.unlink, missing_ok=True)
+
+
+def main() -> int:
+    environment = dict(os.environ)
+    compat_data_value = environment.get("STEAM_COMPAT_DATA_PATH")
+    if not compat_data_value:
+        fail("Steam compatibility data path is unavailable")
+
+    arguments = sys.argv[1:]
+    if not arguments or arguments[0] not in ("run", "waitforexitandrun"):
+        fail("Unsupported FX compatibility-tool command")
+    arguments = arguments[1:]
+    if arguments[:1] == ["--"]:
+        arguments = arguments[1:]
+    if not arguments:
+        fail("Missing compatibility-tool command")
+
+    tool_root = Path(__file__).resolve().parent
+    rootfs = selected_rootfs(environment)
+    write_config(tool_root, Path(compat_data_value), rootfs)
+    temporary_app_config(environment)
+
+    environment.setdefault("FEX_PORTABLE", "1")
+    environment.setdefault("tu_override_uncached_as_cache_coherent", "true")
+    environment["STEAM_COMPAT_MACHINE_ARCHITECTURE"] = "aarch64-linux-gnu"
+    environment["STEAM_COMPAT_EMULATOR"] = str(tool_root / "emulator.json")
+    environment.pop("LD_PRELOAD", None)
+
+    executable = tool_root / "usr/bin/FEX"
+    if not executable.is_file() or not os.access(executable, os.X_OK):
+        fail("FX executable is missing or not executable")
+
+    completed = subprocess.run([str(executable), *arguments], env=environment, check=False)
+    return completed.returncode
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

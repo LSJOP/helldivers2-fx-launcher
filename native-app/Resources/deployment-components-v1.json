@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "BLOCKED_PUBLIC_RF_DISTRIBUTION",
+  "status": "V1_0_7_RC_RIGHTS_REVIEWED_LIVE_ACCEPTANCE_REQUIRED",
   "compatibility": "isolated FX 1.9.9 / SteamOS 0.4.5 aarch64 only; no gameplay claim",
   "bundled": [
     {
@@ -32,6 +32,20 @@
       "bytes": 1083919,
       "sha256": "c2469305cd27a8d613ca97aff2f676f772c037ebbbc0dd56e03512f07080efba",
       "bundled": true
+    },
+    {
+      "name": "distribution-approvals-v1.json",
+      "bytes": 4227,
+      "sha256": "2fc58dab78966426654f8eb5752f32a6f24147901a8726a4b18a0c7ad391ed24",
+      "bundled": true,
+      "purpose": "Hash-bound rights, provenance and RC/Stable approval decisions"
+    },
+    {
+      "name": "proton-je-11.0-20261014-3-source-lock.json",
+      "bytes": 11235,
+      "sha256": "eae02108934ac7843d827b20c2eb644f7b1af929b83d8c6dc0e80444c675d0c4",
+      "bundled": true,
+      "purpose": "Tagged source plus 62 recursive submodule identities"
     }
   ],
   "localTestOnly": [
@@ -317,26 +331,29 @@
       "bytes": 348245820,
       "sha256": "aa5430696ca39451299e2f007ef652bc030e6419242776343d48947e21827485",
       "source": "https://github.com/jegglest/proton-je/releases/download/proton-je-11.0-20261014-3/proton-je-11.0-20261014-3.tar.xz",
-      "license": "upstream notices retained; direct download",
+      "license": "Upstream notices retained; approved redistribution requires co-located corresponding source",
       "installer": "existing ProtonJERelease"
     }
   ],
   "rfPackagingPlan": {
-    "status": "CONTROLLED_DEBUG_READY_RELEASE_BLOCKED",
+    "status": "CONTROLLED_RC_ASSEMBLY_READY_STABLE_PENDING_LIVE_ACCEPTANCE",
     "preferred": "APP_BUNDLE",
     "fallback": "VERIFIED_DOWNLOAD",
     "fallbackSource": "UNVERIFIED",
-    "publicRedistribution": "UNVERIFIED",
-    "bundlePathStatus": "DEBUG_IMPLEMENTED_RELEASE_APPROVAL_REQUIRED",
+    "publicRedistribution": "RIGHTS_APPROVED_WITH_NOTICES_RECOVERED_SCRIPTS_EXCLUDED",
+    "bundlePathStatus": "RC_ASSEMBLY_IMPLEMENTED_STABLE_ACCEPTANCE_REQUIRED",
     "bundleRoot": "Contents/Resources/Deployment/RF-FEX",
     "debugManifest": "rf-fex-debug-manifest-v1.json",
     "debugExpectedFiles": 41,
     "debugPayloadFingerprint": "0ddd70d9b19e0a6abac26d9edb442fe43557376670c46d9489890f7eef913cd7",
     "debugBinaryTracking": "GIT_IGNORED_LOCAL_IMPORT_ONLY",
-    "releaseBuildGate": "REJECT_UNAPPROVED_RF_PAYLOAD",
+    "releaseBuildGate": "ALLOW_HASH_BOUND_RC_ONLY_REJECT_STABLE_UNTIL_ACCEPTED",
     "guestRoot": "~/.local/share/HD2FXLauncher/compatibility/FEX-RF",
     "arm64Runtime": "PRESERVE_SYSTEM_COMPONENT",
-    "inventoryScope": "Complete 41-file controlled-Debug inventory is pinned. Public payload provenance, companion redistribution and an approved fallback package remain UNVERIFIED."
+    "releaseExpectedFiles": 41,
+    "releaseExpectedBytes": 26325773,
+    "releasePayloadFingerprint": "79c051c4e5523513dcb5e030ac466f9b3941551e4f3109132e775b886596fbcd",
+    "inventoryScope": "The historical 41 files remain unchanged as evidence. The RC excludes the unlicensed recovered wrapper and unused unshare helper, then adds a project-owned wrapper and the FEX MIT notice. Stable inclusion still requires live acceptance."
   },
   "bundleArchives": [
     {
@@ -357,8 +374,13 @@
         "SteamLinuxRuntime_4:4183110",
         "RF FEX"
       ],
-      "license": "Per-component notices in archive; exact corresponding source and third-party terms pending",
-      "publicRedistribution": "UNAPPROVED",
+      "license": "Upstream consolidated LICENSE and LICENSE.OFL; LGPL/GPL/MPL corresponding-source obligations apply",
+      "publicRedistribution": "RC_APPROVED_STABLE_REQUIRES_COLOCATED_SOURCE_AND_LIVE_ACCEPTANCE",
+      "sourceTag": "proton-je-11.0-20261014-3",
+      "sourceCommit": "a69793ad2c48dbdf0299e5ef3264b99edb96eeda",
+      "sourceLock": "proton-je-11.0-20261014-3-source-lock.json",
+      "sourceLockSHA256": "eae02108934ac7843d827b20c2eb644f7b1af929b83d8c6dc0e80444c675d0c4",
+      "recursiveSubmodules": 62,
       "fallback": "https://github.com/jegglest/proton-je/releases/download/proton-je-11.0-20261014-3/proton-je-11.0-20261014-3.tar.xz"
     }
   ],

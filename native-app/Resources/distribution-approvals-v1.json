@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "reviewedAt": "2026-11-26",
+  "policy": "License rights, binary provenance, release approval, and runtime acceptance are independent decisions.",
+  "components": [
+    {
+      "id": "rf-fex",
+      "version": "eac-main-20261022-historical",
+      "distributionRights": "APPROVED_WITH_NOTICES",
+      "binaryProvenance": "HISTORICAL_STAGE_HASH_VERIFIED_SOURCE_FAMILY_MAPPED",
+      "releaseApproval": "RC_ONLY_PENDING_LIVE_ACCEPTANCE",
+      "sourceRepository": "https://github.com/StonkGuy/FEX",
+      "sourceCommit": "87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8",
+      "sourcePatchSHA256": "85999c4f3a82063c66095d5315a661f0eed8369ed7b4b03191ed5dc8521d7926",
+      "license": "MIT plus the dependency notices recorded in Third_Party_License_Inventory.md",
+      "noticePath": "LICENSE-FEX.txt",
+      "baseManifest": "rf-fex-debug-manifest-v1.json",
+      "baseManifestSHA256": "60117fc8cce144dbeb3be0b39b54675c72539619f3d089562bf5b5733508e88c",
+      "basePayloadFingerprint": "0ddd70d9b19e0a6abac26d9edb442fe43557376670c46d9489890f7eef913cd7",
+      "excludedRecoveredFiles": [
+        "fex-compat-tool",
+        "unshare.py"
+      ],
+      "releaseOverlay": [
+        {
+          "source": "rf-fex-release/fex-compat-tool",
+          "path": "fex-compat-tool",
+          "bytes": 4840,
+          "sha256": "2f8d88b65b85413584f0c6ca631a8ec85235ce64001e0be41ea6ccece860507d",
+          "mode": 493,
+          "owner": "LSJOP",
+          "license": "Project-owned release wrapper"
+        },
+        {
+          "source": "LICENSE-FEX.txt",
+          "path": "LICENSE-FEX.txt",
+          "bytes": 1094,
+          "sha256": "f34a779f56b36d22b20e1b990d23e583a6a7ca071331925fa46156441c77a1ee",
+          "mode": 420,
+          "owner": "Ryan Houdek and FEX contributors",
+          "license": "MIT"
+        }
+      ],
+      "releaseExpectedFiles": 41,
+      "releaseExpectedBytes": 26325773,
+      "releasePayloadFingerprint": "79c051c4e5523513dcb5e030ac466f9b3941551e4f3109132e775b886596fbcd",
+      "requiredBeforeStable": [
+        "Deploy the release payload through the real App to the isolated Guest",
+        "Pass the RF execution probe",
+        "Pass two normal Guest restarts",
+        "Verify HELLDIVERS 2 launch without bypassing anti-cheat"
+      ]
+    },
+    {
+      "id": "proton-je",
+      "version": "11.0-20261014-3",
+      "build": "1792806463",
+      "distributionRights": "APPROVED_WITH_NOTICES_AND_CORRESPONDING_SOURCE",
+      "binaryProvenance": "UPSTREAM_RELEASE_ASSET_HASH_VERIFIED",
+      "releaseApproval": "RC_ONLY_PENDING_SOURCE_PUBLICATION_AND_LIVE_ACCEPTANCE",
+      "sourceRepository": "https://github.com/jegglest/proton-je",
+      "sourceTag": "proton-je-11.0-20261014-3",
+      "sourceCommit": "a69793ad2c48dbdf0299e5ef3264b99edb96eeda",
+      "releaseURL": "https://github.com/jegglest/proton-je/releases/tag/proton-je-11.0-20261014-3",
+      "archive": "proton-je-11.0-20261014-3.tar.xz",
+      "bytes": 348245820,
+      "sha256": "aa5430696ca39451299e2f007ef652bc030e6419242776343d48947e21827485",
+      "sha512": "fca903662898b5b117c926a7fa52f8053ff3c099a687c16851b15a81b2ad69bdecc4305962e67ddce2d0ec682c80ceffe59d601878894ef70a43529364747f25",
+      "license": "BSD-3-Clause launcher plus the component licenses reproduced in the upstream archive",
+      "sourceLock": "proton-je-11.0-20261014-3-source-lock.json",
+      "sourceLockSHA256": "eae02108934ac7843d827b20c2eb644f7b1af929b83d8c6dc0e80444c675d0c4",
+      "recursiveSubmodules": 62,
+      "correspondingSourceArchive": "proton-je-11.0-20261014-3-corresponding-source.tar.xz",
+      "correspondingSourceBytes": 422456272,
+      "correspondingSourceSHA256": "d5f7e56ea9911f8bab985a3b80492e76ee0e07a62ba2a3dec3507cf75e615c61",
+      "requiredReleaseAssets": [
+        "proton-je-11.0-20261014-3-corresponding-source.tar.xz",
+        "proton-je-11.0-20261014-3.tar.xz"
+      ],
+      "requiredBeforeStable": [
+        "Verify the corresponding-source archive contains the tagged tree and every recursive submodule at its pinned object",
+        "Publish the corresponding-source archive beside the binary archive",
+        "Deploy and probe the archive through the real App in the isolated Guest"
+      ]
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.36** · Updated: **2026-11-25**.
-Change: fixed development branches, bounded worktrees and explicit release exceptions, and integrated Dashboard V003 and controlled Debug FX runtime repair. Instruction version is independent of App version.
+Instruction version: **v1.2.37** · Updated: **2026-11-26**.
+Change: separate upstream license rights, binary provenance, internal release approval and live compatibility acceptance; bind reviewed component candidates to immutable approval evidence. Instruction version is independent of App version.
 
 ## Authority and task lifecycle
 
@@ -35,6 +35,7 @@ Change: fixed development branches, bounded worktrees and explicit release excep
 
 - Bundle reviewed RF FEX and Proton-JE plus configuration templates. Use only approved fixed, verified fallback sources. Steam manages Steam Linux Runtime 4.0 (AppID 4183110) in the Guest. Discover the actual Steam library and qualify its version, build, architecture and container execution. Keep Runtime archives out of all App and update artifacts. First-run setup must not ask ordinary users to supply RF files or point to a developer's local directory.
 - For all bundled deployment resources record source, build/version, license, bytes and SHA-256. Public artifacts require confirmed redistribution rights and verified package provenance. Historical samples and unresolved companion files stay out of public bundles and download endpoints.
+- Do not equate an unfinished internal checklist with missing upstream redistribution rights. Record license grant, required notices/source offer, binary provenance, RC/Stable approval and live acceptance independently. Exclude or replace any individual file whose rights cannot be established; never approve it by changing only a catalogue flag. A rights-approved RC may remain blocked from Stable by source-delivery or runtime acceptance conditions.
 
 - Historical RF binaries are opt-in local Debug inputs only. Keep them Git-ignored and exclude their App from CI artifacts, Releases and update feeds. See [acceptance](docs/testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md).
 - Prefer the verified compressed Proton-JE Bundle archive and reuse the existing SSH/SFTP transaction. Historical archives stay local and opt-in until approved individually for redistribution. Preserve the original SteamLinuxRuntime_4-arm64. Reuse FEX staging, identity checks, transactions and recovery. Keep managed RF in its own persistent path under Guest /home, outside Steam's managed depot.
