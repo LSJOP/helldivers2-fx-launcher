@@ -111,6 +111,14 @@ final class ProgressRecorder: @unchecked Sendable {
         try FileManager.default.createSymbolicLink(atPath: treeRoot.appendingPathComponent("Versions/Current").path,
                                                    withDestinationPath: "B")
         let before = try ComponentUpdate.tree(treeRoot, limit: 4096)
+        // macOS can return /var to the caller and /private/var during enumeration.
+        let runtimeDirectory = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
+            .appendingPathComponent("hd2-update-" + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: runtimeDirectory, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: runtimeDirectory) }
+        try Data([0x5a]).write(to: runtimeDirectory.appendingPathComponent("module.dat"))
+        let runtimeTree = try ComponentUpdate.tree(runtimeDirectory, limit: 4096)
+        check(runtimeTree.bytes == 1, "component inventory uses relative paths in a real macOS temporary directory")
         try Data("changed".utf8).write(to: library)
         let after = try ComponentUpdate.tree(treeRoot, limit: 4096)
         try check(before.bytes == after.bytes && before.hash != after.hash, "framework symlinks preserve traversal of real signed files")

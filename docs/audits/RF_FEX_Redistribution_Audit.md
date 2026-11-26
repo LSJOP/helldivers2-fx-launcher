@@ -1,7 +1,9 @@
 # RF FEX Redistribution Audit
 
-Date: 2026-11-26  
-Scope: `eac-main-20261022-historical`, retained 41-file controlled payload  
+Date: 2026-11-26
+
+Scope: `eac-main-20261022-historical`, retained 41-file controlled payload
+
 Historical payload: 26,327,173 bytes; tree SHA-256 `0ddd70d9b19e0a6abac26d9edb442fe43557376670c46d9489890f7eef913cd7`
 
 ## Decision

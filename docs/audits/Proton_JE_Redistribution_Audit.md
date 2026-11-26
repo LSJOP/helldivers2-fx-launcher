@@ -1,7 +1,9 @@
 # Proton-JE Redistribution Audit
 
-Date: 2026-11-26  
-Version: `11.0-20261014-3`  
+Date: 2026-11-26
+
+Version: `11.0-20261014-3`
+
 Build: `1792806463`
 
 ## Decision

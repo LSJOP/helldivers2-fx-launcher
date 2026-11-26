@@ -465,19 +465,19 @@ struct ComponentUpdate: Codable {
     static func tree(_ directory: URL, limit: Int64) throws -> (hash: String, bytes: Int64) {
         let fm = FileManager.default
         guard directory.path == directory.resolvingSymlinksInPath().path,
-              let entries = fm.enumerator(at: directory, includingPropertiesForKeys: nil),
+              let entries = fm.enumerator(atPath: directory.path),
               try directory.resourceValues(forKeys: [.isDirectoryKey]).isDirectory == true else {
             throw NativeUpdateFailure.integrity
         }
         var inventory: [UpdateArchiveEntry] = [.init(path: rootName, kind: .directory)]
         var records: [(String, String)] = []
         var bytes: Int64 = 0
-        for case let item as URL in entries {
+        for case let name as String in entries {
             try Task.checkCancellation()
+            let item = directory.appendingPathComponent(name)
             var metadata = stat()
             guard records.count < 19_998, lstat(item.path, &metadata) == 0,
                   metadata.st_mode & 0o7000 == 0 else { throw NativeUpdateFailure.integrity }
-            let name = String(item.path.dropFirst(directory.path.count + 1))
             let kind: UpdateArchiveEntry.Kind
             let payload: String
             switch metadata.st_mode & S_IFMT {

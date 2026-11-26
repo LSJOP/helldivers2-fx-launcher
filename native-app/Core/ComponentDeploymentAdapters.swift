@@ -834,17 +834,17 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
                                     "mode": .number(Double(entry.mode)), "data": .string(contents.base64EncodedString())]))
         }
         guard replayHash(fingerprint) == manifest.payloadFingerprint,
-              let iterator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey]) else {
+              let iterator = FileManager.default.enumerator(atPath: root.path) else {
             throw CoreError("ARTIFACT_HASH")
         }
         var scanned = 0
-        for case let file as URL in iterator {
+        for case let relative as String in iterator {
             scanned += 1
+            let file = root.appendingPathComponent(relative)
             guard scanned <= 128 else { throw CoreError("OUTPUT_LIMIT") }
             let values = try file.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
             guard values.isSymbolicLink != true else { throw CoreError("UNSAFE_PATH") }
             if values.isRegularFile == true {
-                let relative = String(file.path.dropFirst(root.path.count + 1))
                 guard ApprovedArtifact.safe(relative) else { throw CoreError("UNSAFE_PATH") }
                 actual.insert(relative)
             }

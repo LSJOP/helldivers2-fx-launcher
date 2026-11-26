@@ -20,6 +20,7 @@ if [[ -d "$source/Deployment/RF-FEX" ]]; then
     --destination "$scratch/RF-FEX" --output-manifest "$scratch/RF-FEX.manifest.json"
   /bin/rm -rf "$deployment/RF-FEX"
   /bin/mv "$scratch/RF-FEX" "$deployment/RF-FEX"
+  /bin/chmod 755 "$deployment/RF-FEX"
   /usr/bin/python3 -I -B "$root/script/rf_fex_bundle.py" verify-package \
     --manifest "$resources/rf-fex-package-v1.json" --payload "$deployment/RF-FEX"
   /bin/rm -f "$deployment/RF-FEX.manifest.json"
@@ -29,6 +30,7 @@ fi
 if [[ -d "$source/Deployment/Proton-JE" ]]; then
   /usr/bin/python3 -I -B "$root/script/deployment_archives.py" copy \
     --catalogue "$catalogue" --source "$source" --destination "$resources"
+  /bin/chmod 644 "$deployment"/Proton-JE/*.tar.xz
 else
   /usr/bin/python3 -I -B "$root/script/deployment_archives.py" reject \
     --catalogue "$catalogue" --destination "$resources"
