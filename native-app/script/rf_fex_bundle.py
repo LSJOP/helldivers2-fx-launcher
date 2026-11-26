@@ -47,6 +47,17 @@ def safe_relative(value: str) -> bool:
     )
 
 
+def has_symlink_component(path: Path) -> bool:
+    """Check existing path components without comparing Unicode spellings."""
+    current = path.absolute()
+    while True:
+        if current.is_symlink():
+            return True
+        if current.parent == current:
+            return False
+        current = current.parent
+
+
 def load_manifest(path: Path) -> dict:
     if path.is_symlink() or not path.is_file() or path.stat().st_size > 1024 * 1024:
         raise BundleError("manifest is missing, linked, or too large")
@@ -163,7 +174,7 @@ def source_bytes(root: Path, item: dict) -> bytes:
         raise BundleError(f"missing source: {item['sourceRelativePath']}") from error
     if not stat.S_ISREG(metadata.st_mode) or stat.S_ISLNK(metadata.st_mode) or metadata.st_nlink != 1:
         raise BundleError(f"unsafe source: {item['sourceRelativePath']}")
-    if source.resolve() != source.absolute():
+    if has_symlink_component(source):
         raise BundleError(f"linked source parent: {item['sourceRelativePath']}")
     data = source.read_bytes()
     if digest(data) != item["sourceSHA256"]:
@@ -181,7 +192,7 @@ def source_bytes(root: Path, item: dict) -> bytes:
 
 
 def actual_files(root: Path) -> dict[str, Path]:
-    if root.is_symlink() or not root.is_dir() or root.resolve() != root.absolute():
+    if root.is_symlink() or not root.is_dir() or has_symlink_component(root):
         raise BundleError("payload root is missing or linked")
     actual: dict[str, Path] = {}
     for directory, directories, files in os.walk(root, followlinks=False):
@@ -246,7 +257,7 @@ def release_manifest(debug_manifest: dict, approval: dict, resources: Path) -> t
         if not isinstance(relative, str) or not safe_relative(relative):
             raise BundleError("unsafe release overlay path")
         source = resources / source_name
-        if source.is_symlink() or not source.is_file() or source.resolve() != source.absolute():
+        if source.is_symlink() or not source.is_file() or has_symlink_component(source):
             raise BundleError("release overlay is missing or linked")
         data = source.read_bytes()
         if len(data) != item.get("bytes") or digest(data) != item.get("sha256") or item.get("mode") not in (420, 493):
@@ -333,7 +344,7 @@ def assemble_release(source: Path, destination: Path, output_manifest: Path,
 def import_payload(source_root: Path, destination: Path, manifest: dict) -> str:
     source_root = source_root.expanduser().absolute()
     destination = destination.expanduser().absolute()
-    if source_root.is_symlink() or not source_root.is_dir() or source_root.resolve() != source_root:
+    if source_root.is_symlink() or not source_root.is_dir() or has_symlink_component(source_root):
         raise BundleError("source root is missing or linked")
     if destination.exists():
         return verify_payload(destination, manifest)

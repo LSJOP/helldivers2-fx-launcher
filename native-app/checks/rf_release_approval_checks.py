@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -19,6 +20,15 @@ def digest(path):
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             sha.update(chunk)
     return sha.hexdigest()
+
+
+def load_bundle_module():
+    path = ROOT / "script/rf_fex_bundle.py"
+    spec = importlib.util.spec_from_file_location("rf_fex_bundle", path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
 
 
 class ReleaseApprovalChecks(unittest.TestCase):
@@ -100,6 +110,16 @@ class ReleaseApprovalChecks(unittest.TestCase):
             config = (compat / "fex-emu/Config.json").read_text()
             self.assertIn(str(tool), config)
             self.assertIn(str(provider.parent), config)
+
+    def test_unicode_path_is_not_mistaken_for_a_symlink(self):
+        module = load_bundle_module()
+        with tempfile.TemporaryDirectory(prefix="rf-资源-") as temporary:
+            root = Path(temporary) / "组件"
+            root.mkdir()
+            self.assertFalse(module.has_symlink_component(root))
+            linked = Path(temporary) / "linked"
+            linked.symlink_to(root, target_is_directory=True)
+            self.assertTrue(module.has_symlink_component(linked))
 
 
 if __name__ == "__main__":
