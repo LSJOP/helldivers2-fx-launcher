@@ -371,7 +371,7 @@ def import_payload(source_root: Path, destination: Path, manifest: dict) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=("import", "verify", "verify-release", "assemble-release"))
+    parser.add_argument("command", choices=("import", "verify", "verify-release", "verify-package", "assemble-release"))
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--payload", type=Path)
     parser.add_argument("--source-root", type=Path)
@@ -380,7 +380,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--resources", type=Path)
     parser.add_argument("--output-manifest", type=Path)
     args = parser.parse_args()
-    if args.command == "verify" and args.payload is None:
+    if args.command in ("verify", "verify-package") and args.payload is None:
         parser.error("verify requires --payload")
     if args.command == "verify-release" and (args.payload is None or args.approval is None):
         parser.error("verify-release requires --payload and --approval")
@@ -399,6 +399,11 @@ def main() -> int:
         if args.command == "verify-release":
             manifest = load_release_manifest(args.manifest.absolute(), args.approval.absolute())
             fingerprint = verify_payload(args.payload.absolute(), manifest)
+        elif args.command == "verify-package":
+            if (has_symlink_component(args.manifest)
+                    or file_digest(args.manifest) != "8354dbaf034e5c96d3b5cee84354e5a9650aea2c04245c979ff42be4d44636d8"):
+                raise BundleError("packaged integrity manifest differs from the reviewed package")
+            fingerprint = verify_payload(args.payload.absolute(), json.loads(args.manifest.read_bytes()))
         else:
             manifest = load_manifest(args.manifest.absolute())
         if args.command == "verify":

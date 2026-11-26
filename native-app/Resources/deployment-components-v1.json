@@ -34,18 +34,10 @@
       "bundled": true
     },
     {
-      "name": "distribution-approvals-v1.json",
-      "bytes": 4227,
-      "sha256": "2fc58dab78966426654f8eb5752f32a6f24147901a8726a4b18a0c7ad391ed24",
-      "bundled": true,
-      "purpose": "Hash-bound rights, provenance and RC/Stable approval decisions"
-    },
-    {
-      "name": "proton-je-11.0-20261014-3-source-lock.json",
-      "bytes": 11235,
-      "sha256": "eae02108934ac7843d827b20c2eb644f7b1af929b83d8c6dc0e80444c675d0c4",
-      "bundled": true,
-      "purpose": "Tagged source plus 62 recursive submodule identities"
+      "name": "rf-fex-package-v1.json",
+      "bytes": 9742,
+      "sha256": "8354dbaf034e5c96d3b5cee84354e5a9650aea2c04245c979ff42be4d44636d8",
+      "bundled": true
     }
   ],
   "localTestOnly": [

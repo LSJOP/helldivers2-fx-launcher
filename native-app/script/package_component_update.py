@@ -78,12 +78,13 @@ def asset(path, tag):
 def reusable_assets(previous, info):
     if previous is None:
         return {}
-    manifest_path = previous / "update-manifest.json"
+    stem = "update-manifest-v3" if (previous / "update-manifest-v3.json").is_file() else "update-manifest"
+    manifest_path = previous / (stem + ".json")
     if manifest_path.stat().st_size > 65_536:
         raise ValueError("Previous manifest exceeds the protocol limit")
     old = json.loads(manifest_path.read_bytes())
     subprocess.run(["/usr/bin/swift", str(ROOT.parent / "script/verify_stable_signatures.swift"),
-                    str(previous), info["SUPublicEDKey"], old["archive"]], check=True)
+                    str(previous), info["SUPublicEDKey"], old["archive"], stem], check=True)
     if old["schema"] != 3 or old["bundleID"] != info["CFBundleIdentifier"]:
         raise ValueError("Incompatible previous component catalogue")
     return {item["id"]: item for item in old["components"]["modules"]}
@@ -197,14 +198,9 @@ def run(app, output, minimum, local_test, previous=None, dmg=False, signing_key=
             or any(os.environ.get(name) for name in ("CI", "GITHUB_ACTIONS"))):
             raise ValueError("Private fixtures require the isolated local test identity and ignored build directory")
     else:
-        # The current deployment catalogue rejects every historical unapproved asset.
-        subprocess.run(["/usr/bin/python3", "-I", "-B", str(ROOT / "script/deployment_archives.py"),
-                        "reject", "--catalogue", str(ROOT / "Resources/deployment-components-v1.json"),
-                        "--destination", str(resources)], check=True)
-        if (resources / "Deployment/RF-FEX").exists() or (resources / "Deployment/RF-FEX.manifest.json").exists():
-            raise ValueError("RF redistribution is unapproved")
-        if info.get("CFBundleIdentifier") != BUNDLE_ID:
-            raise ValueError("Wrong application identifier")
+        subprocess.run([str(ROOT / "script/check_release_bundle.sh"), str(app)], check=True)
+        if not signing_key:
+            raise ValueError("Public component updates require the pinned signing key")
     subprocess.run(["/usr/bin/codesign", "--verify", "--deep", "--strict", str(app)], check=True)
     arch = subprocess.check_output(["/usr/bin/lipo", "-archs", str(app / "Contents/MacOS/HD2FXNative")], text=True).strip()
     if arch != "arm64":
@@ -219,7 +215,10 @@ def run(app, output, minimum, local_test, previous=None, dmg=False, signing_key=
     target_hash, target_size = inventory(app)
     catalogue = json.loads((resources / "deployment-components-v1.json").read_text())
     versions = {item["name"]: item["version"] for item in catalogue["bundleArchives"]}
-    versions["rf-fex"] = json.loads((resources / "Deployment/RF-FEX.manifest.json").read_text())["version"]
+    rf_manifest = resources / "rf-fex-package-v1.json"
+    if local_test and not rf_manifest.exists():
+        rf_manifest = resources / "Deployment/RF-FEX.manifest.json"
+    versions["rf-fex"] = json.loads(rf_manifest.read_text())["version"]
     versions["proton-je"] = versions["Proton-JE"]
 
     if local_test and previous:
@@ -286,17 +285,18 @@ def run(app, output, minimum, local_test, previous=None, dmg=False, signing_key=
                         length=full_asset["length"], sha256=full_asset["sha256"], sourceCommit=commit,
                         components=dict(protocolVersion=1, minimumBaseBuild=minimum, targetTreeSHA256=target_hash,
                                         targetBytes=target_size, core=core_asset, modules=modules))
-        (output / "update-manifest.json").write_text(json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n")
+        stem = "update-manifest-v3" if not local_test else "update-manifest"
+        (output / (stem + ".json")).write_text(json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n")
         if signing_key:
-            operator = ROOT / "script/update_signing.swift"
-            public_key = subprocess.check_output(["/usr/bin/swift", str(operator), "public", str(signing_key)], text=True).strip()
-            if public_key != info.get("SUPublicEDKey"):
-                raise ValueError("Signing key does not match the App trust root")
-            signature = subprocess.check_output(["/usr/bin/swift", str(operator), "sign", str(signing_key),
-                                                 str(output / "update-manifest.json")], text=True)
-            (output / "update-manifest.sig").write_text(signature)
-            subprocess.run(["/usr/bin/swift", str(ROOT.parent / "script/verify_stable_signatures.swift"),
-                            str(output), public_key, full.name], check=True)
+            sign(output, stem, signing_key, info, full)
+            if not local_test and manifest["channel"] == "stable" and manifest["length"] <= 536_870_912:
+                legacy = {key: value for key, value in manifest.items() if key != "components"}
+                legacy["schema"] = 2
+                legacy["archiveEdSignature"] = subprocess.check_output(
+                    ["/usr/bin/swift", str(ROOT / "script/update_signing.swift"), "sign", str(signing_key), str(full)],
+                    text=True).strip()
+                (output / "update-manifest.json").write_text(json.dumps(legacy, sort_keys=True, separators=(",", ":")) + "\n")
+                sign(output, "update-manifest", signing_key, info, full)
         print(f"App {target_size} bytes, Full ZIP {full.stat().st_size} bytes, Core ZIP {core_zip.stat().st_size} bytes")
         if dmg:
             image = output / f"HD2FXNative-{tag}-macOS-arm64.dmg"

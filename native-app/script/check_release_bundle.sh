@@ -38,20 +38,23 @@ else
 fi
 has "$APP/Contents/Frameworks/Sparkle.framework" "SPARKLE EMBEDDED"
 
-# Historical RF payloads are controlled-Debug inputs until every binary and
-# companion file has approved provenance and redistribution rights.
-if [ -e "$APP/Contents/Resources/Deployment/RF-FEX" ] || [ -e "$APP/Contents/Resources/Deployment/RF-FEX.manifest.json" ]; then
-  bad "NO UNAPPROVED RF RELEASE PAYLOAD"
+root="$(cd "$(dirname "$0")/.." && pwd -P)"
+resources="$(cd "$APP/Contents/Resources" && pwd -P)"
+deployment="$resources/Deployment"
+if [[ -L "$deployment" || -e "$deployment/SteamLinuxRuntime_4" || -L "$deployment/SteamLinuxRuntime_4" ]]; then
+  bad "STEAM-MANAGED RUNTIME EXCLUDED"
 else
-  ok "NO UNAPPROVED RF RELEASE PAYLOAD"
+  ok "STEAM-MANAGED RUNTIME EXCLUDED"
 fi
-
-root="$(cd "$(dirname "$0")/.." && pwd)"
-if /usr/bin/python3 -I -B "$root/script/deployment_archives.py" reject \
-     --catalogue "$root/Resources/deployment-components-v1.json" --destination "$APP/Contents/Resources" >/dev/null 2>&1; then
-  ok "NO UNAPPROVED CORE ARCHIVES"
-else
-  bad "NO UNAPPROVED CORE ARCHIVES"
+if [[ -e "$deployment/RF-FEX" || -L "$deployment/RF-FEX" || -e "$deployment/Proton-JE" || -L "$deployment/Proton-JE" ]]; then
+  if /usr/bin/python3 -I -B "$root/script/rf_fex_bundle.py" verify-package \
+      --manifest "$resources/rf-fex-package-v1.json" --payload "$deployment/RF-FEX" \
+    && /usr/bin/python3 -I -B "$root/script/deployment_archives.py" verify \
+      --catalogue "$root/Resources/deployment-components-v1.json" --destination "$resources"; then
+    ok "RF AND PROTON PAYLOAD INTEGRITY"
+  else
+    bad "RF AND PROTON PAYLOAD INTEGRITY"
+  fi
 fi
 
 # Info.plist identity.
@@ -88,6 +91,19 @@ if find "$APP" -maxdepth 4 -type d -name 'bridge' 2>/dev/null | grep -q .; then 
 
 # Code signature.
 /usr/bin/codesign --verify --deep --strict "$APP" >/dev/null 2>&1 && ok "CODE SIGNATURE VERIFY" || bad "CODE SIGNATURE VERIFY"
+
+# A structurally valid signature can still fail dyld library validation.
+app_signature=$(/usr/bin/codesign -dv --verbose=4 "$APP" 2>&1)
+if printf '%s\n' "$app_signature" | grep -Eq '^CodeDirectory .*flags=.*\([^)]*runtime'; then
+  app_team=$(printf '%s\n' "$app_signature" | sed -n 's/^TeamIdentifier=//p')
+  sparkle_signature=$(/usr/bin/codesign -dv --verbose=4 "$APP/Contents/Frameworks/Sparkle.framework" 2>&1)
+  sparkle_team=$(printf '%s\n' "$sparkle_signature" | sed -n 's/^TeamIdentifier=//p')
+  if [ -n "$app_team" ] && [ "$app_team" != "not set" ] && [ "$app_team" = "$sparkle_team" ]; then
+    ok "HARDENED RUNTIME SPARKLE SIGNING TEAM"
+  else
+    bad "HARDENED RUNTIME REQUIRES MATCHING APP AND SPARKLE SIGNING TEAMS"
+  fi
+fi
 
 [ "$fail" -eq 0 ] && echo "RELEASE RESOURCE INTEGRITY: PASS" || echo "RELEASE RESOURCE INTEGRITY: FAIL"
 exit "$fail"

@@ -41,10 +41,15 @@ func runChecks() {
     check(!redactedDiagnostic.contains("fixture-secret") && !redactedDiagnostic.contains("id_ed25519"),
           "diagnostic report removes credentials and SSH key paths")
 
-    for method in ["first_run_fex_build", "first_run_fex_install", "first_run_fex_recover"] {
+    for method in ["first_run_fex_build", "first_run_fex_install", "first_run_fex_recover", "first_run_fex_repair"] {
         checkThrows("CONFIRMATION_REQUIRED", "FEX action requires explicit initiation: " + method) {
             _ = try NativeCoreService.perform(method, params: [:], context: CoreContext(timeout: 1), onEvent: nil)
         }
+    }
+
+    checkThrows("CREDENTIAL_SCOPE_CHANGED", "automatic FEX repair requires the verified Guest boot") {
+        _ = try NativeCoreService.perform("first_run_fex_repair", params: ["confirmed": .bool(true)],
+                                          context: CoreContext(timeout: 1), onEvent: nil)
     }
 
     let fexSnapshot = DeploymentSnapshot(target: "fixture", boot: UUID().uuidString, revision: "fixture", fxVersion: "fixture", osVersion: "fixture", architecture: "aarch64", steamRunning: false, gameRunning: false, freeBytes: 0,
@@ -71,8 +76,11 @@ func runChecks() {
     let stock199 = "f9cbb7a70e804b9930fed02fd9d1349d49d7808faace703063a9b4944bc3568e"
     check(FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.9", architecture: "aarch64", executableSHA256: stock199),
           "known failing stock FX 1.9.9 FEX cannot inherit probe success")
-    check(!FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.12", architecture: "aarch64", executableSHA256: stock199)
-          && !FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.9", architecture: "aarch64", executableSHA256: LaunchService.verifiedFEX),
+    check(FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.12", architecture: "aarch64", executableSHA256: stock199),
+          "reproduced FX 1.9.12 stock FEX failure cannot inherit probe success")
+    check(!FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.13", architecture: "aarch64", executableSHA256: stock199)
+          && !FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.12", architecture: "aarch64", executableSHA256: LaunchService.verifiedFEX)
+          && !FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.12", architecture: "x86_64", executableSHA256: stock199),
           "known incompatibility does not apply to other FX versions or FEX binaries")
 
     var installedFEX = fexSnapshot

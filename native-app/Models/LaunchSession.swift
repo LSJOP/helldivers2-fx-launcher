@@ -128,7 +128,6 @@ struct EnvironmentWorkflow {
     var completedSteps = 0
     var launchesGame = false
     var failure: ErrorState?
-    var needsRestartApproval = false
     var deploymentStage: String?
     var archiveComponent: String?
     var archivePhase: String?

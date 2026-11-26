@@ -210,7 +210,6 @@ enum DeploymentArchive {
     }
 
     static func verified(_ name: String, context: CoreContext) throws -> URL? {
-        #if DEBUG
         guard let root = Bundle.main.resourceURL?.resolvingSymlinksInPath(),
               let catalogue = Bundle.main.url(forResource: "deployment-components-v1", withExtension: "json") else { return nil }
         struct Catalogue: Decodable { let bundleArchives: [Entry] }
@@ -234,9 +233,6 @@ enum DeploymentArchive {
         }
         let hash = sha.finalize().map { String(format: "%02x", $0) }.joined()
         return total == entry.bytes && hash == entry.sha256 ? file : nil
-        #else
-        return nil
-        #endif
     }
 }
 
@@ -244,42 +240,29 @@ enum ProtonJERelease {
     static let version = "proton-je-11.0-20261014-3"
     static let digest = "aa5430696ca39451299e2f007ef652bc030e6419242776343d48947e21827485"
     static func manifest() throws -> Data {
-        try verifyBundledComponents()
-        guard let url = Bundle.main.url(forResource: "proton-je-approved", withExtension: "json") else { throw CoreError("ARTIFACT_UNAPPROVED") }
+        guard let url = Bundle.main.url(forResource: "proton-je-approved", withExtension: "json") else {
+            throw CoreError("ARTIFACT_UNAVAILABLE")
+        }
         let data = try Data(contentsOf: url)
         guard data.count <= CoreLimits.maxResourceFile,
-              let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              object["archiveSHA256"] as? String == digest, object["version"] as? String == version else { throw CoreError("ARTIFACT_UNAPPROVED") }
+              CoreHash.sha256(data) == "c2469305cd27a8d613ca97aff2f676f772c037ebbbc0dd56e03512f07080efba" else {
+            throw CoreError("ARTIFACT_HASH")
+        }
         return data
     }
-    /// The bundle catalogue contains metadata/templates only; it never authorizes RF binaries.
-    private static func verifyBundledComponents() throws {
-        guard let catalog = Bundle.main.url(forResource: "deployment-components-v1", withExtension: "json"),
-              let object = try JSONSerialization.jsonObject(with: Data(contentsOf: catalog)) as? [String: Any],
-              object["schema"] as? Int == 1, let entries = object["bundled"] as? [[String: Any]],
-              entries.count == 5 else { throw CoreError("ARTIFACT_UNAPPROVED") }
-        for entry in entries {
-            guard let name = entry["name"] as? String,
-                  name.range(of: "^[A-Za-z0-9_.-]+$", options: .regularExpression) != nil,
-                  let size = entry["bytes"] as? Int, size <= CoreLimits.maxResourceFile,
-                  let expected = entry["sha256"] as? String,
-                  let resource = Bundle.main.resourceURL?.resolvingSymlinksInPath().appendingPathComponent(name),
-                  resource.path == resource.resolvingSymlinksInPath().path else { throw CoreError("ARTIFACT_UNAPPROVED") }
-            let bytes = try Data(contentsOf: resource)
-            guard bytes.count == size,
-                  SHA256.hash(data: bytes).map({ String(format: "%02x", $0) }).joined() == expected else {
-                throw CoreError("ARTIFACT_HASH")
-            }
-        }
+    static func damagedState(_ state: String?) -> Bool {
+        guard let state, state.hasPrefix("damaged:") else { return false }
+        return ApprovedArtifact.hash(String(state.dropFirst("damaged:".count)))
     }
-    static func script(mode: String, manifest: Data, boot: String = "", suffix: String = UUID().uuidString, useHostProxy: Bool = false, bundled: Bool = false) throws -> String {
+    static func script(mode: String, manifest: Data, boot: String = "", suffix: String = UUID().uuidString,
+                       useHostProxy: Bool = false, bundled: Bool = false, prior: String = "missing") throws -> String {
         guard ["probe", "install", "recover", "prepare", "cleanup"].contains(mode), mode == "probe" || UUID(uuidString: boot) != nil,
               UUID(uuidString: suffix) != nil else { throw CoreError("INVALID_ARGUMENT") }
-        let prefix = "MANIFEST=" + CoreJSON.encode(.string(manifest.base64EncodedString())) + "\nMODE=" + CoreJSON.encode(.string(mode)) + "\nBOOT=" + CoreJSON.encode(.string(boot)) + "\nSUFFIX=" + CoreJSON.encode(.string(suffix)) + "\n"
+        let prefix = "MANIFEST=" + CoreJSON.encode(.string(manifest.base64EncodedString())) + "\nMODE=" + CoreJSON.encode(.string(mode)) + "\nBOOT=" + CoreJSON.encode(.string(boot)) + "\nSUFFIX=" + CoreJSON.encode(.string(suffix)) + "\nPRIOR=" + CoreJSON.encode(.string(prior)) + "\n"
         return "python3 - <<'HD2_PROTON_PY'\n" + prefix + "USE_HOST_PROXY=" + (useHostProxy ? "1" : "0") + "\nBUNDLED=" + (bundled ? "1" : "0") + "\n" + python + "\nHD2_PROTON_PY\n"
     }
     static let python = #"""
-import os,sys,json,base64,hashlib,pathlib,stat,subprocess,tempfile,tarfile,shutil,posixpath,re
+import os,sys,json,base64,hashlib,pathlib,stat,subprocess,tempfile,tarfile,shutil,posixpath,re,signal
 m=json.loads(base64.b64decode(MANIFEST))
 mode=MODE
 BUNDLED=globals().get('BUNDLED',0)
@@ -322,15 +305,45 @@ def verified(path,allow_runtime_cache=True):
   if int.from_bytes(header[8:12],'little')!=int(source_stat.st_mtime)&0xffffffff or int.from_bytes(header[12:16],'little')!=source_stat.st_size:return False
  for name,(sha,permissions) in m['files'].items():
   f=path/name
-  if not stat.S_ISREG(f.lstat().st_mode) or f.is_symlink() or digest(f)!=sha or (f.stat().st_mode&0o111)!=(permissions&0o111):return False
+  if not stat.S_ISREG(f.lstat().st_mode) or f.is_symlink() or digest(f)!=sha or stat.S_IMODE(f.stat().st_mode)!=permissions:return False
  for name,target in m['links'].items():
   f=path/name
   if not f.is_symlink() or os.readlink(f)!=target:return False
  return all(stat.S_ISDIR((path/name).lstat().st_mode) for name in m['directories'])
+def damaged_tree(path):
+ if not path.is_dir() or path.is_symlink() or path.stat().st_uid!=os.getuid():return None
+ known=set(m['files'])|set(m['links'])|set(m['directories'])
+ # The version directory itself is insufficient evidence of package ownership.
+ identity_present=False
+ for name in ('proton','version','compatibilitytool.vdf','toolmanifest.vdf'):
+  f=path/name
+  if name in m['files'] and not f.is_symlink() and f.is_file() and f.stat().st_size<=8*1024**2 and digest(f)==m['files'][name][0]:identity_present=True
+ if not identity_present:return None
+ tree={};total=0
+ for folder,dirs,files in os.walk(path,followlinks=False):
+  for name in dirs+files:
+   f=pathlib.Path(folder)/name
+   relative=f.relative_to(path).as_posix();metadata=f.lstat()
+   if relative not in known or metadata.st_uid!=os.getuid() or metadata.st_mode&0o7000:return None
+   if f.is_symlink():
+    if relative not in m['links'] or os.readlink(f)!=m['links'][relative]:return None
+    tree[relative]=['link',os.readlink(f)]
+   elif stat.S_ISDIR(metadata.st_mode) and relative in m['directories']:
+    tree[relative]=['dir',stat.S_IMODE(metadata.st_mode)]
+   elif stat.S_ISREG(metadata.st_mode) and relative in m['files'] and metadata.st_nlink==1:
+    total+=metadata.st_size
+    if total>m['unpackedBytes'] or metadata.st_size>512*1024**2:return None
+    tree[relative]=['file',stat.S_IMODE(metadata.st_mode),digest(f)]
+   else:return None
+ tree['.']=['dir',stat.S_IMODE(path.stat().st_mode)]
+ return 'damaged:'+hashlib.sha256(json.dumps(tree,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 def state():
  safe_parents(p)
  if not os.path.lexists(p):return 'missing'
- return m['archiveSHA256'] if verified(p) else 'unknown'
+ try:
+  if verified(p):return m['archiveSHA256']
+  return damaged_tree(p) or 'unknown'
+ except OSError:return 'unknown'
 def idle():
  if pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip()!=BOOT:raise RuntimeError('TARGET_CHANGED')
  for name in ['reaper','helldivers2.exe']:
@@ -340,6 +353,7 @@ if mode=='probe':
  print('proton_package='+state())
  sys.exit(0)
 safe_parents(root)
+PRIOR=globals().get('PRIOR','missing')
 incoming=root/('.hd2-proton-incoming-'+SUFFIX)
 safe_parents(incoming)
 if mode=='cleanup':
@@ -352,15 +366,28 @@ root.mkdir(parents=True,exist_ok=True)
 lock=pathlib.Path.home()/'.hd2-native-deployment-lock'
 lock.mkdir(mode=0o700)
 try:
+ def interrupted(signum,frame):raise RuntimeError('CANCELLED')
+ for sig in (signal.SIGHUP,signal.SIGINT,signal.SIGTERM):signal.signal(sig,interrupted)
  idle()
+ before=state()
+ backup=None
+ if re.fullmatch(r'damaged:[0-9a-f]{64}',PRIOR):
+  backup=root/('.hd2-proton-backup-'+PRIOR.split(':',1)[1])
+  safe_parents(backup)
  if mode=='recover':
-  if state()=='missing':sys.exit(0)
-  if state()!=m['archiveSHA256']:raise RuntimeError('EXTERNAL_DRIFT')
+  if before==PRIOR:sys.exit(0)
+  if before!=m['archiveSHA256']:raise RuntimeError('EXTERNAL_DRIFT')
+  if backup is not None and damaged_tree(backup)!=PRIOR:raise RuntimeError('EXTERNAL_DRIFT')
   retained=root/(m['version']+'.hd2-recovered-'+SUFFIX)
   if os.path.lexists(retained):raise RuntimeError('EXTERNAL_DRIFT')
   idle();p.rename(retained)
+  try:
+   if backup is not None:backup.rename(p)
+  except BaseException:
+   retained.rename(p);raise
   sys.exit(0)
- if state()!='missing':raise RuntimeError('EXTERNAL_DRIFT')
+ if before!=PRIOR or (PRIOR!='missing' and backup is None):raise RuntimeError('EXTERNAL_DRIFT')
+ if backup is not None and os.path.lexists(backup):raise RuntimeError('EXTERNAL_DRIFT')
  needed=m['unpackedBytes']+67108864
  if mode=='prepare' or not BUNDLED:needed+=m['archiveBytes']
  if shutil.disk_usage(root).free < needed:raise RuntimeError('INSUFFICIENT_SPACE')
@@ -379,10 +406,6 @@ try:
     shutil.copyfile(cache,archive)
    else:
     subprocess.run(curl+['--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','600','--max-filesize',str(m['archiveBytes']),'--output',str(archive),m['url']],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=610)
-   checksum=stage/'payload.sha512sum'
-   subprocess.run(curl+['--fail','--location','--proto','=https','--proto-redir','=https','--connect-timeout','20','--max-time','30','--max-filesize','4096','--output',str(checksum),m['url'].replace('.tar.xz','.sha512sum')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=40)
-   published=checksum.read_text().split()
-   if len(published)!=2 or published[0]!=m['archiveSHA512'] or published[1] not in [m['version']+'.tar.xz','*'+m['version']+'.tar.xz']:raise RuntimeError('ARTIFACT_HASH')
   metadata=archive.lstat()
   if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink!=1 or metadata.st_size!=m['archiveBytes'] or digest(archive)!=m['archiveSHA256']:raise RuntimeError('ARTIFACT_HASH')
   sha512=hashlib.sha512()
@@ -410,11 +433,18 @@ try:
   candidate=unpack/m['version']
   if not verified(candidate,allow_runtime_cache=False):raise RuntimeError('ARTIFACT_HASH')
   idle();safe_parents(p)
-  if os.path.lexists(p):raise RuntimeError('EXTERNAL_DRIFT')
-  candidate.rename(p)
-  if not verified(p):
-   p.rename(candidate)
-   raise RuntimeError('VERIFY_FAILED')
+  if state()!=PRIOR or (backup is not None and os.path.lexists(backup)):raise RuntimeError('EXTERNAL_DRIFT')
+  moved=False
+  activated=False
+  try:
+   if backup is not None:
+    p.rename(backup);moved=True
+   candidate.rename(p);activated=True
+   if not verified(p):raise RuntimeError('VERIFY_FAILED')
+  except BaseException:
+   if activated:p.rename(candidate)
+   if moved:backup.rename(p)
+   raise
  finally:
   shutil.rmtree(stage)
 finally:
@@ -424,15 +454,15 @@ finally:
 
 /// Pinned-source build review and independent installed-runtime compatibility probes.
 enum FEXWorkflow {
-    // The FX 1.9.9 stock binary passed the synthetic probe but failed the
-    // recorded Wine launch comparison. A tree approval cannot override this.
+    // These exact FX releases shipped the same stock FEX binary and failed
+    // the recorded Wine launch. A synthetic probe or approval cannot override this.
     static func hasKnownLaunchIncompatibility(fxVersion: String, architecture: String, executableSHA256: String?) -> Bool {
-        fxVersion == "1.9.9" && architecture == "aarch64" &&
+        ["1.9.9", "1.9.12"].contains(fxVersion) && architecture == "aarch64" &&
             executableSHA256 == "f9cbb7a70e804b9930fed02fd9d1349d49d7808faace703063a9b4944bc3568e"
     }
 
-    /// Recompute the full installed tree for every action. Consent never certifies provenance.
-    static func observe(_ backend: SSHEnvironmentBackend, snapshot: inout DeploymentSnapshot, approvals: [String]) throws {
+    /// Recompute the full installed tree before running the compatibility probe.
+    static func observe(_ backend: SSHEnvironmentBackend, snapshot: inout DeploymentSnapshot) throws {
         let helpers = SteamRuntime4.evidence + "\n" + pipeline.components(separatedBy: "work=pathlib.Path.home()")[0]
         func probe(_ expected: String = "", runtimePath: String = "") throws -> [String: JSONValue] {
             let script = "python3 - <<'HD2_FEX_PROBE'\n" + helpers + "\nEXPECTED_BOOT=" + CoreJSON.encode(.string(snapshot.boot)) + "\nEXPECTED_TREE=" + CoreJSON.encode(.string(expected)) + "\nRUNTIME_PATH=" + CoreJSON.encode(.string(runtimePath)) + "\n" + runtimeProbe + "\nHD2_FEX_PROBE\n"
@@ -464,6 +494,7 @@ enum FEXWorkflow {
         if hasKnownLaunchIncompatibility(fxVersion: snapshot.fxVersion, architecture: snapshot.architecture,
                                          executableSHA256: staticResult["executable_sha256"]?.text) {
             snapshot.facts["fex_reason"] = "FEX_KNOWN_LAUNCH_INCOMPATIBILITY"
+            snapshot.facts["fex_diagnostic_reason"] = "FEX_KNOWN_LAUNCH_INCOMPATIBILITY"
             return
         }
         let approval = runtimeApproval(tree: tree, snapshot: snapshot)
@@ -472,36 +503,11 @@ enum FEXWorkflow {
         snapshot.facts["fex_executable_sha256"] = staticResult["executable_sha256"]?.text
         snapshot.facts["fex_managed_emulator"] = staticResult["managed_emulator"]?.text
         snapshot.facts["fex_registered_rootfs"] = staticResult["registered_rootfs"]?.text
-        snapshot.facts["fex_provenance"] = "unverified"
-        let reviewed = verifyInstalled(tree: tree, snapshot: snapshot)
-        if reviewed { snapshot.facts["fex_provenance"] = "verified" }
-        // A private Debug Bundle can recognize an exact App-owned installation
-        // from an earlier run. Full payload verification still precedes the
-        // runtime probe, and this does not establish public build provenance.
-        var matchesBundle = false
-        #if DEBUG
-        if !reviewed, !approvals.contains(approval), tree == controlledDebugTree,
-           staticResult["managed_emulator"]?.text != nil {
-            matchesBundle = (try? bundledPackage()) != nil
-        }
-        #endif
-        guard reviewed || approvals.contains(approval) || matchesBundle else {
-            #if DEBUG
-            // A previously accepted bundled tree may now have a readable but
-            // changed file. The install transaction still requires its receipt,
-            // a known inventory shape, and an unchanged pre-swap fingerprint.
-            if staticResult["managed_emulator"]?.text != nil,
-               tree != controlledDebugTree,
-               approvals.contains(runtimeApproval(tree: controlledDebugTree, snapshot: snapshot)),
-               let resources = Bundle.main.resourceURL,
-               FileManager.default.fileExists(atPath: resources.appendingPathComponent("Deployment/RF-FEX.manifest.json").path) {
-                snapshot.facts["fex_reason"] = "FEX_CHANGED"
-                snapshot.facts["fex_diagnostic_reason"] = "FEX_MANAGED_TREE_CHANGED"
-                return
-            }
-            #endif
-            snapshot.facts["fex_status"] = "confirmation"
-            snapshot.facts["fex_reason"] = "FEX_CONFIRMATION_REQUIRED"
+        let matchesPackage = tree == packagedGuestTree && staticResult["source_type"]?.text == "app-managed"
+        let reviewed = matchesPackage || verifyInstalled(tree: tree, snapshot: snapshot)
+        snapshot.facts["fex_provenance"] = reviewed ? "verified" : "unverified"
+        guard reviewed else {
+            snapshot.facts["fex_reason"] = "FEX_CHANGED"
             return
         }
         let dependency = try SteamRuntime4.observe(backend, snapshot: snapshot)
@@ -517,7 +523,7 @@ enum FEXWorkflow {
             snapshot.facts["fex_reason"] = runtime["reason"]?.text ?? "FEX_RUNTIME_FAILED"
             return
         }
-        snapshot.facts["fex_status"] = reviewed ? "normal" : "compatible"
+        snapshot.facts["fex_status"] = "normal"
         snapshot.facts["fex_runtime"] = "ready"
         snapshot.facts["fex_probe_rootfs"] = runtime["probe_rootfs"]?.text
         snapshot.facts["fex_loaded_executable"] = runtime["loaded_executable"]?.text
@@ -700,26 +706,87 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
     private struct RFBundleFile: Decodable {
         let path: String, name: String, sha256: String
         let bytes: Int, mode: Int
-        let publicDistributionAllowed: Bool, controlledDebugOnly: Bool
     }
     private struct RFBundleManifest: Decodable {
         let schema: Int, packageID: String, version: String, expectedFiles: Int
-        let payloadFingerprint: String, debugOnly: Bool, distributionApproved: Bool
+        let payloadFingerprint: String
         let guestRoot: String, files: [RFBundleFile]
     }
     private struct RFBundlePackage {
         let id: String, fingerprint: String, files: [JSONValue]
     }
 
-    /// Validate the complete Bundle tree before any Guest upload. Release builds use the
-    /// same path, but reject controlled-Debug manifests unless redistribution was approved.
-    private static func bundledPackage() throws -> RFBundlePackage {
+    private static let packagedManifestHash = "8354dbaf034e5c96d3b5cee84354e5a9650aea2c04245c979ff42be4d44636d8"
+    private static let packagedGuestTree = "518185cf0713a01224d38c04897897547d8ec5e80f04426a45662b5bdd64e09f"
+
+    private static func bundledPackage(context: CoreContext) throws -> (RFBundlePackage, String) {
         guard let resources = Bundle.main.resourceURL?.resolvingSymlinksInPath() else {
             throw CoreError("ARTIFACT_UNAVAILABLE")
         }
         let deployment = resources.appendingPathComponent("Deployment", isDirectory: true)
+        do {
+            return (try verifiedPackage(deployment: deployment, manifestDirectory: resources), "app-bundle")
+        } catch {
+            try context.check()
+        }
+        let fm = FileManager.default
+        let workspace = fm.temporaryDirectory.resolvingSymlinksInPath()
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: workspace, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        defer { try? fm.removeItem(at: workspace) }
+
+        guard let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
+              let buildString = Bundle.main.infoDictionary?["CFBundleVersion"] as? String, let build = Int(buildString),
+              let keyString = Bundle.main.infoDictionary?["SUPublicEDKey"] as? String,
+              let keyData = Data(base64Encoded: keyString),
+              let publicKey = try? Curve25519.Signing.PublicKey(rawRepresentation: keyData),
+              (try? NativeVersion(version)) != nil else { throw CoreError("ARTIFACT_UNAVAILABLE") }
+        let release = "https://github.com/" + NativeUpdateHTTP.repository + "/releases/download/v" + version + "/"
+        func download(_ url: URL, bytes: Int64, name: String) throws -> URL {
+            guard NativeUpdateHTTP.trusted(url) else { throw CoreError("ARTIFACT_UNAVAILABLE") }
+            let output = workspace.appendingPathComponent(name)
+            let result = try CoreProcess.run("/usr/bin/curl", ["--disable", "--fail", "--silent", "--location",
+                "--proto", "=https", "--proto-redir", "=https", "--connect-timeout", "15", "--max-time", "120",
+                "--max-filesize", String(bytes), "--output", output.path, url.absoluteString],
+                timeout: 125, context: context)
+            guard result.status == 0 else { throw CoreError("ARTIFACT_UNAVAILABLE") }
+            return output
+        }
+        guard let manifestAsset = URL(string: release + "update-manifest-v3.json"),
+              let signatureAsset = URL(string: release + "update-manifest-v3.sig") else { throw CoreError("ARTIFACT_UNAVAILABLE") }
+        let manifestURL = try download(manifestAsset, bytes: 65_536, name: "manifest")
+        let signatureURL = try download(signatureAsset, bytes: 1024, name: "signature")
+        let manifest = try Data(contentsOf: manifestURL)
+        guard let signature = Data(base64Encoded: try String(contentsOf: signatureURL, encoding: .utf8)
+                .trimmingCharacters(in: .whitespacesAndNewlines)),
+              publicKey.isValidSignature(signature, for: manifest) else { throw CoreError("ARTIFACT_HASH") }
+        let releaseManifest = try JSONDecoder().decode(NativeUpdateManifest.self, from: manifest)
+        guard releaseManifest.schema == 3, releaseManifest.bundleID == NativeReleaseService.bundleID,
+              releaseManifest.version == version, releaseManifest.build == build,
+              releaseManifest.architecture == "arm64", releaseManifest.channel == "stable",
+              let components = releaseManifest.components else { throw CoreError("ARTIFACT_UNAVAILABLE") }
+        try components.validate(version: version, build: build)
+        guard let module = components.modules.first(where: { $0.id == "rf-fex" }),
+              module.artifact.length <= 48 * 1_048_576, module.artifact.expandedBytes <= 48 * 1_048_576 else {
+            throw CoreError("ARTIFACT_UNAVAILABLE")
+        }
+        let archive = try download(module.artifact.url, bytes: module.artifact.length, name: "rf.zip")
+        guard try ComponentUpdate.fileDigest(archive, length: module.artifact.length) == module.artifact.sha256 else {
+            throw CoreError("ARTIFACT_HASH")
+        }
+        try ComponentUpdate.extract(archive, at: workspace, expectedBytes: module.artifact.expandedBytes)
+        let root = workspace.appendingPathComponent(ComponentUpdate.rootName).appendingPathComponent(module.path)
+        guard try ComponentUpdate.tree(root, limit: module.artifact.expandedBytes).hash == module.treeSHA256 else {
+            throw CoreError("ARTIFACT_HASH")
+        }
+        let package = try verifiedPackage(deployment: root.deletingLastPathComponent(), manifestDirectory: resources)
+        return (package, "verified-download")
+    }
+
+    /// Pinned manifest bytes and the complete file inventory are checked for both sources.
+    private static func verifiedPackage(deployment: URL, manifestDirectory: URL) throws -> RFBundlePackage {
         let root = deployment.appendingPathComponent("RF-FEX", isDirectory: true)
-        let manifestURL = deployment.appendingPathComponent("RF-FEX.manifest.json")
+        let manifestURL = manifestDirectory.appendingPathComponent("rf-fex-package-v1.json")
         let manifestValues = try? manifestURL.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
         let rootValues = try? root.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
         guard manifestValues?.isRegularFile == true, manifestValues?.isSymbolicLink != true,
@@ -730,32 +797,11 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
             throw CoreError("ARTIFACT_UNAVAILABLE")
         }
         let manifestData = try Data(contentsOf: manifestURL)
-        #if DEBUG
-        guard replayHash(manifestData) == "60117fc8cce144dbeb3be0b39b54675c72539619f3d089562bf5b5733508e88c" else {
-            throw CoreError("ARTIFACT_HASH")
-        }
-        #else
-        // Release approval requires a separately reviewed, compiled-in manifest hash.
-        let approvedManifestHashes: Set<String> = [
-            // v1.0.7 review candidate: historical FEX outputs with the recovered
-            // Valve wrapper/unshare helper replaced by the project-owned wrapper
-            // and the FEX MIT notice. Stable packaging remains separately gated.
-            "f491ba43783d986a183592bb5fb7f3f0fc4b338e80c8b3f1089a764914135bca"
-        ]
-        guard approvedManifestHashes.contains(replayHash(manifestData)) else {
-            throw CoreError("ARTIFACT_UNAPPROVED")
-        }
-        #endif
+        guard replayHash(manifestData) == packagedManifestHash else { throw CoreError("ARTIFACT_HASH") }
         let manifest = try JSONDecoder().decode(RFBundleManifest.self, from: manifestData)
         guard manifest.schema == 1, manifest.expectedFiles == 41, manifest.files.count == 41,
               manifest.guestRoot == "~/.local/share/HD2FXLauncher/compatibility/FEX-RF",
               ApprovedArtifact.hash(manifest.payloadFingerprint) else { throw CoreError("ARTIFACT_FORMAT") }
-        #if DEBUG
-        guard manifest.debugOnly, !manifest.distributionApproved else { throw CoreError("ARTIFACT_UNAPPROVED") }
-        #else
-        guard !manifest.debugOnly, manifest.distributionApproved else { throw CoreError("ARTIFACT_UNAPPROVED") }
-        #endif
-
         var expected = Set<String>(), actual = Set<String>()
         var payload: [JSONValue] = [], total = 0
         var fingerprint = Data()
@@ -766,11 +812,6 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
                   ApprovedArtifact.hash(entry.sha256) else {
                 throw CoreError("ARTIFACT_FORMAT")
             }
-            #if DEBUG
-            guard entry.controlledDebugOnly, !entry.publicDistributionAllowed else { throw CoreError("ARTIFACT_UNAPPROVED") }
-            #else
-            guard !entry.controlledDebugOnly, entry.publicDistributionAllowed else { throw CoreError("ARTIFACT_UNAPPROVED") }
-            #endif
             let file = root.appendingPathComponent(entry.path)
             let values = try file.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
             guard values.isRegularFile == true, values.isSymbolicLink != true, values.fileSize == entry.bytes,
@@ -837,7 +878,7 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
         try payload.write(to: payloadFile, options: .atomic)
         install["files_sha256"] = .string(replayHash(payload))
         let staging = try runLocalReplay(backend: backend, request: install, phase: "upload")
-        defer { _ = try? runLocalReplay(backend: backend, request: install, phase: "cleanup") }
+        defer { _ = try? runLocalReplay(backend: backend, request: install, phase: "cleanup", context: CoreContext(timeout: 35)) }
         guard let remotePayload = staging["files"]?.text else {
             throw CoreError("PROTOCOL_ERROR")
         }
@@ -845,12 +886,12 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
         let result = try runLocalReplay(backend: backend, request: install, phase: "install")
         guard result["verified"]?.boolean == true, let tree = result["installed_manifest"]?.text,
               ApprovedArtifact.hash(tree) else { throw CoreError("VERIFY_FAILED") }
-        return ["approval": .string(runtimeApproval(tree: tree, snapshot: snapshot)),
-                "installed_manifest": .string(tree), "verified": .bool(true)]
+        guard tree == packagedGuestTree else { throw CoreError("VERIFY_FAILED") }
+        return ["installed_manifest": .string(tree), "verified": .bool(true)]
     }
 
     private static func runLocalReplay(backend: SSHEnvironmentBackend, request: [String: JSONValue],
-                                       phase: String) throws -> [String: JSONValue] {
+                                       phase: String, context: CoreContext? = nil) throws -> [String: JSONValue] {
         let payload = Data(CoreJSON.encode(.object(request)).utf8).base64EncodedString()
         let code: String
         if phase == "install" {
@@ -862,7 +903,7 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
         }
         let script = "python3 - <<'HD2_FEX_LOCAL'\nimport base64,json\nREQUEST=json.loads(base64.b64decode('" + payload + "'))\n" + code + "\nHD2_FEX_LOCAL\n"
         _ = try backend.hostIdentity()
-        let outcome = try backend.transport.run(script, timeout: phase == "install" ? 350 : 30, context: backend.context)
+        let outcome = try backend.transport.run(script, timeout: phase == "install" ? 350 : 30, context: context ?? backend.context)
         guard outcome.status == 0 else {
             let reasons = ["STEAM_RUNTIME_INCOMPATIBLE", "FEX_LOCAL_RUNTIME_MISSING", "FEX_ROOTFS_UNAVAILABLE", "TARGET_CHANGED", "STEAM_RUNNING",
                            "EXTERNAL_DRIFT", "ARTIFACT_HASH", "ARTIFACT_FORMAT", "UNSAFE_PATH", "VERIFY_FAILED",
@@ -880,7 +921,8 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
         guard snapshot.architecture == "aarch64", !snapshot.gameRunning,
               let machineID = snapshot.facts["machine_id"], !machineID.isEmpty else { throw CoreError("TARGET_CHANGED") }
         var request: [String: JSONValue] = ["boot": .string(snapshot.boot),
-            "machine": .string(CoreHash.sha256(Data(machineID.utf8))), "bundle_package": .bool(true)]
+            "machine": .string(CoreHash.sha256(Data(machineID.utf8))),
+            "expected_tree": .string(packagedGuestTree)]
         if let managed = snapshot.facts["fex_managed_emulator"] {
             guard managed.hasSuffix("/HD2FXLauncher/compatibility/FEX-RF/emulator.json"),
                   let tree = snapshot.facts["fex_tree"] ?? snapshot.facts["fex_repair_tree"],
@@ -893,115 +935,10 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
             request["legacy_tree"] = .string(tree)
         }
         var result = try deployReplay(backend: backend, snapshot: snapshot, request: request, files: package.files)
-        result["resource_source"] = .string("app-bundle")
         result["package_id"] = .string(package.id)
         result["package_fingerprint"] = .string(package.fingerprint)
         return result
     }
-
-    #if DEBUG
-    private static let controlledDebugTree = "23b5d17d9bcdd332ce57d2fcbdfece90279106d845b52c84c77bd31bf10fd655"
-    private static let localRFInventory: [(String, String, Int)] = [
-        ("usr/bin/FEX", "ce93cadae7b7d3ef01376ba2acd58aedb602a7fc077e49592179766d13c294bf", 493),
-        ("usr/bin/FEXBash", "ec3e084e8ace83eee1de61d052b5d6b61f19d4ca6ca8d17180aeb39ccf512ddd", 493),
-        ("usr/bin/FEXGetConfig", "7da0614a4c1c16ac4cf92e7eae5b4bc0255722cf3675e7b30f7a5a6c06e21cde", 493),
-        ("usr/bin/FEXOfflineCompiler", "7c7aa677f33cbc8ac5d7cff7ef693fabd6d74d162809120eb51124a281f5c03e", 493),
-        ("usr/bin/FEXpidof", "907b6801d8cbb2844b66ad8cb199cff933aa7e9b63f596ebd924179bbde9ef56", 493),
-        ("usr/bin/FEXServer", "f32cf426de3d1126bc89bdbf59bd244f9a371fe967b5c2e76437c496eea98236", 493),
-        ("usr/bin/FEXServerManager", "02ff8a14554a8ffc91ec4c71bb2fa470c965b6f38bb5316c44e9296a3bfa4898", 493),
-        ("FEXCompatTool", "85a86207a34c9ae286435ba7ea19aa004ef50220ddc043eeb6bc8963ce516b67", 493),
-        ("ConfigTemplate.json", "e458d3fe3d0e259de3465f621b6742df16e6f0858aa8484a39fd5e47366aeb1d", 420),
-        ("VERSIONS.txt", "e4d61eba61576bfd8ea8dae3cde90dd079b9bf000cf6352b2ff52dfbdd781fea", 420),
-        ("emulator.json", "431e4340dabceb76fd83733864058e1d4176fa35aecde3b8c69cafc686968774", 420),
-        ("toolmanifest.vdf", "35c57b914d1263ae03016aaca37784686c23503c80b7269a13f59f34fb97f08f", 420),
-        ("fex-compat-tool", "3dcb4a90765683c681d7d156ac52116317bbfea0d3161658664101510b0bc8d2", 493),
-    ]
-
-    // A developer launch argument opts this explicit test image into local replay.
-    // Neither the local package nor this entry point is available in Release builds.
-    private static let localGuestDigest = "ace6a40cbce2fb3848a8b28fb7e7f8202e370b111a0e1eac898ab6861f78a5e6"
-
-    static var localReplayEnabled: Bool {
-        ProcessInfo.processInfo.arguments.contains("--hd2-local-rf-replay")
-    }
-
-    static func localReplay(backend: SSHEnvironmentBackend) throws -> [String: JSONValue] {
-        guard localReplayEnabled, backend.fx.lastPathComponent == "FX Steam Launcher测试用.app",
-              backend.transport.settings.host == "127.0.0.1", backend.transport.settings.port == 2223 else {
-            throw CoreError("ARTIFACT_UNAPPROVED")
-        }
-        let snapshot = try backend.snapshot()
-        guard snapshot.fxVersion == "1.9.9", snapshot.osVersion == "0.4.5", snapshot.architecture == "aarch64",
-              snapshot.facts["machine_id"].map({ CoreHash.sha256(Data($0.utf8)) }) == localGuestDigest,
-              !snapshot.gameRunning else {
-            throw CoreError("TARGET_CHANGED")
-        }
-        let arguments = ProcessInfo.processInfo.arguments
-        func resourceArgument(_ flag: String) throws -> URL {
-            guard let index = arguments.firstIndex(of: flag), arguments.indices.contains(index + 1) else {
-                throw CoreError("ARTIFACT_UNAVAILABLE")
-            }
-            let url = URL(fileURLWithPath: arguments[index + 1]).standardizedFileURL
-            guard url.path == url.resolvingSymlinksInPath().path else { throw CoreError("UNSAFE_PATH") }
-            return url
-        }
-        let disk = try resourceArgument("--hd2-test-image").path
-        let rows = try LaunchService.processTable(context: backend.context)
-        let owner = try LaunchService.fxSupervisorPID(rows: rows, executable: LaunchService.normalizedExecutable(backend.fx))
-        let ownership = try CoreProcess.run("/usr/sbin/lsof", ["-t", disk], timeout: 8, context: backend.context)
-        let pids = ownership.stdout.split(whereSeparator: \.isNewline).compactMap { Int($0) }
-        guard ownership.status == 0, !pids.isEmpty,
-              pids.allSatisfy({ LaunchService.descendant($0, of: owner, rows: rows) }) else { throw CoreError("TARGET_CHANGED") }
-
-        // Check the exact runtime and Steam state before sending bytes or creating a receipt.
-        var request: [String: JSONValue] = ["boot": .string(snapshot.boot), "machine": .string(localGuestDigest)]
-        if snapshot.facts["fex_managed_emulator"] != nil {
-            guard snapshot.facts["fex_registered_rootfs"] == "/",
-                  let tree = snapshot.facts["fex_tree"], ApprovedArtifact.hash(tree) else {
-                throw CoreError("EXTERNAL_DRIFT")
-            }
-            request["legacy_tree"] = .string(tree)
-        }
-        let base = try resourceArgument("--hd2-rf-resources")
-        let support = base.appendingPathComponent("rf-replay-support")
-        let manifest = try localArtifact(support.appendingPathComponent("SHA256SUMS"),
-            hash: "43663a2d2d0c1b22f44c0d6d4ed2ef1b6bc145aca94157786b6b3434de26db1b")
-        let extra = try String(decoding: manifest, as: UTF8.self).split(whereSeparator: \.isNewline).map { line -> (String, String, Int) in
-            let fields = line.split(separator: " ")
-            guard fields.count == 2, ApprovedArtifact.hash(String(fields[0])),
-                  fields[1] == "unshare.py" || fields[1].hasPrefix("usr/lib/") || fields[1].hasPrefix("usr/share/") else {
-                throw CoreError("ARTIFACT_FORMAT")
-            }
-            return (String(fields[1]), String(fields[0]), 0o755)
-        }
-        let parts = localRFInventory.map { (base.appendingPathComponent($0.0 == "fex-compat-tool" ?
-            "steamos_test.img-fex-compat-tool" : "rf-verified-stage/" + $0.0), $0.0, $0.1, $0.2) }
-            + extra.map { (support.appendingPathComponent($0.0), $0.0, $0.1, $0.2) }
-        let files: [JSONValue] = try parts.map { file, path, hash, mode in
-            var contents = try localArtifact(file, hash: hash)
-            if path == "fex-compat-tool" {
-                // The archived wrapper dumps its entire process environment to a log.
-                let original = String(decoding: contents, as: UTF8.self)
-                let trimmed = original.replacingOccurrences(of: "subprocess.call(['/usr/bin/printenv'])", with: "")
-                guard trimmed != original else { throw CoreError("ARTIFACT_FORMAT") }
-                contents = Data(trimmed.utf8)
-            }
-            return .object(["path": .string(path), "sha256": .string(replayHash(contents)), "mode": .number(Double(mode)),
-                            "data": .string(contents.base64EncodedString())])
-        }
-        return try deployReplay(backend: backend, snapshot: snapshot, request: request, files: files)
-    }
-
-    private static func localArtifact(_ file: URL, hash: String) throws -> Data {
-        let values = try? file.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
-        guard file.path == file.resolvingSymlinksInPath().path, values?.isRegularFile == true,
-              let size = values?.fileSize, size <= 8 * 1_048_576 else { throw CoreError("ARTIFACT_UNAVAILABLE") }
-        let contents = try Data(contentsOf: file)
-        guard contents.count == size, replayHash(contents) == hash else { throw CoreError("ARTIFACT_HASH") }
-        return contents
-    }
-
-    #endif
 
     static func run(_ method: String, backend: SSHEnvironmentBackend, params: [String: JSONValue]) throws -> [String: JSONValue] {
         let mode = String(method.dropFirst("first_run_fex_".count))
@@ -1082,19 +1019,16 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
 }
 
 extension FEXWorkflow {
-    /// First-run repair enters the existing identity-bound install transaction automatically.
-    /// It may reuse an exact, previously reviewed candidate. A new source build is deliberately
-    /// not treated as a verified download: compiler output is not the historical approved
-    /// binary and the public Bundle/download manifest is still blocked. No developer path or
-    /// user-supplied file is accepted.
-    static func repair(backend: SSHEnvironmentBackend, params: [String: JSONValue],
+    /// First run uses the same identity-bound transaction for the bundle and its signed fallback.
+    static func repair(backend: SSHEnvironmentBackend,
                        emit: (String, String, [String: JSONValue]) -> Void) throws -> [String: JSONValue] {
         let before = try backend.snapshot()
         let reason = before.facts["fex_reason"] ?? "FEX_RUNTIME_FAILED"
         let repairable = ["FEX_MISSING", "FEX_NOT_EXECUTABLE", "FEX_ARCHITECTURE",
                           "FEX_INTEGRATION_MISSING", "FEX_CHANGED", "FEX_INTEGRITY_FAILED",
                           "FEX_RUNTIME_FAILED", "FEX_DEPENDENCY_FAILED", "FEX_LOCAL_RUNTIME_MISSING",
-                          "FEX_KNOWN_LAUNCH_INCOMPATIBILITY", "FEX_PROTON_INTEGRATED_UNVERIFIED"]
+                          "FEX_KNOWN_LAUNCH_INCOMPATIBILITY", "FEX_PROTON_INTEGRATED_UNVERIFIED",
+                    "STEAM_RUNTIME_INCOMPATIBLE"]
         guard repairable.contains(reason) else {
             throw CoreError(reason, ["diagnostic_reason": .string(before.facts["fex_diagnostic_reason"] ?? reason)])
         }
@@ -1106,7 +1040,7 @@ extension FEXWorkflow {
             emit("INFO", "Steam Runtime setup", ["kind": .string("steam_runtime_stage"), "runtime_phase": .string(phase)])
         }
         try SteamRuntime4.ensure(backend, snapshot: before, progress: runtimeProgress)
-        if reason == SteamRuntime4.missing {
+        if reason == SteamRuntime4.missing || reason == SteamRuntime4.unverified {
             let after = try backend.snapshot()
             try requireCompatible(after)
             runtimeProgress("ready")
@@ -1114,64 +1048,23 @@ extension FEXWorkflow {
                     "verification": .object(["runtime_build": .string(after.facts["steam_runtime_build"] ?? "unknown"),
                                              "runtime_version": .string(after.facts["steam_runtime_version"] ?? "unknown")])]
         }
-        let package: RFBundlePackage?
+        let (package, source): (RFBundlePackage, String)
         do {
-            package = try bundledPackage()
-        } catch let error as CoreError where error.code == "ARTIFACT_UNAVAILABLE" {
-            package = nil
+            (package, source) = try bundledPackage(context: backend.context)
+        } catch is NativeUpdateFailure {
+            throw CoreError("ARTIFACT_HASH", ["component": .string("fex")])
         }
-        if let package {
-            emit("INFO", "FX runtime Bundle verified", ["deployment_state": .string("Deploying"),
-                 "component": .string("fex"), "status": .string("running"), "source": .string("app-bundle")])
-            var bundled = try bundleReplay(backend: backend, package: package)
-            guard let approval = bundled["approval"]?.text, ApprovedArtifact.hash(approval) else {
-                throw CoreError("VERIFY_FAILED")
-            }
-            backend.fexApprovals.append(approval)
-            let after = try backend.snapshot()
-            try requireCompatible(after)
-            runtimeProgress("ready")
-            emit("INFO", "FX runtime repair verified", ["deployment_state": .string("Verifying"),
-                 "component": .string("fex"), "status": .string("done"), "source": .string("app-bundle")])
-            bundled["repair_attempted"] = .bool(true)
-            bundled["repair_source"] = .string("app-bundle")
-            bundled["repair_reason"] = .string(reason)
-            bundled["verification"] = .object([
-                "status": .string(after.facts["fex_status"] ?? "unknown"),
-                "runtime": .string(after.facts["fex_runtime"] ?? "unknown"),
-                "executable_sha256": .string(after.facts["fex_executable_sha256"] ?? ""),
-                "tree_sha256": .string(after.facts["fex_tree"] ?? "")
-            ])
-            return bundled
-        }
-        let candidate = try run("first_run_fex_audit", backend: backend, params: params)
-        let audit = candidate["fex_audit"]?.object ?? [:]
-        let source = "existing-reviewed-build"
-        guard audit["ready"]?.boolean == true,
-              audit["executable_sha256"]?.text == audit["expected_sha256"]?.text,
-              let ticket = candidate["fex_ticket"]?.text, UUID(uuidString: ticket) != nil else {
-            emit("ERROR", "FX runtime resource unavailable", ["deployment_state": .string("Deploying"),
-                 "component": .string("fex"), "status": .string("failed"),
-                 "source": .string("bundle-first"), "diagnostic_reason": .string("RF_BUNDLE_PAYLOAD_UNAVAILABLE")])
-            throw CoreError("ARTIFACT_UNAVAILABLE", [
-                "component": .string("fex"),
-                "diagnostic_reason": .string("RF_BUNDLE_PAYLOAD_UNAVAILABLE"),
-                "bundle_status": .string("BLOCKED_PUBLIC_RF_DISTRIBUTION"),
-                "fallback_status": .string("UNVERIFIED"),
-                "source": .string("bundle-first")
-            ])
-        }
-        var installParams = params
-        installParams["receipt_id"] = .string(ticket)
-        let installed = try run("first_run_fex_install", backend: backend, params: installParams)
+        emit("INFO", "FX runtime package verified", ["deployment_state": .string("Deploying"),
+             "component": .string("fex"), "status": .string("running"), "source": .string(source)])
+        var result = try bundleReplay(backend: backend, package: package)
         let after = try backend.snapshot()
         try requireCompatible(after)
         runtimeProgress("ready")
         emit("INFO", "FX runtime repair verified", ["deployment_state": .string("Verifying"),
              "component": .string("fex"), "status": .string("done"), "source": .string(source)])
-        var result = installed
         result["repair_attempted"] = .bool(true)
         result["repair_source"] = .string(source)
+        result["resource_source"] = .string(source)
         result["repair_reason"] = .string(reason)
         result["verification"] = .object([
             "status": .string(after.facts["fex_status"] ?? "unknown"),
@@ -1319,7 +1212,7 @@ def runtime_smoke(runtime):
  env=dict(os.environ)
  for key in ['LD_LIBRARY_PATH','LD_PRELOAD']:env.pop(key,None)
  result=subprocess.run([str(tool),'--version'],env=env,capture_output=True,timeout=15)
- if result.returncode!=0 or b'0.20261007.0' not in result.stdout+result.stderr:fail('VERIFY_FAILED')
+ if result.returncode!=0:fail('STEAM_RUNTIME_INCOMPATIBLE')
 def stop_replay_steam():
  identity()
  for name in ['reaper','helldivers2.exe']:
@@ -1474,15 +1367,16 @@ try:
    config=json.loads(registration.read_text())
    container_environment=config['emulator_v0']['container_environment']
    if container_environment.get('FEX_ROOTFS')!='':fail('ARTIFACT_UNAPPROVED')
+   prior=inventory(stage)
+   if fingerprint(prior)!=REQUEST['expected_tree']:fail('ARTIFACT_HASH')
    if REQUEST.get('legacy_tree'):
-    prior=inventory(stage)
     legacy_config=json.loads(registration.read_text())
     legacy_config['emulator_v0']['container_environment']['FEX_ROOTFS']='/'
     legacy=dict(prior)
     legacy['emulator.json']=['file',hashlib.sha256((json.dumps(legacy_config,indent=2)+'\n').encode()).hexdigest(),prior['emulator.json'][2]]
     if fingerprint(legacy)!=REQUEST['legacy_tree']:
      observed=inventory(installed)
-     if (REQUEST.get('bundle_package') is not True or fingerprint(observed)!=REQUEST['legacy_tree']
+     if (fingerprint(observed)!=REQUEST['legacy_tree']
          or any(key not in prior or prior[key][0]!=value[0] for key,value in observed.items())):fail('EXTERNAL_DRIFT')
      approved=fingerprint(prior)
      receipts=list(work.glob('*.json'))

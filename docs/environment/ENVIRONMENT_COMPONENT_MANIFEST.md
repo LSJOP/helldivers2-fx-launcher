@@ -1,5 +1,7 @@
 # Environment component manifest
 
+> 2026-11-27 · 运行时只读取完整性清单。构建负责制品来源、许可、声明和对应源码。正确的内置 RF FEX 与 Proton-JE 由同一套 Debug / Release 服务自动部署、修复和复用。Steam 安装或校验 4183110，保留 4185400 和原始 ARM64 环境。下文带日期的 Debug 与 RC 限制为历史记录。
+
 2026-11-26 当前策略。RF FEX 和 Proton-JE 内置优先，获批固定来源备用。Guest Steam 管理 Steam Linux Runtime 4.0（steamrt4，AppID 4183110）；历史基准 4.0.20261021.265997、Build ID 26116036。构建与更新不分发 Runtime 归档。原有 ARM64 Runtime（4185400）保持独立。Steam 下载后的实际版本、架构和容器兼容性必须重新验收。
 
 v1.0.7 审核状态：RF 的 MIT 权利已确认，但从 Steam 安装中回收且无授权证明的 wrapper 和 `unshare.py` 不进入候选包；使用项目自有 wrapper 和 MIT 声明替代。Proton-JE 已对上游标签、SHA-256/SHA-512 及 62 个递归子模块完成锁定。详细权利和义务见 [RF 审核](../audits/RF_FEX_Redistribution_Audit.md)、[Proton-JE 审核](../audits/Proton_JE_Redistribution_Audit.md) 与 [许可清单](../audits/Third_Party_License_Inventory.md)。Stable 仍要求 Proton 对应源码同地发布及真实 Guest/游戏验收。下文旧策略保留为历史记录。

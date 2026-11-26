@@ -1,5 +1,7 @@
 # HD2FXNative 接续开发交接
 
+> 2026-11-27 · 从 PR #23 已有 Worktree 续接。Debug / Release 用同一个组件事务。RF 备用资源从同版本 Ed25519 签名更新清单获取；正式包只包含 App Core、RF FEX、Proton-JE，Steam 管理 Runtime 4。下一次实机必须从已核验的 FX199_FRESH_USER_BASELINE 恢复工作副本。历史 FX 1.9.12、FX 1.9.9 原盘和现有离线备份均为受保护参考。见[基线验收](testing/FX199_FRESH_USER_BASELINE.md)。
+
 v1.0.5 过渡发行保留受控 Debug 资源，仅公开分发签名更新引擎及获准内容。公开端点和实际升级证据以发行验收记录为准。
 
 > 2026-11-22 · Dashboard V003 接续入口见[整合报告](Dashboard_UI_V003_Final_Integration_Report.md)。保留 main 的 1.0.4 业务和签名基础，真实 FX、Guest、SSH 和游戏仍需要独立实机验收。

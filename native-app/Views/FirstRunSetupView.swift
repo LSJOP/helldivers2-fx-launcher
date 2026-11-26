@@ -288,7 +288,6 @@ struct EnvironmentWorkflowProgressView: View {
     var showStepsInline = false
     var returnToDashboard: (() -> Void)? = nil
     private var workflow: EnvironmentWorkflow { state.environmentWorkflow }
-    @State private var showFEXDetails = false
     @State private var diagnosticCopied = false
     private var stepRows: some View {
         ForEach(Array([EnvironmentWorkflowPhase.startingFX, .connecting, .detecting, .deploying, .verifying, .launching].prefix(workflow.totalSteps).enumerated()), id: \.offset) { index, phase in
@@ -316,7 +315,7 @@ struct EnvironmentWorkflowProgressView: View {
                 Text(state.t("ui.fx.repaired"))
             }
             if let status = state.firstRunPlan?.snapshot.facts["fex_status"] {
-                Text(state.t(status == "unverified" ? "ui.fex.integrated" : status == "normal" ? "ui.fex.normal" : status == "compatible" ? "ui.fex.compatible" : status == "confirmation" ? "ui.fex.unverified" : "ui.fex.repair"))
+                Text(state.t(status == "unverified" ? "ui.fex.integrated" : status == "normal" ? "ui.fex.normal" : status == "compatible" ? "ui.fex.compatible" : "ui.fex.repair"))
             }
             Text(verbatim: "ID: " + workflow.taskID.uuidString).font(.caption.monospaced()).textSelection(.enabled)
         }
@@ -414,30 +413,7 @@ struct EnvironmentWorkflowProgressView: View {
                     }
                 }
             }
-            .sheet(isPresented: Binding(get: { state.pendingFEXApproval != nil && !tasks.busy }, set: { if !$0 { state.cancelFEXApproval() } })) {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(state.t("ui.fex.confirmTitle")).font(.headline)
-                    Text(state.t("ui.fex.confirmMessage"))
-                    if showFEXDetails {
-                        Text(state.firstRunPlan?.snapshot.facts["fex_tree"] ?? "").font(.caption.monospaced()).textSelection(.enabled)
-                        Text(state.t("ui.fex.unverified"))
-                    }
-                    HStack {
-                        Button(state.t("ui.fex.continue")) { state.approveFEXBuild() }.buttonStyle(.borderedProminent).tint(.yellow)
-                        Button(state.t("ui.setup.details")) { showFEXDetails.toggle() }
-                        Button(state.t("ui.037"), role: .cancel) { state.cancelFEXApproval() }
-                    }
-                }.padding(24).frame(width: 540)
-            }
-            .confirmationDialog(state.t("ui.setup.autoReboot"), isPresented: Binding(
-                get: { state.environmentWorkflow.needsRestartApproval && !tasks.busy },
-                set: { if !$0 { state.environmentWorkflow.needsRestartApproval = false } })) {
-                    Button(state.t("ui.setup.deploy")) {
-                        state.environmentWorkflow.needsRestartApproval = false
-                        state.startEnvironmentWorkflow(launchGame: workflow.launchesGame, restartApproved: true)
-                    }
-                    Button(state.t("ui.037"), role: .cancel) { state.environmentWorkflow.needsRestartApproval = false }
-                }
+
         }
     }
 }

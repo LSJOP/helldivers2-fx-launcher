@@ -1,5 +1,7 @@
 # 功能与开发状态索引
 
+> 2026-11-27 · PR #23 的 v1.0.7 候选统一 Debug/Release 部署路径。RF FEX 用内置清单与 Guest 整树指纹验证，缺失时可用同版本签名增量资源。Proton-JE 内置优先，Steam 管理 Runtime 4。GitHub 最新 Stable 仍是 v1.0.6。首装母本与正式包实机结果见[验收](testing/FX199_FRESH_USER_BASELINE.md)。
+
 v1.0.5 Stable 集成组件更新引擎和 Dashboard V003。正式过渡包面向旧客户端，公开核心资源审批和 Guest 验收保持开放。
 
 > 2026-11-22 · PR #22 已合入 main。环境分支保留总览 V003、六项导航、滚动策略与多实例 UI，继续验证受控 Debug Bundle 的真实部署。见 [V003 整合报告](Dashboard_UI_V003_Final_Integration_Report.md)与[部署验收](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。

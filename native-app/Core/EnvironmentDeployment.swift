@@ -129,11 +129,14 @@ struct DeploymentPlan: Codable {
         }
         return operation.detectionPassed
     }
+    private var setupOperations: [DeploymentOperation] {
+        operations.filter { !$0.advisory && $0.component != "game" }
+    }
     var firstUnverifiedSetupOperation: DeploymentOperation? {
-        operations.first { !$0.advisory && !setupObservationVerified($0) }
+        setupOperations.first { !setupObservationVerified($0) }
     }
     var detectionState: DeploymentState {
-        let required = operations.filter { !$0.advisory }
+        let required = setupOperations
         if !required.isEmpty && required.allSatisfy({ $0.blocked == "UNSUPPORTED" }) { return .Unsupported }
         return required.allSatisfy { setupObservationVerified($0) } ? .Ready : .NeedsConfiguration
     }
@@ -156,7 +159,7 @@ enum DeploymentPlanBuilder {
             let artifact = profile.artifacts.first { $0.component == component && $0.version == version }
             if component == "fex", let status = snapshot.facts["fex_status"] {
                 add(component, target: version, block: ["normal", "compatible"].contains(status) ? nil : snapshot.facts["fex_reason"] ?? "FEX_RUNTIME_FAILED", observed: status)
-            } else if component == "proton", snapshot.values["proton_package"] == "missing", version == ProtonJERelease.version {
+            } else if component == "proton", (snapshot.values["proton_package"] == "missing" || ProtonJERelease.damagedState(snapshot.values["proton_package"])), version == ProtonJERelease.version {
                 add(component, target: version, changes: ["proton_package": ProtonJERelease.digest], restart: true, bytes: 4 * 1_073_741_824)
             } else {
                 add(component, target: version, block: verified ? nil : component == "proton" && snapshot.values["proton_package"] == "unknown" ? "COMPONENT_CONFLICT" : artifact == nil ? "ARTIFACT_UNAPPROVED" : "ARTIFACT_IMPORT_REQUIRED", observed: verified ? "verified" : nil)
@@ -166,29 +169,33 @@ enum DeploymentPlanBuilder {
             let fact = snapshot.facts[component] ?? "UNKNOWN"
             add(component, target: component == "vulkan" ? profile.vulkan : "detect", block: component == "ipv6" || fact == "UNKNOWN" || ["present", "configured", "available"].contains(fact) ? nil : "USER_ACTION_REQUIRED")
         }
-        do {
-            let before = snapshot.values["launch"] ?? ""
-            var managed = profile.launchOptions
-            if let emulator = snapshot.facts["fex_managed_emulator"], emulator.hasSuffix("/HD2FXLauncher/compatibility/FEX-RF/emulator.json") {
-                managed["PRESSURE_VESSEL_EMULATOR"] = emulator
+        // The runtime can be prepared before a Steam account installs the game.
+        // Apply per-game settings when Steam can observe the installed game.
+        if snapshot.facts["game"] != "missing" {
+            do {
+                let before = snapshot.values["launch"] ?? ""
+                var managed = profile.launchOptions
+                if let emulator = snapshot.facts["fex_managed_emulator"], emulator.hasSuffix("/HD2FXLauncher/compatibility/FEX-RF/emulator.json") {
+                    managed["PRESSURE_VESSEL_EMULATOR"] = emulator
+                }
+                let after = try LaunchOptionsAdapter.merge(before, managed: managed)
+                var changes = before == after ? [:] : ["launch": after]
+                if !changes.isEmpty, snapshot.values["launch_present"] != nil { changes["launch_present"] = "true" }
+                add("launch", target: "profile-v1", changes: changes, block: snapshot.values["launch"] == nil ? "USER_ACTION_REQUIRED" : snapshot.steamRunning && snapshot.facts["steam_api"] != "available" ? "STEAM_API_UNAVAILABLE" : nil,
+                    restart: !changes.isEmpty && snapshot.facts["fex_managed_emulator"] != nil, observed: snapshot.values["launch"] != nil && changes.isEmpty ? "configured" : nil)
+            } catch { add("launch", target: "profile-v1", block: "LAUNCH_OPTIONS_CONFLICT") }
+            if snapshot.values["tool"] != profile.protonVersion {
+                var changes = ["tool": profile.protonVersion]
+                if snapshot.values["tool_present"] != nil { changes["tool_present"] = "true" }
+                let installing = (snapshot.values["proton_package"] == "missing" || ProtonJERelease.damagedState(snapshot.values["proton_package"])) && profile.protonVersion == ProtonJERelease.version
+                let verified = snapshot.facts["proton_manifest"] == "verified"
+                let toolOnline = snapshot.facts["steam_tool_api"] == "available"
+                let block = snapshot.values["tool"] == nil ? "STEAM_TOOL_READ_FAILED" :
+                    !verified && !installing ? "ARTIFACT_UNAPPROVED" :
+                    snapshot.steamRunning && !toolOnline ? "STEAM_TOOL_API_UNAVAILABLE" : nil
+                add("tool", target: profile.protonVersion, changes: changes, block: block,
+                    restart: snapshot.steamRunning && snapshot.facts["restart_completed"] != "true")
             }
-            let after = try LaunchOptionsAdapter.merge(before, managed: managed)
-            var changes = before == after ? [:] : ["launch": after]
-            if !changes.isEmpty, snapshot.values["launch_present"] != nil { changes["launch_present"] = "true" }
-            add("launch", target: "profile-v1", changes: changes, block: snapshot.values["launch"] == nil ? "USER_ACTION_REQUIRED" : snapshot.steamRunning && snapshot.facts["steam_api"] != "available" ? "STEAM_API_UNAVAILABLE" : nil,
-                restart: !changes.isEmpty && snapshot.facts["fex_managed_emulator"] != nil, observed: snapshot.values["launch"] != nil && changes.isEmpty ? "configured" : nil)
-        } catch { add("launch", target: "profile-v1", block: "LAUNCH_OPTIONS_CONFLICT") }
-        if snapshot.values["tool"] != profile.protonVersion {
-            var changes = ["tool": profile.protonVersion]
-            if snapshot.values["tool_present"] != nil { changes["tool_present"] = "true" }
-            let installing = snapshot.values["proton_package"] == "missing" && profile.protonVersion == ProtonJERelease.version
-            let verified = snapshot.facts["proton_manifest"] == "verified"
-            let toolOnline = snapshot.facts["steam_tool_api"] == "available"
-            let block = snapshot.values["tool"] == nil ? "STEAM_TOOL_READ_FAILED" :
-                !verified && !installing ? "ARTIFACT_UNAPPROVED" :
-                snapshot.steamRunning && !toolOnline ? "STEAM_TOOL_API_UNAVAILABLE" : nil
-            add("tool", target: profile.protonVersion, changes: changes, block: block,
-                restart: snapshot.steamRunning && snapshot.facts["restart_completed"] != "true")
         }
         if !baselineApplicable {
             ops = ops.map { $0.detectionPassed ? $0 : .init(id: $0.id, component: $0.component, currentVersion: $0.currentVersion, targetVersion: $0.targetVersion,

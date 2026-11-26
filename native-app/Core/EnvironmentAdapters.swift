@@ -144,7 +144,10 @@ enum SteamRuntime4 {
         let phase = installPhase(flags)
         guard phase == "installed" else { return Observation(phase: phase, build: build) }
         let version = record["version"]?.text
-        guard build == "26116036", version == "4.0.20261021.265997", record["verified"]?.boolean == true else {
+        guard let build, let buildNumber = UInt64(build), buildNumber > 0,
+              let version, record["verified"]?.boolean == true,
+              let depot = try vdf.value(["appstate", "installeddepots", "4183111", "manifest"]).flatMap(UInt64.init),
+              depot > 0 else {
             return Observation(phase: "incompatible", build: build, version: version)
         }
         return Observation(phase: "installed", path: path, build: build, version: version)
@@ -166,10 +169,6 @@ enum SteamRuntime4 {
             try backend.context.check()
             let runtime = try observe(backend, snapshot: snapshot)
             if runtime.phase == "installed" { progress("verifying"); return }
-            if runtime.phase == "incompatible" {
-                throw CoreError(unverified, ["runtime_build": .string(runtime.build ?? "unknown"),
-                                             "runtime_version": .string(runtime.version ?? "unknown")])
-            }
             let state = try GuestService.state(backend.transport, context: backend.context)
             guard state["boot"]?.text == snapshot.boot, state["game_count"]?.integer == 0 else { throw CoreError("TARGET_CHANGED") }
             if runtime.phase == "downloading" || runtime.phase == "installing" {
@@ -183,13 +182,21 @@ enum SteamRuntime4 {
                 }
             } else if !requested {
                 progress("requesting")
-                try GuestService.requestRuntime4(backend.transport, boot: snapshot.boot, context: backend.context)
+                try GuestService.requestRuntime4(backend.transport, boot: snapshot.boot,
+                                                 verify: runtime.phase == "incompatible", context: backend.context)
                 requested = true
                 lastPhase = "requesting"
             }
             Thread.sleep(forTimeInterval: min(3, max(0, deadline - CoreClock.monotonic)))
         }
-        throw CoreError(lastPhase == "login" ? "STEAM_RUNTIME_LOGIN_REQUIRED" : "STEAM_RUNTIME_DOWNLOAD_INCOMPLETE")
+        if lastPhase == "login" { throw CoreError("STEAM_RUNTIME_LOGIN_REQUIRED") }
+        let final = try observe(backend, snapshot: snapshot)
+        if final.phase == "installed" { progress("verifying"); return }
+        if final.phase == "incompatible" {
+            throw CoreError(unverified, ["runtime_build": .string(final.build ?? "unknown"),
+                                         "runtime_version": .string(final.version ?? "unknown")])
+        }
+        throw CoreError("STEAM_RUNTIME_DOWNLOAD_INCOMPLETE")
     }
 
     static let evidence = #"""
@@ -202,8 +209,9 @@ def runtime_evidence(runtime):
  data=versions.read_bytes()
  match=re.search(rb'(?m)^depot[\t ]+(\d+(?:\.\d+){2,5})\b',data)
  version=match[1].decode() if match else None
- if hashlib.sha256(data).hexdigest()!='936cb7e1a2de6463e81b08443f3096ea6900de05d1723c0f0f7bcef946aad88a':return version,False
- version='4.0.20261021.265997'
+ if not version or not version.startswith('4.0.'):return version,False
+ legacy=version=='4.0.20261021.265997'
+ if legacy and hashlib.sha256(data).hexdigest()!='936cb7e1a2de6463e81b08443f3096ea6900de05d1723c0f0f7bcef946aad88a':return version,False
  expected={
   '_v2-entry-point':('ab9beb61c7c614caeb53e70ea0f4a1736d18b71eacb907ab09832db53cf6e46d',None),
   'pressure-vessel/bin/pressure-vessel-wrap':('5357ec29b464961bfd1a743d4a28732d971062719933c9cbbea6ae95eb7110ad',62),
@@ -212,7 +220,7 @@ def runtime_evidence(runtime):
   file=runtime/relative
   if not runtime_regular(file,2**20) or not os.access(file,os.X_OK):return version,False
   content=file.read_bytes()
-  if hashlib.sha256(content).hexdigest()!=digest:return version,False
+  if legacy and hashlib.sha256(content).hexdigest()!=digest:return version,False
   if machine is not None and (content[:6]!=b'\x7fELF\x02\x01' or int.from_bytes(content[18:20],'little')!=machine):return version,False
  return version,True
 """#
@@ -236,7 +244,6 @@ print(json.dumps(records))
 final class SSHEnvironmentBackend: DeploymentBackend {
     let transport: SSHTransport, fx: URL, context: CoreContext, configurationRevision: String
     var expectedGuestBoot: String?
-    var fexApprovals: [String] = []
     let fxVersion: String
     var restartCompleted = false
     var archiveProgress: (String, String) -> Void = { _, _ in }
@@ -393,7 +400,7 @@ final class SSHEnvironmentBackend: DeploymentBackend {
         if !restartCompleted, SetupVMReboot.hasCompletedReceipt(for: snapshot) {
             snapshot.facts["restart_completed"] = "true"
         }
-        try FEXWorkflow.observe(self, snapshot: &snapshot, approvals: fexApprovals)
+        try FEXWorkflow.observe(self, snapshot: &snapshot)
         return snapshot
     }
     /// Steam updates unrelated VDF metadata while running. Compare managed values
@@ -412,23 +419,24 @@ final class SSHEnvironmentBackend: DeploymentBackend {
     }
     func replace(_ changes: [String: String], expected: DeploymentSnapshot) throws {
         if let target = changes["proton_package"] {
-            guard changes.count == 1, ["missing", ProtonJERelease.digest].contains(target) else { throw CoreError("INVALID_ARGUMENT") }
+            guard changes.count == 1, (["missing", ProtonJERelease.digest].contains(target) || ProtonJERelease.damagedState(target)) else { throw CoreError("INVALID_ARGUMENT") }
             let current = try snapshot()
             guard EnvironmentDeploymentService.identity(current, expected), current.revision == expected.revision,
                   current.values == expected.values else { throw CoreError("CONFIG_CHANGED") }
             try EnvironmentDeploymentService.idle(current, requiresStoppedSteam: false)
             let manifest = try ProtonJERelease.manifest()
             let ticket = UUID().uuidString
-            let installing = target != "missing"
+            let installing = target == ProtonJERelease.digest
+            let prior = installing ? current.values["proton_package"] ?? "unknown" : target
             let archive = installing ? try DeploymentArchive.verified("Proton-JE", context: context) : nil
             let useProxy = SSHTransport.localHost(transport.settings.host) && LaunchService.checkProxyPort()
             func run(_ mode: String, timeout: TimeInterval, context operationContext: CoreContext) throws -> CoreProcessResult {
                 let script = try ProtonJERelease.script(mode: mode, manifest: manifest, boot: current.boot,
-                    suffix: ticket, useHostProxy: useProxy, bundled: archive != nil)
+                    suffix: ticket, useHostProxy: useProxy, bundled: archive != nil, prior: prior)
                 let result = try transport.run(script, timeout: timeout, context: operationContext)
                 if result.status != 0 {
                     let reasons = ["ARTIFACT_HASH", "STEAM_ROOT_CONFLICT", "INSUFFICIENT_SPACE", "GAME_RUNNING",
-                                   "TARGET_CHANGED", "EXTERNAL_DRIFT", "UNSAFE_PATH", "VERIFY_FAILED"]
+                                   "TARGET_CHANGED", "EXTERNAL_DRIFT", "UNSAFE_PATH", "VERIFY_FAILED", "CANCELLED"]
                     throw CoreError(reasons.first { result.stderr.contains($0) } ?? "COMPONENT_INSTALL_FAILED")
                 }
                 return result
@@ -670,15 +678,11 @@ extension NativeCoreService {
                 "component": .string(component), "archive_phase": .string(phase)])
         }
         backend.sudoPassword = request.sudoPassword
-        backend.fexApprovals = request.fexApprovals
         backend.expectedGuestBoot = params["credential_guest_boot"]?.text
-        #if DEBUG
-        if method == "first_run_fex_local_replay" { return try FEXWorkflow.localReplay(backend: backend) }
-        #endif
         if method.hasPrefix("first_run_fex_") {
             emit("INFO", "FX runtime workflow", ["deployment_state": .string(method == "first_run_fex_audit" ? "Checking" : "Deploying")])
             if method == "first_run_fex_repair" {
-                return try FEXWorkflow.repair(backend: backend, params: params, emit: emit)
+                return try FEXWorkflow.repair(backend: backend, emit: emit)
             }
             return try FEXWorkflow.run(method, backend: backend, params: params)
         }

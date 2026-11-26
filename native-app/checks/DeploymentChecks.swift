@@ -106,6 +106,19 @@ final class FileDeploymentBackend: DeploymentBackend {
         complete.values["launch"] = try LaunchOptionsAdapter.merge("%command%", managed: profile.launchOptions)
         complete.values["tool"] = profile.protonVersion
         try check(DeploymentPlanBuilder.build(complete, profile: profile).detectionState == .Ready, "full plan is ready only with verified components and matching launch options")
+        var beforeGameInstall = complete
+        beforeGameInstall.facts["game"] = "missing"
+        beforeGameInstall.values.removeValue(forKey: "launch")
+        beforeGameInstall.values.removeValue(forKey: "tool")
+        let setupOnly = DeploymentPlanBuilder.build(beforeGameInstall, profile: profile)
+        try check(setupOnly.detectionState == .Ready && setupOnly.firstUnverifiedSetupOperation == nil,
+                  "verified runtime can be ready before the game is installed")
+        try check(setupOnly.operations.first { $0.component == "game" }?.blocked == "USER_ACTION_REQUIRED"
+                  && !setupOnly.operations.contains { ["launch", "tool"].contains($0.component) },
+                  "missing game remains a launch blocker and defers per-game Steam changes")
+        beforeGameInstall.facts["fex_runtime"] = "unverified"
+        try check(DeploymentPlanBuilder.build(beforeGameInstall, profile: profile).firstUnverifiedSetupOperation?.component == "fex",
+                  "pre-game setup still requires a successful FEX runtime probe")
         complete.facts["fex_manifest"] = "UNKNOWN"; complete.facts.removeValue(forKey: "fex_status"); complete.facts.removeValue(forKey: "fex_runtime")
         try check(DeploymentPlanBuilder.build(complete, profile: profile).detectionState != .Ready, "unverified FEX never claims readiness")
         complete.facts["fex_manifest"] = "verified"; complete.values.removeValue(forKey: "launch")

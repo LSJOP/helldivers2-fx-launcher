@@ -8,7 +8,6 @@ struct LaunchRequest {
     var password: String?
     var passphrase: String?
     var sudoPassword: String?
-    var fexApprovals: [String] = []
     var approvedChanges: [JSONValue]
     var context: CoreContext
     var emit: (String, String, [String: JSONValue]) -> Void
@@ -404,8 +403,8 @@ enum LaunchService {
         }
     }
 
-    static func launchOptionsReady(_ state: [String: JSONValue]) -> Bool {
-        let launch = state["launch"]?.text ?? ""
+    static func launchOptionsReady(_ launch: String?) -> Bool {
+        guard let launch else { return false }
         return requiredLaunchTokens.allSatisfy { launch.contains($0) }
     }
 

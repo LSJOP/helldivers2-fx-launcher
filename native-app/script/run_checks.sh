@@ -36,38 +36,38 @@ fi
 # SSH regression: arguments, controlling terminal, password echo, error classes.
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" \
   -module-cache-path "$ROOT_DIR/build/ModuleCache" \
-  Models/BridgeModels.swift Core/*.swift checks/SSHChecks.swift \
+  Models/BridgeModels.swift Core/*.swift Services/UpdateReleaseService.swift UpdateHelper/{ArchivePathPolicy,UpdateZIPPreflight}.swift checks/SSHChecks.swift \
   -o build/SSHChecks >evidence/ssh-compile.txt 2>&1
 ./build/SSHChecks >evidence/ssh-checks.txt 2>&1
 
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" \
- -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Core/*.swift checks/PrivilegedExecutorChecks.swift \
+ -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Core/*.swift Services/UpdateReleaseService.swift UpdateHelper/{ArchivePathPolicy,UpdateZIPPreflight}.swift checks/PrivilegedExecutorChecks.swift \
  -o build/PrivilegedExecutorChecks >evidence/privileged-compile.txt 2>&1
 ./build/PrivilegedExecutorChecks >evidence/privileged-checks.txt 2>&1
 /usr/bin/python3 -I -B script/check_memory_only.py >evidence/memory-only-audit.json
 
 # Runtime network transactions and actual diagnostic protocol validation, isolated.
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" \
- -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Core/*.swift checks/NetworkChecks.swift \
+ -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Core/*.swift Services/UpdateReleaseService.swift UpdateHelper/{ArchivePathPolicy,UpdateZIPPreflight}.swift checks/NetworkChecks.swift \
  -o build/NetworkChecks >evidence/network-compile.txt 2>&1
 ./build/NetworkChecks >evidence/network-checks.txt 2>&1
 
 # Native core contract, isolation and integrity checks.
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" \
   -module-cache-path "$ROOT_DIR/build/ModuleCache" \
-  Models/BridgeModels.swift Core/*.swift checks/NativeCoreChecks.swift \
+  Models/BridgeModels.swift Core/*.swift Services/UpdateReleaseService.swift UpdateHelper/{ArchivePathPolicy,UpdateZIPPreflight}.swift checks/NativeCoreChecks.swift \
   -o build/NativeCoreChecks >evidence/native-core-compile.txt 2>&1
 ./build/NativeCoreChecks >evidence/native-core-checks.txt 2>&1
 
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" \
   -module-cache-path "$ROOT_DIR/build/ModuleCache" \
-  Models/BridgeModels.swift Core/*.swift checks/NativeCoreIntegrationChecks.swift \
+  Models/BridgeModels.swift Core/*.swift Services/UpdateReleaseService.swift UpdateHelper/{ArchivePathPolicy,UpdateZIPPreflight}.swift checks/NativeCoreIntegrationChecks.swift \
   -o build/NativeCoreIntegrationChecks >evidence/native-integration-compile.txt 2>&1
 ./build/NativeCoreIntegrationChecks >evidence/native-integration-checks.txt 2>&1
 
 /usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" \
   -module-cache-path "$ROOT_DIR/build/ModuleCache" \
-  Models/BridgeModels.swift Core/*.swift checks/FXIdentityChecks.swift \
+  Models/BridgeModels.swift Core/*.swift Services/UpdateReleaseService.swift UpdateHelper/{ArchivePathPolicy,UpdateZIPPreflight}.swift checks/FXIdentityChecks.swift \
   -o build/FXIdentityChecks >evidence/fx-identity-compile.txt 2>&1
 ./build/FXIdentityChecks >evidence/fx-identity-checks.txt 2>&1
 
@@ -84,6 +84,6 @@ fi
 /usr/bin/plutil -lint HD2FXNative.xcodeproj/project.pbxproj >evidence/project-lint.txt
 cat evidence/native-core-checks.txt evidence/native-integration-checks.txt evidence/fx-identity-checks.txt
 
-/usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Core/*.swift checks/DeploymentChecks.swift -o build/DeploymentChecks >evidence/deployment-compile.txt 2>&1
+/usr/bin/xcrun swiftc -swift-version 5 -target arm64-apple-macos14.0 -sdk "$SDK" -module-cache-path "$ROOT_DIR/build/ModuleCache" Models/BridgeModels.swift Core/*.swift Services/UpdateReleaseService.swift UpdateHelper/{ArchivePathPolicy,UpdateZIPPreflight}.swift checks/DeploymentChecks.swift -o build/DeploymentChecks >evidence/deployment-compile.txt 2>&1
 ./build/DeploymentChecks >evidence/deployment-checks.txt 2>&1
 cat evidence/deployment-checks.txt
