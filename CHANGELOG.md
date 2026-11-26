@@ -15,7 +15,7 @@ No unreleased entries.
 - Dashboard launch and First-Run Setup use the same automatic setup path. Debug and Release verify and use bundled RF FEX and Proton-JE without developer-only flags, local approval files or an extra deployment prompt. The updater's signed RF module provides the fallback; Proton-JE keeps its pinned upstream fallback.
 - Steam installs or validates Runtime 4 (4183110). The original ARM64 Runtime (4185400), stock FEX and Steam game files remain managed by Steam and FX. The RF registration keeps the audited provider configuration.
 - Downloads include the arm64 App, DMG, full ZIP and signed App Core, RF FEX and Proton-JE update packages. The signed full ZIP supports older clients. Source and notices for the bundled compatibility tools accompany the release.
-- Fresh FX 1.9.9 setup, actual in-App upgrades and HELLDIVERS 2 gameplay remain pending live acceptance.
+- The published v1.0.4 upgraded in-app to v1.0.7 with the signed full ZIP and a confirmed restart. The v1.0.5 and v1.0.6 ZIPs reproduced a Sparkle library-validation startup failure on the test Mac. Use the v1.0.7 DMG when an older App cannot open. Fresh FX 1.9.9 setup and HELLDIVERS 2 gameplay remain pending.
 
 ### v1.0.6 — 2026-11-26
 
