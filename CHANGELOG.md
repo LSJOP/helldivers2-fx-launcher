@@ -8,7 +8,7 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 
 ## Unreleased
 
-- Local controlled Debug can bundle the pinned Proton-JE and Runtime 4 archives alongside the FX runtime. First-run repair prefers verified Bundle resources, with pinned downloads retained as fallback where available. Public distribution and live offline deployment still require acceptance.
+- Guest Steam now manages Steam Linux Runtime 4.0 during environment setup. App downloads and incremental assembly exclude its archive. The original ARM64 runtime stays available. Controlled Debug still bundles the verified FX runtime and Proton-JE; their public redistribution is pending. Runtime setup on a missing installation requires Steam connectivity.
 
 - Local opt-in Debug builds can carry the verified 41-file FX runtime package and use it during first-run repair. Public distribution approval remains pending.
 
@@ -23,8 +23,6 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 - Persistence candidate: keep the RF compatibility tree outside the Steam-managed FX runtime depot, verify RootFS inside a real Runtime container, and restore the shared main window on launch/reopen. Final reboot acceptance and distributable RF build remain pending.
 
 - Recovery continuation adds verified Runtime cache/retry, explicit Debug resource paths and a bundled component integrity catalogue. Real setup installed Proton and configured Steam, but failed final verification after reboot restored the incompatible stock FX runtime and empty container RootFS; public one-click setup remains blocked.
-
-- The isolated first-run replay can install the pinned Steam Linux Runtime 4.0 from a verified local archive or Valve HTTPS download. It preserves the existing ARM64-only Runtime.
 
 - Add an opt-in Debug path for replaying pinned local RF samples on the isolated FX 1.9.9 test image. It checks the matching Steam Linux Runtime before writing and runs the FX runtime probe inside the recovery transaction. Fresh-guest deployment is pending.
 

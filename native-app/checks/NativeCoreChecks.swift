@@ -293,6 +293,13 @@ func runChecks() {
     let guestHome = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try! FileManager.default.createDirectory(at: guestHome, withIntermediateDirectories: false)
     defer { try? FileManager.default.removeItem(at: guestHome) }
+    check(SteamRuntime4.installPhase(4) == "installed", "Steam runtime fully installed bit admits preflight")
+    check(SteamRuntime4.installPhase(4 | 0x0010_0000) == "downloading", "an old installed Runtime is not ready during download")
+    check(SteamRuntime4.installPhase(4 | 0x0040_0000) == "installing", "pending Steam commit is not readiness")
+    check(SteamRuntime4.installPhase(4 | 2) == "pending", "Runtime requiring update remains pending")
+    let runtimeRequest = GuestScripts.requestRuntime4(boot: "fixture")
+    check(runtimeRequest.contains("steam 'steam://install/4183110'") && runtimeRequest.contains("/proc/sys/kernel/random/boot_id"),
+          "Runtime installation is requested through identity-bound Guest Steam")
     let noSteamLog = try! CoreProcess.run("/bin/sh", ["-c", "HOME=\"$1\"\n" + GuestScripts.state, "guest-fixture", guestHome.path])
     let unreadLogin = try! GuestService.parse(noSteamLog.stdout, expected: "GUEST_INSPECTION_FAILED")
     check(unreadLogin["steam_logged_on"]?.text == "unknown" && !GuestService.steamReady(unreadLogin),

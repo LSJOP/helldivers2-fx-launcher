@@ -607,6 +607,17 @@ final class AppState: ObservableObject {
         workflowPhaseStarted = now
         workflowLog(id, "\(t(phase.titleKey)): \(logStatus("started"))")
     }
+    func steamRuntimePhaseTitle(_ phase: String) -> String {
+        switch phase {
+        case "login": return t("ui.steamRuntime.login")
+        case "requesting": return t("ui.steamRuntime.requesting")
+        case "downloading": return t("ui.steamRuntime.downloading")
+        case "installing": return t("ui.steamRuntime.installing")
+        case "verifying": return t("ui.steamRuntime.verifying")
+        case "ready": return t("ui.steamRuntime.ready")
+        default: return t("ui.steamRuntime.checking")
+        }
+    }
     private func workflowEvent(_ event: [String: JSONValue], taskID: UUID) {
         guard environmentWorkflow.taskID == taskID else { return }
         let request = event["request_id"]?.text ?? ""
@@ -624,8 +635,14 @@ final class AppState: ObservableObject {
                 ? " (\(Int(max(0, now - started!)))s)" : ""
             if status == "done" || status == "passed" || status == "failed" { workflowStageStarted.removeValue(forKey: raw) }
             workflowLog(taskID, "\(stage.title(languageCode)): \(logStatus(status))\(elapsed)", level: status == "failed" ? "ERROR" : "INFO", at: at)
+        } else if event["kind"]?.text == "steam_runtime_stage", environmentWorkflow.phase == .deploying,
+                  let phase = event["runtime_phase"]?.text,
+                  ["checking", "login", "requesting", "downloading", "installing", "verifying", "ready"].contains(phase) {
+            environmentWorkflow.archiveComponent = "steam-runtime"
+            environmentWorkflow.archivePhase = phase
+            workflowLog(taskID, steamRuntimePhaseTitle(phase), at: at)
         } else if event["kind"]?.text == "bundle_archive_stage", environmentWorkflow.phase == .deploying,
-                  let component = event["component"]?.text, ["Proton-JE", "SteamLinuxRuntime_4"].contains(component),
+                  let component = event["component"]?.text, component == "Proton-JE",
                   let phase = event["archive_phase"]?.text, ["sftp", "install", "finished"].contains(phase) {
             environmentWorkflow.archiveComponent = phase == "finished" ? nil : component
             environmentWorkflow.archivePhase = phase == "finished" ? nil : phase

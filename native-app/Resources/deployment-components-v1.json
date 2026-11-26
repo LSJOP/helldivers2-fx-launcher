@@ -312,15 +312,6 @@
   ],
   "downloads": [
     {
-      "name": "SteamLinuxRuntime_4",
-      "version": "4.0.20261021.265997",
-      "bytes": 175077288,
-      "sha256": "aa9dd1aab2173e65b631faae34b85e2c17fe323d941013154ddd2e1dce8a0910",
-      "source": "https://repo.steampowered.com/steamrt4/images/4.0.20261021.265997/SteamLinuxRuntime_4.tar.xz",
-      "license": "Valve archive contains component notices; direct upstream download; not redistributed",
-      "installer": "Debug RF replay transaction; production activation pending"
-    },
-    {
       "name": "Proton-JE",
       "version": "11.0-20261014-3",
       "bytes": 348245820,
@@ -369,31 +360,19 @@
       "license": "Per-component notices in archive; exact corresponding source and third-party terms pending",
       "publicRedistribution": "UNAPPROVED",
       "fallback": "https://github.com/jegglest/proton-je/releases/download/proton-je-11.0-20261014-3/proton-je-11.0-20261014-3.tar.xz"
-    },
-    {
-      "name": "SteamLinuxRuntime_4",
-      "version": "4.0.20261021.265997",
-      "build": "26116036",
-      "depotManifest": "622183911945836103",
-      "architecture": "x86_64 runtime and aarch64 pressure-vessel 0.20261007.0",
-      "source": "Historical audited Valve depot 4183111 archive",
-      "originalArchive": "steamrt4-4183111-622183911945836103-local.tar",
-      "originalBytes": 717803520,
-      "originalSHA256": "31a43e6e6ff78509eb1cdb762cfff8e9d89fc83c118d5d723bead42b9b18ca5c",
-      "bytes": 193365028,
-      "unpackedBytes": 711197025,
-      "sha256": "d70d0db92512bd9cc0d200618b780fd8da37cc5cb6c5cad9326df261f20b468d",
-      "treeSHA256": "11c51804ac7a94667d2bda95ba88fa21cbfdde6ada5f1e2fe6998c100cb3bfe7",
-      "bundlePath": "Deployment/SteamLinuxRuntime_4/steamrt4-4183111-622183911945836103-local.tar.xz",
-      "guestTarget": "Steam/steamapps/common/SteamLinuxRuntime_4",
-      "probe": "ARM64 pressure-vessel version and managed FX container probe",
-      "dependencies": [
-        "Guest aarch64 graphics provider"
-      ],
-      "license": "Mixed Valve/runtime package notices and corresponding sources require per-component audit",
-      "publicRedistribution": "UNAPPROVED",
-      "fallback": "https://repo.steampowered.com/steamrt4/images/4.0.20261021.265997/SteamLinuxRuntime_4.tar.xz",
-      "fallbackSHA256": "aa9dd1aab2173e65b631faae34b85e2c17fe323d941013154ddd2e1dce8a0910"
     }
-  ]
+  ],
+  "steamManagedRuntime": {
+    "name": "Steam Linux Runtime 4.0",
+    "identifier": "steamrt4",
+    "appID": 4183110,
+    "installURI": "steam://install/4183110",
+    "source": "https://github.com/ValveSoftware/steam-runtime",
+    "bundle": false,
+    "historicalVersion": "4.0.20261021.265997",
+    "historicalBuild": "26116036",
+    "historicalDepotManifest": "622183911945836103",
+    "historicalArchitecture": "x86_64 runtime and aarch64 pressure-vessel 0.20261007.0",
+    "protectedARM64AppID": 4185400
+  }
 }

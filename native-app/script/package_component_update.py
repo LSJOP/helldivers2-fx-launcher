@@ -20,7 +20,6 @@ MAX_BYTES = 2_147_483_648
 DESTINATIONS = {
     "rf-fex": "Contents/Resources/Deployment/RF-FEX",
     "proton-je": "Contents/Resources/Deployment/Proton-JE",
-    "runtime4": "Contents/Resources/Deployment/SteamLinuxRuntime_4",
 }
 
 
@@ -128,6 +127,9 @@ def bridge(app, output, minimum, signing_key, make_dmg):
         raise ValueError("A signed stable transition App and the pinned signing key are required")
     subprocess.run([str(ROOT / "script/check_release_bundle.sh"), str(app)], check=True)
     resources = app / "Contents/Resources"
+    retired = resources / "Deployment/SteamLinuxRuntime_4"
+    if retired.exists() or retired.is_symlink():
+        raise ValueError("Steam-managed Runtime cannot be packaged as an App update")
     with (resources / "BuildMetadata.json").open() as f:
         meta = json.load(f)
     commit = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip()
@@ -185,6 +187,9 @@ def run(app, output, minimum, local_test, previous=None, dmg=False, signing_key=
     with (app / "Contents/Info.plist").open("rb") as stream:
         info = plistlib.load(stream)
     resources = app / "Contents/Resources"
+    retired = resources / "Deployment/SteamLinuxRuntime_4"
+    if retired.exists() or retired.is_symlink():
+        raise ValueError("Steam-managed Runtime cannot be packaged as an App update")
     if local_test:
         if (info.get("CFBundleIdentifier") != BUNDLE_ID + ".update-test"
             or not re.fullmatch(r"\d+\.\d+\.\d+-update-test\.[1-9]\d*", info["CFBundleShortVersionString"])
@@ -215,7 +220,7 @@ def run(app, output, minimum, local_test, previous=None, dmg=False, signing_key=
     catalogue = json.loads((resources / "deployment-components-v1.json").read_text())
     versions = {item["name"]: item["version"] for item in catalogue["bundleArchives"]}
     versions["rf-fex"] = json.loads((resources / "Deployment/RF-FEX.manifest.json").read_text())["version"]
-    versions["proton-je"], versions["runtime4"] = versions["Proton-JE"], versions["SteamLinuxRuntime_4"]
+    versions["proton-je"] = versions["Proton-JE"]
 
     if local_test and previous:
         raise ValueError("Local fixtures cannot reference public assets")

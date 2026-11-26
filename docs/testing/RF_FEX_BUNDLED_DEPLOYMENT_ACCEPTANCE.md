@@ -1,5 +1,13 @@
 # RF 资源内置与部署验收
 
+## v1.0.6 候选 · Steam 管理 Runtime 4 · 2026-11-26
+
+- 当前公开 Stable 仍为 v1.0.5。新候选未替换其标签、制品或更新源。
+- App 不内置或直接下载 Runtime 4。安装请求发送给绑定 Guest 内运行的 Steam，使用官方 AppID 4183110。Steam 库清单、版本及关键文件架构和哈希通过后，还需完成容器运行探针。未知构建报告为未验证，不主动降级。历史兼容基准为 4.0.20261021.265997／26116036。[Valve 官方说明](https://github.com/ValveSoftware/steam-runtime)
+- RF FEX 与 Proton-JE 保留受控 Debug 内置及分发门禁。旧 Schema 3 三组件清单继续可读，新模块清单省略 Runtime；本地复用仅限目标清单中的组件。旧部署回执如涉及 Runtime 文件，恢复会停止以保留 Steam 库变更。
+- 只读核对表明运行中的 FX 1.9.9 持有独立测试副本。Mac 锁屏，按本次指示跳过需解锁的界面步骤。当前 Guest Runtime 版本／构建、Steam 下载与安装、现有 ARM64 Runtime 的实机复验、旧 App 界面升级均为 BLOCKED。断网、Steam 未登录、重启、Proton-JE 实机联动、游戏启动与联机均为 NOT_TESTED。
+- 下文 2026-11-25 的归档、导入命令及三组件内置结果为历史证据。现行导入命令只接受 Proton-JE，RF 仍使用原有工具。
+
 ## 三组件内置 · 2026-11-25
 
 环境分支以 `9084b5ce7aec07860a2ce1aa496b64758e3d36a0` 为开发起点，远端 main 为 `dfe2c18e5fb586b918cf089e1f3900a2e85459aa`。固定版本组合来自 [FX 1.9.12 成功环境审计](../environment/FEX_SUCCESS_ENVIRONMENT_REPORT_FX1912_20261115.md)中的工具映射、归档和实际启动记录。历史镜像保持原状。没有升级或重新编译组件。

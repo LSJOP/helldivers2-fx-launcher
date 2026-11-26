@@ -7,6 +7,8 @@ v1.0.5 Stable 集成组件更新引擎和 Dashboard V003。正式过渡包面向
 > 2026-11-24 · `fix/first-run-ssh-access` 的 FX 1.9.9 独立副本通过既有环境两次重启复验。缺失场景和真实 Bundle 上传仍待验证。启动和持久化证据见[部署验收](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
 
 
+> 2026-11-26 · v1.0.6 候选切换到 Guest Steam 管理 Runtime 4（4183110）。RF FEX 与 Proton-JE 保留内置优先。Schema 3 支持旧清单及移除 Runtime 的新目标。真实安装和公开分发状态见[部署验收](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
+
 > 2026-11-25 · 环境分支本机 Debug 采用三组件内置优先策略，复用现有 Proton 与 Runtime 部署事务。实机离线安装及公开分发待验收。见[构建与验收](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
 
 组件级 App 更新候选位于现有环境分支，包含签名 Schema 3、目标组装、原 Helper 接管和全量备用。详细区分测试、本机实机和生产交付，见[验收](testing/COMPONENT_UPDATES_ACCEPTANCE.md)。

@@ -1,5 +1,7 @@
 # Environment component manifest
 
+2026-11-26 当前策略。RF FEX 和 Proton-JE 内置优先，获批固定来源备用。Guest Steam 管理 Steam Linux Runtime 4.0（steamrt4，AppID 4183110）；历史基准 4.0.20261021.265997、Build ID 26116036。构建与更新不分发 Runtime 归档。原有 ARM64 Runtime（4185400）保持独立。Steam 下载后的实际版本、架构和容器兼容性必须重新验收。下文旧策略为历史记录。
+
 The [2026-11-24 acceptance record](../testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md) confirms that the opt-in arm64 Debug Bundle still contains all 41 verified files after the Dashboard V003 integration. The isolated FX 1.9.9 copy passed runtime checks with its existing managed installation over two normal reboots. Bundle upload on a missing installation and public payload approval remain open.
 
 The three-component policy now prefers the App Bundle. The [deployment catalogue](../../native-app/Resources/deployment-components-v1.json) pins original and bundled archive identities, sizes and runtime probes. The historical Runtime depot archive includes the ARM64 pressure-vessel executable used on FX while targeting the separate SteamLinuxRuntime_4 directory. Public redistribution of the exact archives and RF tree remains unapproved.

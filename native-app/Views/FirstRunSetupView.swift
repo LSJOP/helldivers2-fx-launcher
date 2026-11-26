@@ -325,7 +325,11 @@ struct EnvironmentWorkflowProgressView: View {
         VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     if workflow.active, let component = workflow.archiveComponent, let phase = workflow.archivePhase {
-                        Text(verbatim: component + " · " + (phase == "sftp" ? "SFTP" : state.t("ui.workflow.deploying")))
+                        if component == "steam-runtime" {
+                            Text(state.steamRuntimePhaseTitle(phase))
+                        } else {
+                            Text(verbatim: component + " · " + (phase == "sftp" ? "SFTP" : state.t("ui.workflow.deploying")))
+                        }
                     } else if !showStepsInline || workflow.phase == .launching {
                         Text(workflow.phase == .launching ? state.launchSession.current.title(state.languageCode) :
                              state.t(workflow.launchesGame && workflow.phase == .failed ? "ui.179" : workflow.phase.titleKey))

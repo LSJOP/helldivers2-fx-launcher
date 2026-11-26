@@ -95,6 +95,144 @@ struct SteamVDF {
     static let toolPath = ["installconfigstore", "software", "valve", "steam", "compattoolmapping", "553850", "name"]
 }
 
+/// Resolve AppID 4183110 from Steam's registered libraries. The historical
+/// compatibility baseline remains a gate until another Valve build is qualified.
+enum SteamRuntime4 {
+    static let missing = "FEX_LOCAL_RUNTIME_MISSING"
+    static let unverified = "STEAM_RUNTIME_INCOMPATIBLE"
+
+    struct Observation {
+        let phase: String
+        var path: String? = nil
+        var build: String? = nil
+        var version: String? = nil
+    }
+
+    static func observe(_ backend: SSHEnvironmentBackend, snapshot: DeploymentSnapshot) throws -> Observation {
+        let identity = try backend.hostIdentity()
+        let home = snapshot.facts["home"] ?? ""
+        guard home.hasPrefix("/"), !home.contains("\n") else { throw CoreError("TARGET_CHANGED") }
+        var roots = [home + "/.local/share/Steam", home + "/.steam/root"]
+        if let raw = snapshot.facts["libraryfolders_data"], let bytes = Data(base64Encoded: raw),
+           let vdf = String(data: bytes, encoding: .utf8) {
+            roots += try SteamVDF(vdf).steamLibraryRoots()
+        }
+        guard roots.allSatisfy({ $0.hasPrefix("/") && $0.utf8.count <= 4096 && !$0.contains("\n") && !$0.contains("\0") }) else {
+            throw CoreError("UNSAFE_PATH")
+        }
+        let input = Data(CoreJSON.encode(.object(["boot": .string(snapshot.boot), "roots": .array(roots.map(JSONValue.string))])).utf8)
+        let command = "python3 - <<'HD2_STEAM_RUNTIME'\nimport base64,json\nrequest=json.loads(base64.b64decode('" +
+            input.base64EncodedString() + "'))\n" + probe + "\nHD2_STEAM_RUNTIME\n"
+        let result = try backend.transport.run(command, timeout: 20, context: backend.context)
+        guard try backend.hostIdentity() == identity else { throw CoreError("TARGET_CHANGED") }
+        guard result.status == 0, let records = try? JSONDecoder().decode([[String: JSONValue]].self, from: Data(result.stdout.utf8)) else {
+            throw CoreError("STEAM_RUNTIME_CHECK_FAILED")
+        }
+        guard records.count <= 1 else { throw CoreError("COMPONENT_CONFLICT") }
+        guard let record = records.first else { return Observation(phase: "missing") }
+        guard let manifest = record["manifest"]?.text, let path = record["path"]?.text else {
+            throw CoreError("STEAM_RUNTIME_CHECK_FAILED")
+        }
+        let vdf = try SteamVDF(manifest)
+        guard try vdf.value(["appstate", "appid"]) == "4183110",
+              try vdf.value(["appstate", "installdir"]) == "SteamLinuxRuntime_4",
+              let flags = try vdf.value(["appstate", "stateflags"]).flatMap(UInt32.init) else {
+            throw CoreError("STEAM_RUNTIME_CHECK_FAILED")
+        }
+        let build = try vdf.value(["appstate", "buildid"])
+        // Steam also includes the FullyInstalled bit while updating a previous build.
+        let phase = installPhase(flags)
+        guard phase == "installed" else { return Observation(phase: phase, build: build) }
+        let version = record["version"]?.text
+        guard build == "26116036", version == "4.0.20261021.265997", record["verified"]?.boolean == true else {
+            return Observation(phase: "incompatible", build: build, version: version)
+        }
+        return Observation(phase: "installed", path: path, build: build, version: version)
+    }
+
+    static func installPhase(_ flags: UInt32) -> String {
+        // Runtime can remain marked FullyInstalled while Steam replaces an old build.
+        if flags & 0x0010_0000 != 0 { return "downloading" }
+        if flags & 0x006F_0000 != 0 { return "installing" }
+        return flags == 4 ? "installed" : "pending"
+    }
+
+    static func ensure(_ backend: SSHEnvironmentBackend, snapshot: DeploymentSnapshot,
+                       progress: (String) -> Void) throws {
+        progress("checking")
+        let deadline = CoreClock.monotonic + 900
+        var requested = false, startedSteam = false, lastPhase = "checking"
+        while CoreClock.monotonic < deadline {
+            try backend.context.check()
+            let runtime = try observe(backend, snapshot: snapshot)
+            if runtime.phase == "installed" { progress("verifying"); return }
+            if runtime.phase == "incompatible" {
+                throw CoreError(unverified, ["runtime_build": .string(runtime.build ?? "unknown"),
+                                             "runtime_version": .string(runtime.version ?? "unknown")])
+            }
+            let state = try GuestService.state(backend.transport, context: backend.context)
+            guard state["boot"]?.text == snapshot.boot, state["game_count"]?.integer == 0 else { throw CoreError("TARGET_CHANGED") }
+            if runtime.phase == "downloading" || runtime.phase == "installing" {
+                if lastPhase != runtime.phase { progress(runtime.phase); lastPhase = runtime.phase }
+            } else if !GuestService.steamReady(state) {
+                if lastPhase != "login" { progress("login"); lastPhase = "login" }
+                if !startedSteam, state["steam_count"]?.integer == 0, state["service"]?.text == "stopped" {
+                    let session = GuestSession(boot: snapshot.boot, identitySignature: snapshot.target, plan: state)
+                    _ = try GuestService.steam(backend.transport, session: session, context: backend.context)
+                    startedSteam = true
+                }
+            } else if !requested {
+                progress("requesting")
+                try GuestService.requestRuntime4(backend.transport, boot: snapshot.boot, context: backend.context)
+                requested = true
+                lastPhase = "requesting"
+            }
+            Thread.sleep(forTimeInterval: min(3, max(0, deadline - CoreClock.monotonic)))
+        }
+        throw CoreError(lastPhase == "login" ? "STEAM_RUNTIME_LOGIN_REQUIRED" : "STEAM_RUNTIME_DOWNLOAD_INCOMPLETE")
+    }
+
+    static let evidence = #"""
+import os,pathlib,hashlib,re
+def runtime_regular(path,limit):
+ return path.resolve()==path and path.is_file() and path.stat().st_size<=limit
+def runtime_evidence(runtime):
+ versions=runtime/'VERSIONS.txt'
+ if not runtime_regular(versions,4096):return None,False
+ data=versions.read_bytes()
+ match=re.search(rb'(?m)^depot[\t ]+(\d+(?:\.\d+){2,5})\b',data)
+ version=match[1].decode() if match else None
+ if hashlib.sha256(data).hexdigest()!='936cb7e1a2de6463e81b08443f3096ea6900de05d1723c0f0f7bcef946aad88a':return version,False
+ version='4.0.20261021.265997'
+ expected={
+  '_v2-entry-point':('ab9beb61c7c614caeb53e70ea0f4a1736d18b71eacb907ab09832db53cf6e46d',None),
+  'pressure-vessel/bin/pressure-vessel-wrap':('5357ec29b464961bfd1a743d4a28732d971062719933c9cbbea6ae95eb7110ad',62),
+  'pressure-vessel-arm64/bin/pressure-vessel-wrap':('0f08831d92b7747b113a967ba2eba2d3266c426ccd8854f872dc5130582e8079',183)}
+ for relative,(digest,machine) in expected.items():
+  file=runtime/relative
+  if not runtime_regular(file,2**20) or not os.access(file,os.X_OK):return version,False
+  content=file.read_bytes()
+  if hashlib.sha256(content).hexdigest()!=digest:return version,False
+  if machine is not None and (content[:6]!=b'\x7fELF\x02\x01' or int.from_bytes(content[18:20],'little')!=machine):return version,False
+ return version,True
+"""#
+
+    static let probe = evidence + "\n" + #"""
+import json
+if pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip()!=request['boot']:raise SystemExit(1)
+records=[]
+for library in sorted({pathlib.Path(root).resolve() for root in request['roots']}):
+ steamapps=library/'steamapps'
+ manifest=steamapps/'appmanifest_4183110.acf'
+ runtime=steamapps/'common/SteamLinuxRuntime_4'
+ if not os.path.lexists(manifest):continue
+ if not runtime_regular(manifest,8192):raise SystemExit(1)
+ version,verified=runtime_evidence(runtime)
+ records.append({'manifest':manifest.read_text(),'path':str(runtime),'version':version,'verified':verified})
+print(json.dumps(records))
+"""#
+}
+
 final class SSHEnvironmentBackend: DeploymentBackend {
     let transport: SSHTransport, fx: URL, context: CoreContext, configurationRevision: String
     var expectedGuestBoot: String?
@@ -402,7 +540,9 @@ printf 'free=%s\n' "$free"
 present(){ if [ -e "$2" ]; then printf '%s=present\n' "$1"; else printf '%s=missing\n' "$1"; fi; }
 present steam "$S/steam.sh"
 present game "$S/steamapps/common/Helldivers 2/bin/helldivers2.exe"
-for pair in "libraryfolders:$S/steamapps/libraryfolders.vdf" "loginusers:$S/config/loginusers.vdf"; do
+libraries="$S/steamapps/libraryfolders.vdf"
+if [ ! -f "$libraries" ]; then libraries="$HOME/.steam/root/steamapps/libraryfolders.vdf"; fi
+for pair in "libraryfolders:$libraries" "loginusers:$S/config/loginusers.vdf"; do
  key=${pair%%:*}; file=${pair#*:}
  if [ -f "$file" ] && [ ! -L "$file" ] && [ "$(wc -c < "$file")" -le 262144 ]; then
   printf '%s_data=' "$key"; base64 < "$file" | tr -d '\n'; printf '\n'

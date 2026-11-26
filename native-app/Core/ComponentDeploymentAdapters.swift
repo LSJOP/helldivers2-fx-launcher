@@ -433,9 +433,9 @@ enum FEXWorkflow {
 
     /// Recompute the full installed tree for every action. Consent never certifies provenance.
     static func observe(_ backend: SSHEnvironmentBackend, snapshot: inout DeploymentSnapshot, approvals: [String]) throws {
-        let helpers = pipeline.components(separatedBy: "work=pathlib.Path.home()")[0]
-        func probe(_ expected: String = "") throws -> [String: JSONValue] {
-            let script = "python3 - <<'HD2_FEX_PROBE'\n" + helpers + "\nEXPECTED_BOOT=" + CoreJSON.encode(.string(snapshot.boot)) + "\nEXPECTED_TREE=" + CoreJSON.encode(.string(expected)) + "\n" + runtimeProbe + "\nHD2_FEX_PROBE\n"
+        let helpers = SteamRuntime4.evidence + "\n" + pipeline.components(separatedBy: "work=pathlib.Path.home()")[0]
+        func probe(_ expected: String = "", runtimePath: String = "") throws -> [String: JSONValue] {
+            let script = "python3 - <<'HD2_FEX_PROBE'\n" + helpers + "\nEXPECTED_BOOT=" + CoreJSON.encode(.string(snapshot.boot)) + "\nEXPECTED_TREE=" + CoreJSON.encode(.string(expected)) + "\nRUNTIME_PATH=" + CoreJSON.encode(.string(runtimePath)) + "\n" + runtimeProbe + "\nHD2_FEX_PROBE\n"
             let result = try backend.transport.run(script, timeout: 150, context: backend.context)
             guard result.status == 0, let bytes = result.stdout.data(using: .utf8),
                   let value = try? JSONDecoder().decode([String: JSONValue].self, from: bytes) else { throw CoreError("FEX_RUNTIME_FAILED") }
@@ -504,7 +504,15 @@ enum FEXWorkflow {
             snapshot.facts["fex_reason"] = "FEX_CONFIRMATION_REQUIRED"
             return
         }
-        let runtime = try probe(tree)
+        let dependency = try SteamRuntime4.observe(backend, snapshot: snapshot)
+        snapshot.facts["steam_runtime_phase"] = dependency.phase
+        snapshot.facts["steam_runtime_build"] = dependency.build
+        snapshot.facts["steam_runtime_version"] = dependency.version
+        guard let runtimePath = dependency.path else {
+            snapshot.facts["fex_reason"] = dependency.phase == "incompatible" ? SteamRuntime4.unverified : SteamRuntime4.missing
+            return
+        }
+        let runtime = try probe(tree, runtimePath: runtimePath)
         guard runtime["runtime"]?.boolean == true else {
             snapshot.facts["fex_reason"] = runtime["reason"]?.text ?? "FEX_RUNTIME_FAILED"
             return
@@ -628,15 +636,15 @@ def check():
  if fingerprint(inventory(root))!=tree:return {'reason':'FEX_CHANGED'}
  if pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip()!=EXPECTED_BOOT:return {'reason':'TARGET_CHANGED'}
  if status!=42:return {'reason':'FEX_RUNTIME_FAILED'}
- if managed:
-  rt=pathlib.Path.home()/'.local/share/Steam/steamapps/common/SteamLinuxRuntime_4'
+ if RUNTIME_PATH:
+  rt=pathlib.Path(RUNTIME_PATH)
+  safe(rt)
+  if not runtime_evidence(rt)[1]:return {'reason':'STEAM_RUNTIME_INCOMPATIBLE'}
   env=dict(os.environ,PRESSURE_VESSEL_EMULATOR=str(root/'emulator.json'),
-           STEAM_COMPAT_EMULATOR=str(rt.parent/'FEX-Emu/emulator.json'),
+           STEAM_COMPAT_EMULATOR=str(steam_root/'emulator.json'),
            STEAM_COMPAT_GRAPHICS_PROVIDER=str(provider/'graphics_provider.json'),
            STEAM_COMPAT_MACHINE_ARCHITECTURE='aarch64-linux-gnu',
            PRESSURE_VESSEL_PREFIX=str(rt/'pressure-vessel-arm64'))
-  if fingerprint(inventory(rt,omit_var=True)) not in [RUNTIME_VALVE[2],RUNTIME_LOCAL[2]]:
-   return {'reason':'FEX_LOCAL_RUNTIME_MISSING'}
   env.pop('FEX_ROOTFS',None)
   command=[str(rt/'_v2-entry-point'),'--verb=run','--','/bin/sh','-c',
            'case "${FEX_ROOTFS-unset}" in "") r=empty;; /) r=slash;; /usr/share/guestos/fex-mesa|/usr/share/guestos/fex-mesa/) r=provider;; unset) r=unset;; *) r=other;; esac; printf "HD2_ROOTFS_OK:%s\n" "$r"; sleep 1']
@@ -804,9 +812,14 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
     }
 
     private static func deployReplay(backend: SSHEnvironmentBackend, snapshot: DeploymentSnapshot,
-                                     request original: [String: JSONValue], files: [JSONValue],
-                                     runtimeArchive: URL? = nil, preferBundle: Bool = false) throws -> [String: JSONValue] {
-        let preflight = try runLocalReplay(backend: backend, request: original, phase: "preflight")
+                                     request original: [String: JSONValue], files: [JSONValue]) throws -> [String: JSONValue] {
+        let dependency = try SteamRuntime4.observe(backend, snapshot: snapshot)
+        guard let runtimePath = dependency.path else {
+            throw CoreError(dependency.phase == "incompatible" ? SteamRuntime4.unverified : SteamRuntime4.missing)
+        }
+        var original = original
+        original["runtime_path"] = .string(runtimePath)
+        _ = try runLocalReplay(backend: backend, request: original, phase: "preflight")
         var install = original
         install["mode"] = .string("local_replay")
         install["ticket"] = .string(UUID().uuidString.lowercased())
@@ -820,41 +833,10 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
         install["files_sha256"] = .string(replayHash(payload))
         let staging = try runLocalReplay(backend: backend, request: install, phase: "upload")
         defer { _ = try? runLocalReplay(backend: backend, request: install, phase: "cleanup") }
-        guard let destination = staging["destination"]?.text, let remotePayload = staging["files"]?.text else {
+        guard let remotePayload = staging["files"]?.text else {
             throw CoreError("PROTOCOL_ERROR")
         }
         try backend.transport.upload(payloadFile, to: remotePayload, context: backend.context)
-        if preflight["runtime_ready"]?.boolean != true, preferBundle,
-           let archive = try DeploymentArchive.verified("SteamLinuxRuntime_4", context: backend.context) {
-            backend.archiveProgress("SteamLinuxRuntime_4", "sftp")
-            try backend.transport.upload(archive, to: destination, context: backend.context)
-            backend.archiveProgress("SteamLinuxRuntime_4", "install")
-            install["bundled_runtime_uploaded"] = .bool(true)
-        } else if preflight["runtime_ready"]?.boolean != true, let archive = runtimeArchive {
-            let values = try archive.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
-            guard archive.path == archive.resolvingSymlinksInPath().path, values.isRegularFile == true,
-                  values.isSymbolicLink != true, values.fileSize == 717_803_520 else { throw CoreError("ARTIFACT_HASH") }
-            let source = try FileHandle(forReadingFrom: archive)
-            defer { try? source.close() }
-            var hasher = SHA256(), bytes = 0
-            while let chunk = try source.read(upToCount: 1_048_576), !chunk.isEmpty {
-                try backend.context.check(); bytes += chunk.count
-                guard bytes <= 717_803_520 else { throw CoreError("ARTIFACT_HASH") }
-                hasher.update(data: chunk)
-            }
-            let hash = hasher.finalize().map { String(format: "%02x", $0) }.joined()
-            guard bytes == 717_803_520,
-                  hash == "31a43e6e6ff78509eb1cdb762cfff8e9d89fc83c118d5d723bead42b9b18ca5c" else {
-                throw CoreError("ARTIFACT_HASH")
-            }
-            try backend.transport.upload(archive, to: destination, context: backend.context)
-            install["local_runtime_uploaded"] = .bool(true)
-        }
-        defer {
-            if install["bundled_runtime_uploaded"]?.boolean == true {
-                backend.archiveProgress("SteamLinuxRuntime_4", "finished")
-            }
-        }
         let result = try runLocalReplay(backend: backend, request: install, phase: "install")
         guard result["verified"]?.boolean == true, let tree = result["installed_manifest"]?.text,
               ApprovedArtifact.hash(tree) else { throw CoreError("VERIFY_FAILED") }
@@ -868,16 +850,16 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
         let code: String
         if phase == "install" {
             let probe = runtimeProbe.components(separatedBy: "try:print(json.dumps(check()))")[0]
-            code = "import pathlib\n" + probe + "\n" + pipeline
+            code = SteamRuntime4.evidence + "\n" + probe + "\n" + pipeline
         } else {
-            code = pipeline.components(separatedBy: "work=pathlib.Path.home()")[0]
+            code = SteamRuntime4.evidence + "\n" + pipeline.components(separatedBy: "work=pathlib.Path.home()")[0]
                 + "\nlocal_replay_prepare(" + CoreJSON.encode(.string(phase)) + ")"
         }
         let script = "python3 - <<'HD2_FEX_LOCAL'\nimport base64,json\nREQUEST=json.loads(base64.b64decode('" + payload + "'))\n" + code + "\nHD2_FEX_LOCAL\n"
         _ = try backend.hostIdentity()
-        let outcome = try backend.transport.run(script, timeout: phase == "install" ? 350 : 15, context: backend.context)
+        let outcome = try backend.transport.run(script, timeout: phase == "install" ? 350 : 30, context: backend.context)
         guard outcome.status == 0 else {
-            let reasons = ["FEX_LOCAL_RUNTIME_MISSING", "FEX_ROOTFS_UNAVAILABLE", "TARGET_CHANGED", "STEAM_RUNNING",
+            let reasons = ["STEAM_RUNTIME_INCOMPATIBLE", "FEX_LOCAL_RUNTIME_MISSING", "FEX_ROOTFS_UNAVAILABLE", "TARGET_CHANGED", "STEAM_RUNNING",
                            "EXTERNAL_DRIFT", "ARTIFACT_HASH", "ARTIFACT_FORMAT", "UNSAFE_PATH", "VERIFY_FAILED",
                            "INSUFFICIENT_SPACE", "COMPONENT_CONFLICT", "TIMEOUT", "FEX_CHANGED", "FEX_TIMEOUT",
                            "FEX_DEPENDENCY_FAILED", "FEX_RUNTIME_FAILED"]
@@ -905,7 +887,7 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
             }
             request["legacy_tree"] = .string(tree)
         }
-        var result = try deployReplay(backend: backend, snapshot: snapshot, request: request, files: package.files, preferBundle: true)
+        var result = try deployReplay(backend: backend, snapshot: snapshot, request: request, files: package.files)
         result["resource_source"] = .string("app-bundle")
         result["package_id"] = .string(package.id)
         result["package_fingerprint"] = .string(package.fingerprint)
@@ -1002,12 +984,7 @@ except Exception:print(json.dumps({'reason':'FEX_INTEGRITY_FAILED'}))
             return .object(["path": .string(path), "sha256": .string(replayHash(contents)), "mode": .number(Double(mode)),
                             "data": .string(contents.base64EncodedString())])
         }
-        var runtimeArchive: URL?
-        if let flag = arguments.firstIndex(of: "--hd2-runtime-archive"), arguments.indices.contains(flag + 1) {
-            runtimeArchive = URL(fileURLWithPath: arguments[flag + 1]).standardizedFileURL
-        }
-        return try deployReplay(backend: backend, snapshot: snapshot, request: request,
-                                files: files, runtimeArchive: runtimeArchive)
+        return try deployReplay(backend: backend, snapshot: snapshot, request: request, files: files)
     }
 
     private static func localArtifact(_ file: URL, hash: String) throws -> Data {
@@ -1120,6 +1097,18 @@ extension FEXWorkflow {
         emit("INFO", "FX runtime repair preflight", ["deployment_state": .string("Checking"),
              "component": .string("fex"), "status": .string("running"),
              "source": .string("app-bundle")])
+        func runtimeProgress(_ phase: String) {
+            emit("INFO", "Steam Runtime setup", ["kind": .string("steam_runtime_stage"), "runtime_phase": .string(phase)])
+        }
+        try SteamRuntime4.ensure(backend, snapshot: before, progress: runtimeProgress)
+        if reason == SteamRuntime4.missing {
+            let after = try backend.snapshot()
+            try requireCompatible(after)
+            runtimeProgress("ready")
+            return ["repair_attempted": .bool(true), "repair_source": .string("steam"),
+                    "verification": .object(["runtime_build": .string(after.facts["steam_runtime_build"] ?? "unknown"),
+                                             "runtime_version": .string(after.facts["steam_runtime_version"] ?? "unknown")])]
+        }
         let package: RFBundlePackage?
         do {
             package = try bundledPackage()
@@ -1136,6 +1125,7 @@ extension FEXWorkflow {
             backend.fexApprovals.append(approval)
             let after = try backend.snapshot()
             try requireCompatible(after)
+            runtimeProgress("ready")
             emit("INFO", "FX runtime repair verified", ["deployment_state": .string("Verifying"),
                  "component": .string("fex"), "status": .string("done"), "source": .string("app-bundle")])
             bundled["repair_attempted"] = .bool(true)
@@ -1171,6 +1161,7 @@ extension FEXWorkflow {
         let installed = try run("first_run_fex_install", backend: backend, params: installParams)
         let after = try backend.snapshot()
         try requireCompatible(after)
+        runtimeProgress("ready")
         emit("INFO", "FX runtime repair verified", ["deployment_state": .string("Verifying"),
              "component": .string("fex"), "status": .string("done"), "source": .string(source)])
         var result = installed
@@ -1278,13 +1269,6 @@ def observed_managed_executable(supervisor, executable):
    visited.add(pid);pid=processes[pid][0]
  return False
 def fingerprint(x):return hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':')).encode()).hexdigest()
-RUNTIME_NAME='SteamLinuxRuntime_4'
-RUNTIME_URL='https://repo.steampowered.com/steamrt4/images/4.0.20261021.265997/SteamLinuxRuntime_4.tar.xz'
-RUNTIME_VALVE=(175077288,'aa9dd1aab2173e65b631faae34b85e2c17fe323d941013154ddd2e1dce8a0910','db4b40a9b5c254582283b1876944f06dcdb78afea4aac90540c3b6a4f46cc9f0')
-RUNTIME_LOCAL=(717803520,'31a43e6e6ff78509eb1cdb762cfff8e9d89fc83c118d5d723bead42b9b18ca5c','11c51804ac7a94667d2bda95ba88fa21cbfdde6ada5f1e2fe6998c100cb3bfe7')
-RUNTIME_BUNDLE=(193365028,'d70d0db92512bd9cc0d200618b780fd8da37cc5cb6c5cad9326df261f20b468d',RUNTIME_LOCAL[2])
-def runtime_common():
- return pathlib.Path.home()/'.local/share/Steam/steamapps/common'
 def replay_root():
  return pathlib.Path.home()/'.local/share/HD2FXLauncher/compatibility/FEX-RF'
 def replay_work():
@@ -1299,16 +1283,16 @@ def local_replay_preflight(installed):
   if not legacy or fingerprint(inventory(installed))!=legacy:fail('EXTERNAL_DRIFT')
  provider=pathlib.Path('/usr/share/guestos/fex-mesa')
  if not (provider/'graphics_provider.json').is_file() or not (provider/'usr/lib/ld-linux-x86-64.so.2').is_file():fail('FEX_ROOTFS_UNAVAILABLE')
- runtime=runtime_common()/RUNTIME_NAME
+ runtime=pathlib.Path(REQUEST['runtime_path'])
  safe(runtime)
- ready=os.path.lexists(runtime)
- if ready and fingerprint(inventory(runtime,omit_var=True)) not in [RUNTIME_VALVE[2],RUNTIME_LOCAL[2]]:fail('COMPONENT_CONFLICT')
- if not ready and shutil.disk_usage(runtime_common()).free<2*1024**3:fail('INSUFFICIENT_SPACE')
- return ready
+ if not runtime.is_absolute() or runtime.name!='SteamLinuxRuntime_4' or runtime.parent.name!='common' or runtime.parent.parent.name!='steamapps':fail('UNSAFE_PATH')
+ if not runtime_evidence(runtime)[1]:fail('STEAM_RUNTIME_INCOMPATIBLE')
+ runtime_smoke(runtime)
+ return runtime
 def local_replay_prepare(phase):
  installed=replay_root()
  if phase=='preflight':
-  print(json.dumps({'runtime_ready':local_replay_preflight(installed)}));return
+  local_replay_preflight(installed);print('{}');return
  identity()
  machine=pathlib.Path('/etc/machine-id').read_text().strip()
  if hashlib.sha256(machine.encode()).hexdigest()!=REQUEST['machine']:fail('TARGET_CHANGED')
@@ -1318,74 +1302,13 @@ def local_replay_prepare(phase):
   store.mkdir(parents=True,exist_ok=True,mode=0o700)
   if store.stat().st_uid!=os.getuid() or store.stat().st_mode&0o022:fail('UNSAFE_PATH')
   incoming.mkdir(mode=0o700)
-  print(json.dumps({'destination':str(incoming/'runtime.tar'),'files':str(incoming/'files.json')}))
+  print(json.dumps({'files':str(incoming/'files.json')}))
  elif phase=='cleanup':
   if incoming.exists():
-   for name in ['runtime.tar','files.json']:(incoming/name).unlink(missing_ok=True)
+   (incoming/'files.json').unlink(missing_ok=True)
    incoming.rmdir()
   print('{}')
  else:fail('INVALID_ARGUMENT')
-def stage_runtime(parent,token):
- import tarfile,posixpath
- token=str(uuid.UUID(token))
- stage=parent/('HD2-runtime-stage-'+token)
- bundled=REQUEST.get('bundled_runtime_uploaded') is True
- local=REQUEST.get('local_runtime_uploaded') is True or bundled
- size,expected,tree=RUNTIME_BUNDLE if bundled else RUNTIME_LOCAL if local else RUNTIME_VALVE
- archive=replay_work()/('incoming-'+token)/'runtime.tar' if local else replay_work()/('runtime-'+token+'.tar.xz')
- cache=replay_work()/('runtime-'+expected+'.tar.xz');safe(cache)
- safe(archive)
- try:
-  if not local:
-   cached=cache.is_file() and cache.stat().st_nlink==1 and cache.stat().st_size==size and digest(cache)==expected
-   proxy=guest_proxy()
-   args=['curl','--fail','--silent','--show-error','--proto','=https','--max-time','160',
-         '--retry','2','--connect-timeout','20','--max-filesize',str(size),'--output',str(archive)]
-   if proxy:args+=['--proxy',proxy]
-   if cached:shutil.copyfile(cache,archive)
-   else:subprocess.run(args+[RUNTIME_URL],check=True,timeout=165,stdout=subprocess.DEVNULL)
-  status=archive.lstat()
-  if not stat.S_ISREG(status.st_mode) or status.st_nlink!=1 or status.st_size!=size or digest(archive)!=expected:fail('ARTIFACT_HASH')
-  if not local and not cached:
-   # Publish only verified bytes. Failure leaves the previous cache unchanged.
-   temporary=cache.with_name(cache.name+'.'+token)
-   try:
-    shutil.copyfile(archive,temporary);temporary.chmod(0o600);os.replace(temporary,cache)
-   finally:temporary.unlink(missing_ok=True)
-  stage.mkdir(mode=0o700)
-  extracted=0;seen=set();links=[]
-  with tarfile.open(archive,'r|*') as source:
-   for member in source:
-    name=member.name.rstrip('/') if member.isdir() else member.name
-    if not local:
-     if name==RUNTIME_NAME and member.isdir():continue
-     if not name.startswith(RUNTIME_NAME+'/'):fail('ARTIFACT_FORMAT')
-     name=name[len(RUNTIME_NAME)+1:]
-    if len(seen)>=9000 or name in seen or not name or any(p in ['','.','..'] for p in name.split('/')):fail('UNSAFE_PATH')
-    seen.add(name);dst=stage/name
-    safe(dst);dst.parent.mkdir(parents=True,exist_ok=True)
-    if member.isdir():dst.mkdir(exist_ok=True)
-    elif member.isfile():
-     extracted+=member.size
-     if extracted>750000000:fail('ARTIFACT_FORMAT')
-     with source.extractfile(member) as src,dst.open('xb') as out:shutil.copyfileobj(src,out)
-     dst.chmod(member.mode&0o777)
-    elif member.issym():
-     resolved=posixpath.normpath(posixpath.join(posixpath.dirname(name),member.linkname))
-     if member.linkname.startswith('/') or resolved in ['.','..'] or resolved.startswith('../'):fail('UNSAFE_PATH')
-     links.append((dst,member.linkname))
-    else:fail('ARTIFACT_FORMAT')
-  for dst,target in links:
-   safe(dst)
-   if os.path.lexists(dst):fail('UNSAFE_PATH')
-   dst.symlink_to(target)
-  if fingerprint(inventory(stage,omit_var=True))!=tree:fail('VERIFY_FAILED')
-  return stage,tree
- except BaseException:
-  if stage.is_dir() and not stage.is_symlink():shutil.rmtree(stage)
-  raise
- finally:
-  if not local:archive.unlink(missing_ok=True)
 def runtime_smoke(runtime):
  tool=runtime/'pressure-vessel-arm64/bin/pressure-vessel-wrap';safe(tool)
  env=dict(os.environ)
@@ -1402,22 +1325,6 @@ def stop_replay_steam():
  if observed.returncode!=0 or unit.returncode!=0 or observed.stdout.split()!=[unit.stdout.strip()]:fail('STEAM_RUNNING')
  subprocess.run(['systemctl','--user','stop','steam.service'],check=True,timeout=30,stdout=subprocess.DEVNULL)
  return True
-def runtime_registration():
- return '"AppState"{ "appid" "4183110" "Universe" "1" "name" "Steam Linux Runtime 4.0" "StateFlags" "4" "installdir" "SteamLinuxRuntime_4" "buildid" "26116036" "TargetBuildID" "26116036" "SizeOnDisk" "711197025" "InstalledDepots"{ "4183111"{ "manifest" "622183911945836103" "size" "711197025" } } }'
-def recover_runtime(receipt,installed):
- tree=receipt.get('runtime_tree')
- if tree is None:return
- if tree not in [RUNTIME_LOCAL[2],RUNTIME_VALVE[2]]:fail('EXTERNAL_DRIFT')
- rt=runtime_common()/RUNTIME_NAME
- rt_stage=runtime_common()/('HD2-runtime-stage-'+str(uuid.UUID(receipt['ticket'])))
- rt_acf=runtime_common().parent/'appmanifest_4183110.acf'
- for path in [rt,rt_stage,rt_acf]:safe(path)
- present=os.path.lexists(rt)
- if present and (os.path.lexists(rt_stage) or fingerprint(inventory(rt,omit_var=True))!=tree):fail('EXTERNAL_DRIFT')
- if os.path.lexists(rt_acf):
-  if not rt_acf.is_file() or rt_acf.stat().st_size>4096 or rt_acf.read_text()!=runtime_registration():fail('EXTERNAL_DRIFT')
-  rt_acf.unlink()
- if present:rt.rename(rt_stage)
 work=pathlib.Path.home()/'.local/share/HD2FXLauncher/fex-rf-v1';safe(work)
 work.mkdir(parents=True,exist_ok=True,mode=0o700)
 if work.stat().st_uid!=os.getuid() or work.stat().st_mode&0o022:fail('UNSAFE_PATH')
@@ -1536,10 +1443,7 @@ try:
  if mode in ['audit','build']:print(json.dumps(audit()))
  elif mode in ['install','local_replay']:
   if mode=='local_replay':
-   runtime_ready=local_replay_preflight(installed)
-   rt=runtime_common()/RUNTIME_NAME
-   rt_stage=None;rt_tree=None
-   rt_acf=runtime_common().parent/'appmanifest_4183110.acf';safe(rt_acf)
+   rt=local_replay_preflight(installed)
    installed.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
    safe(installed.parent)
    stage=work/('local-runtime-'+str(uuid.UUID(REQUEST['ticket'])))
@@ -1587,11 +1491,8 @@ try:
        return record.get('ticket')==path.stem and record.get('state')=='completed' and record.get('installed')==approved
       except (ValueError,OSError,AttributeError):return False
      if not any(owned_receipt(path) for path in receipts):fail('EXTERNAL_DRIFT')
-   if not runtime_ready:
-    if os.path.lexists(rt_acf):fail('COMPONENT_CONFLICT')
-    rt_stage,rt_tree=stage_runtime(runtime_common(),REQUEST['ticket'])
    restart_steam=stop_replay_steam()
-   runtime_smoke(rt_stage if rt_stage is not None else rt)
+   rt=local_replay_preflight(installed)
   idle();current=audit()
   if mode=='install' and (not current['ready'] or any(current[k]!=REQUEST['audit'].get(k) for k in ['source','patch','executable_sha256','expected_sha256','candidate','original','files','installed'])):fail('ARTIFACT_UNAPPROVED')
   if mode=='local_replay':
@@ -1625,21 +1526,12 @@ try:
   record=work/(token+'.json');save_record(record,receipt)
   moved_original=False;activated=False
   try:
-   if mode=='local_replay' and rt_stage is not None:
-    if os.path.lexists(rt) or os.path.lexists(rt_acf):fail('EXTERNAL_DRIFT')
-    receipt['runtime_tree']=rt_tree;save_record(record,receipt)
-    rt_stage.rename(rt)
-    if fingerprint(inventory(rt,omit_var=True))!=rt_tree:fail('VERIFY_FAILED')
-    registration_temp=work/('runtime-acf-'+token)
-    with registration_temp.open('x') as f:f.write(runtime_registration());f.flush();os.fsync(f.fileno())
-    os.link(registration_temp,rt_acf)
-    registration_temp.unlink()
    if installed.exists():
     installed.rename(backup);moved_original=True
    prepared.rename(installed);activated=True
    if inventory(installed)!=expected:fail('VERIFY_FAILED')
    if mode=='local_replay':
-    EXPECTED_BOOT=REQUEST['boot'];EXPECTED_TREE=fingerprint(expected)
+    EXPECTED_BOOT=REQUEST['boot'];EXPECTED_TREE=fingerprint(expected);RUNTIME_PATH=str(rt)
     root=installed;exe=root/'usr/bin/FEX';managed=True
     runtime=check()
     if not runtime.get('runtime'):fail(runtime.get('reason','FEX_RUNTIME_FAILED'))
@@ -1654,7 +1546,6 @@ try:
     if os.path.lexists(installed):fail('EXTERNAL_DRIFT')
     backup.rename(installed)
    if fingerprint(inventory(installed))!=receipt['original']:fail('VERIFY_FAILED')
-   recover_runtime(receipt,installed)
    receipt['state']='recovered';save_record(record,receipt)
    raise
   print(json.dumps({'ticket':token,'verified':True,'backup':backup.name,'installed_manifest':fingerprint(expected)}))
@@ -1662,9 +1553,9 @@ try:
   idle();token=REQUEST['ticket'];uuid.UUID(token);record=work/(token+'.json');safe(record)
   r=json.loads(record.read_text());backup=installed.with_name(installed.name+'.hd2-backup-'+token)
   if r['boot']!=REQUEST['boot'] or r['ticket']!=token:fail('TARGET_CHANGED')
+  if 'runtime_tree' in r:fail('EXTERNAL_DRIFT')
   current=fingerprint(inventory(installed))
   if current==r['original']:
-   recover_runtime(r,installed)
    r['state']='recovered';save_record(record,r);print(json.dumps({'ticket':token,'recovered':True}));sys.exit(0)
   if current!=r['installed'] and installed.exists():fail('EXTERNAL_DRIFT')
   if r['had_original'] and fingerprint(inventory(backup))!=r['original']:fail('EXTERNAL_DRIFT')
@@ -1674,7 +1565,6 @@ try:
   elif installed.exists():installed.rename(retained)
   if r['had_original']:backup.rename(installed)
   if fingerprint(inventory(installed))!=r['original']:fail('VERIFY_FAILED')
-  recover_runtime(r,installed)
   r['state']='recovered';save_record(record,r);print(json.dumps({'ticket':token,'recovered':True}))
  else:fail('INVALID_ARGUMENT')
 finally:

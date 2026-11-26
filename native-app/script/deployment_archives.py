@@ -3,7 +3,6 @@
 import argparse
 import hashlib
 import json
-import lzma
 from pathlib import Path
 import shutil
 import tempfile
@@ -22,7 +21,7 @@ def verify(path, size, sha256):
         raise ValueError("Archive size, path or SHA-256 mismatch: " + path.name)
 
 
-def publish(source, destination, entry, repack=False):
+def publish(source, destination, entry):
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.parent.resolve() != destination.parent.absolute():
         raise ValueError("Unsafe destination: " + destination.name)
@@ -35,11 +34,7 @@ def publish(source, destination, entry, repack=False):
     with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False) as temporary:
         stage = Path(temporary.name)
     try:
-        if repack:
-            with source.open("rb") as archive, lzma.open(stage, "wb", preset=3) as compressed:
-                shutil.copyfileobj(archive, compressed, 1024 * 1024)
-        else:
-            shutil.copyfile(source, stage)
+        shutil.copyfile(source, stage)
         verify(stage, entry["bytes"], entry["sha256"])
         stage.replace(destination)
     finally:
@@ -53,9 +48,11 @@ def main():
     parser.add_argument("--destination", type=Path, required=True)
     parser.add_argument("--source", type=Path)
     parser.add_argument("--proton", type=Path)
-    parser.add_argument("--runtime", type=Path)
     args = parser.parse_args()
     entries = json.loads(args.catalogue.read_text())["bundleArchives"]
+    retired = args.destination / "Deployment/SteamLinuxRuntime_4"
+    if args.action != "import" and (retired.exists() or retired.is_symlink()):
+        raise ValueError("Steam-managed Runtime must be absent from App resources")
     for entry in entries:
         relative = Path(entry["bundlePath"])
         if relative.is_absolute() or ".." in relative.parts or relative.parts[0] != "Deployment":
@@ -69,16 +66,11 @@ def main():
         if args.action == "verify":
             verify(output, entry["bytes"], entry["sha256"])
             continue
-        repack = args.action == "import" and entry["name"] == "SteamLinuxRuntime_4"
-        if args.action == "import":
-            source = args.runtime if repack else args.proton
-        else:
-            source = args.source / relative if args.source else None
+        source = args.proton if args.action == "import" else (args.source / relative if args.source else None)
         if source is None:
             parser.error("missing archive source")
-        verify(source.absolute(), entry["originalBytes"] if repack else entry["bytes"],
-               entry["originalSHA256"] if repack else entry["sha256"])
-        publish(source, output, entry, repack)
+        verify(source.absolute(), entry["bytes"], entry["sha256"])
+        publish(source, output, entry)
         print(f'{entry["name"]}: {entry["bytes"]} bytes, SHA-256 {entry["sha256"]}')
 
 

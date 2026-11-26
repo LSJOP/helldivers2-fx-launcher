@@ -41,9 +41,10 @@ def verify_component_assets(manifest, release, directory):
     target = components["targetBytes"]
     destinations = {"rf-fex": "RF-FEX", "proton-je": "Proton-JE", "runtime4": "SteamLinuxRuntime_4"}
     modules = components["modules"]
+    ids = {item["id"] for item in modules}
     if (components["protocolVersion"] != 1 or not 0 < components["minimumBaseBuild"] < manifest["build"]
             or not 0 < target <= 2_147_483_648 or not re.fullmatch(r"[a-f0-9]{64}", components["targetTreeSHA256"])
-            or (modules and (len(modules) != 3 or set(item["id"] for item in modules) != set(destinations)))):
+            or len(ids) != len(modules) or ids not in (set(), {"rf-fex", "proton-je"}, set(destinations))):
         raise ValueError("Invalid component manifest")
     core = components["core"]
     expanded = core["expandedBytes"]

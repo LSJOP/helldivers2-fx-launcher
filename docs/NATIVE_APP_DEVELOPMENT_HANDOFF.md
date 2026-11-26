@@ -9,7 +9,9 @@ v1.0.5 过渡发行保留受控 Debug 资源，仅公开分发签名更新引擎
 2026-11-24 复验从源码 `564d31274056a02dfdad5abfd4ad10a055625e97` 继续，已观察到独立副本的第二次正常启动。既有组件通过 App 检查。另修复首次配置完成后总览的启动按钮恢复逻辑。缺失修复、真实上传和分发审批仍待验收。
 
 
-2026-11-25：RF FEX、Proton-JE 和 SteamLinuxRuntime_4 统一内置优先。沿用 Proton 的完整树校验和 Runtime 的事务，保留原有 ARM64 Runtime。受控构建导入、大小、更新上限和验收见[专项报告](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
+2026-11-26：v1.0.6 候选由 Guest Steam 负责 Runtime 4。保留历史归档作为本地证据，构建与打包拒绝已退役的 Bundle 目录。现有 Steam Runtime 和 ARM64 Runtime 保留。RF FEX 与 Proton-JE 公开分发审批仍独立待完成。
+
+2026-11-25（历史）：RF FEX、Proton-JE 和 SteamLinuxRuntime_4 统一内置优先。沿用 Proton 的完整树校验和 Runtime 的事务，保留原有 ARM64 Runtime。受控构建导入、大小、更新上限和验收见[专项报告](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
 
 组件级更新与 Guest 部署独立。协议、原交易机制、隔离测试方式和旧版限制见[更新文档](NATIVE_UPDATES.md#component-update-schema-3)和[验收](testing/COMPONENT_UPDATES_ACCEPTANCE.md)。
 

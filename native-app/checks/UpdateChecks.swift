@@ -71,6 +71,16 @@ final class ProgressRecorder: @unchecked Sendable {
             let plan = try model.plan(currentBuild: 100, fullBytes: 300) { $0.id == id ? nil : digest }
             try check(plan?.downloads.map(\.id) == [id] && plan?.bytes == 120, "changed or damaged component: " + id)
         }
+        let steamManaged = ComponentUpdate(protocolVersion: 1, minimumBaseBuild: 100, targetTreeSHA256: digest,
+                                           targetBytes: 300, core: model.core, modules: modules.filter { $0.id != "runtime4" })
+        try steamManaged.validate(version: "1.1.0", build: 101)
+        let removingRuntime = try steamManaged.plan(currentBuild: 100, fullBytes: 300) { module in
+            try check(module.id != "runtime4", "retired Runtime does not enter the fingerprint plan")
+            return digest
+        }
+        try check(removingRuntime?.bytes == 30 && removingRuntime?.downloads.isEmpty == true
+                  && Set(removingRuntime?.reused.map(\.id) ?? []) == ["rf-fex", "proton-je"],
+                  "legacy three-component base transfers only Core to a Steam-managed target")
         let multi = try model.plan(currentBuild: 100, fullBytes: 300) { $0.id == "rf-fex" ? digest : nil }
         try check(multi?.downloads.count == 2 && multi?.bytes == 210, "multi-component delta accounts for signed byte totals")
         try check(try model.plan(currentBuild: 100, fullBytes: 299) { _ in nil } == nil, "prefer full when modules cost more")
@@ -87,6 +97,13 @@ final class ProgressRecorder: @unchecked Sendable {
         let realDirectory = treeRoot.appendingPathComponent("Versions/B", isDirectory: true)
         try FileManager.default.createDirectory(at: realDirectory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: treeRoot) }
+        let retired = treeRoot.appendingPathComponent("SteamLinuxRuntime_4")
+        try ComponentUpdate.requireAbsent(retired)
+        try FileManager.default.createSymbolicLink(atPath: retired.path, withDestinationPath: "missing")
+        try await failure(.integrity, "dangling retired Runtime path is rejected") {
+            try ComponentUpdate.requireAbsent(retired)
+        }
+        try FileManager.default.removeItem(at: retired)
         let library = realDirectory.appendingPathComponent("Library")
         try Data("library".utf8).write(to: library)
         try FileManager.default.createSymbolicLink(atPath: treeRoot.appendingPathComponent("Alias").path,

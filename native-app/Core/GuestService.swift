@@ -104,6 +104,16 @@ printf '{"ok":true,"started":true,"service":"started"}\n'
 """#
     }
 
+    static func requestRuntime4(boot: String) -> String {
+        #"""
+set -eu
+[ "$(cat /proc/sys/kernel/random/boot_id)" = "\#(boot)" ] || exit 1
+pgrep -u "$(id -u)" -x steam >/dev/null || exit 1
+uid=$(id -u)
+DISPLAY=:0 XDG_RUNTIME_DIR="/run/user/$uid" steam 'steam://install/4183110' >/dev/null 2>&1
+"""#
+    }
+
     static func launchGame(boot: String) -> String {
         #"""
 set -u
@@ -186,6 +196,12 @@ enum GuestService {
             throw CoreError("STEAM_START_FAILED", ["reason": .string(value["reason"]?.text ?? "unknown")])
         }
         return value
+    }
+
+    static func requestRuntime4(_ transport: SSHTransport, boot: String, context: CoreContext) throws {
+        guard UUID(uuidString: boot) != nil else { throw CoreError("TARGET_CHANGED") }
+        let result = try transport.run(GuestScripts.requestRuntime4(boot: boot), timeout: 20, context: context)
+        guard result.status == 0 else { throw CoreError("STEAM_RUNTIME_REQUEST_FAILED") }
     }
 
     static func launchGame(_ transport: SSHTransport, session: GuestSession, context: CoreContext?) throws -> [String: JSONValue] {
