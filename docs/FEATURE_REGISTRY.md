@@ -1,6 +1,6 @@
 # 功能与开发状态索引
 
-> 2026-11-27 · `FX199_FRESH_USER_BASELINE` 已从独立 FX 1.9.9 副本恢复并验证，三个目标组件缺失，保留原 ARM64/FEX 环境、Steam 登录与游戏。正式 v1.0.7 实机发现 Steam 安装确认框及 RF 复验路径编码故障。现有 `fix/first-run-ssh-access` 的 `c686f7b` 修复两项问题。候选和真实游戏状态见[首次配置验收](testing/FX199_FRESH_USER_BASELINE.md)。
+> 2026-11-27 · `FX199_FRESH_USER_BASELINE` 已从独立 FX 1.9.9 副本恢复并验证，三个目标组件缺失，保留原 ARM64/FEX 环境、Steam 登录与游戏。正式 v1.0.7 实机发现 Steam 安装确认框及 RF 复验路径编码故障。main 的 `c686f7b` 修复两项问题并发布 v1.0.8（2026112703）。正式首次配置与 v1.0.7 组件级增量升级已通过。真实游戏状态见[首次配置验收](testing/FX199_FRESH_USER_BASELINE.md)。
 
 > 2026-11-27 · PR #23 的 v1.0.7 候选统一 Debug/Release 部署路径。RF FEX 用内置清单与 Guest 整树指纹验证，缺失时可用同版本签名增量资源。Proton-JE 内置优先，Steam 管理 Runtime 4。GitHub 最新 Stable 为 v1.0.7（2026112702）。正式 v1.0.4 已经通过签名全量更新实际升级，组件复用已经通过真实签名包的组装检查。首装母本与正式包实机结果见[验收](testing/FX199_FRESH_USER_BASELINE.md)。
 

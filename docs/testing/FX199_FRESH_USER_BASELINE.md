@@ -31,13 +31,29 @@ RF 部署后的观察探针返回 `STEAM_RUNTIME_INCOMPATIBLE`。实机复现表
 | 首页一键启动游戏、游戏窗口、主菜单、单人任务、正常反作弊与多人 | 未验证 |
 | 正式 v1.0.4 → v1.0.7 全量自动升级 | PASS |
 | 正式 v1.0.5、v1.0.6 在本机启动 | FAIL（Sparkle 库验证） |
-| 正式 v1.0.7 → 下一正式版的真实组件增量升级 | 待下一正式版 |
+| 正式 v1.0.7 → v1.0.8 的真实组件增量升级 | PASS（见下文） |
 
 ## v1.0.8 候选实机
 
 候选 arm64 build `2026112703`，源码 `c686f7b55aa59380f896e322cd9470e600ff644b`。用第二份完整 SHA-256 校验过的副本和独立 App 数据目录，在首次配置页点击自动配置。06:51:22 Steam 自行排队，06:51:55 安装完成（33 秒），下载计数 250.98 MB。版本 `4.0.20261021.265997`，Build `26116036`，depot/manifest 与 v1.0.7 的诊断下载一致。没有点击 Steam 确认框或执行手动安装。RF 事务与复验通过，内置 Proton-JE 上传、安装及复验用时 62 秒。App 实际验证 sudo，保存启动项，重启 Guest，重新认证后应用 Proton-JE 工具映射。06:57:07 App 显示配置完成，全程 369 秒。
 
 候选内置的 RF FEX、Proton-JE 自动部署与首次配置结果为 PASS。原始 ARM64 组件保留，重启后 Steam 识别 Proton-JE 和对 4183110 的依赖。记录保存在基线目录的 `candidate-first-run-app-events.txt` 与 `candidate-first-run-completed.png`。修复相关 Native Core 119 项、RF 探针 16 项和 RF 部署事务 19 项通过。正式包、首页首次配置、独立重复运行、游戏及真实增量升级另行验收。
+候选首页 06:58:10 发出 Steam 启动请求，Steam 完成其运行依赖安装后启动游戏。观察到 `helldivers2.exe` 的底层可执行文件是 App 部署的 RF FEX，EAC Bootstrapper 返回 `301: Easy Anti-Cheat successfully loaded in-game`。游戏显示显卡驱动版本未知的提示，选择游戏内继续后，第一次运行在主菜单前发生 `0xc0000005` 读访问异常，故障地址落在 `helldivers2.exe`。保留本地 minidump 摘要，无外发崩溃报告。按原配置重复从首页启动，正常通过游戏图形提示和游戏初始选项后显示标题界面并进入舰桥。Steam 只下载了常规语言包（250.32 MB），未重装游戏或调整反作弊。
+
+
+## 正式 v1.0.8 发布与增量更新
+
+[v1.0.8 Stable / Latest](https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/v1.0.8) 于 2026-11-27 07:05:40（Asia/Shanghai）发布。arm64 build `2026112703`，发布源码 `c686f7b55aa59380f896e322cd9470e600ff644b`。App 415.58 MB，DMG 382.53 MB，全量 ZIP 379.11 MB，App Core 23.95 MB。签名清单固定复用 v1.0.7 上已发布的 RF FEX（6.84 MB）及 Proton-JE（348.32 MB）。验证内容包括严格签名、Ed25519、完整目标树、只读 DMG、GitHub 制品摘要和发布工作流。
+
+正式 v1.0.7 的独立已签名安装通过实际设置页联网发现 v1.0.8。点击更新后，仅观察到 23,953,205 字节的 Core ZIP，生成完整签名 App 交给 Update Helper，未出现全量 ZIP 请求或组件 ZIP 文件。07:06:50 启动替换事务，07:06:58 新 App 确认启动。重新核对正式构建号、严格签名和主程序字节一致。动态证据为基线目录下 `official-v107-v108-incremental-cache.txt` 与 `official-v107-v108-helper-journal.txt`。该路径为 PASS。
+
+## 正式 v1.0.8 首次配置
+
+2026-11-27 11:45:43–11:51:55（Asia/Shanghai），用经正式增量更新安装的 v1.0.8 和另一次完整 SHA-256 还原的独立副本，从首次配置页启动。App 使用隔离的数据目录和已选的 FX 1.9.9 测试实例。Guest 开始时没有 RF、Proton-JE 或可用的独立 Runtime。Steam 11:46:09 开始下载，11:46:37 完成，下载计数 250.98 MB，Build `26116036`、版本 `4.0.20261021.265997`。内置 RF FEX 安装及实机容器复验通过。内置 Proton-JE `11.0-20261014-3` 事务完成（61 秒），App 自动重启 Guest、重新验证 SSH，并持久化游戏启动参数和兼容工具映射。完整首次配置和重启后复验为 PASS（372 秒），无额外部署确认。
+
+完整母本保留原始 ARM64 Proton。该次运行的 Steam 日志显示客户端先独立更新自己的 ARM64 Proton（4628740，Build `26871091`，`proton-11.0-3-arm64`），之后才安装独立 Runtime。母本不受影响。系统 FEX、4185400 Runtime、游戏可执行文件在运行前后保持对应指纹或已核对的构建号。证据在保护基线目录的 `official-v108-firstrun-app-events.txt`、`official-v108-firstrun-receipts.txt`、`official-v108-first-run-completed.png` 和 `official-v108-stock-proton-steam-update.txt`。
+
+11:52 正常关闭 Guest 和 App，然后使用同一副本重启。正式 App 重新运行首次配置，31 秒完成，配置阶段为 0 秒。部署回执 SHA-256 集合完全一致，无新增部署事务。Guest boot ID 再次变化，三个组件仍在，同一份启动参数和 Steam 映射被复用。证据为 `official-v108-repeat-after-shutdown-app-events.txt`、`official-v108-repeat-after-shutdown-guest.txt` 和重复配置截图。该路径为 PASS。
 
 ## 发布与主机验收
 
@@ -54,6 +70,6 @@ RF 部署后的观察探针返回 `STEAM_RUNTIME_INCOMPATIBLE`。实机复现表
 
 开发和产物检查为 PASS。包括 arm64 Debug / Release、部署隔离回归 164 项、更新服务 62 项、RF 探针 16 项和事务 19 项、Proton 事务 20 项、十语言各 627 项、真实中英文首次配置窗口、Schema 2 与 Schema 3 Ed25519 签名、解压预检、实际签名模块组装及完整 App 签名。合法 RF 模块在 macOS 临时目录的路径归一问题已修复。重复组装时原样复用匹配的两个模块。旧正式包缺少模块时选择全量备用。既有四组件协议仍由解析器接受。
 
-本机用 GitHub v1.0.4 原始签名包，在独立安装路径通过 App 更新按钮检测并下载 v1.0.7。Update Helper 替换 App、自动重启并写入 `confirmed` 回执。安装后重验严格签名，主程序与正式构建逐字节一致。该路径下载全量 ZIP。v1.0.5 和 v1.0.6 的原始 GitHub ZIP 均在本机启动时复现 dyld 拒绝映射 Sparkle，原因为 Team ID 不匹配。保留两版历史产物，无法打开旧版时可用 v1.0.7 DMG。
+本机用 GitHub v1.0.4 原始签名包，在独立安装路径通过 App 更新按钮检测并下载 v1.0.7。Update Helper 替换 App、自动重启并写入 `confirmed` 回执。安装后重验严格签名，主程序与正式构建逐字节一致。该路径下载全量 ZIP。v1.0.5 和 v1.0.6 的原始 GitHub ZIP 均在本机启动时复现 dyld 拒绝映射 Sparkle。崩溃报告的命名空间为 DYLD，两版进程与库 Team ID 不匹配。v1.0.7 正式主程序为 `ad-hoc` 签名，未带触发旧版故障的 hardened runtime 标记。保留两版历史产物，无法打开旧版时可用 v1.0.7 DMG。
 
-此次 v1.0.7 实机直接使用上述升级后的已签名安装，新进程成功打开窗口并操作 Guest。此结果覆盖旧版 dyld/Sparkle 映射故障的实际启动路径。组件级端到端升级仍需以 v1.0.7 为源版本实测。
+此次 v1.0.7 实机直接使用上述升级后的已签名安装，新进程成功打开窗口并操作 Guest。此结果覆盖旧版 dyld/Sparkle 映射故障的实际启动路径。随后已完成 v1.0.7 → v1.0.8 的组件级端到端升级。
