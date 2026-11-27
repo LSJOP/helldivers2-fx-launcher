@@ -55,6 +55,28 @@ RF 部署后的观察探针返回 `STEAM_RUNTIME_INCOMPATIBLE`。实机复现表
 
 11:52 正常关闭 Guest 和 App，然后使用同一副本重启。正式 App 重新运行首次配置，31 秒完成，配置阶段为 0 秒。部署回执 SHA-256 集合完全一致，无新增部署事务。Guest boot ID 再次变化，三个组件仍在，同一份启动参数和 Steam 映射被复用。证据为 `official-v108-repeat-after-shutdown-app-events.txt`、`official-v108-repeat-after-shutdown-guest.txt` 和重复配置截图。该路径为 PASS。
 
+## 正式 v1.0.8 首页一键配置并启动
+
+用另一份完整 SHA-256 校验过的副本和全新的 App 数据目录，从中文首页点一次启动。2026-11-27 11:54:37–12:02:57（Asia/Shanghai），500 秒内完成缺失组件自动安装、Guest 重启、设置复验、Steam 启动请求及进程检测。Steam 从 11:55:05 至 11:55:29 下载并安装 4183110（250.98 MB，版本 `4.0.20261021.265997`、Build `26116036`）。App 自动部署内置 RF 和 Proton-JE，未使用额外审批、手动组件安装或资源目录选择。
+
+已独立确认游戏进程的底层可执行文件为受管理的 RF FEX，实际 X11 窗口属于 553850。EAC 正常从其服务下载、初始化模块，并返回 `301: Easy Anti-Cheat successfully loaded in-game`。在游戏自带的显卡版本提示中选择继续后，正式版一次进入可见标题、主菜单及舰桥。全天的正式首页测试中，Steam 另下载 240.10 MB 的游戏着色器缓存。正式游戏 Build 和 EXE 哈希保持一致。App 的 500 秒指标截至真实进程检测，实际窗口与界面由独立证据确认。实机使用系统内既有的测试 Guest 认证，App 数据隔离直接用于限定测试副本与收集证据。
+
+日志和截图在基线目录的 `official-v108-dashboard-app-events.txt`、`official-v108-dashboard-game-events.txt`、`official-v108-dashboard-game-main-title.png`、`official-v108-dashboard-game-main-menu.png`、`official-v108-dashboard-game-ship.png`。在测试副本的游戏设置用正常界面绑定缺失的前进键 W，完成舰桥移动。选择已安装的英文语音、中文界面，拒绝可选游戏数据收集，并将麦克风设为按键说话。
+
+单人实机测试使用临时仅限邀请的匹配设置。难度 1 城市任务正常进入、空投并落地，保持单人队伍，验证角色移动、镜头操作及从游戏菜单独自返回飞船。多人复验将匹配设置和难度还原为公开、9 级。公开快速匹配进入三名其他玩家的真实小队，并加入他们进行中的任务。已核对四人 HUD、实际落地、角色移动与任务进度实时更新。两次运行验证了进入和操作任务，未进行完整结算。证据为 `official-v108-single-player-in-mission.png` 与 `official-v108-multiplayer-landed.png`、`official-v108-multiplayer-movement.png`，本地截图包含游戏内显示名。
+
+12:32:06 从游戏菜单正常退出，Steam 记录游戏进程移除。12:32:36 再次点击正式 App 的启动按钮，Steam 创建了新的游戏进程和窗口，EAC 于 12:33:50 再次报告 301 正常加载。复用 RF、Proton-JE、Runtime 4 和 Steam 配置。证据为 `official-v108-game-exit.txt`、`official-v108-game-relaunch-events.txt`。
+
+| 正式版验收 | 结果 |
+| --- | --- |
+| 三目标缺失时，首次配置页及首页自动部署 | PASS |
+| 重复配置、Guest 重启与 App 重开后的复用 | PASS |
+| 首页发送 Steam 请求、游戏进程、窗口、主菜单与舰桥 | PASS |
+| 隔离单人任务与公开四人任务的进入和实际操作 | PASS |
+| EAC 正常初始化及联机 | PASS |
+| 游戏菜单正常退出、首页再次启动和窗口观察 | PASS |
+| Mac 整机重启、逐组件独立缺失和环境故障矩阵 | NOT_TESTED，本次实机范围为三目标全缺、重用与游戏路径 |
+
 ## 发布与主机验收
 
 [v1.0.7 Stable / Latest](https://github.com/LSJOP/helldivers2-fx-launcher/releases/tag/v1.0.7) 发布于 2026-11-27 01:08（Asia/Shanghai），arm64 build `2026112702`，源码 `55f5c70db42269c7eca7b7c85a5b7a4b4b6282f5`。GitHub 上 13 项资产的大小和 SHA-256 与本地一致，包括 Proton-JE 对应源码。DMG 以只读方式挂载，内部 App 通过严格 ad-hoc 签名检查。下表为十进制 MB。

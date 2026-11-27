@@ -1,6 +1,6 @@
 # First-run acceptance
 
-> 2026-11-27 · 当前正式版和候选的 FX 1.9.9 实机结果见[功能等效基线与验收](FX199_FRESH_USER_BASELINE.md)。已验证保护母本的恢复流程、正式 v1.0.7 故障与修复依据。以下为历史记录。
+> 2026-11-27 · 当前正式版和候选的 FX 1.9.9 实机结果见[功能等效基线与验收](FX199_FRESH_USER_BASELINE.md)。本轮验证受保护母本、v1.0.8 两条首次配置入口、重启复用、EAC、单人与公开四人任务的实际运行。以下为历史记录。
 
 The 2026-11-24 [bundled deployment acceptance](RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md) records the current FX 1.9.9 isolated-copy run after the Dashboard V003 merge. The real App recognized the existing verified installation after two normal reboots. First installation from the App Bundle and fresh-image acceptance remain open. The entries below describe earlier development runs.
 
