@@ -19,10 +19,10 @@ class ProtonReleaseChecks(unittest.TestCase):
  def refresh_checksum(self):
   sha=hashlib.sha512(self.archive.read_bytes()).hexdigest();self.manifest['archiveSHA512']=sha;self.checksum.write_text(sha+'  '+self.manifest['version']+'.tar.xz\n')
  def tearDown(self):self.temp.cleanup()
- def run_script(self,mode,use_proxy=False,bundled=False,ticket=None):
+ def run_script(self,mode,use_proxy=False,bundled=False,ticket=None,prior="missing"):
   prefix='MANIFEST='+repr(base64.b64encode(json.dumps(self.manifest).encode()).decode())+'\nMODE='+repr(mode)+'\nBOOT='+repr(self.boot.read_text())+'\nSUFFIX='+repr(ticket or str(uuid.uuid4()))+'\n'
   prefix+='USE_HOST_PROXY='+repr(use_proxy)+'\n'
-  prefix+='BUNDLED='+repr(bundled)+'\n'
+  prefix+='BUNDLED='+repr(bundled)+'\nPRIOR='+repr(prior)+'\n'
   source=SOURCE.replace('/proc/sys/kernel/random/boot_id',str(self.boot))
   env=dict(os.environ,HOME=str(self.home),PATH=str(self.bin)+':/usr/bin:/bin',FIXTURE_ARCHIVE=str(self.archive),FIXTURE_CHECKSUM=str(self.checksum))
   return subprocess.run([sys.executable,'-'],input=prefix+source,env=env,capture_output=True,text=True,timeout=15)
@@ -69,9 +69,15 @@ class ProtonReleaseChecks(unittest.TestCase):
  def test_sha512_pin_mismatch_never_installs(self):
   self.manifest['archiveSHA512']='0'*128
   self.assertNotEqual(self.run_script('install').returncode,0);self.assertFalse(self.p.exists())
- def test_published_checksum_mismatch_never_installs(self):
-  self.checksum.write_text('0'*128+'  '+self.version+'.tar.xz\n')
-  self.assertNotEqual(self.run_script('install').returncode,0);self.assertFalse(self.p.exists())
+ def test_pinned_package_repairs_permission_and_rolls_back(self):
+  self.assertEqual(self.run_script('install').returncode,0)
+  tool=self.p/'proton';tool.chmod(0o644)
+  damaged=self.run_script('probe').stdout.strip().split('=',1)[1]
+  self.assertRegex(damaged,r'^damaged:[a-f0-9]{64}$')
+  self.assertEqual(self.run_script('install',prior=damaged).returncode,0)
+  self.assertEqual(tool.stat().st_mode&0o777,0o755)
+  self.assertEqual(self.run_script('recover',prior=damaged).returncode,0)
+  self.assertEqual(tool.stat().st_mode&0o777,0o644)
  def cache_path(self):
   return self.home/'.cache/hd2fx-native/artifacts'/(self.manifest['archiveSHA256']+'.tar.xz')
  def test_verified_cache_avoids_archive_download(self):

@@ -1,4 +1,6 @@
 <div align="center">
+
+v1.0.8 修复 FX 1.9.9 新用户环境的 Steam Runtime 4 自动安装和 RF FEX 复验。首页和首次配置共用部署事务，优先使用已校验的内置 RF FEX 与 Proton-JE。见 [FX 1.9.9 验收记录](docs/testing/FX199_FRESH_USER_BASELINE.md)。
   <img src="docs/assets/app-icon.png" width="128" alt="绝地潜兵 2 FX 启动器 icon">
   <h1>绝地潜兵 2 FX 启动器</h1>
   <p>HELLDIVERS 2 FX Launcher · Apple Silicon macOS</p>
@@ -7,11 +9,11 @@
 [简体中文](README.zh-CN.md) | [English](README.md)
 
 <!-- stable-download:start -->
-### [🟨 ⬇️ 下载 绝地潜兵 2 FX 启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.5-macOS-arm64.dmg)
+### [🟨 ⬇️ 下载 绝地潜兵 2 FX 启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.8-macOS-arm64.dmg)
 
-**🟨 Stable Release · v1.0.5** · **macOS · Apple Silicon / arm64**
+**🟨 Stable Release · v1.0.8** · **macOS · Apple Silicon / arm64**
 
-**[⬇️ 立即下载 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.5-macOS-arm64.dmg)** · [查看所有版本](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**[⬇️ 立即下载 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.8-macOS-arm64.dmg)** · [查看所有版本](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
 <!-- stable-download:end -->
 
 ## 简体中文
@@ -51,7 +53,7 @@ FX 1.9.9 测试盘已恢复历史验证的 RF 运行组件，通过 GUI 启动�
 ### 安装说明
 
 <!-- stable-install:start -->
-当前 App：`1.0.5`（构建 `2026112501`），适用于 macOS 14+ Apple Silicon arm64。采用 ad-hoc 签名，无 Apple Developer ID 签名，未经 Apple 公证。Gatekeeper 可能拦截下载副本；打开前核对 [SHA-256 文件](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt)。若被拦截，对已核验 App 使用「隐私与安全性 → 仍要打开」。
+当前 App：`1.0.8`（构建 `2026112703`），适用于 macOS 14+ Apple Silicon arm64。采用 ad-hoc 签名，无 Apple Developer ID 签名，未经 Apple 公证。Gatekeeper 可能拦截下载副本；打开前核对 [SHA-256 文件](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt)。若被拦截，对已核验 App 使用「隐私与安全性 → 仍要打开」。
 <!-- stable-install:end -->
 
 1. 从正式 Release 下载 macOS arm64 DMG。
@@ -75,10 +77,14 @@ FX 1.9.9 历史实测记录了游戏主菜单及飞船。单人、EAC、多人�
 - v1.0.1 会在 ZIP 安全检查时拒绝已发布的 v1.0.2 更新包，请使用 DMG 升级。App 使用 ad-hoc 签名且未经公证，可能受到 Gatekeeper 拦截。
 - [验收报告](docs/acceptance/RELEASE_READINESS_REPORT.md) · [已知问题详情](docs/acceptance/KNOWN_ISSUES.md) · [首次运行验收](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md) · [更新机制](docs/NATIVE_UPDATES.md) · [性能设置限制](docs/GAME_PERFORMANCE.md)
 
+### v1.0.7 组件审核
+
+v1.0.7 审核候选将 RF FEX 和 Proton-JE 的许可权利、制品来源与实机验收分开记录。候选 RF 包排除两个无法确认授权的 Steam 回收脚本，改用项目自有 wrapper 和 FEX MIT 声明。Proton-JE 归档绑定上游标签、二进制校验值和 62 个递归源码子模块。该工作尚不是 Stable 发布：仍须公布对应源码、使用现有密钥签名，并完成真实 Guest/游戏验收。见 [RF 审核](docs/audits/RF_FEX_Redistribution_Audit.md)、[Proton-JE 审核](docs/audits/Proton_JE_Redistribution_Audit.md) 和 [v1.0.7 就绪报告](docs/acceptance/v1.0.7_Release_Readiness.md)。
+
 ### 更新日志
 
 <!-- stable-version:start -->
-[v1.0.5 — 2026-11-25](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · 正式稳定版，构建 `2026112501`。见[发布说明](CHANGELOG.zh-CN.md)。
+[v1.0.8 — 2026-11-27](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · 正式稳定版，构建 `2026112703`。见[发布说明](CHANGELOG.zh-CN.md)。
 <!-- stable-version:end -->
 
 当前功能状态、验证范围和未合并成果见[功能索引](docs/FEATURE_REGISTRY.md)、[更新日志](CHANGELOG.zh-CN.md)及[原版启动器历史](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script)。
@@ -103,7 +109,7 @@ FX 1.9.9 环境实测记录见[运行环境基线报告](docs/environment/FEX_BA
 
 v1.0.5 提供组件更新引擎，并为旧正式版保留小体积 ZIP。后续兼容版本可复用校验匹配的内置组件，并保留已验证的全量 ZIP 备用。三个历史运行组件仍限受控测试。若应用内更新失败，请核验并挂载完整 DMG，退出启动器后替换现有 App。已保存设置和 SteamOS 镜像继续使用。见[组件更新验收](docs/testing/COMPONENT_UPDATES_ACCEPTANCE.md)。
 
-环境配置分支采用已锁定的 FX 运行环境、Proton-JE 和 SteamLinuxRuntime_4 组合，以 App 内置优先，以获批的固定版本和哈希校验下载为备用。本机 Debug 构建已内置三项。公开分发审批和真实离线部署仍待验收。见[部署验收报告](docs/testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
+环境配置分支优先使用 App 内置的 FX 运行组件和 Proton-JE，以获批的固定版本和哈希校验下载为备用。Steam Linux Runtime 4.0 由 Guest 内的 Steam 管理。缺失时需要 Steam 联网，已验证兼容的安装会复用。FX 和 Proton-JE 的公开分发审批与真实部署验收仍待完成。见[部署验收报告](docs/testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
 
 早期恢复工作已接入固定版本 Runtime 的隔离 Debug 安装（已验证本地归档或 Valve HTTPS、SHA-256、SFTP、保留 ARM64 Runtime、事务恢复）。公开版一键配置仍受 RF 二进制来源／再分发许可审核阻塞；Debug 回放需明确传入测试镜像与资源目录。见[首次配置验收](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md)。
 

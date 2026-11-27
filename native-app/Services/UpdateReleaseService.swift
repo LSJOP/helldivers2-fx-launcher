@@ -390,11 +390,13 @@ struct ComponentUpdate: Codable {
     }
 
     func validate(version: String, build: Int) throws {
+        let ids = Set(modules.map(\.id))
+        let current: Set<String> = ["rf-fex", "proton-je"]
         guard protocolVersion == 1, minimumBaseBuild > 0, minimumBaseBuild < build,
               (1...NativeReleaseService.maximumArchiveBytes).contains(targetBytes),
               Self.validHash(targetTreeSHA256),
-              modules.isEmpty || (modules.count == Self.destinations.count &&
-                                  Set(modules.map(\.id)) == Set(Self.destinations.keys)) else {
+              ids.count == modules.count,
+              ids.isEmpty || ids == current || ids == Set(Self.destinations.keys) else {
             throw NativeUpdateFailure.malformed
         }
         func validateArtifact(_ item: Artifact, name: String, currentTagOnly: Bool) throws {
@@ -463,19 +465,19 @@ struct ComponentUpdate: Codable {
     static func tree(_ directory: URL, limit: Int64) throws -> (hash: String, bytes: Int64) {
         let fm = FileManager.default
         guard directory.path == directory.resolvingSymlinksInPath().path,
-              let entries = fm.enumerator(at: directory, includingPropertiesForKeys: nil),
+              let entries = fm.enumerator(atPath: directory.path),
               try directory.resourceValues(forKeys: [.isDirectoryKey]).isDirectory == true else {
             throw NativeUpdateFailure.integrity
         }
         var inventory: [UpdateArchiveEntry] = [.init(path: rootName, kind: .directory)]
         var records: [(String, String)] = []
         var bytes: Int64 = 0
-        for case let item as URL in entries {
+        for case let name as String in entries {
             try Task.checkCancellation()
+            let item = directory.appendingPathComponent(name)
             var metadata = stat()
             guard records.count < 19_998, lstat(item.path, &metadata) == 0,
                   metadata.st_mode & 0o7000 == 0 else { throw NativeUpdateFailure.integrity }
-            let name = String(item.path.dropFirst(directory.path.count + 1))
             let kind: UpdateArchiveEntry.Kind
             let payload: String
             switch metadata.st_mode & S_IFMT {
@@ -507,7 +509,16 @@ struct ComponentUpdate: Codable {
         return (hex(sha.finalize()), bytes)
     }
 
+    static func requireAbsent(_ item: URL) throws {
+        var metadata = stat()
+        guard lstat(item.path, &metadata) != 0, errno == ENOENT else { throw NativeUpdateFailure.integrity }
+    }
+
     func verifyTarget(_ app: URL, manifest: NativeUpdateManifest, publicKey: Data) throws {
+        if !modules.contains(where: { $0.id == "runtime4" }),
+           let relative = Self.destinations["runtime4"] {
+            try Self.requireAbsent(app.appendingPathComponent(relative))
+        }
         let inventory = try Self.tree(app, limit: targetBytes)
         guard inventory.hash == targetTreeSHA256, inventory.bytes == targetBytes,
               let bundle = Bundle(url: app), bundle.bundleIdentifier == manifest.bundleID,
@@ -597,10 +608,12 @@ extension NativeReleaseService {
                 }
                 try await fetch(components.core, into: workspace)
                 let app = workspace.appendingPathComponent(ComponentUpdate.rootName, isDirectory: true)
-                for item in components.modules {
-                    let destination = app.appendingPathComponent(item.path)
-                    guard !fm.fileExists(atPath: destination.path),
-                          destination.path == destination.resolvingSymlinksInPath().path else { throw NativeUpdateFailure.integrity }
+                for relative in ComponentUpdate.destinations.values {
+                    let destination = app.appendingPathComponent(relative)
+                    try ComponentUpdate.requireAbsent(destination)
+                    guard destination.standardizedFileURL.path == destination.resolvingSymlinksInPath().path else {
+                        throw NativeUpdateFailure.integrity
+                    }
                 }
                 for item in plan.reused {
                     try fm.copyItem(at: installed.appendingPathComponent(item.path), to: app.appendingPathComponent(item.path))

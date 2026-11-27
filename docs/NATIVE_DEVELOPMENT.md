@@ -11,6 +11,8 @@
 
 ## Fast Development Mode
 
+Use the [successful environment baseline](environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md) before changing FX, SteamOS/kernel, FEX, Proton, DXMT/WMTR, graphics drivers, audio, launch options or switching graphics modes. When a new combination passes live testing, append versions, required settings, runtime evidence, regressions and rollback, with the source commit and evidence index. Keep the historical DX12 and DX11 entries.
+
 - 按任务范围选最少有效验证。匹配版本、配置及运行路径的历史实机证据可复用。遇到非关键检查失败，记下警告并继续，涉及数据、凭据、许可、反作弊及外部安全机制的检查继续执行。
 - 实机兼容性任务已授权的常规组件安装、版本切换和 Steam／图形参数修改可直接执行。确认工作盘和 Guest，保留原值和回退路径，使用官方或可核验的上游制品，每轮改变一个主要变量。复用现有工作副本、日志和缓存。遇到失败先查实际错误，再做针对性调整。
 - 以验收范围内的实际功能为准。图形兼容性检查记录生效后端和设备初始化日志，再进入指定场景并实际操作。性能、联机和长稳按任务需要采集。纯内部文档改动检查内容和链接即可。

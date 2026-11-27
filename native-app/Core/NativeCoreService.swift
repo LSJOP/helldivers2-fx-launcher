@@ -10,18 +10,11 @@ actor NativeCoreService {
 
     struct Operation { let method: String; let scope: String; let confirmation: Bool; let external: Bool }
 
-    #if DEBUG
-    private static let debugOperations = [
-        Operation(method: "first_run_fex_local_replay", scope: "setup", confirmation: true, external: true),
-    ]
-    #else
-    private static let debugOperations: [Operation] = []
-    #endif
-
     static let operations: [Operation] = [
         Operation(method: "first_run_fex_audit", scope: "setup", confirmation: true, external: true),
         Operation(method: "first_run_fex_build", scope: "setup", confirmation: true, external: true),
         Operation(method: "first_run_fex_install", scope: "setup", confirmation: true, external: true),
+        Operation(method: "first_run_fex_repair", scope: "setup", confirmation: true, external: true),
         Operation(method: "first_run_fex_recover", scope: "setup", confirmation: true, external: true),
         Operation(method: "first_run_detect", scope: "setup", confirmation: true, external: true),
         Operation(method: "first_run_deploy", scope: "setup", confirmation: true, external: true),
@@ -66,7 +59,7 @@ actor NativeCoreService {
         Operation(method: "export_network_report", scope: "logs", confirmation: true, external: false),
         Operation(method: "export_environment_report", scope: "logs", confirmation: true, external: false),
         Operation(method: "get_legacy_catalog", scope: "settings", confirmation: false, external: false),
-    ] + debugOperations
+    ]
 
     static let readMethods: Set<String> = ["handshake", "get_launcher_version", "get_system_info",
                                            "get_environment_status", "get_dependencies", "list_fx_versions",
@@ -76,7 +69,7 @@ actor NativeCoreService {
         "fx_path", "confirmed", "runtime_root", "password", "passphrase", "sudo_password",
         "credential_guest_boot", "credential_host_identity", "credential_revision", "approved_changes", "configuration", "expected_revision",
         "channel", "match_result", "note", "values", "preview_token", "backup_path",
-        "fex_approvals", "selected_paths", "ipv6_enabled", "network_plan", "deployment_plan", "approved_steps", "receipt_id", "restart_vm_approved"]
+        "selected_paths", "ipv6_enabled", "network_plan", "deployment_plan", "approved_steps", "receipt_id", "restart_vm_approved"]
 
     func request(_ method: String, timeout: TimeInterval = 5,
                  params: [String: JSONValue] = [:],
@@ -150,11 +143,12 @@ actor NativeCoreService {
         case "first_run_detect", "first_run_deploy", "first_run_recover", "first_run_receipts", "first_run_fex_audit", "first_run_fex_build", "first_run_fex_install", "first_run_fex_recover":
             guard method == "first_run_receipts" || params["confirmed"]?.boolean == true else { throw CoreError("CONFIRMATION_REQUIRED") }
             return try deployment(method, params: params, context: context, emit: emit)
-        #if DEBUG
-        case "first_run_fex_local_replay":
+        case "first_run_fex_repair":
             guard params["confirmed"]?.boolean == true else { throw CoreError("CONFIRMATION_REQUIRED") }
+            guard let boot = params["credential_guest_boot"]?.text, UUID(uuidString: boot) != nil else {
+                throw CoreError("CREDENTIAL_SCOPE_CHANGED")
+            }
             return try deployment(method, params: params, context: context, emit: emit)
-        #endif
         case "credential_target": return try credentialTarget(params, context: context)
         case "handshake":
             return ["protocol_min": .number(1), "protocol_max": .number(1),
@@ -409,7 +403,6 @@ actor NativeCoreService {
         return LaunchRequest(configuration: configuration, fxPath: fxPath,
                              password: params["password"]?.text, passphrase: params["passphrase"]?.text,
                              sudoPassword: params["sudo_password"]?.text,
-                             fexApprovals: params["fex_approvals"]?.array.compactMap { $0.text } ?? [],
                              approvedChanges: params["approved_changes"]?.array ?? [],
                              context: context, emit: emit)
     }
@@ -674,14 +667,10 @@ printf '{"guest_os":"%s","guest_arch":"%s","components":{"steam_files":%s,"game_
         }
         let backend = try SSHEnvironmentBackend(fx: fx, transport: transport, context: context, revision: ConfigurationService.read().revision)
         backend.expectedGuestBoot = session.boot
-        backend.fexApprovals = request.fexApprovals
         let fexSnapshot = try backend.snapshot()
         try FEXWorkflow.requireCompatible(fexSnapshot)
         try LaunchService.compatibility(state)
-        guard LaunchService.checkProxyPort() else {
-            throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("host_proxy_7890_unavailable")])
-        }
-        guard LaunchService.launchOptionsReady(state) else {
+        guard LaunchService.launchOptionsReady(fexSnapshot.values["launch"]) else {
             throw CoreError("COMPATIBILITY_CHECK_FAILED", ["reason": .string("steam_launch_options_action_required")])
         }
         if let apps = state["apps"]?.text, !apps.isEmpty, !apps.split(separator: " ").allSatisfy({ $0 == "553850" }) {
@@ -729,7 +718,7 @@ printf '{"guest_os":"%s","guest_arch":"%s","components":{"steam_files":%s,"game_
         }
         let dispatchIdentity = try backend.hostIdentity()
         var dispatchSnapshot = fexSnapshot
-        try FEXWorkflow.observe(backend, snapshot: &dispatchSnapshot, approvals: request.fexApprovals)
+        try FEXWorkflow.observe(backend, snapshot: &dispatchSnapshot)
         guard try backend.hostIdentity() == dispatchIdentity else { throw CoreError("TARGET_CHANGED") }
         try FEXWorkflow.requireCompatible(dispatchSnapshot)
         guard dispatchSnapshot.facts["fex_fingerprint"] == fexSnapshot.facts["fex_fingerprint"] else { throw CoreError("FEX_CHANGED") }

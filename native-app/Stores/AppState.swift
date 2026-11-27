@@ -613,6 +613,17 @@ final class AppState: ObservableObject {
         workflowPhaseStarted = now
         workflowLog(id, "\(t(phase.titleKey)): \(logStatus("started"))")
     }
+    func steamRuntimePhaseTitle(_ phase: String) -> String {
+        switch phase {
+        case "login": return t("ui.steamRuntime.login")
+        case "requesting": return t("ui.steamRuntime.requesting")
+        case "downloading": return t("ui.steamRuntime.downloading")
+        case "installing": return t("ui.steamRuntime.installing")
+        case "verifying": return t("ui.steamRuntime.verifying")
+        case "ready": return t("ui.steamRuntime.ready")
+        default: return t("ui.steamRuntime.checking")
+        }
+    }
     private func workflowEvent(_ event: [String: JSONValue], taskID: UUID) {
         guard environmentWorkflow.taskID == taskID else { return }
         let request = event["request_id"]?.text ?? ""
@@ -631,8 +642,14 @@ final class AppState: ObservableObject {
                 ? " (\(Int(max(0, now - started!)))s)" : ""
             if status == "done" || status == "passed" || status == "failed" { workflowStageStarted.removeValue(forKey: raw) }
             workflowLog(taskID, "\(stage.title(languageCode)): \(logStatus(status))\(elapsed)", level: status == "failed" ? "ERROR" : "INFO", at: at)
+        } else if event["kind"]?.text == "steam_runtime_stage", environmentWorkflow.phase == .deploying,
+                  let phase = event["runtime_phase"]?.text,
+                  ["checking", "login", "requesting", "downloading", "installing", "verifying", "ready"].contains(phase) {
+            environmentWorkflow.archiveComponent = "steam-runtime"
+            environmentWorkflow.archivePhase = phase
+            workflowLog(taskID, steamRuntimePhaseTitle(phase), at: at)
         } else if event["kind"]?.text == "bundle_archive_stage", environmentWorkflow.phase == .deploying,
-                  let component = event["component"]?.text, ["Proton-JE", "SteamLinuxRuntime_4"].contains(component),
+                  let component = event["component"]?.text, component == "Proton-JE",
                   let phase = event["archive_phase"]?.text, ["sftp", "install", "finished"].contains(phase) {
             environmentWorkflow.archiveComponent = phase == "finished" ? nil : component
             environmentWorkflow.archivePhase = phase == "finished" ? nil : phase
@@ -654,21 +671,7 @@ final class AppState: ObservableObject {
             workflowLog(taskID, t(success ? "ui.logs.commandSucceeded" : "ui.logs.alreadyRunning"), at: at)
         }
     }
-    @Published var pendingFEXApproval: String?
-    func approveFEXBuild() {
-        guard let fingerprint = pendingFEXApproval else { return }
-        var approvals = UserDefaults.standard.stringArray(forKey: "FEXBuildApprovals") ?? []
-        if !approvals.contains(fingerprint) { approvals.append(fingerprint) }
-        UserDefaults.standard.set(Array(approvals.suffix(64)), forKey: "FEXBuildApprovals")
-        pendingFEXApproval = nil
-        startEnvironmentWorkflow(launchGame: environmentWorkflow.launchesGame)
-    }
-    func cancelFEXApproval() {
-        pendingFEXApproval = nil
-        environmentWorkflow.phase = .cancelled
-        environmentWorkflow.failure = nil
-    }
-    func startEnvironmentWorkflow(launchGame: Bool, restartApproved: Bool = false) {
+    func startEnvironmentWorkflow(launchGame: Bool) {
         guard !tasks.busy else { return }
         guard fxSelection.selected != nil else {
             scanFX(workflow: launchGame ? .game : .setup)
@@ -690,13 +693,6 @@ final class AppState: ObservableObject {
                 var input = launch
                 input["runtime_root"] = .string(root)
                 input["confirmed"] = .bool(true)
-                var approvals = (UserDefaults.standard.stringArray(forKey: "FEXBuildApprovals") ?? []).map(JSONValue.string)
-                #if DEBUG
-                if FEXWorkflow.localReplayEnabled, let replay = UserDefaults.standard.string(forKey: "FEXLocalReplayApproval") {
-                    approvals.append(.string(replay))
-                }
-                #endif
-                input["fex_approvals"] = .array(approvals)
                 let fx = try await self.core.request("start_fx", timeout: 180, params: input)
                 self.environmentWorkflow.evidence = fx.result
                 try Task.checkCancellation()
@@ -725,28 +721,12 @@ final class AppState: ObservableObject {
                 var detected = try await self.core.request("first_run_detect", timeout: 240, params: input)
                 guard var raw = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
                 var plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
-                #if DEBUG
-                if !launchGame, FEXWorkflow.localReplayEnabled,
-                   plan.snapshot.facts["fex_managed_emulator"] == nil || plan.snapshot.facts["fex_registered_rootfs"] == "/" {
-                    self.firstRunPlan = plan
-                    self.workflowLog(taskID, "FX runtime: local replay preflight")
-                    input["credential_guest_boot"] = .string(boot)
-                    let replay = try await self.core.request("first_run_fex_local_replay", timeout: 650, params: input)
-                    guard let approval = replay.result["approval"]?.text else { throw ErrorState("VERIFY_FAILED") }
-                    UserDefaults.standard.set(approval, forKey: "FEXLocalReplayApproval")
-                    input["fex_approvals"] = .array(approvals + [.string(approval)])
-                    self.workflowLog(taskID, "SteamLinuxRuntime_4 / FX runtime / RootFS: verified")
-                    detected = try await self.core.request("first_run_detect", timeout: 240, params: input)
-                    guard let refreshed = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
-                    raw = refreshed
-                    plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
-                }
-                #endif
                 let repairableFXReasons: Set<String> = [
                     "FEX_MISSING", "FEX_NOT_EXECUTABLE", "FEX_ARCHITECTURE",
                     "FEX_INTEGRATION_MISSING", "FEX_CHANGED", "FEX_INTEGRITY_FAILED",
                     "FEX_RUNTIME_FAILED", "FEX_DEPENDENCY_FAILED", "FEX_LOCAL_RUNTIME_MISSING",
-                    "FEX_KNOWN_LAUNCH_INCOMPATIBILITY", "FEX_PROTON_INTEGRATED_UNVERIFIED"
+                    "FEX_KNOWN_LAUNCH_INCOMPATIBILITY", "FEX_PROTON_INTEGRATED_UNVERIFIED",
+                    "STEAM_RUNTIME_INCOMPATIBLE"
                 ]
                 if let repair = plan.operations.first(where: { $0.component == "fex" })?.blocked,
                    repairableFXReasons.contains(repair) {
@@ -768,13 +748,6 @@ final class AppState: ObservableObject {
                             self.workflowEvent(event, taskID: taskID)
                         }
                     }
-                    if let approval = repaired.result["approval"]?.text,
-                       approval.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil {
-                        let retained = approvals.compactMap(\.text).filter { $0 != approval } + [approval]
-                        UserDefaults.standard.set(retained, forKey: "FEXBuildApprovals")
-                        approvals = retained.map(JSONValue.string)
-                        input["fex_approvals"] = .array(approvals)
-                    }
                     self.environmentWorkflow.evidence["fx_runtime_repair_attempted"] = repaired.result["repair_attempted"] ?? .bool(true)
                     self.environmentWorkflow.evidence["fx_runtime_resource_source"] = repaired.result["repair_source"] ?? .string("unknown")
                     self.environmentWorkflow.evidence["fx_runtime_verification"] = repaired.result["verification"] ?? .null
@@ -792,23 +765,15 @@ final class AppState: ObservableObject {
                     }
                 }
                 self.environmentWorkflow.completedSteps = 3
-                if plan.snapshot.facts["fex_status"] == "confirmation" {
-                    self.pendingFEXApproval = plan.snapshot.facts["fex_fingerprint"]
-                    throw ErrorState("FEX_CONFIRMATION_REQUIRED")
-                }
                 if let blocked = plan.operations.first(where: { $0.component == "fex" && $0.blocked != nil }) {
                     throw ErrorState(blocked.blocked ?? "FEX_RUNTIME_FAILED")
                 }
                 self.environmentWorkflow.evidence["steam_running"] = .bool(plan.snapshot.steamRunning)
                 self.workflowPhase(.deploying)
                 if !plan.executable.isEmpty {
-                    if plan.executable.contains(where: { $0.needsRestart }) && !restartApproved {
-                        self.environmentWorkflow.needsRestartApproval = true
-                        throw ErrorState("CONFIRMATION_REQUIRED")
-                    }
                     input["deployment_plan"] = raw
                     input["approved_steps"] = .array(plan.executable.map { .string($0.id) })
-                    input["restart_vm_approved"] = .bool(restartApproved)
+                    input["restart_vm_approved"] = .bool(true)
                     let deploymentCredentials = input
                     let deployed = try await self.core.request("first_run_deploy", timeout: 1500, params: input) { [weak self] event in
                         if event["kind"]?.text == "credential_status", event["status"]?.text == "authenticated",
@@ -850,7 +815,7 @@ final class AppState: ObservableObject {
                 if let pending = fresh.executable.first {
                     throw ErrorState("VERIFY_FAILED", details: ["component": .string(pending.component)])
                 }
-                if let blocked = fresh.operations.first(where: {
+                if launchGame, let blocked = fresh.operations.first(where: {
                     ["fex", "proton", "tool", "launch", "steam", "game"].contains($0.component) && $0.blocked != nil
                 }) { throw ErrorState(blocked.blocked ?? "VERIFY_FAILED", details: ["component": .string(blocked.component)]) }
                 if !launchGame, let unverified = fresh.firstUnverifiedSetupOperation {

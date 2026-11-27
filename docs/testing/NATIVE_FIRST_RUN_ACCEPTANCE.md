@@ -1,5 +1,7 @@
 # First-run acceptance
 
+> 2026-11-27 · 当前正式版和候选的 FX 1.9.9 实机结果见[功能等效基线与验收](FX199_FRESH_USER_BASELINE.md)。本轮验证受保护母本、v1.0.8 两条首次配置入口、重启复用、EAC、单人与公开四人任务的实际运行。以下为历史记录。
+
 ## Acceptance scope
 
 - 场景决定门禁。首次部署改动需要验证实际安装、目标完整性及受影响的复用和恢复路径。仅调整已配好的 Guest 游戏兼容性时，复用仍适用的首配与成功基线。
@@ -11,7 +13,9 @@
 
 The 2026-11-24 [bundled deployment acceptance](RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md) records the current FX 1.9.9 isolated-copy run after the Dashboard V003 merge. The real App recognized the existing verified installation after two normal reboots. First installation from the App Bundle and fresh-image acceptance remain open. The entries below describe earlier development runs.
 
-The 2026-11-25 candidate prioritizes the three verified local Bundle components. It retains pinned downloads for Proton-JE and Runtime 4. Real missing-component and offline installation results are tracked in the [bundled deployment acceptance](RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md).
+The current v1.0.6 candidate delegates Runtime 4 downloads, installation and updates to Guest Steam. Offline RF and Proton deployment requires Runtime already installed and qualified. Steam and game acceptance remain independently tracked.
+
+Historical note. The 2026-11-25 candidate prioritizes the three verified local Bundle components. It retains pinned downloads for Proton-JE and Runtime 4. Real missing-component and offline installation results are tracked in the [bundled deployment acceptance](RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md).
 
 Development scope: isolated source/build only. No current successful SteamOS changes, new VM creation, Latest replacement, main merge or release.
 

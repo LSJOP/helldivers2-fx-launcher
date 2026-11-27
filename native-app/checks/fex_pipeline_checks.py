@@ -1,5 +1,5 @@
 """Real filesystem transaction tests; identity/idle are fixture-only substitutions."""
-import ast,base64,contextlib,hashlib,io,json,pathlib,shutil,tarfile,tempfile,unittest,uuid
+import ast,base64,contextlib,hashlib,io,json,pathlib,shutil,tempfile,unittest,uuid
 from unittest.mock import patch
 source=(pathlib.Path(__file__).resolve().parents[1]/'Core/ComponentDeploymentAdapters.swift').read_text().split('    static let pipeline = #"""\n',1)[1].rsplit('\n"""#',1)[0]
 class PipelineChecks(unittest.TestCase):
@@ -14,9 +14,9 @@ class PipelineChecks(unittest.TestCase):
   self.expected=hashlib.sha256((b'\x7fELF\x02\x01'+bytes(12)+b'\xb7\x00'+bytes(44))).hexdigest();self.ticket=str(uuid.uuid4())
   tree=ast.parse(source)
   functions=[n for n in tree.body if isinstance(n,(ast.Import,ast.ImportFrom,ast.FunctionDef))]
-  ns={'RUNTIME_NAME':'SteamLinuxRuntime_4','RUNTIME_VALVE':(0,'','official'),'RUNTIME_LOCAL':(0,'','local')}
+  ns={}
   exec(compile(ast.Module(body=functions,type_ignores=[]),'helpers','exec'),ns);self.helpers=ns
-  ns['runtime_common']=lambda:self.common
+  ns['runtime_evidence']=lambda _: (None, False)
   self.inventory=ns['inventory'];self.fingerprint=ns['fingerprint']
   self.original=self.inventory(self.installed)
   self.provenance()
@@ -24,7 +24,7 @@ class PipelineChecks(unittest.TestCase):
  def provenance(self):
   self.work.mkdir(parents=True,exist_ok=True)
   (self.work/'provenance.json').write_text(json.dumps({'source':'87c57f0a5f2a0e87c6b994e9d91f72ac6d512ab8','patch':'85999c4f3a82063c66095d5315a661f0eed8369ed7b4b03191ed5dc8521d7926','runtime':self.inventory(self.stage)}))
- def run_pipeline(self,mode,audit=None,files=None,legacy_tree=None,probe_ok=False,bundle_package=False):
+ def run_pipeline(self,mode,audit=None,files=None,legacy_tree=None,probe_ok=False):
   tree=ast.parse(source)
   for n in tree.body:
    if isinstance(n,ast.FunctionDef) and n.name in ['identity','idle','runtime_smoke','stop_replay_steam']:n.body=[ast.Return(value=None)]
@@ -32,7 +32,15 @@ class PipelineChecks(unittest.TestCase):
    if mode=='local_replay' and isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='EXPECTED' for t in n.targets):
     n.value=ast.Constant(self.expected)
   ast.fix_missing_locations(tree)
-  request={'mode':mode,'boot':'fixture-boot','ticket':self.ticket,'audit':audit,'files':files,'bundle_package':bundle_package}
+  request={'mode':mode,'boot':'fixture-boot','ticket':self.ticket,'audit':audit,'files':files}
+  if files is not None:
+   staged={}
+   for item in files:
+    path=pathlib.PurePosixPath(item['path'])
+    staged[str(path)]=['file',item['sha256'],item['mode']]
+    for parent in path.parents:
+     if parent.parts:staged[str(parent)]=['dir']
+   request['expected_tree']=self.fingerprint(staged)
   if legacy_tree is not None:request['legacy_tree']=legacy_tree
   out=io.StringIO()
   with patch.object(pathlib.Path,'home',return_value=self.home),contextlib.redirect_stdout(out):
@@ -112,13 +120,12 @@ class PipelineChecks(unittest.TestCase):
   def read(p,*args,**kwargs):
    if p==pathlib.Path('/etc/machine-id'):return 'fixture-machine'
    return original_read(p,*args,**kwargs)
-  self.helpers['REQUEST']={'machine':hashlib.sha256(b'fixture-machine').hexdigest()}
+  self.helpers['REQUEST']={'machine':hashlib.sha256(b'fixture-machine').hexdigest(),'runtime_path':str(self.common/'SteamLinuxRuntime_4')}
   self.helpers['identity']=lambda:None
   with patch.object(pathlib.Path,'read_text',read),patch.object(pathlib.Path,'is_file',is_file):
-   self.assertFalse(self.helpers['local_replay_preflight'](self.installed))
-   (self.common/'SteamLinuxRuntime_4').mkdir()
-   with self.assertRaisesRegex(RuntimeError,'COMPONENT_CONFLICT'):
+   with self.assertRaisesRegex(RuntimeError,'STEAM_RUNTIME_INCOMPATIBLE'):
     self.helpers['local_replay_preflight'](self.installed)
+   self.assertFalse((self.common/'SteamLinuxRuntime_4').exists())
   self.assertFalse(self.installed.exists())
   self.assertFalse((self.work/(self.ticket+'.json')).exists())
  def test_local_replay_failed_runtime_probe_removes_candidate(self):
@@ -159,91 +166,31 @@ class PipelineChecks(unittest.TestCase):
   files=[{'path':path,'sha256':hashlib.sha256(data).hexdigest(),'mode':mode,
           'data':base64.b64encode(data).decode()}
          for path,data,mode in [('usr/bin/FEX',binary,0o755),('emulator.json',registration,0o644)]]
-  self.run_pipeline('local_replay',files=files,probe_ok=True,bundle_package=True)
+  self.run_pipeline('local_replay',files=files,probe_ok=True)
   self.ticket=str(uuid.uuid4())
   executable=self.installed/'usr/bin/FEX'
   executable.write_bytes(b'damaged');executable.chmod(0o644)
   damaged=self.fingerprint(self.inventory(self.installed))
-  result=self.run_pipeline('local_replay',files=files,legacy_tree=damaged,probe_ok=True,bundle_package=True)
+  result=self.run_pipeline('local_replay',files=files,legacy_tree=damaged,probe_ok=True)
   self.assertEqual(executable.read_bytes(),binary)
   self.assertEqual(executable.stat().st_mode&0o777,0o755)
   self.assertEqual((self.installed.with_name(result['backup'])/'usr/bin/FEX').read_bytes(),b'damaged')
 
- def test_runtime_upload_uses_same_ticket_spelling_as_extraction(self):
-  incoming=self.work/('incoming-'+self.ticket.lower())
-  incoming.mkdir()
-  archive=incoming/'runtime.tar'
-  data=b'fixture runtime'
-  with tarfile.open(archive,'w') as tar:
-   entry=tarfile.TarInfo('runtime-file')
-   entry.size=len(data);entry.mode=0o755
-   tar.addfile(entry,io.BytesIO(data))
-  expected=self.fingerprint({'runtime-file':['file',hashlib.sha256(data).hexdigest(),0o755]})
-  self.helpers['RUNTIME_LOCAL']=(archive.stat().st_size,hashlib.sha256(archive.read_bytes()).hexdigest(),expected)
-  self.helpers['REQUEST']={'local_runtime_uploaded':True}
-  with patch.object(pathlib.Path,'home',return_value=self.home):
-   stage,tree=self.helpers['stage_runtime'](self.installed.parent,self.ticket.upper())
-  self.assertEqual((stage/'runtime-file').read_bytes(),data)
-  self.assertEqual(tree,expected)
- def test_bundled_runtime_without_network(self):
-  incoming=self.work/('incoming-'+self.ticket.lower());incoming.mkdir()
-  archive=incoming/'runtime.tar'
-  data=b'pinned compressed depot fixture'
-  with tarfile.open(archive,'w:xz') as tar:
-   entry=tarfile.TarInfo('runtime-file');entry.size=len(data);entry.mode=0o755
-   tar.addfile(entry,io.BytesIO(data))
-  expected=self.fingerprint({'runtime-file':['file',hashlib.sha256(data).hexdigest(),0o755]})
-  self.helpers['RUNTIME_BUNDLE']=(archive.stat().st_size,hashlib.sha256(archive.read_bytes()).hexdigest(),expected)
-  self.helpers['REQUEST']={'bundled_runtime_uploaded':True}
-  with patch.object(pathlib.Path,'home',return_value=self.home),patch('subprocess.run',side_effect=AssertionError('network invoked')):
-   stage,tree=self.helpers['stage_runtime'](self.installed.parent,self.ticket)
-  self.assertEqual((stage/'runtime-file').read_bytes(),data)
-  self.assertEqual(tree,expected)
- def test_runtime_recovery_leaves_arm64_and_checks_registered_data(self):
-  common=self.common
-  runtime=common/'SteamLinuxRuntime_4';runtime.mkdir()
-  arm64=common/'SteamLinuxRuntime_4-arm64';arm64.mkdir()
-  (runtime/'file').write_text('managed')
-  (arm64/'file').write_text('original ARM64')
-  manifest=common.parent/'appmanifest_4183110.acf'
-  manifest.write_text('external edit')
-  tree=self.fingerprint(self.inventory(runtime,omit_var=True))
-  self.helpers['RUNTIME_LOCAL']=(0,'',tree)
-  receipt={'ticket':self.ticket,'runtime_tree':tree}
+ def test_legacy_runtime_receipt_does_not_modify_steam_managed_files(self):
+  self.run_pipeline('install',self.run_pipeline('audit'))
+  runtime=self.common/'SteamLinuxRuntime_4';runtime.mkdir()
+  arm64=self.common/'SteamLinuxRuntime_4-arm64';arm64.mkdir()
+  ARM64=arm64/'file';ARM64.write_text('original ARM64')
+  manifest=self.common.parent/'appmanifest_4183110.acf'
+  manifest.write_text('unchanged Steam data')
+  receipt=self.work/(self.ticket+'.json')
+  record=json.loads(receipt.read_text());record['runtime_tree']='legacy'
+  receipt.write_text(json.dumps(record))
   with self.assertRaisesRegex(RuntimeError,'EXTERNAL_DRIFT'):
-   self.helpers['recover_runtime'](receipt,self.installed)
+   self.run_pipeline('recover')
   self.assertTrue(runtime.is_dir())
-  manifest.write_text(self.helpers['runtime_registration']())
-  self.helpers['recover_runtime'](receipt,self.installed)
-  self.assertFalse(manifest.exists())
-  self.assertFalse(runtime.exists())
-  self.assertEqual((arm64/'file').read_text(),'original ARM64')
- def test_network_runtime_cache_is_verified_and_reused(self):
-  archive=self.home/'official.tar'
-  data=b'official fixture'
-  with tarfile.open(archive,'w') as tar:
-   entry=tarfile.TarInfo('SteamLinuxRuntime_4/runtime-file');entry.size=len(data);entry.mode=0o755
-   tar.addfile(entry,io.BytesIO(data))
-  sha=hashlib.sha256(archive.read_bytes()).hexdigest()
-  expected=self.fingerprint({'runtime-file':['file',hashlib.sha256(data).hexdigest(),0o755]})
-  self.helpers['RUNTIME_VALVE']=(archive.stat().st_size,sha,expected)
-  self.helpers['RUNTIME_URL']='https://fixture.invalid/runtime.tar.xz'
-  self.helpers['REQUEST']={}
-  def download(args,**kwargs):shutil.copyfile(archive,pathlib.Path(args[args.index('--output')+1]))
-  with patch.object(pathlib.Path,'home',return_value=self.home),patch('subprocess.run',side_effect=download) as curl:
-   stage,_=self.helpers['stage_runtime'](self.installed.parent,self.ticket)
-   self.assertEqual(curl.call_count,1);shutil.rmtree(stage)
-   self.helpers['stage_runtime'](self.installed.parent,self.ticket)
-   self.assertEqual(curl.call_count,1)
-  self.assertEqual((self.work/('runtime-'+sha+'.tar.xz')).read_bytes(),archive.read_bytes())
- def test_bad_network_download_never_enters_cache(self):
-  self.helpers['RUNTIME_VALVE']=(3,'0'*64,'tree')
-  self.helpers['RUNTIME_URL']='https://fixture.invalid/runtime.tar.xz';self.helpers['REQUEST']={}
-  def download(args,**kwargs):pathlib.Path(args[args.index('--output')+1]).write_bytes(b'bad')
-  with patch.object(pathlib.Path,'home',return_value=self.home),patch('subprocess.run',side_effect=download):
-   with self.assertRaisesRegex(RuntimeError,'ARTIFACT_HASH'):
-    self.helpers['stage_runtime'](self.installed.parent,self.ticket)
-  self.assertFalse((self.work/('runtime-'+'0'*64+'.tar.xz')).exists())
+  self.assertEqual(manifest.read_text(),'unchanged Steam data')
+  self.assertEqual(ARM64.read_text(),'original ARM64')
  def test_runtime_generated_hardlinks_are_readonly_but_fex_remains_strict(self):
   import os
   rt=self.common/'SteamLinuxRuntime_4';rt.mkdir()

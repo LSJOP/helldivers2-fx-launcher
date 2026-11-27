@@ -1,7 +1,7 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.40** · Updated: **2026-11-27**.
-Change: make Fast Development Mode the default for scoped development and live compatibility work.
+Instruction version: **v1.2.41** · Updated: **2026-11-28**.
+Change: retain both verified graphics-mode baselines and their recovery evidence.
 
 ## Authority and task lifecycle
 
@@ -18,8 +18,8 @@ Change: make Fast Development Mode the default for scoped development and live c
 
 - SwiftUI owns pages/navigation/settings/theme; AppKit is narrowly scoped to native menus, complex logs, drag/drop and window handling. One AppState and shared Service Layer own business state. First-run and dashboard launch use the same configuration service; no view-built remote shell commands or duplicate deployment state.
 - The current App uses Swift Native Core. Python Bridge packaging instructions in historical reports are superseded. Keep archived Python/CoreSnapshot history intact; never execute code from an arbitrary runtime directory.
-- Preserve runtime allowlists, identity and integrity checks, configuration revision, cancellation, rollback and bounded redacted logs. App Refresh remains read-only. App actions retain their scoped authorization and credential handling.
-- Bind live changes to the selected Guest. Preserve SSH host verification, anti-cheat, data protection, licenses and external safety controls. Destructive changes and unrelated system or network changes require separate authorization.
+- Preserve allowlists, canonical executable/signature/hash checks, configuration revision, process/Guest boot identity binding, duplicate-task guards, cancellation and bounded/redacted logs. Unknown or file-present is never success. Refresh remains read-only. The user’s first-run or dashboard launch action authorizes the standard identity-bound setup transaction and any required verified Guest restart. Keep credentials and sudo scoped to the selected Guest. Destructive recovery, unrelated network changes and other independent writes require their own actions, target checks and rollback.
+- Use isolated fixtures for development by default. Follow Fast Development Mode for authorized live work. Preserve SSH host verification, sudoers, known component provenance and graceful VM stop and restart.
 - FEX readiness requires helper/integration/integrity and runtime capability evidence, not existence alone. Preserve official FX FEX. Restore only identity-bound owned changes with integrity receipts and conflict checks.
 - SessionCredentialManager owns independent SSH/sudo secrets. Main includes optional AES-GCM persistence alongside session memory; this does not authorize Keychain access. Persistent storage uses installation-random authenticated encryption, per-target/per-role binding, private directories/files, durable rejected/forgotten markers and visible errors. Never store secrets in source, bundle, defaults, argv, environment or logs; actual challenge plus verified identity is required before saving. No automatic legacy credential migration/deletion.
 - Launcher updates retain the independent Update Helper, project-trusted Ed25519/SHA-256 verification, HTTPS, safe archive paths, verified metadata binding and worker-aware relaunch. Do not update FX/Guest/game through the launcher updater. Unconfigured service stays visibly unconfigured, never “up to date.” Do not disable verification to make installation work. Developer ID/notarization and project signature trust are separate concerns.
@@ -31,14 +31,15 @@ Change: make Fast Development Mode the default for scoped development and live c
 
 ## First-run component deployment
 
-- Bundle the reviewed RF FEX, Proton-JE and SteamLinuxRuntime_4 combination plus configuration templates in the App by default. Use only a pinned verified download as fallback when approved for that component. First-run setup must not ask ordinary users to supply RF files or point to a developer's local directory.
+- Bundle reviewed RF FEX and Proton-JE plus configuration templates. Use only approved fixed, verified fallback sources. Steam manages Steam Linux Runtime 4.0 (AppID 4183110) in the Guest. Discover the actual Steam library and qualify its version, build, architecture and container execution. Keep Runtime archives out of all App and update artifacts. First-run setup must not ask ordinary users to supply RF files or point to a developer's local directory.
 - For all bundled deployment resources record source, build/version, license, bytes and SHA-256. Public artifacts require confirmed redistribution rights and verified package provenance. Historical samples and unresolved companion files stay out of public bundles and download endpoints.
-
-- Historical RF binaries are opt-in local Debug inputs only. Keep them Git-ignored and exclude their App from CI artifacts, Releases and update feeds. See [acceptance](docs/testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md).
-- Prefer verified compressed Bundle archives for Proton-JE and SteamLinuxRuntime_4, reusing the existing SSH/SFTP transactions. Historical archives stay local and opt-in until approved individually for redistribution. Preserve the original SteamLinuxRuntime_4-arm64. Reuse FEX staging, identity checks, transactions and recovery. Keep managed RF in its own persistent path under Guest /home, outside Steam's managed depot.
+- Debug and Release share the same runtime installer. A valid bundled RF FEX or Proton-JE payload is consumed automatically. Any trusted fallback must use pinned integrity and publisher evidence. Use technical manifests for integrity, architecture, compatibility and paths. Complete redistribution, notices and corresponding-source checks in build/release tooling. Keep development flags, per-machine bindings, deployment permit files, resource pickers and duplicate confirmations out of first run.
+- Keep managed RF under Guest home and the pinned Proton-JE under Steam’s user compatibility tools. Installation and repair must verify complete inventories, protect distribution and Steam-owned files, and preserve backups and rollback. Preserve stock FEX, original ARM64 Proton, SteamLinuxRuntime_4-arm64 (4185400), Steam login and game files.
+- Keep App Core, RF FEX and Proton-JE as the shipped update modules. Continue accepting older schema-3 manifests with Runtime 4 and retain the signed full fallback for older clients.
 - Preserve valid RootFS configuration. Treat emulator registration, provider-derived configuration, and effective runtime environment as separate evidence. Do not force an unverified FEX_ROOTFS=/ or edit historical success images.
 - A missing or damaged FX runtime must enter the repair stage instead of terminating at detection. Distinguish absence, path, access, executable bit, architecture, integrity, registration, RootFS and runtime failures internally. If neither the Bundle nor the fallback has an approved payload, fail with the exact artifact blocker and allow retry; never approve a new source-build output merely because compilation completed.
-- When a change affects first installation, test it on a clean working copy and check actual FEX loading. Check reuse and restart persistence when the change affects those behaviors. Reuse equivalent live evidence for unchanged paths.
+- When the original clean image is unavailable, reconstruct an independent copy using historical inventories, configuration backups and verified deployment receipts. Use Steam to remove its own Runtime. Record differences from the historical environment, verify all three target components are absent and verify retained stock components, Steam login and game data before protecting and hashing the new master. Keep the source images and existing backups untouched.
+- First-run acceptance uses the actual GitHub Stable Release App. Prefer restoring a working copy from the protected, hashed FX199_FRESH_USER_BASELINE. Keep FX 1.9.12 historical success and the FX 1.9.9 master read-only. Verify restore, fresh install, actual FEX loading and verified reuse across restarts. The initial release can precede live verification when explicitly requested. Final delivery requires live setup and game verification, with any subsequent fixes released from main and retested from the clean baseline.
 
 ## UI, localization and documentation
 
@@ -56,6 +57,8 @@ Change: make Fast Development Mode the default for scoped development and live c
 - A patch package may use updated archive rules even when v1.0.1 cannot validate it. Record the affected upgrade path and provide an accurate installation method when required. Continue enforcing the current signature, integrity and archive safety checks.
 
 ## Fast Development Mode
+
+- Before changing FX, SteamOS, the kernel, FEX, Proton, graphics/WMTR, audio or game launch options, consult the [DX12 and DX11 success baselines](docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md). Append each newly verified setup with component/configuration changes, runtime results, regressions, recovery, source commit and evidence index. Preserve prior successful entries and keep credentials or unapproved binaries out of the repository.
 
 - A live compatibility assignment authorizes ordinary in-scope installation from verified sources, per-game options, version switches and reversible graphics changes on the selected working environment. Save the original settings and a rollback route. Keep a known-good runtime available, change one main variable per attempt, and retry when errors or new evidence justify it.
 - Use the smallest checks that establish the requested outcome and protect affected paths. Reuse live evidence when the build, components and tested behavior still match. Run a build if code or build inputs warrant one. Record noncritical failures as warnings and proceed. Required security, data, license, anti-cheat and release-integrity controls remain in force.

@@ -36,14 +36,23 @@ def sha256_file(path):
         return sha.hexdigest()
 
 
+def reject_steam_runtime_in_zip(zipped):
+    retired = "hd2fxnative.app/contents/resources/deployment/steamlinuxruntime_4"
+    for member in zipped.infolist():
+        path = member.filename.rstrip("/").casefold()
+        if path == retired or path.startswith(retired + "/"):
+            raise ValueError("Steam-managed Runtime is present in a public ZIP")
+
+
 def verify_component_assets(manifest, release, directory):
     components = manifest["components"]
     target = components["targetBytes"]
-    destinations = {"rf-fex": "RF-FEX", "proton-je": "Proton-JE", "runtime4": "SteamLinuxRuntime_4"}
+    destinations = {"rf-fex": "RF-FEX", "proton-je": "Proton-JE"}
     modules = components["modules"]
+    ids = {item["id"] for item in modules}
     if (components["protocolVersion"] != 1 or not 0 < components["minimumBaseBuild"] < manifest["build"]
             or not 0 < target <= 2_147_483_648 or not re.fullmatch(r"[a-f0-9]{64}", components["targetTreeSHA256"])
-            or (modules and (len(modules) != 3 or set(item["id"] for item in modules) != set(destinations)))):
+            or len(ids) != len(modules) or ids not in (set(), set(destinations))):
         raise ValueError("Invalid component manifest")
     core = components["core"]
     expanded = core["expandedBytes"]
@@ -78,6 +87,8 @@ def verify_component_assets(manifest, release, directory):
             local = directory / name
             if local.stat().st_size != item["length"] or sha256_file(local) != item["sha256"]:
                 raise ValueError("Component downloaded bytes differ from the signed release")
+            with zipfile.ZipFile(local) as zipped:
+                reject_steam_runtime_in_zip(zipped)
 
 
 def validate_release(release, assets_dir):
@@ -122,6 +133,7 @@ def validate_release(release, assets_dir):
             or manifest.get("sha256") != sha256_file(assets_dir / archive)):
         raise ValueError("Update manifest does not match the tag and archive")
     with zipfile.ZipFile(assets_dir / archive) as zipped:
+        reject_steam_runtime_in_zip(zipped)
         plist = plistlib.loads(zipped.read("HD2FXNative.app/Contents/Info.plist"))
     if (plist.get("CFBundleShortVersionString") != version
             or plist.get("CFBundleVersion") != str(manifest["build"])

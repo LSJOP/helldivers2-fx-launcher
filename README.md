@@ -1,4 +1,6 @@
 <div align="center">
+
+v1.0.8 fixes automatic Steam Runtime 4 installation and the RF FEX verification path on a restored FX 1.9.9 environment. The Dashboard and First-Run Setup share the same transaction, with verified bundled RF FEX and Proton-JE. See the [FX 1.9.9 acceptance record](docs/testing/FX199_FRESH_USER_BASELINE.md) for live results.
   <img src="docs/assets/app-icon.png" width="128" alt="HD2 FX Launcher icon">
   <h1>HELLDIVERS 2 FX Launcher</h1>
   <p>HELLDIVERS 2 FX Launcher · Apple Silicon macOS</p>
@@ -7,11 +9,11 @@
 [简体中文](README.zh-CN.md) | [English](README.md)
 
 <!-- stable-download:start -->
-### [🟨 ⬇️ Download HD2 FX Launcher — Latest Stable](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.5-macOS-arm64.dmg)
+### [🟨 ⬇️ Download HD2 FX Launcher — Latest Stable](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.8-macOS-arm64.dmg)
 
-**🟨 Stable Release · v1.0.5** · **macOS · Apple Silicon / arm64**
+**🟨 Stable Release · v1.0.8** · **macOS · Apple Silicon / arm64**
 
-**[⬇️ Download DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.5-macOS-arm64.dmg)** · [All Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**[⬇️ Download DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.8-macOS-arm64.dmg)** · [All Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
 <!-- stable-download:end -->
 
 ## English
@@ -51,7 +53,7 @@ The Logs page displays local system time, streams bounded task events, supports 
 ### Installation
 
 <!-- stable-install:start -->
-Current App: `1.0.5` (build `2026112501`), macOS 14+ Apple Silicon arm64. Ad-hoc signed; no Apple Developer ID signature or Apple notarization. Gatekeeper may block the download. Verify the [SHA-256 file](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt) before opening. If blocked, use Privacy & Security → Open Anyway for the verified App.
+Current App: `1.0.8` (build `2026112703`), macOS 14+ Apple Silicon arm64. Ad-hoc signed; no Apple Developer ID signature or Apple notarization. Gatekeeper may block the download. Verify the [SHA-256 file](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt) before opening. If blocked, use Privacy & Security → Open Anyway for the verified App.
 <!-- stable-install:end -->
 
 1. Download the macOS arm64 DMG from the published release.
@@ -75,10 +77,14 @@ Earlier FX 1.9.9 testing reached the game menu and ship. Single-player, EAC, mul
 - v1.0.1 rejects the published v1.0.2 update archive during ZIP safety checks. Use the DMG for this upgrade. Gatekeeper may block the ad-hoc signed, unnotarized App.
 - [Acceptance report](docs/acceptance/RELEASE_READINESS_REPORT.md) · [Known issues detail](docs/acceptance/KNOWN_ISSUES.md) · [First-run acceptance](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md) · [Update integration](docs/NATIVE_UPDATES.md) · [Performance limits](docs/GAME_PERFORMANCE.md)
 
+### v1.0.7 component review
+
+The v1.0.7 review candidate records RF FEX and Proton-JE rights, provenance and runtime acceptance independently. The candidate RF package removes two recovered Steam scripts with unverified rights and uses a project-owned wrapper plus the FEX MIT notice. The Proton-JE archive is bound to its upstream tag, binary checksums and 62 recursive source submodules. This work is not yet a Stable release: corresponding-source publication, existing-key update signatures and real Guest/game acceptance remain required. See the [RF audit](docs/audits/RF_FEX_Redistribution_Audit.md), [Proton-JE audit](docs/audits/Proton_JE_Redistribution_Audit.md) and [v1.0.7 readiness](docs/acceptance/v1.0.7_Release_Readiness.md).
+
 ### Changelog
 
 <!-- stable-version:start -->
-[v1.0.5 — 2026-11-25](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · Stable release, build `2026112501`. See [release notes](CHANGELOG.md).
+[v1.0.8 — 2026-11-27](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · Stable release, build `2026112703`. See [release notes](CHANGELOG.md).
 <!-- stable-version:end -->
 
 For current feature status, verification and unmerged work, see the [feature registry](docs/FEATURE_REGISTRY.md), [changelog](CHANGELOG.md) and [original launcher history](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script).
@@ -103,7 +109,7 @@ First-run detection distinguishes a Proton-integrated FX runtime from a missing 
 
 v1.0.5 installs the component-update engine and provides a compact ZIP for existing Stable clients. Later compatible releases can reuse matching Bundle components and retain a verified full ZIP fallback. The three historical runtime payloads remain reserved for controlled testing. If in-app updating fails, mount the verified full DMG, quit the launcher, and replace the existing App. Your saved settings and SteamOS image remain in place. See [component update acceptance](docs/testing/COMPONENT_UPDATES_ACCEPTANCE.md).
 
-The environment branch targets Bundle-first deployment of the pinned FX runtime, Proton-JE and SteamLinuxRuntime_4 combination, with hash-verified fixed-version network fallback where approved. The local Debug build carries all three. Public package approval and real offline deployment remain open. See the [deployment acceptance report](docs/testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md).
+The environment branch prefers verified FX runtime and Proton-JE resources in the App, with approved fixed-version downloads as fallback. Guest Steam manages Steam Linux Runtime 4.0. A missing Runtime requires a Steam connection, and a verified compatible installation is reused. Public FX and Proton-JE redistribution and real deployment acceptance remain pending. See the [deployment acceptance report](docs/testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md).
 
 Earlier recovery work installed the pinned Runtime through the isolated Debug replay (verified local archive or Valve HTTPS, SHA-256, SFTP, retained ARM64 Runtime, transaction recovery). Public one-click deployment remains blocked by RF binary provenance/redistribution review; the Debug replay requires explicitly supplied test image and resource paths. See [first-run acceptance](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md). The RF replay uses its own persistent directory and the audited empty RootFS registration. A no-game Runtime probe checks the selected RF executable and records its observed RootFS separately.
 

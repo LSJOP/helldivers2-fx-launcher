@@ -1,5 +1,7 @@
 # 组件级 App 更新验收
 
+> 2026-11-27 · 正式 v1.0.7 → v1.0.8 实机增量为 PASS。通过 GitHub Stable 服务仅下载 App Core 23.95 MB，复用 RF FEX、Proton-JE。旧进程退出，Update Helper 校验完整签名、交换 App 并在 8 秒内确认重启。正式证据见[基线验收](FX199_FRESH_USER_BASELINE.md)。以下为早期隔离验收。
+
 本轮基于 `fix/first-run-ssh-access` 的 `c15b3afd9ab46be193954688e578560319e7bfde`，保留远端 main 的 Dashboard V003。长期自动更新归 `dev/core`。本轮使用现有环境分支联调，因为当前 `dev/core` 不含三项 Bundle 资源。使用隔离的测试 Bundle ID、单次本机测试密钥和环回 HTTP。未修改生产信任根或真实安装。协议和发行流程见[更新文档](../NATIVE_UPDATES.md#component-update-schema-3)。
 
 ## 真实 App 安装验收

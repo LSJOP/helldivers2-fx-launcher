@@ -86,7 +86,12 @@ struct ErrorState: Error, LocalizedError, Identifiable, Sendable {
         case "FX_NOT_RUNNING": return NativeStrings.text("ui.353", language: language)
         case "LOCAL_FX_REQUIRED": return NativeStrings.text("ui.355", language: language)
         case "GUEST_INSPECTION_FAILED": return NativeStrings.text("ui.146", language: language)
-        case "FEX_LOCAL_RUNTIME_MISSING": return "SteamLinuxRuntime_4 · " + NativeStrings.text("ui.setup.artifactUnavailable", language: language)
+        case "FEX_LOCAL_RUNTIME_MISSING", "STEAM_RUNTIME_DOWNLOAD_INCOMPLETE":
+            return NativeStrings.text("ui.steamRuntime.incomplete", language: language)
+        case "STEAM_RUNTIME_CHECK_FAILED": return NativeStrings.text("ui.steamRuntime.checkFailed", language: language)
+        case "STEAM_RUNTIME_REQUEST_FAILED": return NativeStrings.text("ui.steamRuntime.requestFailed", language: language)
+        case "STEAM_RUNTIME_LOGIN_REQUIRED": return NativeStrings.text("ui.steamRuntime.loginRequired", language: language)
+        case "STEAM_RUNTIME_INCOMPATIBLE": return NativeStrings.text("ui.steamRuntime.incompatible", language: language)
         case "FEX_PROTON_INTEGRATED_UNVERIFIED": return NativeStrings.text("ui.fex.integrated", language: language)
         case "ARTIFACT_UNAVAILABLE", "ARTIFACT_UNAPPROVED": return NativeStrings.text("ui.setup.artifactUnavailable", language: language)
         case "SSH_AUTH_FAILED": return NativeStrings.text("ui.289", language: language)

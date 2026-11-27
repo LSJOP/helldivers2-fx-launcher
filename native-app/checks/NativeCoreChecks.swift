@@ -41,10 +41,15 @@ func runChecks() {
     check(!redactedDiagnostic.contains("fixture-secret") && !redactedDiagnostic.contains("id_ed25519"),
           "diagnostic report removes credentials and SSH key paths")
 
-    for method in ["first_run_fex_build", "first_run_fex_install", "first_run_fex_recover"] {
+    for method in ["first_run_fex_build", "first_run_fex_install", "first_run_fex_recover", "first_run_fex_repair"] {
         checkThrows("CONFIRMATION_REQUIRED", "FEX action requires explicit initiation: " + method) {
             _ = try NativeCoreService.perform(method, params: [:], context: CoreContext(timeout: 1), onEvent: nil)
         }
+    }
+
+    checkThrows("CREDENTIAL_SCOPE_CHANGED", "automatic FEX repair requires the verified Guest boot") {
+        _ = try NativeCoreService.perform("first_run_fex_repair", params: ["confirmed": .bool(true)],
+                                          context: CoreContext(timeout: 1), onEvent: nil)
     }
 
     let fexSnapshot = DeploymentSnapshot(target: "fixture", boot: UUID().uuidString, revision: "fixture", fxVersion: "fixture", osVersion: "fixture", architecture: "aarch64", steamRunning: false, gameRunning: false, freeBytes: 0,
@@ -71,8 +76,11 @@ func runChecks() {
     let stock199 = "f9cbb7a70e804b9930fed02fd9d1349d49d7808faace703063a9b4944bc3568e"
     check(FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.9", architecture: "aarch64", executableSHA256: stock199),
           "known failing stock FX 1.9.9 FEX cannot inherit probe success")
-    check(!FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.12", architecture: "aarch64", executableSHA256: stock199)
-          && !FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.9", architecture: "aarch64", executableSHA256: LaunchService.verifiedFEX),
+    check(FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.12", architecture: "aarch64", executableSHA256: stock199),
+          "reproduced FX 1.9.12 stock FEX failure cannot inherit probe success")
+    check(!FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.13", architecture: "aarch64", executableSHA256: stock199)
+          && !FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.12", architecture: "aarch64", executableSHA256: LaunchService.verifiedFEX)
+          && !FEXWorkflow.hasKnownLaunchIncompatibility(fxVersion: "1.9.12", architecture: "x86_64", executableSHA256: stock199),
           "known incompatibility does not apply to other FX versions or FEX binaries")
 
     var installedFEX = fexSnapshot
@@ -293,6 +301,23 @@ func runChecks() {
     let guestHome = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try! FileManager.default.createDirectory(at: guestHome, withIntermediateDirectories: false)
     defer { try? FileManager.default.removeItem(at: guestHome) }
+    check(SteamRuntime4.installPhase(4) == "installed", "Steam runtime fully installed bit admits preflight")
+    check(SteamRuntime4.installPhase(4 | 0x0010_0000) == "downloading", "an old installed Runtime is not ready during download")
+    check(SteamRuntime4.installPhase(4 | 0x0040_0000) == "installing", "pending Steam commit is not readiness")
+    check(SteamRuntime4.installPhase(4 | 2) == "pending", "Runtime requiring update remains pending")
+    check(SteamSetupClient.runtime4InstallExpression.contains("app_install 4183110")
+              && !SteamSetupClient.runtime4InstallExpression.contains("4185400"),
+          "Steam client queue request targets only the required Runtime")
+    let runtimeValidation = GuestScripts.requestRuntime4Validation(boot: "fixture")
+    check(runtimeValidation.contains("steam 'steam://validate/4183110'")
+              && runtimeValidation.contains("/proc/sys/kernel/random/boot_id") && !runtimeValidation.contains("4185400"),
+          "Steam validates the dedicated Runtime only on the expected Guest boot")
+    let libraryRuntime = #"/home/steamos/Library "Games" 雪\archive/steamapps/common/SteamLinuxRuntime_4"#
+    let input = FEXWorkflow.runtimeProbeInput(boot: "fixture", tree: "tree", runtimePath: libraryRuntime)
+    let decoded = try! CoreProcess.run("/usr/bin/python3", ["-c",
+        "import base64,json,sys; print(json.loads(base64.b64decode(sys.argv[1]))['runtime_path'])", input])
+    check(decoded.status == 0 && decoded.stdout.trimmingCharacters(in: .newlines) == libraryRuntime,
+          "FEX Runtime path survives Swift JSON encoding and Guest Python decoding")
     let noSteamLog = try! CoreProcess.run("/bin/sh", ["-c", "HOME=\"$1\"\n" + GuestScripts.state, "guest-fixture", guestHome.path])
     let unreadLogin = try! GuestService.parse(noSteamLog.stdout, expected: "GUEST_INSPECTION_FAILED")
     check(unreadLogin["steam_logged_on"]?.text == "unknown" && !GuestService.steamReady(unreadLogin),

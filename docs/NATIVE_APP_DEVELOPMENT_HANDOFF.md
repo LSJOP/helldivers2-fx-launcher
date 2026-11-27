@@ -1,5 +1,9 @@
 # HD2FXNative 接续开发交接
 
+> 2026-11-27 · FX 1.9.9 功能等效母本已恢复并两次核对完整 SHA-256。正式 v1.0.7 复现 Steam 确认框及 Swift/Python 的 Runtime 路径转义错误。main 的 `c686f7b` 修复并发布 v1.0.8。正式首配、Guest 和 App 重开后的复用、从干净副本首页启动、游戏窗口与菜单、单人与四人实际落地、EAC 与 v1.0.7 组件级增量升级均通过。证据、差异与未验收事项见[基线验收](testing/FX199_FRESH_USER_BASELINE.md)。
+
+> 2026-11-27 · 从 PR #23 已有 Worktree 续接。Debug / Release 用同一个组件事务。RF 备用资源从同版本 Ed25519 签名更新清单获取；正式包只包含 App Core、RF FEX、Proton-JE，Steam 管理 Runtime 4。v1.0.7 已从 main 发布为 Stable / Latest。正式 v1.0.4 实际升级并自动重启成功。正式 v1.0.5 和 v1.0.6 在本机因 dyld 的 Sparkle 库验证无法启动。下一次首装实机必须从已核验的 FX199_FRESH_USER_BASELINE 恢复工作副本。历史 FX 1.9.12、FX 1.9.9 原盘和现有离线备份均为受保护参考。见[基线验收](testing/FX199_FRESH_USER_BASELINE.md)。
+
 v1.0.5 过渡发行保留受控 Debug 资源，仅公开分发签名更新引擎及获准内容。公开端点和实际升级证据以发行验收记录为准。
 
 > 2026-11-22 · Dashboard V003 接续入口见[整合报告](Dashboard_UI_V003_Final_Integration_Report.md)。保留 main 的 1.0.4 业务和签名基础，真实 FX、Guest、SSH 和游戏仍需要独立实机验收。
@@ -9,7 +13,11 @@ v1.0.5 过渡发行保留受控 Debug 资源，仅公开分发签名更新引擎
 2026-11-24 复验从源码 `564d31274056a02dfdad5abfd4ad10a055625e97` 继续，已观察到独立副本的第二次正常启动。既有组件通过 App 检查。另修复首次配置完成后总览的启动按钮恢复逻辑。缺失修复、真实上传和分发审批仍待验收。
 
 
-2026-11-25：RF FEX、Proton-JE 和 SteamLinuxRuntime_4 统一内置优先。沿用 Proton 的完整树校验和 Runtime 的事务，保留原有 ARM64 Runtime。受控构建导入、大小、更新上限和验收见[专项报告](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
+2026-11-26：v1.0.6 候选由 Guest Steam 负责 Runtime 4。保留历史归档作为本地证据，构建与打包拒绝已退役的 Bundle 目录。现有 Steam Runtime 和 ARM64 Runtime 保留。RF FEX 与 Proton-JE 公开分发审批仍独立待完成。
+
+2026-11-26：v1.0.7 专项已完成权利/来源分层审核。RF 历史 41 文件保持原样作证；发布候选排除未证实授权的 `fex-compat-tool` 与未使用的 `unshare.py`，改为 39 个 FEX 文件 + 项目自有 wrapper + MIT 声明，新树指纹 `79c051c4…`。Proton-JE 对上游 Release SHA-256/SHA-512、标签提交及 62 个递归子模块已固定。RC 组装路径已加入；Stable 仍需同地对应源码制品、现有 Ed25519 私钥签名及真实 Guest/游戏验收。见 `docs/audits/*Redistribution_Audit.md` 与 `docs/acceptance/v1.0.7_Release_Readiness.md`。
+
+2026-11-25（历史）：RF FEX、Proton-JE 和 SteamLinuxRuntime_4 统一内置优先。沿用 Proton 的完整树校验和 Runtime 的事务，保留原有 ARM64 Runtime。受控构建导入、大小、更新上限和验收见[专项报告](testing/RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md)。
 
 组件级更新与 Guest 部署独立。协议、原交易机制、隔离测试方式和旧版限制见[更新文档](NATIVE_UPDATES.md#component-update-schema-3)和[验收](testing/COMPONENT_UPDATES_ACCEPTANCE.md)。
 

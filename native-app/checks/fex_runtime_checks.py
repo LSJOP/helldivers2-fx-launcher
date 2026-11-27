@@ -4,6 +4,30 @@ from unittest.mock import patch
 source=(pathlib.Path(__file__).resolve().parents[1]/'Core/ComponentDeploymentAdapters.swift').read_text()
 pipeline=source.split('static let pipeline = #"""\n',1)[1].rsplit('\n"""#',1)[0]
 probe=source.split('static let runtimeProbe = #"""\n',1)[1].split('\n"""#',1)[0]
+class SteamLibraryChecks(unittest.TestCase):
+ def test_steam_managed_runtime_found_in_nondefault_library_without_writes(self):
+  adapter=(pathlib.Path(__file__).resolve().parents[1]/'Core/EnvironmentAdapters.swift').read_text()
+  evidence=adapter.split('static let evidence = #"""\n',1)[1].split('\n"""#',1)[0]
+  scanner=adapter.split('static let probe = evidence + "\\n" + #"""\n',1)[1].split('\n"""#',1)[0]
+  with tempfile.TemporaryDirectory() as temporary:
+   library=pathlib.Path(temporary).resolve()/'Library with spaces'
+   common=library/'steamapps/common'
+   arm64=common/'SteamLinuxRuntime_4-arm64'
+   arm64.mkdir(parents=True)
+   manifest=library/'steamapps/appmanifest_4183110.acf'
+   text='"AppState" { "appid" "4183110" "StateFlags" "4" }'
+   manifest.write_text(text)
+   runtime=common/'SteamLinuxRuntime_4';runtime.mkdir()
+   (runtime/'VERSIONS.txt').write_text('depot\t4.0.20261126.123456\n')
+   alias=library.with_name('alias');alias.symlink_to(library,target_is_directory=True)
+   original=pathlib.Path.read_text
+   with patch.object(pathlib.Path,'read_text',lambda p,*a,**k:'fixture' if str(p)=='/proc/sys/kernel/random/boot_id' else original(p,*a,**k)):
+    output=io.StringIO()
+    with contextlib.redirect_stdout(output):
+     exec(evidence+'\n'+scanner,{'request':{'boot':'fixture','roots':[str(alias),str(library)]}})
+    self.assertEqual(json.loads(output.getvalue()),[{'path':str(runtime),'manifest':text,'version':'4.0.20261126.123456','verified':False}])
+   self.assertEqual(manifest.read_text(),text)
+   self.assertTrue(arm64.is_dir())
 class RuntimeChecks(unittest.TestCase):
  def setUp(self):
   self.temp=tempfile.TemporaryDirectory();self.home=pathlib.Path(self.temp.name).resolve()
@@ -19,7 +43,9 @@ class RuntimeChecks(unittest.TestCase):
  def tearDown(self):self.temp.cleanup()
  def run_probe(self,expected='',status=42,container_status=0,loaded=True):
   output=io.StringIO();ns=dict(self.ns,EXPECTED_TREE=expected,EXPECTED_BOOT=pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip() if pathlib.Path('/proc').exists() else 'fixture')
-  ns.update(RUNTIME_VALVE=(0,'',self.ns['fingerprint'](None)),RUNTIME_LOCAL=(0,'','unused'),observed_managed_executable=lambda *_:loaded)
+  managed=self.home/'.local/share/HD2FXLauncher/compatibility/FEX-RF'
+  ns.update(RUNTIME_PATH=str(self.home/'custom steam library/steamapps/common/SteamLinuxRuntime_4') if managed.exists() else '',
+            runtime_evidence=lambda *_:(None,True),observed_managed_executable=lambda *_:loaded)
   original_read=pathlib.Path.read_text
   def read(p,*a,**k):return 'fixture' if str(p)=='/proc/sys/kernel/random/boot_id' else original_read(p,*a,**k)
   with patch.object(pathlib.Path,'home',return_value=self.home),patch.object(pathlib.Path,'read_text',read),patch('platform.machine',return_value='aarch64'),patch('subprocess.Popen') as process,contextlib.redirect_stdout(output):
@@ -80,6 +106,7 @@ class RuntimeChecks(unittest.TestCase):
    self.assertTrue(result['runtime']);self.assertEqual(result['probe_rootfs'],'empty')
    self.assertEqual(result['loaded_executable'],str(managed/'usr/bin/FEX'))
    self.assertEqual(self.container_call.kwargs['env']['PRESSURE_VESSEL_EMULATOR'],str(metadata))
+   self.assertEqual(self.container_call.args[0][0],str(self.home/'custom steam library/steamapps/common/SteamLinuxRuntime_4/_v2-entry-point'))
    self.assertEqual(self.run_probe(static['tree'],container_status=1)['reason'],'FEX_RUNTIME_FAILED')
    self.assertEqual(self.run_probe(static['tree'],loaded=False)['reason'],'FEX_RUNTIME_FAILED')
  def test_no_execute_permission(self):

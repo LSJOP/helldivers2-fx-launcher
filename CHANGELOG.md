@@ -8,35 +8,26 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 
 ## Unreleased
 
-- Launch tasks now retain a correlation ID in macOS logs and report Steam command exit codes when available.
+No unreleased entries.
 
-- Local controlled Debug can bundle the pinned Proton-JE and Runtime 4 archives alongside the FX runtime. First-run repair prefers verified Bundle resources, with pinned downloads retained as fallback where available. Public distribution and live offline deployment still require acceptance.
+### v1.0.8 — 2026-11-27
 
-- Local opt-in Debug builds can carry the verified 41-file FX runtime package and use it during first-run repair. Public distribution approval remains pending.
+- Queue a missing Steam Linux Runtime 4.0 through the authenticated Steam client. Wait for Steam to finish before deploying the bundled compatibility tools.
+- Preserve the Steam library path when passing Runtime 4 to the RF FEX verification probe.
 
-- Controlled Debug builds recognize an exact installed match to the verified bundled runtime and still run the compatibility probe before continuing setup.
+### v1.0.7 — 2026-11-27
 
-- First-run setup now enters automatic FX runtime repair for missing or damaged components, discovers Steam libraries and the active account without a developer SteamID, reports distinct permission/architecture/integrity failures, and can copy a redacted diagnostic report. Public RF Bundle and fallback payloads remain blocked pending provenance and redistribution approval; no unreviewed binary is installed.
+- Dashboard launch and First-Run Setup use the same automatic setup path. Debug and Release verify and use bundled RF FEX and Proton-JE without developer-only flags, local approval files or an extra deployment prompt. The updater's signed RF module provides the fallback; Proton-JE keeps its pinned upstream fallback.
+- Steam installs or validates Runtime 4 (4183110). The original ARM64 Runtime (4185400), stock FEX and Steam game files remain managed by Steam and FX. The RF registration keeps the audited provider configuration.
+- Downloads include the arm64 App, DMG, full ZIP and signed App Core, RF FEX and Proton-JE update packages. The signed full ZIP supports older clients. Source and notices for the bundled compatibility tools accompany the release.
+- The published v1.0.4 upgraded in-app to v1.0.7 with the signed full ZIP and a confirmed restart. The v1.0.5 and v1.0.6 ZIPs reproduced a Sparkle library-validation startup failure on the test Mac. Use the v1.0.7 DMG when an older App cannot open. Fresh FX 1.9.9 setup and HELLDIVERS 2 gameplay remain pending.
 
-- Preserve the audited empty RF RootFS registration and verify that the isolated Steam Runtime probe loads the installed RF executable. Migrate the previous Debug registration through the existing recovery transaction. Wait for the SwiftUI main-scene action during launch or reopen.
+### v1.0.6 — 2026-11-26
 
-- Verify the active FX Vulkan driver and Guest Steam HTTPS during first-run setup. Preserve the component name when final verification detects a pending change.
-
-- Persistence candidate: keep the RF compatibility tree outside the Steam-managed FX runtime depot, verify RootFS inside a real Runtime container, and restore the shared main window on launch/reopen. Final reboot acceptance and distributable RF build remain pending.
-
-- Recovery continuation adds verified Runtime cache/retry, explicit Debug resource paths and a bundled component integrity catalogue. Real setup installed Proton and configured Steam, but failed final verification after reboot restored the incompatible stock FX runtime and empty container RootFS; public one-click setup remains blocked.
-
-- The isolated first-run replay can install the pinned Steam Linux Runtime 4.0 from a verified local archive or Valve HTTPS download. It preserves the existing ARM64-only Runtime.
-
-- Add an opt-in Debug path for replaying pinned local RF samples on the isolated FX 1.9.9 test image. It checks the matching Steam Linux Runtime before writing and runs the FX runtime probe inside the recovery transaction. Fresh-guest deployment is pending.
-
-- Retry transient SteamOS SSH startup failures before authentication, with FX endpoint verification on each attempt.
-
-- Show first-run progress as completed stages and require current verification evidence before marking setup complete.
-
-- Record Proton-integrated FX runtime evidence during first-run detection and preserve the sudo credential kind when requesting authentication.
-
-- Add original MOTR7 artwork to setup and launch workflows and an artwork credit in Settings; preserve the Dashboard hero and shared header.
+- Environment setup checks the active Steam library for Steam Linux Runtime 4.0. If missing, setup asks Steam inside FX to install AppID 4183110 and checks readiness before continuing. Existing ARM64 Runtime remains under Steam management.
+- App packages and incremental updates exclude the Steam-managed Runtime archive. The signed Schema 2 ZIP and Schema 3 manifest preserve compatibility with the existing update engine. The public packages exclude the controlled FX and Proton-JE payloads pending redistribution approval.
+- In isolated testing, a target assembled from the Core ZIP and reused FX and Proton-JE resources passed the complete inventory and strict code-signature checks. The v1.0.4 updater code accepted the legacy signed manifest and full ZIP in a local test.
+- Live Steam download and installation, fresh Guest setup, interactive upgrade and restart, and gameplay remain unverified for this release.
 
 ### v1.0.5 — 2026-11-25
 
