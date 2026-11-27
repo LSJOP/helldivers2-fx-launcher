@@ -9,6 +9,13 @@
 - Apple Silicon / macOS 14+、完整 Xcode、Python 3 检查工具及固定 Sparkle SPM。使用 `bash native-app/script/build_and_run.sh --build-only` 仅编译。
 - 详细 Release/测试命令、架构和候选边界见交接文档。旧阶段版本号和测试结果不代表当前构建。
 
+## Fast Development Mode
+
+- 按任务范围选最少有效验证。匹配版本、配置及运行路径的历史实机证据可复用。遇到非关键检查失败，记下警告并继续，涉及数据、凭据、许可、反作弊及外部安全机制的检查继续执行。
+- 实机兼容性任务已授权的常规组件安装、版本切换和 Steam／图形参数修改可直接执行。确认工作盘和 Guest，保留原值和回退路径，使用官方或可核验的上游制品，每轮改变一个主要变量。复用现有工作副本、日志和缓存。遇到失败先查实际错误，再做针对性调整。
+- 以验收范围内的实际功能为准。图形兼容性检查记录生效后端和设备初始化日志，再进入指定场景并实际操作。性能、联机和长稳按任务需要采集。纯内部文档改动检查内容和链接即可。
+- Apply the same scope in English-language work. Reuse matching evidence, run focused checks, and proceed past noncritical warnings. Keep credentials, data, redistribution, anti-cheat and external safety protections. For authorized live compatibility work, preserve working settings, change one main variable at a time, and verify the requested live behavior.
+
 ## State, credentials and recovery
 
 SwiftUI pages use one AppState, TaskManager and Swift Native Core services; the historical JSONL Python Bridge is not the current runtime. Views do not construct remote commands. Refresh reads local metadata only; explicit connect/inspect buttons perform identity-bound Guest access.

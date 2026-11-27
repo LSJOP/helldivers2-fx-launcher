@@ -1,5 +1,14 @@
 # First-run acceptance
 
+## Acceptance scope
+
+- 场景决定门禁。首次部署改动需要验证实际安装、目标完整性及受影响的复用和恢复路径。仅调整已配好的 Guest 游戏兼容性时，复用仍适用的首配与成功基线。
+- 图形兼容性验收记录实际 FX、Guest、兼容层和游戏版本，并用日志或覆盖层确认渲染 API、设备初始化及兼容层。观察主菜单和指定可玩场景，进行实际操控。只有任务要求时才增加联机、战斗、性能或长稳测试。
+- 记录非关键警告、复用的证据以及尚未验证的结果。对数据、凭据、许可、反作弊、外部安全和发布完整性使用适用的必要检查。
+- Scope acceptance to changed behavior. For a renderer change, verify the live API, device and translation layer plus the requested playable state and input. Reuse matching setup and launch evidence. Record warnings and retain applicable safety and release checks.
+
+## Historical development runs
+
 The 2026-11-24 [bundled deployment acceptance](RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md) records the current FX 1.9.9 isolated-copy run after the Dashboard V003 merge. The real App recognized the existing verified installation after two normal reboots. First installation from the App Bundle and fresh-image acceptance remain open. The entries below describe earlier development runs.
 
 The 2026-11-25 candidate prioritizes the three verified local Bundle components. It retains pinned downloads for Proton-JE and Runtime 4. Real missing-component and offline installation results are tracked in the [bundled deployment acceptance](RF_FEX_BUNDLED_DEPLOYMENT_ACCEPTANCE.md).
@@ -15,7 +24,7 @@ Development scope: isolated source/build only. No current successful SteamOS cha
 
 The final ordinary-user one-click deployment acceptance is **not achieved** while required artifacts and new-VM testing are blocked. The build is a reviewable development implementation, not a production installer. Completion of approved configuration items never means that blocked components were installed. The UI retains blockers after partial success and asks for rescan.
 
-Future live acceptance requires the user's explicit authorization and an independent official VM, without personal disk/Prefix cloning. Record initial state, exact target/profile/artifact hashes, real installation receipts, repeat behavior and recovery. Validate gameplay, official EAC and multiplayer separately. Do not substitute any local tests for these results.
+For the historical initial-installation blocker above, use a clean official working image and record the installed components and recovery evidence. Apply the acceptance scope above for subsequent tasks.
 
 
 ## Recovery candidate · 2026-11-15
