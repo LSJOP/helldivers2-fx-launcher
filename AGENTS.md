@@ -1,7 +1,7 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.40** · Updated: **2026-11-27**.
-Change: make Fast Development Mode the default for scoped development and live compatibility work.
+Instruction version: **v1.2.41** · Updated: **2026-11-28**.
+Change: retain both verified graphics-mode baselines and their recovery evidence.
 
 ## Authority and task lifecycle
 
@@ -57,6 +57,8 @@ Change: make Fast Development Mode the default for scoped development and live c
 - A patch package may use updated archive rules even when v1.0.1 cannot validate it. Record the affected upgrade path and provide an accurate installation method when required. Continue enforcing the current signature, integrity and archive safety checks.
 
 ## Fast Development Mode
+
+- Before changing FX, SteamOS, the kernel, FEX, Proton, graphics/WMTR, audio or game launch options, consult the [DX12 and DX11 success baselines](docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md). Append each newly verified setup with component/configuration changes, runtime results, regressions, recovery, source commit and evidence index. Preserve prior successful entries and keep credentials or unapproved binaries out of the repository.
 
 - A live compatibility assignment authorizes ordinary in-scope installation from verified sources, per-game options, version switches and reversible graphics changes on the selected working environment. Save the original settings and a rollback route. Keep a known-good runtime available, change one main variable per attempt, and retry when errors or new evidence justify it.
 - Use the smallest checks that establish the requested outcome and protect affected paths. Reuse live evidence when the build, components and tested behavior still match. Run a build if code or build inputs warrant one. Record noncritical failures as warnings and proceed. Required security, data, license, anti-cheat and release-integrity controls remain in force.
