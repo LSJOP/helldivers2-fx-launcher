@@ -1,7 +1,7 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.41** · Updated: **2026-11-28**.
-Change: retain both verified graphics-mode baselines and their recovery evidence.
+Instruction version: **v1.2.42** · Updated: **2026-11-29**.
+Change: use one Settings credential entry, reuse verified task evidence, and preserve game settings across graphics modes.
 
 ## Authority and task lifecycle
 
@@ -21,13 +21,21 @@ Change: retain both verified graphics-mode baselines and their recovery evidence
 - Preserve allowlists, canonical executable/signature/hash checks, configuration revision, process/Guest boot identity binding, duplicate-task guards, cancellation and bounded/redacted logs. Unknown or file-present is never success. Refresh remains read-only. The user’s first-run or dashboard launch action authorizes the standard identity-bound setup transaction and any required verified Guest restart. Keep credentials and sudo scoped to the selected Guest. Destructive recovery, unrelated network changes and other independent writes require their own actions, target checks and rollback.
 - Use isolated fixtures for development by default. Follow Fast Development Mode for authorized live work. Preserve SSH host verification, sudoers, known component provenance and graceful VM stop and restart.
 - FEX readiness requires helper/integration/integrity and runtime capability evidence, not existence alone. Preserve official FX FEX. Restore only identity-bound owned changes with integrity receipts and conflict checks.
-- SessionCredentialManager owns independent SSH/sudo secrets. Main includes optional AES-GCM persistence alongside session memory; this does not authorize Keychain access. Persistent storage uses installation-random authenticated encryption, per-target/per-role binding, private directories/files, durable rejected/forgotten markers and visible errors. Never store secrets in source, bundle, defaults, argv, environment or logs; actual challenge plus verified identity is required before saving. No automatic legacy credential migration/deletion.
+- Settings is the only password entry. SessionCredentialManager supplies one shared SteamOS password for SSH and sudo. The services independently verify each actual challenge. Keep password and private-key passphrase off argv, environment, logs, screenshots and reports. Use the existing owner-only AES-GCM store after a verified challenge on the selected FX, disk and SSH endpoint. Passphrases remain in memory. Preserve host-key verification, sudoers, storage errors and rejection markers. Missing or rejected credentials appear in the current page with a Settings action. Keep password and duplicate confirmation dialogs out of other flows.
+- Share task inspection evidence through the existing services and task state. Coalesce identical concurrent inspections. User-requested complete checks remain available. Invalidate changed identity, interrupted work, failures and expired results. Recheck affected components after modification. Page changes, view reconstruction and metadata refresh must not implicitly run a full inspection. Scope SSH and sudo authorization to the observed live connection and Guest. Sudo authorization on a separate session requires its own proof.
+- Before integrating Git changes, compare affected features against prior working code. When build settings, resources or execution differ between Debug and Release, test the relevant behavior in Release.
 - Launcher updates retain the independent Update Helper, project-trusted Ed25519/SHA-256 verification, HTTPS, safe archive paths, verified metadata binding and worker-aware relaunch. Do not update FX/Guest/game through the launcher updater. Unconfigured service stays visibly unconfigured, never “up to date.” Do not disable verification to make installation work. Developer ID/notarization and project signature trust are separate concerns.
 
 ## Component updates
 
 - Full installation includes all distribution-approved core components. A signed component update downloads only the destination App Core and components whose content mismatches the target. Retain a verified full ZIP and one download-and-install action. Use an isolated assembly directory and verify the entire target inventory, identity and strict nested code signature before the existing Helper exchanges the App and confirms startup. Do not re-sign on the client, edit the running bundle, or write to SteamOS through launcher updates.
 - Each component-capable release uses measured sizes, regenerates its signed manifest and reuses verified immutable assets with matching fingerprints where available. Never publish unapproved components in any artifact or feed. Keep fixed branches and the existing Ed25519 trust root. See [schema and release procedure](docs/NATIVE_UPDATES.md#component-update-schema-3).
+
+## Graphics mode and audio
+
+- DX11 may change DXMT, WMTR, isolated Proton-JE and Wine state, required FEX and launch parameters, TAA, temporary capture suppression and playback-only compatibility. Preserve other Steam arguments, game preferences and user-selected FX performance and network settings. Apply independent performance and IPv6 controls only through their explicit actions.
+- Carry the latest user settings between modes. Restore App-managed fields by receipt and observed value. Preserve later user edits and never restore a historical whole-game configuration snapshot over current settings. Keep the original DX12 prefix and guard against running games and conflicting transactions.
+- An unavailable microphone must leave the game launchable with playback compatibility. Keep unverified duplex experiments outside stable launch changes. Never route system playback to game capture. Archive newly verified live combinations incrementally and distinguish renderer and process evidence from actually reaching and controlling the game on the ship. Network and IPv6 diagnostics remain advisory.
 
 ## First-run component deployment
 

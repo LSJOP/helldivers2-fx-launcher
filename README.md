@@ -58,7 +58,7 @@ The Logs page displays local system time, streams bounded task events, supports 
 
 - Dashboard starts the guarded HELLDIVERS 2 launch workflow. The Dashboard also manages FX selection and the supported FX launch action.
 - First-Run Setup checks Guest identity, runtime capabilities and component integrity. Approved configuration can install the pinned Proton-JE package, select a verified Steam compatibility tool and merge launch options while retaining custom arguments. Detection is read-only. Deployment and recovery require their own checks.
-- Environment reports FX runtime and Proton-JE evidence. SSH and sudo credentials can be stored separately in encrypted local storage for a verified target; reuse after restart still requires real-world acceptance.
+- The development candidate uses one SteamOS password entered in Settings for both SSH and sudo, with separate authentication and encrypted storage scoped to the FX instance, disk and endpoint. Logs can copy a permission-safe diagnostics report. The published download below retains the v1.1.0 behavior.
 - The Swift App provides six native pages, logs, scoped performance controls and ten interface languages. Optional SteamOS installation steps require Python 3.
 - Use Settings → Software Update to check for stable releases. v1.0.1 cannot install the published v1.0.2 update ZIP, so install v1.0.2 using the DMG.
 

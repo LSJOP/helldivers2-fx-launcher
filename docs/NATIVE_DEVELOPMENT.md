@@ -20,12 +20,12 @@ Use the [successful environment baseline](environment/HD2_SUCCESSFUL_ENVIRONMENT
 
 ## State, credentials and recovery
 
-SwiftUI pages use one AppState, TaskManager and Swift Native Core services; the historical JSONL Python Bridge is not the current runtime. Views do not construct remote commands. Refresh reads local metadata only; explicit connect/inspect buttons perform identity-bound Guest access.
+SwiftUI pages use one AppState, TaskManager and Swift Native Core services; the historical JSONL Python Bridge is not the current runtime. Views do not construct remote commands. Refresh reads local metadata. Use explicit identity-bound operations for Guest checks and repair. The setup and launch workflow reuse verified inspection plans while the same task or recent verified Guest boot applies. Explicit full checks and component changes obtain fresh evidence.
 
 - Configuration: `~/Library/Application Support/Helldivers2FXLauncher/settings.json`. The editor records the revision, preserves existing unknown fields and backs up before atomic replacement.
 - Native diagnostics/reports: `~/Library/Application Support/Helldivers2FXLauncher/native`. Original Core recovery records can also be stored below the selected old launcher directory.
-- SSH password, private-key passphrase and Guest sudo password default to session memory. They use controlled stdin/PTY, not argv/environment/password files. Passwords are never report content.
-- Optional remembering stores SSH and sudo secrets independently in an installation-local AES-GCM file under Application Support after an actual challenge and verified Guest identity. Storage is bound to executable/digest, SSH endpoint and role, with private directory/file permissions; it does not use Keychain. Private-key passphrases remain session-only.
+- Enter the shared SteamOS password only in Settings. SSH and sudo authenticate separately using controlled stdin or PTY. An optional SSH key passphrase stays in session memory. Keep secrets out of arguments, environment, reports and screenshots.
+- The existing AES-GCM store saves one verified password under Application Support, bound to the FX executable digest, selected disk and SSH endpoint. Existing entries without a disk binding remain archived and require a fresh Settings entry for the disk-scoped record.
 - Rejected or forgotten values are not silently reused; storage errors remain visible. Neither old script credentials nor signing keys are migrated or deleted. Restoring saved data does not prove a live authenticated session.
 - Preferences contain non-secret options/metadata. Language and appearance preferences persist; standard macOS menu language may require restart.
 - Cancellation does not force-stop already started FX/Steam/game processes and cannot prove that an in-flight transaction was unwritten. Inspect actual state and retained recovery records before retry/restore. Never restore Guest changes while gameplay is active.

@@ -8,6 +8,11 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 
 ## Unreleased
 
+- Enter the shared SteamOS password in Settings. Authentication failures offer inline recovery. SSH and sudo continue to verify their own challenges.
+- Reuse healthy SSH connections and the current setup inspection when its FX and Guest identity still match. Recheck after deployment or on explicit request.
+- Check DX11 compatibility after Steam starts. Carry current game settings between prefixes and restore the scoped TAA, audio and launch changes when returning to DX12.
+- Copy a redacted diagnostic report with component, authentication, renderer and audio evidence. Gameplay and physical microphone acceptance are tracked separately.
+
 ## Releases
 
 ### v1.1.0 — 2026-11-28

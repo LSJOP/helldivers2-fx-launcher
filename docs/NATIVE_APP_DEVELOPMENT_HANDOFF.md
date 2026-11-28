@@ -1,5 +1,7 @@
 # HD2FXNative 接续开发交接
 
+> 2026-11-29 · v1.1.1 候选在 `dev/core`。基线 `ce92762` 直接继承 `5886b11`，正式核心差异为隔离 SSH 转发端口分配与重试。PR #22 冲突整合 `57f2e75` 的重合并差异集中在 Content、首配、日志和设置视图，SSH/sudo 的双角色服务已在此前存在。源码证据确认旧 Prefix 设置复用和重复检测，用户卡在过场后的原始原因仍未复现。[成功环境及接续记录](environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)
+
 > 2026-11-28 · v1.1.0（2026112801）从 `main` 发布。DX11 仍需主动授权，批准的 RF FEX 和 Proton-JE 随包分发，Steam 和 FX 各自管理其 Runtime 与图形组件。沿用正式 Ed25519 信任根。升级和包验收与已归档的游戏实机记录分开。[发布流程](NATIVE_UPDATES.md) · [成功环境与验收](environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)
 
 > 2026-11-28 · `dev/core` 的 FX 1.9.15 DXMT 候选通过同盘双向切换。切换通过宿主与 Guest 收据保护原路径，关闭后只恢复已管理的配置。继续开发前核对候选提交、实际渲染链、声音与已知限制，复用存档和原测试盘。[成功环境与验收](environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)

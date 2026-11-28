@@ -40,7 +40,7 @@ Use `TacticalButton` and `TacticalButtonStyle` for primary and secondary actions
 
 ## Loading and dialogs
 
-Use the shared button loading state or a native progress indicator for ongoing work; bind it to the existing service/task state. Show real errors and recovery options. Use sheets or dialogs for credentials, target selection, important conflicts and consequential confirmation; retain existing safeguards and avoid unnecessary modal interruptions.
+Use the shared button loading state or a native progress indicator for ongoing work; bind it to the existing service/task state. Show real errors and recovery options. Enter SteamOS credentials on the Settings page. Other pages show credential failures inline with a Settings action. Reserve sheets and dialogs for target selection, important conflicts and consequential confirmation.
 
 ## Localization and accessibility
 

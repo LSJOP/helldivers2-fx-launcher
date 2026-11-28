@@ -1,5 +1,7 @@
 # HD2FXNative 开发状态
 
+> 2026-11-29 · v1.1.1 候选在 `dev/core`。基线 `ce92762` 直接继承 `5886b11`，正式核心差异为隔离 SSH 转发端口分配与重试。PR #22 冲突整合 `57f2e75` 的重合并差异集中在 Content、首配、日志和设置视图，SSH/sudo 的双角色服务已在此前存在。源码证据确认旧 Prefix 设置复用和重复检测，用户卡在过场后的原始原因仍未复现。[成功环境及接续记录](environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)
+
 > 2026-11-28 · v1.1.0 Stable 源码整合至 `main`，正式构建 `2026112801`。继承 FX 1.9.15 的 DX11/DX12 实机验收，加入隔离 SSH 转发冲突重试。[成功环境与验收](environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)
 
 > 2026-11-28 · `dev/core` 候选已在 FX 1.9.15 测试盘通过双向切换及已有游戏环境的 DXMT 首次配置。DX12 恢复原环境并进入舰桥，DX11 回切复用隔离工具和 prefix，舰桥操控、菜单与声音通过。运行中恢复被拦截，退出游戏后可重试。[成功环境与验收](environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)
