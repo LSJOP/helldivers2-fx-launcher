@@ -85,6 +85,17 @@ class GraphicsChecks(unittest.TestCase):
         finally:
             SCOPE["run"], SCOPE["audio_card"] = original
 
+    def test_dxmt_native_dll_preserves_every_byte_except_builtin_marker(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            payload = Path(tmp) / "payload.dll"
+            live = Path(tmp) / "live.dll"
+            data = bytes(range(96))
+            payload.write_bytes(data)
+            live.write_bytes(data)
+            self.assertFalse(MODULE["native_d3d11_matches"](payload, live))
+            live.write_bytes(data[:64] + bytes(16) + data[80:])
+            self.assertTrue(MODULE["native_d3d11_matches"](payload, live))
+
 
 if __name__ == "__main__":
     unittest.main()

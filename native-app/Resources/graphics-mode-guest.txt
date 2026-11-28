@@ -11,6 +11,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import time
 
 GAME = "553850"
 BASE = "proton-je-11.0-20261014-3"
@@ -42,7 +43,11 @@ def run(*args, optional=False):
 
 
 def sha(path):
-    return hashlib.file_digest(path.open("rb"), "sha256").hexdigest()
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        while chunk := file.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def write(path, text):
@@ -147,6 +152,26 @@ def apply_output_audio(record):
     if not muted:
         run("pactl", "set-source-mute", monitor, "1")
         require(audio_card()[4], "audio_monitor_not_muted")
+
+
+def dxmt_loaded(pid, metal, dll):
+    try:
+        process = Path("/proc") / pid
+        if b"--use-d3d11" not in (process / "cmdline").read_bytes().split(b"\0"):
+            return False
+        with (process / "maps").open() as maps:
+            paths = {line.split(maxsplit=5)[-1].rstrip("\n") for line in maps}
+        return str(metal) in paths and str(dll) in paths
+    except (OSError, UnicodeError):
+        return False
+
+
+def native_d3d11_matches(payload, dll):
+    built_in = payload.read_bytes()
+    # FX's verified steam-gfx-path clears the Wine builtin marker before
+    # Proton copies this native-only DLL into the prefix.
+    native = built_in[:0x40] + bytes(16) + built_in[0x50:]
+    return dll.is_file() and hashlib.sha256(native).hexdigest() == sha(dll)
 
 
 def ensure_idle():
@@ -361,7 +386,7 @@ def main(action, expected_boot):
         run("systemctl", "--user", "start", "--no-block", "steam.service")
         return {"state": "restored", "boot": boot, "machine": machine}
 
-    require(action == "verify", "unknown_graphics_operation")
+    require(action in {"verify", "runtime"}, "unknown_graphics_operation")
     require(gfx == "dxmt" and record and record["phase"] == "armed" and prefix_owned(live),
             "graphics_mode_not_active")
     _path, _key, options, mapping = steam_values()
@@ -370,6 +395,18 @@ def main(action, expected_boot):
     metal = tool / "files/lib/wine/x86_64-unix/winemetal.so"
     require(marker.is_file() and metal.is_file() and sha(metal) == sha(payload / "x86_64-unix/winemetal.so"),
             "dxmt_injection_unverified")
+    if action == "runtime":
+        dll = live / "pfx/drive_c/windows/system32/d3d11.dll"
+        verified = False
+        deadline = time.monotonic() + 18
+        while time.monotonic() < deadline:
+            pids = run("pgrep", "-u", str(os.getuid()), "-x", "helldivers2.exe", optional=True).split()
+            if any(pid.isdecimal() and dxmt_loaded(pid, metal, dll) for pid in pids):
+                verified = native_d3d11_matches(payload / "x86_64-windows/d3d11.dll", dll)
+                break
+            time.sleep(0.5)
+        return {"state": "configured", "boot": boot, "machine": machine,
+                "renderer": "dxmt_loaded" if verified else "unverified"}
     require(settings_text((live / GAME_CONFIG).read_text()) == (live / GAME_CONFIG).read_text(),
             "taa_enabled")
     apply_output_audio(record)

@@ -165,7 +165,7 @@ enum GraphicsModeService {
     }
 
     private static func worker(_ operation: String, boot: String, transport: SSHTransport, context: CoreContext) throws -> [String: JSONValue] {
-        guard ["prepare", "restore", "verify"].contains(operation), UUID(uuidString: boot) != nil,
+        guard ["prepare", "restore", "verify", "runtime"].contains(operation), UUID(uuidString: boot) != nil,
               let url = Bundle.main.url(forResource: "graphics-mode-guest", withExtension: "txt"),
               let source = try? String(contentsOf: url, encoding: .utf8), !source.contains("\nHD2FX_GRAPHICS_PROGRAM\n") else {
             throw CoreError("GRAPHICS_WORKER_UNAVAILABLE")
@@ -317,7 +317,9 @@ enum GraphicsModeService {
             result["game_process_detected"] = .bool(count > 0)
             result["game_launch_command_succeeded"] = dispatch["started"] ?? .bool(false)
             result["game_process_count"] = .number(Double(count))
-            result["renderer"] = .string("unverified")
+            let runtime = try? worker("runtime", boot: session.boot, transport: transport, context: request.context)
+            try request.context.check()
+            result["renderer"] = runtime?["renderer"] ?? .string("unverified")
         }
         return result
     }

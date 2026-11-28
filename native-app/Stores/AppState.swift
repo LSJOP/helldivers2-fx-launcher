@@ -12,6 +12,7 @@ final class AppState: ObservableObject {
         return .dx11
     }()
     @Published private(set) var graphicsConfigured: GraphicsMode?
+    @Published private(set) var graphicsRuntimeVerified = false
     @Published private(set) var graphicsStage: String?
     @Published private(set) var graphicsError: ErrorState?
     @Published var graphicsRiskPrompt = false
@@ -32,6 +33,7 @@ final class AppState: ObservableObject {
     var graphicsChoiceKey: String { graphicsChoice == .dx11 ? "ui.graphics.experimental" : "ui.graphics.stable" }
     var graphicsStatusKey: String {
         if graphicsConfigured == graphicsChoice {
+            if graphicsChoice == .dx11, graphicsRuntimeVerified { return "ui.graphics.dxmtLastLaunch" }
             return graphicsChoice == .dx11 ? "ui.graphics.configuredDX11" : "ui.graphics.configuredDX12"
         }
         if graphicsChoice == .dx11 || graphicsHasTransaction {
@@ -59,6 +61,7 @@ final class AppState: ObservableObject {
     private func setGraphicsChoice(_ choice: GraphicsMode) {
         guard !tasks.busy else { return }
         graphicsChoice = choice
+        graphicsRuntimeVerified = false
         graphicsError = nil
         graphicsStage = nil
         UserDefaults.standard.set(choice == .dx11, forKey: "DXMTRequested")
@@ -104,6 +107,7 @@ final class AppState: ObservableObject {
         graphicsStage = nil
         environmentWorkflow.evidence.merge(reply.result) { _, value in value }
         if launch {
+            graphicsRuntimeVerified = reply.result["renderer"]?.text == "dxmt_loaded"
             launchSession.complete(reply.result, at: reply.observedAt)
             recordLaunch()
             guard reply.result["game_process_detected"]?.boolean == true else { throw ErrorState("GAME_LAUNCH_FAILED") }
@@ -794,6 +798,7 @@ final class AppState: ObservableObject {
         let root = runtimeRoot
         let launch = fxSelection.launchParameters(runtimeRoot: root)
         let requestedMode = graphicsChoice
+        if launchGame { graphicsRuntimeVerified = false }
         let resumeGraphics = graphicsHasTransaction
         tasks.start { [weak self] in
             guard let self else { return }
