@@ -8,12 +8,16 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 
 ## Unreleased
 
-- Enter the shared SteamOS password in Settings. Authentication failures offer inline recovery. SSH and sudo continue to verify their own challenges.
-- Reuse healthy SSH connections and the current setup inspection when its FX and Guest identity still match. Recheck after deployment or on explicit request.
-- Check DX11 compatibility after Steam starts. Carry current game settings between prefixes and restore the scoped TAA, audio and launch changes when returning to DX12.
-- Copy a redacted diagnostic report with component, authentication, renderer and audio evidence. Gameplay and physical microphone acceptance are tracked separately.
-
 ## Releases
+
+### v1.1.1 — 2026-11-29
+
+- Enter the SteamOS password once in Settings and recover from authentication failures in place. SSH and sudo authenticate independently. Saved credentials are encrypted and scoped to the FX instance, disk and connection endpoint.
+- Reuse healthy SSH connections and setup inspection results while the FX and Guest identity still match. Recheck after deployment or on request.
+- Check DX11 compatibility after Steam reports ready. Carry the latest game settings between prefixes and restore the original DX12 launch options, TAA and audio settings when switching back.
+- Copy a redacted diagnostic report with component, authentication, renderer and audio details.
+- Earlier candidates reached the ship bridge in DX11 and DX12 on FX 1.9.15. DX12 remains the default and DX11 audio uses the playback-only profile. Physical microphone input and two-way voice chat remain unverified.
+- Fresh installation, in-app upgrade and restart, and update failure recovery were waived for this release and remain unverified.
 
 ### v1.1.0 — 2026-11-28
 

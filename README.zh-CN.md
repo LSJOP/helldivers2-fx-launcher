@@ -1,6 +1,6 @@
 <div align="center">
 
-v1.1.0 为 FX Steam Launcher 1.9.15 加入实验性 DirectX 11 高性能模式。安装和升级后，DirectX 12 仍为默认模式。
+v1.1.1 改善 SteamOS 密码设置，并优化 FX Steam Launcher 1.9.15 的 DirectX 11 和 DirectX 12 切换。安装和升级后，DirectX 12 仍为默认模式。
   <img src="docs/assets/app-icon.png" width="128" alt="绝地潜兵 2 FX 启动器 icon">
   <h1>绝地潜兵 2 FX 启动器</h1>
   <p>HELLDIVERS 2 FX Launcher · Apple Silicon macOS</p>
@@ -9,11 +9,11 @@ v1.1.0 为 FX Steam Launcher 1.9.15 加入实验性 DirectX 11 高性能模式�
 [简体中文](README.zh-CN.md) | [English](README.md)
 
 <!-- stable-download:start -->
-### [🟨 ⬇️ 下载 绝地潜兵 2 FX 启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.1.0-macOS-arm64.dmg)
+### [🟨 ⬇️ 下载 绝地潜兵 2 FX 启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.1.1-macOS-arm64.dmg)
 
-**🟨 Stable Release · v1.1.0** · **macOS · Apple Silicon / arm64**
+**🟨 Stable Release · v1.1.1** · **macOS · Apple Silicon / arm64**
 
-**[⬇️ 立即下载 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.1.0-macOS-arm64.dmg)** · [查看所有版本](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**[⬇️ 立即下载 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.1.1-macOS-arm64.dmg)** · [查看所有版本](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
 <!-- stable-download:end -->
 
 ## 简体中文
@@ -58,14 +58,14 @@ DX11 截图复用版本号为 v1.0.8 的真实验收候选。其余截图来自�
 
 - 从总览发起带保护检查的 HELLDIVERS 2 启动流程。总览提供实例选择及受支持的 FX 启动操作。
 - 首次运行环境配置检查 Guest 身份、运行能力和组件完整性。经确认后可安装固定版本的 Proton-JE、选择已验证的 Steam 兼容工具，并合并启动参数以保留自定义参数。检测为只读，部署与恢复各有检查条件。
-- 运行环境页面报告 FX 运行环境 和 Proton-JE 的检测依据。SSH 和 sudo 凭据可针对已验证目标分别加密保存在本地；跨重启复用仍需实机验收。
+- 在设置中统一输入 SteamOS 密码。SSH 与 sudo 各自认证，已保存的凭据按 FX 实例、磁盘与连接端点限定范围并加密。可在日志页复制脱敏诊断报告。
 - Swift App 提供六个原生页面、日志、限定范围的性能设置和十种界面语言。SteamOS 内的可选安装步骤需要 Python 3。
 - 在「设置 → 软件更新」中检查稳定版。v1.0.1 无法安装已发布的 v1.0.2 更新 ZIP，请使用 DMG 安装 v1.0.2。
 
 ### 安装说明
 
 <!-- stable-install:start -->
-当前 App：`1.1.0`（构建 `2026112801`），适用于 macOS 14+ Apple Silicon arm64。采用 ad-hoc 签名，无 Apple Developer ID 签名，未经 Apple 公证。Gatekeeper 可能拦截下载副本；打开前核对 [SHA-256 文件](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt)。若被拦截，对已核验 App 使用「隐私与安全性 → 仍要打开」。
+当前 App：`1.1.1`（构建 `2026112906`），适用于 macOS 14+ Apple Silicon arm64。采用 ad-hoc 签名，无 Apple Developer ID 签名，未经 Apple 公证。Gatekeeper 可能拦截下载副本；打开前核对 [SHA-256 文件](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt)。若被拦截，对已核验 App 使用「隐私与安全性 → 仍要打开」。
 <!-- stable-install:end -->
 
 1. 从正式 Release 下载 macOS arm64 DMG。
@@ -91,7 +91,7 @@ v1.0.7 审核记录了 RF FEX 和 Proton-JE 的许可、来源及实机验收。
 ### 更新日志
 
 <!-- stable-version:start -->
-[v1.1.0 — 2026-11-28](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · 正式稳定版，构建 `2026112801`。见[发布说明](CHANGELOG.zh-CN.md)。
+[v1.1.1 — 2026-11-29](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · 正式稳定版，构建 `2026112906`。见[发布说明](CHANGELOG.zh-CN.md)。
 <!-- stable-version:end -->
 
 当前功能状态、验证范围和未合并成果见[功能索引](docs/FEATURE_REGISTRY.md)、[更新日志](CHANGELOG.zh-CN.md)及[原版启动器历史](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script)。
@@ -112,7 +112,7 @@ v1.0.7 审核记录了 RF FEX 和 Proton-JE 的许可、来源及实机验收。
 
 FX 1.9.9 环境实测记录见[运行环境基线报告](docs/environment/FEX_BASELINE_REPORT_20261115.md)。
 
-首次配置区分 Proton 内置 FX 运行环境与独立组件缺失。开发候选在设置中统一输入 SteamOS 密码，SSH 与 sudo 各自认证，并按 FX 实例、磁盘与连接端点加密保存。日志页可复制脱敏诊断报告。正式下载仍为 v1.1.0。
+首次配置区分 Proton 内置 FX 运行环境与独立组件缺失。检测记录 Proton 版本、配置摘要和库文件哈希，在获得已批准的方案前将兼容性标记为未验证。
 
 v1.0.5 提供组件更新引擎，并为旧正式版保留小体积 ZIP。后续兼容版本可复用校验匹配的内置组件，并保留已验证的全量 ZIP 备用。三个历史运行组件仍限受控测试。若应用内更新失败，请核验并挂载完整 DMG，退出启动器后替换现有 App。已保存设置和 SteamOS 镜像继续使用。见[组件更新验收](docs/testing/COMPONENT_UPDATES_ACCEPTANCE.md)。
 

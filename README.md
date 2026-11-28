@@ -1,6 +1,6 @@
 <div align="center">
 
-v1.1.0 adds an experimental DirectX 11 performance mode for FX Steam Launcher 1.9.15. DirectX 12 remains the default after installation or upgrade.
+v1.1.1 improves SteamOS password setup and switching between DirectX 11 and DirectX 12 on FX Steam Launcher 1.9.15. DirectX 12 remains the default after installation or upgrade.
   <img src="docs/assets/app-icon.png" width="128" alt="HD2 FX Launcher icon">
   <h1>HELLDIVERS 2 FX Launcher</h1>
   <p>HELLDIVERS 2 FX Launcher · Apple Silicon macOS</p>
@@ -9,11 +9,11 @@ v1.1.0 adds an experimental DirectX 11 performance mode for FX Steam Launcher 1.
 [简体中文](README.zh-CN.md) | [English](README.md)
 
 <!-- stable-download:start -->
-### [🟨 ⬇️ Download HD2 FX Launcher — Latest Stable](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.1.0-macOS-arm64.dmg)
+### [🟨 ⬇️ Download HD2 FX Launcher — Latest Stable](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.1.1-macOS-arm64.dmg)
 
-**🟨 Stable Release · v1.1.0** · **macOS · Apple Silicon / arm64**
+**🟨 Stable Release · v1.1.1** · **macOS · Apple Silicon / arm64**
 
-**[⬇️ Download DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.1.0-macOS-arm64.dmg)** · [All Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**[⬇️ Download DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.1.1-macOS-arm64.dmg)** · [All Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
 <!-- stable-download:end -->
 
 ## English
@@ -58,14 +58,14 @@ The Logs page displays local system time, streams bounded task events, supports 
 
 - Dashboard starts the guarded HELLDIVERS 2 launch workflow. The Dashboard also manages FX selection and the supported FX launch action.
 - First-Run Setup checks Guest identity, runtime capabilities and component integrity. Approved configuration can install the pinned Proton-JE package, select a verified Steam compatibility tool and merge launch options while retaining custom arguments. Detection is read-only. Deployment and recovery require their own checks.
-- The development candidate uses one SteamOS password entered in Settings for both SSH and sudo, with separate authentication and encrypted storage scoped to the FX instance, disk and endpoint. Logs can copy a permission-safe diagnostics report. The published download below retains the v1.1.0 behavior.
+- Enter the SteamOS password once in Settings. SSH and sudo authenticate independently. Saved credentials are encrypted and scoped to the FX instance, disk and endpoint. Copy a redacted diagnostic report from Logs.
 - The Swift App provides six native pages, logs, scoped performance controls and ten interface languages. Optional SteamOS installation steps require Python 3.
 - Use Settings → Software Update to check for stable releases. v1.0.1 cannot install the published v1.0.2 update ZIP, so install v1.0.2 using the DMG.
 
 ### Installation
 
 <!-- stable-install:start -->
-Current App: `1.1.0` (build `2026112801`), macOS 14+ Apple Silicon arm64. Ad-hoc signed; no Apple Developer ID signature or Apple notarization. Gatekeeper may block the download. Verify the [SHA-256 file](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt) before opening. If blocked, use Privacy & Security → Open Anyway for the verified App.
+Current App: `1.1.1` (build `2026112906`), macOS 14+ Apple Silicon arm64. Ad-hoc signed; no Apple Developer ID signature or Apple notarization. Gatekeeper may block the download. Verify the [SHA-256 file](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt) before opening. If blocked, use Privacy & Security → Open Anyway for the verified App.
 <!-- stable-install:end -->
 
 1. Download the macOS arm64 DMG from the published release.
@@ -91,7 +91,7 @@ The v1.0.7 review recorded RF FEX and Proton-JE rights, provenance and runtime a
 ### Changelog
 
 <!-- stable-version:start -->
-[v1.1.0 — 2026-11-28](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · Stable release, build `2026112801`. See [release notes](CHANGELOG.md).
+[v1.1.1 — 2026-11-29](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · Stable release, build `2026112906`. See [release notes](CHANGELOG.md).
 <!-- stable-version:end -->
 
 For current feature status, verification and unmerged work, see the [feature registry](docs/FEATURE_REGISTRY.md), [changelog](CHANGELOG.md) and [original launcher history](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script).
