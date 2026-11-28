@@ -15,6 +15,7 @@ final class AppState: ObservableObject {
     @Published private(set) var graphicsRuntimeVerified = false
     @Published private(set) var graphicsStage: String?
     @Published private(set) var graphicsError: ErrorState?
+    @Published private(set) var graphicsHasTransaction = false
     @Published var graphicsRiskPrompt = false
 
     var graphicsProgressKey: String? {
@@ -29,7 +30,13 @@ final class AppState: ObservableObject {
         }
     }
 
-    var graphicsHasTransaction: Bool { (try? GraphicsModeService.load()) != nil }
+    private func readGraphicsTransaction() async throws -> Bool {
+        let present = try await Task.detached(priority: .userInitiated) {
+            try GraphicsModeService.load() != nil
+        }.value
+        graphicsHasTransaction = present
+        return present
+    }
     var graphicsChoiceKey: String { graphicsChoice == .dx11 ? "ui.graphics.experimental" : "ui.graphics.stable" }
     var graphicsStatusKey: String {
         if graphicsConfigured == graphicsChoice {
@@ -105,6 +112,7 @@ final class AppState: ObservableObject {
             }
         }
         graphicsConfigured = mode
+        graphicsHasTransaction = mode == .dx11
         graphicsStage = nil
         environmentWorkflow.evidence.merge(reply.result) { _, value in value }
         if launch {
@@ -842,10 +850,12 @@ final class AppState: ObservableObject {
         let launch = fxSelection.launchParameters(runtimeRoot: root)
         let requestedMode = graphicsChoice
         if launchGame { graphicsRuntimeVerified = false }
-        let resumeGraphics = graphicsHasTransaction
         tasks.start { [weak self] in
             guard let self else { return }
+            var resumeGraphics = self.graphicsHasTransaction
             do {
+                resumeGraphics = try await self.readGraphicsTransaction()
+                try Task.checkCancellation()
                 var input = launch
                 input["runtime_root"] = .string(root)
                 input["confirmed"] = .bool(true)
@@ -1047,6 +1057,7 @@ final class AppState: ObservableObject {
                     self.graphicsError = failure
                     self.graphicsConfigured = nil
                     self.graphicsStage = nil
+                    if failure.code != "CANCELLED" { _ = try? await self.readGraphicsTransaction() }
                 }
                 self.recentReadyPlan = nil
                 self.environmentWorkflow.failure = ErrorState(failure.code, details: self.credentials.redactor.diagnostic(failure.details))
@@ -1232,6 +1243,7 @@ final class AppState: ObservableObject {
         var snapshot: [String: [String: JSONValue]] = [:]
         var snapshotTime: String?
         var failures: [String: String] = [:]
+        _ = try? await readGraphicsTransaction()
         for method in ["handshake", "get_launcher_version", "get_system_info", "get_environment_status", "get_dependencies", "list_fx_versions", "get_logs", "get_legacy_catalog"] {
             do {
                 try Task.checkCancellation()

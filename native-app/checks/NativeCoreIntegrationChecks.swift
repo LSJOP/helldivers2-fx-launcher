@@ -80,6 +80,15 @@ struct NativeCoreIntegrationChecks {
         let realFX = (scan.result["candidates"]?.array ?? []).contains { $0.object["version"]?.text == "1.9.8" }
         ok(realFX, "fixture FX 1.9.8 discovered")
 
+        let unbound = run("credential_target", ["fx_path": .string(fixture.path)])
+        ok(unbound.result["persistence_identity"] == nil, "stopped FX without a verified disk cannot restore a saved password")
+        let disk = root.appendingPathComponent("fixture-storage").resolvingSymlinksInPath()
+        try! Data([0]).write(to: disk)
+        let receipt = GraphicsModeService.Transaction(fxPath: fixture.resolvingSymlinksInPath().path, disk: disk.path,
+            diskIdentity: try! GraphicsModeService.id(ofDisk: disk.path), machine: "fixture",
+            executable: try! CoreHash.sha256File(executable), revision: try! ConfigurationService.read().revision, stage: .armed)
+        let receiptURL = CoreFS.nativeData().appendingPathComponent("graphics-mode/transaction.json")
+        try! CoreFS.atomicWrite(JSONEncoder().encode(receipt), to: receiptURL)
         let bindingOne = run("credential_target", ["fx_path": .string(fixture.path)])
         let configurationBefore = try! ConfigurationService.read()
         _ = try! ConfigurationService.save(patch: .object(["appearance": .object(["language": .string("fr")])]), expectedRevision: configurationBefore.revision)
@@ -89,6 +98,12 @@ struct NativeCoreIntegrationChecks {
         _ = try! ConfigurationService.save(patch: .object(["ssh": .object(["port": .number(2223)])]), expectedRevision: try! ConfigurationService.read().revision)
         let bindingThree = run("credential_target", ["fx_path": .string(fixture.path)])
         ok(bindingThree.result["persistence_identity"] != bindingTwo.result["persistence_identity"], "SSH endpoint change isolates stored credentials")
+        let moved = disk.appendingPathExtension("retained")
+        try! FileManager.default.moveItem(at: disk, to: moved)
+        try! Data([1]).write(to: disk)
+        let diskReplaced = run("credential_target", ["fx_path": .string(fixture.path)])
+        ok(diskReplaced.result["persistence_identity"] == nil && diskReplaced.result["identity"] != bindingThree.result["identity"],
+           "a replacement disk cannot reuse the old persistence identity")
 
         let catalog = run("get_legacy_catalog")
         ok(catalog.result["runtime"]?.text == "swift_native_core", "catalog native runtime")
