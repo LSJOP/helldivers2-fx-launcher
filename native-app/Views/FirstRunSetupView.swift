@@ -323,7 +323,9 @@ struct EnvironmentWorkflowProgressView: View {
     private var workflowContent: some View {
         VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    if workflow.active, let component = workflow.archiveComponent, let phase = workflow.archivePhase {
+                    if workflow.active, let graphics = state.graphicsProgressKey {
+                        Text(state.t(graphics))
+                    } else if workflow.active, let component = workflow.archiveComponent, let phase = workflow.archivePhase {
                         if component == "steam-runtime" {
                             Text(state.steamRuntimePhaseTitle(phase))
                         } else {
@@ -360,6 +362,9 @@ struct EnvironmentWorkflowProgressView: View {
                     }
                     HStack {
                         Button(state.t("ui.workflow.retry")) { state.startEnvironmentWorkflow(launchGame: workflow.launchesGame) }.disabled(tasks.busy)
+                        if state.graphicsError != nil {
+                            Button(state.t("ui.graphics.restore")) { state.recoverDX12() }.disabled(tasks.busy)
+                        }
                         Button(state.t(diagnosticCopied ? "ui.setup.diagnosticCopied" : "ui.setup.copyDiagnostic")) {
                             NSPasteboard.general.clearContents()
                             NSPasteboard.general.setString(state.firstRunDiagnosticReport(), forType: .string)

@@ -26,7 +26,7 @@ IPv6 政策：只诊断、可显示橙色提示，不自动修改，不阻塞部
 | 层级 | 成功配置与证据 |
 | --- | --- |
 | 宿主 | Apple M4 Pro，24 GB 统一内存，macOS 27.2.1（26B131）。FX 1.9.15，上游构建 `862e991347`，官方 Developer ID `V25VKGTW55`（FX GAMES FZ LLC），严格签名验证通过。8 vCPU、12,288 MiB Guest RAM，1280×800 验证窗口；该分辨率只描述测试条件。 |
-| Guest | 既有 SteamOS 工作副本，内核 `7.2.9-steamac`，aarch64。Steam 管理的 x86_64 Runtime `4.0.20261021.265997`（depot AppID 4183110，Build 26116036）。游戏 AppID 553850，Steam Build 26568081，菜单 `release/01.007.203/19543`。 |
+| Guest | SteamOS 0.4.5，Build `20261022.6150929`，既有工作副本，内核 `7.2.9-steamac`，aarch64。Steam 管理的 x86_64 Runtime `4.0.20261021.265997`（depot AppID 4183110，Build 26116036）。游戏 AppID 553850，Steam Build 26568081，菜单 `release/01.007.203/19543`。 |
 | 转译 | 公布来源见[组件清单](ENVIRONMENT_COMPONENT_MANIFEST.md)。原 RF FEX `eac-main-20261022`，基准可执行文件指纹见上表。x86_64 Proton-JE `11.0-20261014-3` 的原始归档及 ntdll 指纹见上表，测试工具名为 `proton-je-11.0-20261014-3-dxmt-local`。 |
 | D3D11 | FX 内置 DXMT，上游基线 `e94c312f5c054263acf261cfa109edf13e757587`，FX 补丁基线 `17896accb64afa6b06bf1bdbc6183f6d00a35667`，Guest 载荷标记 `8ae333465a742e5c`。实际建立 D3D11 FL12_1，`winemetal` 与宿主 WMTR 活跃，Metal 呈现回调有持续进度。 |
 | WMTR 与生效的 Guest DLL | `libwmtr_host.dylib` SHA-256 `8aadb3969286411b035278ac748c2ad177d3323267b4cd0e1f323bc7e61fc92b`。测试 prefix 的 x64 `d3d11.dll` SHA-256 `139a2752b29240ee549cb124f26cc0dd26f7e8e5db79b75df01025b8c89d528b`，`winemetal.dll` SHA-256 `6d6c5bea44c3350566c01e49cc744e47b7a303396bbc5d8c144600078b63ae28`。 |

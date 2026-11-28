@@ -22,6 +22,10 @@ v1.0.8 修复 FX 1.9.9 新用户环境的 Steam Runtime 4 自动安装和 RF FEX
 
 FX 1.9.9 测试盘已恢复历史验证的 RF 运行组件，通过 GUI 启动游戏，主菜单／飞船获用户确认；单人、多人及自动更新完整闭环仍未测试。正式 FX 1.9.12 仅离线只读调查。见[修复证据](docs/environment/FX199_RF_REPAIR_20261114.md)。
 
+### 实验性图形模式（开发分支）
+
+游戏性能配置页的 DXMT 候选功能复用总览启动按钮。它独立切换 HELLDIVERS 2 的兼容工具和前缀，在同一磁盘复用 Steam 管理的游戏及 Runtime，并提供恢复 DX12 操作。已验证的渲染器基线为 FX 1.9.15。DXMT 会扩大 Guest 对 Mac 的访问范围，需要主动确认。实验模式采用仅输出音频并关闭 TAA。独立参考环境见[图形成功环境基准](docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md#dx11--dxmt-已验证成功环境--2026-11-28)。
+
 ### 软件截图
 
 截图来自隔离 Debug 构建。软件更新面板的截图使用捕获专用 App，服务显示未配置。见[截图记录](docs/images/README.md)。

@@ -57,7 +57,12 @@ printf '{"boot":"%s","marker":%s,"ipv6":{"all":"%s","default":"%s","eth0":"%s","
     static let inspect = #"""
 set -u
 boot=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || printf 'unknown')
-marker=false; grep -q 'steamac.gfx=vulkan' /proc/cmdline 2>/dev/null && marker=true
+graphics=unknown
+case " $(cat /proc/cmdline) " in
+  *" steamac.gfx=vulkan "*) graphics=vulkan ;;
+  *" steamac.gfx=dxmt "*) graphics=dxmt ;;
+esac
+marker=false; [ "$graphics" = vulkan ] && marker=true
 ok=true
 a=""; d=""; e=""; l=""
 for k in all default eth0 lo; do
@@ -74,7 +79,7 @@ fi
 svc=$(systemctl --user show steam.service --property=LoadState,ActiveState,SubState 2>/dev/null | tr '\n' ' ')
 service=unknown
 case "$svc" in *"LoadState=loaded"*"ActiveState=active"*"SubState=running"*) service=running ;; *"ActiveState=inactive"*|*"ActiveState=failed"*) service=stopped ;; esac
-printf '{"boot":"%s","marker":%s,"ipv6_ok":%s,"ipv6":{"all":"%s","default":"%s","eth0":"%s","lo":"%s"},"proxy":"%s","service":"%s"}\n' "$boot" "$marker" "$ok" "$a" "$d" "$e" "$l" "$proxy" "$service"
+printf '{"boot":"%s","marker":%s,"graphics":"%s","ipv6_ok":%s,"ipv6":{"all":"%s","default":"%s","eth0":"%s","lo":"%s"},"proxy":"%s","service":"%s"}\n' "$boot" "$marker" "$graphics" "$ok" "$a" "$d" "$e" "$l" "$proxy" "$service"
 """#
 
     /// Steam is started at most once; the probe never stops it and never retries a transaction.
@@ -153,22 +158,22 @@ enum GuestService {
         return try parse(result.stdout, expected: "GUEST_INSPECTION_FAILED")
     }
 
-    static func inspect(_ transport: SSHTransport, context: CoreContext?) throws -> [String: JSONValue] {
+    static func inspect(_ transport: SSHTransport, context: CoreContext?, allowDXMT: Bool = false) throws -> [String: JSONValue] {
         let result = try transport.run(GuestScripts.inspect, timeout: 25, context: context)
         guard result.status == 0 else { throw CoreError("GUEST_INSPECTION_FAILED") }
         let plan = try parse(result.stdout, expected: "GUEST_INSPECTION_FAILED")
-        guard plan["boot"]?.text != nil, plan["marker"]?.boolean == true else {
+        guard plan["boot"]?.text != nil, plan["marker"]?.boolean == true || (allowDXMT && plan["graphics"]?.text == "dxmt") else {
             throw CoreError("FX_ENTRY_MISMATCH", ["reason": .string("guest_identity_or_marker_unverified")])
         }
         return plan
     }
 
     static func connect(_ transport: SSHTransport, password: String?, passphrase: String?,
-                        context: CoreContext?, hostIdentity: () throws -> String) throws -> GuestSession {
+                        context: CoreContext?, allowDXMT: Bool = false, hostIdentity: () throws -> String) throws -> GuestSession {
         transport.setSecret(password: password, passphrase: passphrase)
         try transport.connectOnce(context: context)
         let first = try hostIdentity()
-        let plan = try inspect(transport, context: context)
+        let plan = try inspect(transport, context: context, allowDXMT: allowDXMT)
         let second = try hostIdentity()
         guard first == second, let boot = plan["boot"]?.text else {
             throw CoreError("FX_ENTRY_MISMATCH", ["reason": .string("target_changed_during_binding")])
@@ -176,12 +181,12 @@ enum GuestService {
         return GuestSession(boot: boot, identitySignature: second, plan: plan)
     }
 
-    static func verify(_ transport: SSHTransport, session: GuestSession, context: CoreContext?,
+    static func verify(_ transport: SSHTransport, session: GuestSession, context: CoreContext?, allowDXMT: Bool = false,
                        hostIdentity: () throws -> String) throws -> [String: JSONValue] {
         guard try hostIdentity() == session.identitySignature else {
             throw CoreError("FX_ENTRY_MISMATCH", ["reason": .string("fx_instance_changed")])
         }
-        let plan = try inspect(transport, context: context)
+        let plan = try inspect(transport, context: context, allowDXMT: allowDXMT)
         guard plan["boot"]?.text == session.boot else {
             throw CoreError("FX_ENTRY_MISMATCH", ["reason": .string("guest_identity_changed")])
         }

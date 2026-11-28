@@ -1,5 +1,7 @@
 # HD2FXNative 接续开发交接
 
+> 2026-11-28 · DX11/DXMT 成功基准已归档。开发候选复用同盘游戏与 Runtime，对 Proton 工具、prefix、Steam 映射、TAA 和 Guest 音频做事务管理。各阶段的实机状态见[成功环境基准](environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)。独立工作副本的舰桥实机通过与候选 App 双向切换分开记录。
+
 > 2026-11-27 · FX 1.9.9 功能等效母本已恢复并两次核对完整 SHA-256。正式 v1.0.7 复现 Steam 确认框及 Swift/Python 的 Runtime 路径转义错误。main 的 `c686f7b` 修复并发布 v1.0.8。正式首配、Guest 和 App 重开后的复用、从干净副本首页启动、游戏窗口与菜单、单人与四人实际落地、EAC 与 v1.0.7 组件级增量升级均通过。证据、差异与未验收事项见[基线验收](testing/FX199_FRESH_USER_BASELINE.md)。
 
 > 2026-11-27 · 从 PR #23 已有 Worktree 续接。Debug / Release 用同一个组件事务。RF 备用资源从同版本 Ed25519 签名更新清单获取；正式包只包含 App Core、RF FEX、Proton-JE，Steam 管理 Runtime 4。v1.0.7 已从 main 发布为 Stable / Latest。正式 v1.0.4 实际升级并自动重启成功。正式 v1.0.5 和 v1.0.6 在本机因 dyld 的 Sparkle 库验证无法启动。下一次首装实机必须从已核验的 FX199_FRESH_USER_BASELINE 恢复工作副本。历史 FX 1.9.12、FX 1.9.9 原盘和现有离线备份均为受保护参考。见[基线验收](testing/FX199_FRESH_USER_BASELINE.md)。

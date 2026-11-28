@@ -22,6 +22,10 @@ HELLDIVERS 2 FX Launcher is an unofficial community launcher and management tool
 
 FX 1.9.9 test-Guest repair now reaches the game through the GUI with the historically verified RF runtime components. Main menu/ship was confirmed by the user; single-player, multiplayer and end-to-end updating remain untested. Production FX 1.9.12 was inspected offline without writes. See [repair evidence](docs/environment/FX199_RF_REPAIR_20261114.md).
 
+### Experimental graphics mode (development branch)
+
+The DXMT candidate in Game Performance uses the existing Dashboard launch action. It switches the HELLDIVERS 2 compatibility tool and prefix independently, keeps Steam-managed game files and runtime on the same disk, and includes a DX12 restore action. FX 1.9.15 is the verified renderer baseline. DXMT expands the guest’s access to the Mac and requires consent. The experiment uses playback-only audio and disables TAA. The independent reference setup is documented in the [graphics environment baseline](docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md#dx11--dxmt-已验证成功环境--2026-11-28).
+
 ### Screenshots
 
 Screenshots come from isolated Debug builds. The update panel capture uses a separate App identity and shows the service as unconfigured. See [capture provenance](docs/images/README.md).

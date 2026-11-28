@@ -4,6 +4,112 @@ import SwiftUI
 @MainActor
 final class AppState: ObservableObject {
     @Published var selection: Page? = .dashboard
+    @Published private(set) var graphicsChoice: GraphicsMode = {
+        let defaults = UserDefaults.standard
+        guard !NativeLocalization.isolatedUXSmoke,
+              defaults.integer(forKey: "DXMTConsentRevision") == GraphicsModeService.consentRevision,
+              defaults.bool(forKey: "DXMTRequested") else { return .dx12 }
+        return .dx11
+    }()
+    @Published private(set) var graphicsConfigured: GraphicsMode?
+    @Published private(set) var graphicsStage: String?
+    @Published private(set) var graphicsError: ErrorState?
+    @Published var graphicsRiskPrompt = false
+
+    var graphicsProgressKey: String? {
+        switch graphicsStage {
+        case "PreparingDXMT": return "ui.graphics.preparing"
+        case "RestartingFX": return "ui.graphics.restarting"
+        case "VerifyingDXMT": return "ui.workflow.verifying"
+        case "RestoringDX12": return "ui.graphics.restoring"
+        case "StartingSteam", "LaunchingGame": return "ui.workflow.launching"
+        case "StartingFX": return "ui.workflow.startingFX"
+        default: return nil
+        }
+    }
+
+    var graphicsHasTransaction: Bool { (try? GraphicsModeService.load()) != nil }
+    var graphicsChoiceKey: String { graphicsChoice == .dx11 ? "ui.graphics.experimental" : "ui.graphics.stable" }
+    var graphicsStatusKey: String {
+        if graphicsConfigured == graphicsChoice {
+            return graphicsChoice == .dx11 ? "ui.graphics.configuredDX11" : "ui.graphics.configuredDX12"
+        }
+        if graphicsChoice == .dx11 || graphicsHasTransaction {
+            return "ui.graphics.pending"
+        }
+        return "ui.graphics.stable"
+    }
+
+    func selectDXMT(_ enabled: Bool) {
+        guard !tasks.busy else { return }
+        if enabled, UserDefaults.standard.integer(forKey: "DXMTConsentRevision") != GraphicsModeService.consentRevision {
+            graphicsRiskPrompt = true
+            return
+        }
+        setGraphicsChoice(enabled ? .dx11 : .dx12)
+    }
+
+    func acceptDXMTRisk() {
+        UserDefaults.standard.set(GraphicsModeService.consentRevision, forKey: "DXMTConsentRevision")
+        setGraphicsChoice(.dx11)
+    }
+
+    func recoverDX12() { setGraphicsChoice(.dx12) }
+
+    private func setGraphicsChoice(_ choice: GraphicsMode) {
+        guard !tasks.busy else { return }
+        graphicsChoice = choice
+        graphicsError = nil
+        graphicsStage = nil
+        UserDefaults.standard.set(choice == .dx11, forKey: "DXMTRequested")
+        if choice == .dx12, graphicsHasTransaction {
+            startEnvironmentWorkflow(launchGame: false)
+        }
+    }
+
+    private func applyGraphics(_ mode: GraphicsMode, launch: Bool, input: [String: JSONValue], taskID: UUID) async throws {
+        var params = input
+        params["graphics_mode"] = .string(mode.rawValue)
+        params["graphics_consent_revision"] = .number(Double(UserDefaults.standard.integer(forKey: "DXMTConsentRevision")))
+        params["graphics_launch"] = .bool(launch)
+        graphicsError = nil
+        workflowPhase(.deploying)
+        if launch { launchSession.begin(root: runtimeRoot, taskID: taskID) }
+        let reply = try await core.request("graphics_apply", timeout: 1_050, params: params) { [weak self] event in
+            Task { @MainActor in
+                guard let self, self.environmentWorkflow.taskID == taskID else { return }
+                if let stage = event["graphics_stage"]?.text {
+                    self.graphicsStage = stage
+                    self.workflowLog(taskID, stage)
+                } else {
+                    if launch { self.launchSession.consume(event) }
+                    self.workflowEvent(event, taskID: taskID)
+                }
+            }
+        }
+        let configured = mode == .dx11 ? "configured" : "restored"
+        guard reply.result["state"]?.text == configured else { throw ErrorState("GRAPHICS_TRANSACTION_FAILED") }
+        if let transition = reply.result["reboot_transition"]?.object,
+           let old = transition["from"]?.text, let new = transition["to"]?.text,
+           let revision = input["credential_revision"]?.text,
+           let original = input["credential_host_identity"]?.text,
+           let identity = transition["host_identity"]?.text {
+            let target = runtimeRoot + "|" + revision + "|"
+            if credentials.scope == target + original {
+                if credentials.guestBoot == nil { try credentials.bindGuest(old) }
+                try credentials.acceptExpectedReboot(from: old, to: new, target: target + original, reboundTarget: target + identity)
+            }
+        }
+        graphicsConfigured = mode
+        graphicsStage = nil
+        environmentWorkflow.evidence.merge(reply.result) { _, value in value }
+        if launch {
+            launchSession.complete(reply.result, at: reply.observedAt)
+            recordLaunch()
+            guard reply.result["game_process_detected"]?.boolean == true else { throw ErrorState("GAME_LAUNCH_FAILED") }
+        }
+    }
+
     #if DEBUG
     // Only the isolated fixture host calls this. These values do not represent a real
     // scan, deployment, guest, or game launch; the host labels and disables its UI.
@@ -687,14 +793,18 @@ final class AppState: ObservableObject {
         if launchGame { launchSession = LaunchSession() }
         let root = runtimeRoot
         let launch = fxSelection.launchParameters(runtimeRoot: root)
+        let requestedMode = graphicsChoice
+        let resumeGraphics = graphicsHasTransaction
         tasks.start { [weak self] in
             guard let self else { return }
             do {
                 var input = launch
                 input["runtime_root"] = .string(root)
                 input["confirmed"] = .bool(true)
-                let fx = try await self.core.request("start_fx", timeout: 180, params: input)
-                self.environmentWorkflow.evidence = fx.result
+                if !resumeGraphics {
+                    let fx = try await self.core.request("start_fx", timeout: 180, params: input)
+                    self.environmentWorkflow.evidence = fx.result
+                }
                 try Task.checkCancellation()
                 self.environmentWorkflow.completedSteps = 1
                 self.workflowPhase(.connecting)
@@ -708,6 +818,13 @@ final class AppState: ObservableObject {
                 input.merge(try self.credentials.parameters(for: target)) { _, value in value }
                 input["credential_revision"] = .string(revision)
                 input["credential_host_identity"] = .string(identity)
+                if resumeGraphics {
+                    try await self.applyGraphics(requestedMode, launch: launchGame, input: input, taskID: taskID)
+                    self.environmentWorkflow.completedSteps = launchGame ? 6 : 5
+                    self.environmentWorkflow.phase = .completed
+                    self.firstRunState = .Completed
+                    return
+                }
                 let connected = try await self.core.request("test_ssh", timeout: 90, params: input)
                 guard let boot = connected.result["guest_boot"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
                 try self.credentials.bindGuest(boot)
@@ -823,7 +940,10 @@ final class AppState: ObservableObject {
                 }
                 self.firstRunState = .Completed
                 self.environmentWorkflow.completedSteps = 5
-                if launchGame {
+                if requestedMode == .dx11 {
+                    try await self.applyGraphics(.dx11, launch: launchGame, input: input, taskID: taskID)
+                    if launchGame { self.environmentWorkflow.completedSteps = 6 }
+                } else if launchGame {
                     self.workflowPhase(.launching)
                     self.launchSession.begin(root: root, taskID: taskID)
                     let reply = try await self.core.request("launch_game", timeout: 600, params: input) { [weak self] event in
@@ -846,6 +966,11 @@ final class AppState: ObservableObject {
                 self.appendLog("environment_workflow: COMPLETED")
             } catch {
                 let failure = error as? ErrorState ?? ErrorState(error is CancellationError ? "CANCELLED" : "PROTOCOL_ERROR")
+                if requestedMode == .dx11 || resumeGraphics {
+                    self.graphicsError = failure
+                    self.graphicsConfigured = nil
+                    self.graphicsStage = nil
+                }
                 self.environmentWorkflow.failure = ErrorState(failure.code, details: self.credentials.redactor.diagnostic(failure.details))
                 let reason = self.environmentWorkflow.failure?.details["reason"]?.text.map { String($0.prefix(300)) }
                 let exitCode = failure.details["steam_exit_code"]?.integer ?? failure.details["exit_code"]?.integer

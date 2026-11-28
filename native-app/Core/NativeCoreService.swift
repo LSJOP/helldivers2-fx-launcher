@@ -11,6 +11,7 @@ actor NativeCoreService {
     struct Operation { let method: String; let scope: String; let confirmation: Bool; let external: Bool }
 
     static let operations: [Operation] = [
+        Operation(method: "graphics_apply", scope: "performance", confirmation: true, external: true),
         Operation(method: "first_run_fex_audit", scope: "setup", confirmation: true, external: true),
         Operation(method: "first_run_fex_build", scope: "setup", confirmation: true, external: true),
         Operation(method: "first_run_fex_install", scope: "setup", confirmation: true, external: true),
@@ -63,13 +64,13 @@ actor NativeCoreService {
 
     static let readMethods: Set<String> = ["handshake", "get_launcher_version", "get_system_info",
                                            "get_environment_status", "get_dependencies", "list_fx_versions",
-                                           "get_logs", "inspect_launch_target", "credential_target"]
+                                           "get_logs", "inspect_launch_target", "credential_target", "graphics_status"]
 
     private static let allowedParams: Set<String> = [
         "fx_path", "confirmed", "runtime_root", "password", "passphrase", "sudo_password",
         "credential_guest_boot", "credential_host_identity", "credential_revision", "approved_changes", "configuration", "expected_revision",
         "channel", "match_result", "note", "values", "preview_token", "backup_path",
-        "selected_paths", "ipv6_enabled", "network_plan", "deployment_plan", "approved_steps", "receipt_id", "restart_vm_approved"]
+        "graphics_mode", "graphics_consent_revision", "graphics_launch", "selected_paths", "ipv6_enabled", "network_plan", "deployment_plan", "approved_steps", "receipt_id", "restart_vm_approved"]
 
     func request(_ method: String, timeout: TimeInterval = 5,
                  params: [String: JSONValue] = [:],
@@ -268,6 +269,31 @@ actor NativeCoreService {
             return try testSSH(params, context: context, emit: emit)
         case "test_guest_sudo":
             return try testSudo(params, context: context, emit: emit)
+        case "graphics_status":
+            return try GraphicsModeService.report(fx: selectedFXURL(params))
+        case "graphics_apply":
+            guard let raw = params["graphics_mode"]?.text, let mode = GraphicsMode(rawValue: raw) else { throw CoreError("INVALID_ARGUMENT") }
+            guard mode != .dx11 || params["graphics_consent_revision"]?.integer == GraphicsModeService.consentRevision else {
+                throw CoreError("CONFIRMATION_REQUIRED")
+            }
+            let request = try launchRequest(params, context: context, emit: emit, confirmed: true)
+            let fx = try LaunchService.selectedFX(request)
+            let launch = params["graphics_launch"]?.boolean == true
+            var result = try GraphicsModeService.run(mode: mode, launch: launch, request: request, fx: fx)
+            if let previousBoot = result.removeValue(forKey: "previous_boot")?.text,
+               let binding = try? credentialTarget(params, context: context),
+               binding["guest_boot"]?.text == result["boot"]?.text,
+               binding["revision"]?.text == params["credential_revision"]?.text,
+               let boot = binding["guest_boot"], let identity = binding["identity"] {
+                result["reboot_transition"] = .object(["from": .string(previousBoot), "to": boot, "host_identity": identity])
+            }
+            if mode == .dx12, launch {
+                var rebound = params
+                rebound.removeValue(forKey: "credential_host_identity")
+                rebound.removeValue(forKey: "credential_guest_boot")
+                result.merge(try runGUI("launch_game", params: rebound, context: context, emit: emit)) { _, value in value }
+            }
+            return result
         case "check_fx_state":
             let request = try launchRequest(params, context: context, emit: emit, confirmed: false)
             let fx = try LaunchService.selectedFX(request)
@@ -387,7 +413,8 @@ actor NativeCoreService {
         if !processes.isEmpty { _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context) }
         if transport.masterPID(context: context) != nil {
             _ = try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context, requireCDP: false, allowPublisherNetwork: true)
-            value["guest_boot"] = try GuestService.inspect(transport, context: context)["boot"]
+            value["guest_boot"] = try GuestService.inspect(transport, context: context,
+                allowDXMT: try GraphicsModeService.load() != nil)["boot"]
         }
         return value
     }

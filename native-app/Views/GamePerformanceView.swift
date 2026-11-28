@@ -41,6 +41,33 @@ struct GamePerformanceView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             TacticalPageHeader(title: state.t("ui.134"))
+            TacticalPanel(number: "", title: l("ui.graphics.title"), symbol: "display") {
+                Toggle(l("ui.graphics.toggle"), isOn: Binding(
+                    get: { state.graphicsChoice == .dx11 },
+                    set: { state.selectDXMT($0) }
+                ))
+                .disabled(state.tasks.busy)
+                .accessibilityIdentifier("graphics.dxmt")
+                TacticalInfoRow(title: l("ui.graphics.mode"), value: l(state.graphicsChoiceKey))
+                TacticalInfoRow(title: l("ui.graphics.state"), value: l(state.graphicsStatusKey))
+                if state.graphicsChoice == .dx11 {
+                    TacticalInfoRow(title: l("ui.graphics.backend"), value: "DXMT")
+                }
+                Text(l("ui.graphics.help")).foregroundStyle(.secondary).font(TacticalTypography.caption)
+                if state.graphicsError != nil {
+                    TacticalWarningBanner(text: l("ui.graphics.failure"), isError: true)
+                }
+                if state.graphicsError != nil || (state.graphicsChoice == .dx12 && state.graphicsHasTransaction) {
+                    TacticalButton(title: l("ui.graphics.restore"), symbol: "arrow.uturn.backward",
+                                   disabledReason: state.tasks.busy ? l("ui.224") : nil) { state.recoverDX12() }
+                }
+            }
+            .alert(l("ui.graphics.riskTitle"), isPresented: $state.graphicsRiskPrompt) {
+                Button(l("ui.graphics.enable")) { state.acceptDXMTRisk() }
+                Button(l("ui.038"), role: .cancel) {}
+            } message: {
+                Text(l("ui.graphics.risk"))
+            }
             TacticalButton(title: state.t("ui.243"), symbol: "arrow.clockwise", primary: true,
                 loading: reading, disabledReason: state.tasks.busy ? state.t("ui.224") : nil) { state.runOperation("read_performance") }
             if let record = state.guiRecords["read_performance"] {

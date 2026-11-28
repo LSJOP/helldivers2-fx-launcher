@@ -1,0 +1,387 @@
+"""Fixed SSH worker for the verified FX 1.9.15 graphics layout."""
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import runpy
+import shutil
+import shlex
+import subprocess
+import sys
+import tempfile
+
+GAME = "553850"
+BASE = "proton-je-11.0-20261014-3"
+TOOL = BASE + "-dxmt-local"
+FX = Path("/usr/lib/steamac")
+HELPERS = {
+    "steam-gfx-path": "16751f3f4effa37b98b2762737806e3c8b1fef87f2fcff4a7424526594d7f8ca",
+    "steam-compat-default": "efb69a5274a5fbd2d0912fb7d7e26981b4c99e891f546cb6f7f06410d02b8bff",
+    "steam-title-defaults": "edf39e0ffe49e6df27f0e2ebb49995dc25f2f756346210095aa55cbd756c2065",
+}
+GAME_CONFIG = Path("pfx/drive_c/users/steamuser/AppData/Roaming/Arrowhead/Helldivers2/user_settings.config")
+GFX_DROPINS = ("steam.service.d", "steamac-gfx-path.service.d")
+
+
+class Refused(Exception):
+    pass
+
+
+def require(condition, reason):
+    if not condition:
+        raise Refused(reason)
+
+
+def run(*args, optional=False):
+    result = subprocess.run(args, capture_output=True, text=True, timeout=45)
+    if not optional:
+        require(result.returncode == 0, Path(args[0]).name + "_failed")
+    return result.stdout
+
+
+def sha(path):
+    return hashlib.file_digest(path.open("rb"), "sha256").hexdigest()
+
+
+def write(path, text):
+    require(not path.is_symlink(), "symlink_configuration")
+    with tempfile.NamedTemporaryFile(mode="w", dir=path.parent, encoding="utf-8", delete=False) as out:
+        temp = Path(out.name)
+        try:
+            out.write(text)
+            out.flush()
+            os.fsync(out.fileno())
+            os.replace(temp, path)
+            fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+        finally:
+            temp.unlink(missing_ok=True)
+
+
+def mutable_path(path, home):
+    path = Path(path)
+    require(path.resolve().is_relative_to(home), "path_outside_guest_home")
+    require(not path.is_symlink(), "symlink_configuration")
+    if path.exists():
+        require(path.stat().st_uid == os.getuid(), "file_owner_changed")
+    return path
+
+
+def tool_source(steam):
+    original = steam / "compatibilitytools.d" / BASE
+    core = original / "files/lib/wine/x86_64-windows/ntdll.dll"
+    require(core.is_file() and sha(core) ==
+            "a699b73899f8a3ae464dd5ee237dd1f1f1587287a0941fbab5934698d633cbfe", "unverified_proton")
+    require(not (core.parent.parent / ".steamac-dxmt").exists(), "baseline_tool_already_modified")
+    return original
+
+
+def select_vdf(steam, parse):
+    choices = []
+    for path in (steam / "userdata").glob("*/config/localconfig.vdf"):
+        values, blocks = parse(path.read_text())
+        matches = [key for key in blocks if key[-3:] == ("steam", "apps", GAME)]
+        for parent in matches:
+            key = (*parent, "launchoptions")
+            if key in values:
+                choices.append((path, key, values[key][0]))
+    require(len(choices) == 1, "active_steam_account_unverified")
+    return choices[0]
+
+
+def dx11_options(options):
+    lexer = shlex.shlex(options, posix=True, punctuation_chars=";&|")
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    words = list(lexer)
+    require(words.count("%command%") == 1 and "--use-d3d11" not in words and
+            not any(set(word) <= set(";&|") for word in words) and "\n" not in options,
+            "steam_launch_command_unverified")
+    return options.rstrip() + " --use-d3d11"
+
+
+def settings_text(contents):
+    matches = list(re.finditer(r"(?m)^([ \t]*upscaling_method[ \t]*=[ \t]*)([0-9]+)([ \t]*)$", contents))
+    require(len(matches) == 1, "game_antialias_slot_unverified")
+    hit = matches[0]
+    return contents[:hit.start(2)] + "0" + contents[hit.end(2):]
+
+
+def audio_card():
+    default = run("pactl", "get-default-sink").strip()
+    sinks = [item for item in json.loads(run("pactl", "-f", "json", "list", "sinks"))
+             if item["name"] == default]
+    require(len(sinks) == 1, "default_audio_output_unverified")
+    sink = sinks[0]
+    name = sink.get("properties", {}).get("device.name")
+    cards = [item for item in json.loads(run("pactl", "-f", "json", "list", "cards"))
+             if item["name"] == name]
+    require(len(cards) == 1 and "virtio" in name.lower(), "audio_card_not_virtio")
+    card = cards[0]
+    profiles = [key for key, item in card["profiles"].items()
+                if item["sinks"] > 0 and item["sources"] == 0 and item["available"] and key.startswith("output:")]
+    require(len(profiles) == 1, "audio_output_profile_unverified")
+    monitor = sink["monitor_source"]
+    sources = [item for item in json.loads(run("pactl", "-f", "json", "list", "sources"))
+               if item["name"] == monitor]
+    require(len(sources) == 1 and isinstance(sources[0]["mute"], bool), "audio_monitor_unverified")
+    return name, card["active_profile"], profiles[0], monitor, sources[0]["mute"]
+
+
+def apply_output_audio(record):
+    card, current, output, monitor, muted = audio_card()
+    require(card == record["card"] and output == record["output"] and monitor == record["monitor"] and
+            current in (record["audio"], output), "audio_profile_changed")
+    if current != output:
+        run("pactl", "set-card-profile", card, output)
+        card, current, output, monitor, muted = audio_card()
+        require(card == record["card"] and current == record["output"] and monitor == record["monitor"],
+                "audio_profile_not_applied")
+    # PipeWire may reset the playback monitor's mute on guest reboot. Wine
+    # can select that monitor when the hardware capture profile is inactive.
+    if not muted:
+        run("pactl", "set-source-mute", monitor, "1")
+        require(audio_card()[4], "audio_monitor_not_muted")
+
+
+def ensure_idle():
+    reapers = run("pgrep", "-a", "-x", "reaper", optional=True).splitlines()
+    require(not run("pgrep", "-ix", "helldivers2.exe", optional=True).strip() and
+            all(re.search(r"SteamLaunch AppId=0(?:[ \t]|$)", line) for line in reapers),
+            "steam_game_running")
+
+
+def stop_services():
+    ensure_idle()
+    run("systemctl", "--user", "stop", "steamac-gfx-path.service", "steam.service")
+    ensure_idle()
+    require(not run("pgrep", "-u", str(os.getuid()), "-x", "steam", optional=True).strip(), "steam_stop_unverified")
+
+
+def main(action, expected_boot):
+    boot = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+    require(boot == expected_boot, "guest_boot_changed")
+    gfx = next((word.split("=", 1)[1] for word in Path("/proc/cmdline").read_text().split()
+                if word.startswith("steamac.gfx=")), "")
+    require(gfx in {"dxmt", "vulkan"}, "guest_graphics_unverified")
+    machine = Path("/etc/machine-id").read_text().strip()
+    require(re.fullmatch(r"[0-9a-f]{32}", machine), "guest_identity_unverified")
+    for name, expected in HELPERS.items():
+        require(sha(FX / name) == expected, "fx_guest_helper_mismatch")
+    payload = FX / "dxmt"
+    require((payload / "x86_64-unix/winemetal.so").is_file() and
+            (payload / "x86_64-windows/d3d11.dll").is_file(), "fx_dxmt_payload_missing")
+    compat = runpy.run_path(str(FX / "steam-compat-default"))
+    title = runpy.run_path(str(FX / "steam-title-defaults"))
+
+    home = Path.home().resolve()
+    steam = (home / ".local/share/Steam").resolve(strict=True)
+    require(steam.is_relative_to(home), "steam_root_unverified")
+    tool = mutable_path(steam / "compatibilitytools.d" / TOOL, home)
+    base = mutable_path(tool_source(steam), home)
+    conf = mutable_path(steam / "config/config.vdf", home)
+    libraries = compat["vdf_entries"]((steam / "steamapps/libraryfolders.vdf").read_text())[0]
+    folders = {steam}
+    folders.update(Path(v[0]) for k, v in libraries.items() if len(k) == 3 and k[-1] == "path")
+    matches = {p.resolve() for p in folders if (p / "steamapps/appmanifest_553850.acf").is_file()}
+    require(len(matches) == 1, "game_library_unverified")
+    library = matches.pop()
+    live = mutable_path(library / "steamapps/compatdata" / GAME, home)
+    require(live.parent.is_dir(), "steam_compatdata_root_missing")
+
+    data = mutable_path(home / ".local/state/HD2FXLauncher/graphics-mode-v1", home)
+    data.mkdir(mode=0o700, parents=True, exist_ok=True)
+    require(not data.stat().st_mode & 0o077 and data.stat().st_dev == live.parent.stat().st_dev,
+            "prefix_storage_unverified")
+    saved = data / "dx12-prefix"
+    parked = data / "dx11-prefix"
+    shadow = data / "fx-steam"
+    receipt = mutable_path(data / "receipt.json", home)
+    os.environ["XDG_RUNTIME_DIR"] = f"/run/user/{os.getuid()}"
+    os.environ["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=" + os.environ["XDG_RUNTIME_DIR"] + "/bus"
+    os.environ["LC_ALL"] = "C"
+
+    def link(path, target):
+        require(not path.exists() or path.is_symlink(), "graphics_shadow_conflict")
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if path.is_symlink():
+            require(path.readlink() == target, "graphics_shadow_conflict")
+        else:
+            path.symlink_to(target)
+
+    def dropins(enable):
+        value = ('[Service]\nEnvironment="STEAMAC_STEAM_ROOT=%h/.local/state/HD2FXLauncher/graphics-mode-v1/fx-steam"\n'
+                 'Environment="STEAMAC_GFX_STATE=%h/.local/state/HD2FXLauncher/graphics-mode-v1/fx-driver-state"\n'
+                 'Environment="STEAMAC_COMPAT_DEFAULT=/usr/bin/true"\n')
+        for parent in GFX_DROPINS:
+            path = mutable_path(home / ".config/systemd/user" / parent / "90-hd2fx-dxmt.conf", home)
+            exists = path.exists()
+            require(not exists or path.read_text() == value, "graphics_service_dropin_conflict")
+            if enable and not exists:
+                path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                write(path, value)
+            elif not enable and exists:
+                path.unlink()
+        run("systemctl", "--user", "daemon-reload")
+        if enable:
+            for unit in ("steam.service", "steamac-gfx-path.service"):
+                env = run("systemctl", "--user", "show", unit, "-p", "Environment", "--value")
+                require("STEAMAC_STEAM_ROOT=" + str(shadow) in env and "STEAMAC_COMPAT_DEFAULT=/usr/bin/true" in env,
+                        "graphics_service_scope_unverified")
+
+    def steam_values():
+        path, key, options = select_vdf(steam, title["vdf_entries"])
+        return mutable_path(path, home), key, options, compat["mappings"](conf.read_text()).get(GAME)
+
+    def steam_set(path, key, options, mapping):
+        write(conf, compat["set_mapping"](conf.read_text(), GAME, mapping))
+        write(path, title["vdf_set"](path.read_text(), key, options))
+
+    def prefix_owned(path):
+        return path.is_dir() and not path.is_symlink() and (path / ".hd2fx-dx11").is_file()
+
+    lock = (data / "lock").open("a")
+    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    record = json.loads(receipt.read_text()) if receipt.exists() else None
+    if record:
+        require(record["machine"] == machine and record["library"] == str(library), "graphics_target_changed")
+
+    if action == "prepare" and record is None:
+        require(gfx == "vulkan", "prepare_requires_vulkan_boot")
+        ensure_idle()
+        path, key, original_options, mapping = steam_values()
+        require(mapping and mapping["name"] == BASE, "steam_baseline_unverified")
+        options_dx11 = dx11_options(original_options)
+        require(not live.exists() or (live / "pfx").is_dir(), "steam_prefix_unverified")
+        require(not saved.exists() and not prefix_owned(live), "prefix_recovery_required")
+        require(not tool.exists() or (tool / ".hd2fx-dx11").is_file(), "foreign_dx11_tool")
+        card, original_audio, output, monitor, muted = audio_card()
+        record = dict(machine=machine, library=str(library), local=str(path), key=list(key),
+                      mapping=mapping, launch=original_options, launch_dxmt=options_dx11,
+                      audio=original_audio, output=output, card=card, monitor=monitor, monitor_mute=muted, original_prefix=live.exists(), phase="prepared")
+        write(receipt, json.dumps(record))
+
+    if action == "prepare":
+        require(gfx == "vulkan" and record["phase"] in {"prepared", "armed"}, "graphics_restore_required")
+        ensure_idle()
+        if not tool.exists():
+            with tempfile.TemporaryDirectory(dir=tool.parent) as root:
+                clone = Path(root) / "proton"
+                run("cp", "-a", "--reflink=auto", str(base), str(clone))
+                for relative in ("files/lib/wine/dxvk/x86_64-windows", "files/lib/wine/vkd3d-proton/x86_64-windows",
+                                 "files/lib/wine/x86_64-windows", "files/lib/wine/x86_64-unix"):
+                    targets = clone / relative
+                    require(targets.is_dir() and targets.resolve().is_relative_to(clone), "unsafe_proton_clone")
+                    for filename in ("d3d11.dll", "dxgi.dll", "d3d10core.dll", "d3d12.dll", "winemetal.dll", "winemetal.so"):
+                        target = targets / filename
+                        require(not target.exists() or target.resolve().is_relative_to(clone), "unsafe_proton_clone")
+                descriptor = clone / "compatibilitytool.vdf"
+                text = descriptor.read_text().replace(f'"{BASE}"', f'"{TOOL}"')
+                require(f'"{TOOL}"' in text, "compatibility_tool_manifest_invalid")
+                write(descriptor, text)
+                write(clone / ".hd2fx-dx11", "1\n")
+                clone.rename(tool)
+        require((tool / ".hd2fx-dx11").is_file(), "foreign_dx11_tool")
+        if not prefix_owned(live) and not parked.exists():
+            with tempfile.TemporaryDirectory(dir=data) as root:
+                fresh = Path(root) / "prefix"
+                settings = (live / GAME_CONFIG) if record["original_prefix"] and live.exists() else saved / GAME_CONFIG
+                fresh.mkdir()
+                out = fresh / GAME_CONFIG
+                out.parent.mkdir(parents=True)
+                # Keep user preferences but build a fresh Wine prefix for the experimental tool.
+                if settings.is_file():
+                    write(out, settings_text(settings.read_text()))
+                else:
+                    write(out, "render_settings = {\n\tupscaling_method = 0\n}\n")
+                write(fresh / ".hd2fx-dx11", "1\n")
+                fresh.rename(parked)
+
+        stop_services()
+        path, key, options, mapping = steam_values()
+        expected_mapping = {**record["mapping"], "name": TOOL}
+        require(str(path) == record["local"] and list(key) == record["key"] and
+                options in (record["launch"], record["launch_dxmt"]) and
+                mapping in (record["mapping"], expected_mapping), "steam_settings_changed")
+        if record["original_prefix"] and not saved.exists():
+            require(live.is_dir() and not prefix_owned(live), "prefix_recovery_required")
+            live.rename(saved)
+        if not prefix_owned(live):
+            require(not live.exists() and prefix_owned(parked), "prefix_recovery_required")
+            parked.rename(live)
+        link(shadow / "compatibilitytools.d" / TOOL, tool)
+        link(shadow / "steamapps/compatdata" / GAME / "pfx", live / "pfx")
+        (shadow / "steamapps/common").mkdir(mode=0o700, exist_ok=True)
+        dropins(True)
+        apply_output_audio(record)
+        steam_set(path, key, record["launch_dxmt"], expected_mapping)
+        record["phase"] = "armed"
+        write(receipt, json.dumps(record))
+        return {"state": "armed", "boot": boot, "machine": machine}
+
+    if action == "restore":
+        if record is None:
+            return {"state": "restored", "boot": boot, "machine": machine}
+        stop_services()
+        path, key, options, mapping = steam_values()
+        expected_mapping = {**record["mapping"], "name": TOOL}
+        require(str(path) == record["local"] and list(key) == record["key"] and
+                options in (record["launch"], record["launch_dxmt"]) and
+                mapping in (record["mapping"], expected_mapping), "steam_settings_changed")
+        card, current, output, monitor, _muted = audio_card()
+        require(card == record["card"] and current in (record["audio"], record["output"]), "audio_profile_changed")
+        if current != record["audio"]:
+            run("pactl", "set-card-profile", card, record["audio"])
+        current_audio = audio_card()
+        require(current_audio[1] == record["audio"] and current_audio[3] == record["monitor"], "audio_profile_not_restored")
+        run("pactl", "set-source-mute", current_audio[3], "1" if record["monitor_mute"] else "0")
+        require(audio_card()[4] == record["monitor_mute"], "audio_monitor_not_restored")
+        # Leave scoped FX hooks armed until a Vulkan boot, or a Steam autostart could
+        # run the global DXMT hook on the just-restored prefix before FX has quit.
+        if gfx == "dxmt":
+            record["phase"] = "restoring"
+            write(receipt, json.dumps(record))
+            return {"state": "restoring", "boot": boot, "machine": machine}
+        if prefix_owned(live):
+            require(not parked.exists(), "prefix_recovery_required")
+            live.rename(parked)
+        if saved.exists():
+            require(record["original_prefix"] and not live.exists(), "prefix_recovery_required")
+            saved.rename(live)
+        require(live.exists() == record["original_prefix"] and not prefix_owned(live), "prefix_restore_unverified")
+        steam_set(path, key, record["launch"], record["mapping"])
+        require(steam_values()[2:] == (record["launch"], record["mapping"]), "steam_restore_unverified")
+        dropins(False)
+        receipt.unlink()
+        run("systemctl", "--user", "start", "--no-block", "steam.service")
+        return {"state": "restored", "boot": boot, "machine": machine}
+
+    require(action == "verify", "unknown_graphics_operation")
+    require(gfx == "dxmt" and record and record["phase"] == "armed" and prefix_owned(live),
+            "graphics_mode_not_active")
+    _path, _key, options, mapping = steam_values()
+    require(mapping == {**record["mapping"], "name": TOOL} and options == record["launch_dxmt"], "steam_settings_changed")
+    marker = tool / "files/lib/wine/.steamac-dxmt"
+    metal = tool / "files/lib/wine/x86_64-unix/winemetal.so"
+    require(marker.is_file() and metal.is_file() and sha(metal) == sha(payload / "x86_64-unix/winemetal.so"),
+            "dxmt_injection_unverified")
+    require(settings_text((live / GAME_CONFIG).read_text()) == (live / GAME_CONFIG).read_text(),
+            "taa_enabled")
+    apply_output_audio(record)
+    return {"state": "configured", "boot": boot, "machine": machine}
+
+
+if __name__ == "__main__":
+    try:
+        print(json.dumps(main(*sys.argv[1:])))
+    except Refused as error:
+        print(json.dumps({"error": str(error)}))
+        sys.exit(1)
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError):
+        print(json.dumps({"error": "graphics_transaction_incomplete"}))
+        sys.exit(1)
