@@ -53,12 +53,15 @@ struct DashboardView: View {
                 statusCard("EAC", "shield.lefthalf.filled", "eac", .checkingEAC)
                 statusCard(state.t("ui.191"), "person.2", "multiplayer", nil)
             }
+            VStack(alignment: .leading, spacing: 12) {
+                TacticalInfoRow(title: state.t("ui.graphics.mode"), value: state.t(state.graphicsChoiceKey))
+                    .accessibilityIdentifier("dashboard.graphics-mode")
+                if state.graphicsChoice == .dx11 || state.graphicsHasTransaction {
+                    TacticalStatusBadge(text: state.t(state.graphicsStatusKey), tone: .neutral)
+                }
+            }
             if state.environmentWorkflow.showsDashboardLaunchControls {
                 VStack(alignment: .leading, spacing: 12) {
-                    TacticalInfoRow(title: state.t("ui.graphics.mode"), value: state.t(state.graphicsChoiceKey))
-                    if state.graphicsChoice == .dx11 || state.graphicsHasTransaction {
-                        TacticalStatusBadge(text: state.t(state.graphicsStatusKey), tone: .neutral)
-                    }
                     ViewThatFits(in: .horizontal) {
                         HStack(spacing: 10) { launchButton.frame(maxWidth: 570); inspectButton; Spacer(minLength: 0) }
                         VStack(alignment: .leading, spacing: 10) { launchButton; inspectButton }
