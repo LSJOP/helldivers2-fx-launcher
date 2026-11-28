@@ -279,6 +279,8 @@ final class SSHEnvironmentBackend: DeploymentBackend {
     }
     func snapshot() throws -> DeploymentSnapshot {
         let identity = try hostIdentity()
+        context.record("environment_snapshots")
+        context.record("proton_inventory_checks")
         let packageProbe = try ProtonJERelease.script(mode: "probe", manifest: ProtonJERelease.manifest())
         let result = try transport.run(Self.probe + "\n" + packageProbe, timeout: 90, context: context)
         guard result.status == 0 else { throw CoreError("ENVIRONMENT_DETECTION_FAILED") }
@@ -545,6 +547,8 @@ printf 'boot=%s\nuser=%s\narch=%s\nhome=%s\n' "$(cat /proc/sys/kernel/random/boo
 os=$(sed -n 's/^ID=//p' /etc/os-release | tr -d '"')
 os_version=$(sed -n 's/^VERSION_ID=//p' /etc/os-release | tr -d '"')
 printf 'os=%s\nos_version=%s\n' "$os" "$os_version"
+printf 'os_build=%s\n' "$(sed -n 's/^BUILD_ID=//p' /etc/os-release | tr -d '"')"
+printf 'kernel=%s\nguest_cpus=%s\nguest_mem_kib=%s\n' "$(uname -r)" "$(nproc)" "$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)"
 for n in steam helldivers2.exe reaper; do
   count=$(pgrep -x "$n" | wc -l) || exit 2
   case "$n" in steam) printf 'steam_count=%s\n' "$(echo "$count" | tr -d ' ')";; helldivers2.exe) printf 'game_count=%s\n' "$(echo "$count" | tr -d ' ')";; reaper) printf 'reaper_count=%s\n' "$(echo "$count" | tr -d ' ')";; esac
@@ -667,14 +671,24 @@ extension NativeCoreService {
             throw CoreError("FX_ENTRY_MISMATCH", ["integrity_state": integrity["state"] ?? .string("unverified")])
         }
         guard let gvproxy = LaunchResources.gvproxyBinary else { throw CoreError("GVPROXY_UNAVAILABLE") }
-        let transport = try SSHTransport.connectIsolatedSetup(
-            request.configuration, password: request.password, passphrase: request.passphrase,
-            context: context, endpointIdentity: { candidate in
-            try LaunchService.endpointIdentity(fx: fx, gvproxy: gvproxy, transport: candidate, context: context)
-        }, onRetry: { code, attempt in
-            emit("INFO", "SSH handshake retry", ["reason": .string(code), "attempt": .number(Double(attempt))])
-        })
-        defer { transport.closeMaster() }
+        let existing = SSHTransport.make(request.configuration)
+        let reuseMaster = existing.masterPID(context: context) != nil
+        let transport: SSHTransport
+        if reuseMaster {
+            _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: gvproxy, transport: existing, context: context)
+            context.record("ssh_master_reused")
+            transport = existing
+        } else {
+            transport = try SSHTransport.connectIsolatedSetup(
+                request.configuration, password: request.password, passphrase: request.passphrase,
+                context: context, endpointIdentity: { candidate in
+                try LaunchService.endpointIdentity(fx: fx, gvproxy: gvproxy, transport: candidate, context: context)
+            }, onRetry: { code, attempt in
+                emit("INFO", "SSH handshake retry", ["reason": .string(code), "attempt": .number(Double(attempt))])
+            })
+        }
+        var keepMaster = reuseMaster
+        defer { if !keepMaster { transport.closeMaster() } }
         let backend = try SSHEnvironmentBackend(fx: fx, transport: transport, context: context, revision: ConfigurationService.read().revision)
         backend.archiveProgress = { component, phase in
             emit("INFO", "Bundle archive stage", ["kind": .string("bundle_archive_stage"),
@@ -696,6 +710,10 @@ extension NativeCoreService {
                 emit("INFO", "SSH authenticated", ["kind": .string("credential_status"), "credential_kind": .string("ssh"), "status": .string("authenticated")])
             }
             let plan = DeploymentPlanBuilder.build(snapshot, profile: try EnvironmentProfile.bundled())
+            if !reuseMaster {
+                try SSHTransport.adoptReconnected(transport, configuration: request.configuration, context: context)
+                keepMaster = true
+            }
             return ["plan": try json(plan), "ssh_password_verified": .bool(transport.passwordWasSent)]
         }
         if method == "first_run_deploy" {

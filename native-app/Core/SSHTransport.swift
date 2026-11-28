@@ -230,7 +230,11 @@ final class SSHTransport {
     }
 
     func connectOnce(context: CoreContext? = nil, forwarding: Bool = true) throws {
-        if masterPID(context: context) != nil { return }
+        if masterPID(context: context) != nil {
+            context?.record("ssh_master_reused")
+            return
+        }
+        context?.record("ssh_connection_attempts")
         var arguments = commandPrefix + authArguments
         arguments += ["-M", "-N", "-f", "-o", "ControlMaster=yes", "-o", "ExitOnForwardFailure=yes",
                       "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=3"]
@@ -290,6 +294,7 @@ final class SSHTransport {
                 _ = payload.withUnsafeBytes { write(masterFD, $0.baseAddress, payload.count) }
                 sent = true
                 passwordWasSent = true
+                context?.record("ssh_password_challenges")
             } else if !sent, text.contains("passphrase for key") {
                 guard let value = passphrase else {
                     process.terminate()
@@ -301,6 +306,7 @@ final class SSHTransport {
                 let payload = Array((value + "\n").utf8)
                 _ = payload.withUnsafeBytes { write(masterFD, $0.baseAddress, payload.count) }
                 sent = true
+                context?.record("ssh_key_passphrase_challenges")
             }
         }
         if !exited {
@@ -319,6 +325,7 @@ final class SSHTransport {
             throw CoreError(code, ["before_credentials": .bool(!sent)])
         }
         guard masterPID(context: context) != nil else { throw CoreError("SSH_PROTOCOL_ERROR") }
+        context?.record("ssh_authentications_succeeded")
         Self.ownershipLock.lock(); Self.owned.insert(settings.socketPath); Self.ownershipLock.unlock()
     }
 

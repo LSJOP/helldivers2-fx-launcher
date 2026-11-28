@@ -523,10 +523,12 @@ enum GuestPrivilegedExecutor {
             throw CoreError("SUDO_CREDENTIAL_INVALID")
         }
         let args = try arguments(transport, operation: operation, hasPassword: provided != nil)
+        context.record("sudo_commands")
         let input = provided.map { $0 + "\n" }
         let result: CoreProcessResult
         if let process { result = try process(args, input, context) }
         else { result = try CoreProcess.run("/usr/bin/ssh", args, input: input, timeout: 30, context: context) }
+        if result.stderr.contains(challenge) { context.record("sudo_password_challenges") }
         try context.check()
         if result.status != 0 {
             if result.status == 73 { throw CoreError("FX_ENTRY_MISMATCH", ["reason": .string("guest_boot_changed")]) }

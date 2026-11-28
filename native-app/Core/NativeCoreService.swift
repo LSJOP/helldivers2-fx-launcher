@@ -6,6 +6,7 @@ actor NativeCoreService {
     static let protocolVersion = 1
 
     private var inFlight = false
+    private var activeDetection: (params: [String: JSONValue], work: Task<CoreReply, Error>)?
     private var logRing: [[String: JSONValue]] = []
 
     struct Operation { let method: String; let scope: String; let confirmation: Bool; let external: Bool }
@@ -75,16 +76,25 @@ actor NativeCoreService {
     func request(_ method: String, timeout: TimeInterval = 5,
                  params: [String: JSONValue] = [:],
                  onEvent: (@Sendable ([String: JSONValue]) -> Void)? = nil) async throws -> CoreReply {
-        guard !inFlight else { throw ErrorState("BUSY", method: method) }
-        inFlight = true
-        defer { inFlight = false }
-        let context = CoreContext(timeout: timeout)
-        return try await withTaskCancellationHandler {
+        if method == "first_run_detect", let activeDetection, activeDetection.params == params {
+            let reply = try await activeDetection.work.value
             if Task.isCancelled { throw ErrorState("CANCELLED", method: method) }
-            let reply = try await Task.detached(priority: .userInitiated) {
-                try Self.perform(method, params: params, context: context, onEvent: onEvent)
-            }.value
-            await self.appendReplyLog(method, reply: reply)
+            onEvent?(["kind": .string("work_measurements"), "method": .string(method),
+                      "measurements": .object(["requests_coalesced": .number(1)])])
+            return reply
+        }
+        guard !inFlight else { throw ErrorState("BUSY", method: method) }
+        guard !Task.isCancelled else { throw ErrorState("CANCELLED", method: method) }
+        inFlight = true
+        defer { inFlight = false; activeDetection = nil }
+        let context = CoreContext(timeout: timeout)
+        let work = Task.detached(priority: .userInitiated) {
+            try Self.perform(method, params: params, context: context, onEvent: onEvent)
+        }
+        if method == "first_run_detect" { activeDetection = (params, work) }
+        return try await withTaskCancellationHandler {
+            let reply = try await work.value
+            self.appendReplyLog(method, reply: reply)
             return reply
         } onCancel: {
             context.cancel()
@@ -112,6 +122,13 @@ actor NativeCoreService {
             row["sequence"] = .number(Double(eventSequence))
             row["request_id"] = .string(requestID)
             onEvent?(row)
+        }
+        defer {
+            let measurements = context.measurements
+            if measurements.count > 1 {
+                emit("INFO", "Measured operation", ["kind": .string("work_measurements"), "method": .string(method),
+                      "measurements": .object(measurements)])
+            }
         }
         do {
             try context.check()
@@ -585,7 +602,7 @@ actor NativeCoreService {
             if method == "check_fx_state" { return host }
             stageEmit("WaitingForGuest", "running")
             if let expected = params["credential_host_identity"]?.text {
-                guard try Self.credentialTarget(params, context: context)["identity"]?.text == expected else { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
+                guard try Self.credentialTarget(params, context: context, includeGuest: false)["identity"]?.text == expected else { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
             }
             let (session, state, plan) = try LaunchService.connect(request, fx: fx, transport: transport)
             if let expected = params["credential_guest_boot"]?.text, expected != session.boot { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }

@@ -81,6 +81,7 @@ final class AppState: ObservableObject {
         let reply = try await core.request("graphics_apply", timeout: 1_050, params: params) { [weak self] event in
             Task { @MainActor in
                 guard let self, self.environmentWorkflow.taskID == taskID else { return }
+                self.recordMeasurements(event)
                 if let stage = event["graphics_stage"]?.text {
                     self.graphicsStage = stage
                     self.workflowLog(taskID, stage)
@@ -225,8 +226,36 @@ final class AppState: ObservableObject {
     @Published var firstRunReceipts: [DeploymentReceipt] = []
     @Published var firstRunFailure: String?
     private var firstRunEventGeneration: UUID?
+    private var recentReadyPlan: (plan: DeploymentPlan, scope: String, observed: TimeInterval)?
+    private var taskMeasurements: [[String: JSONValue]] = []
+    private var reusedChecks: [String] = []
+
+    private func recordCheckReuse(_ reason: String) { reusedChecks.append(reason) }
+
+    private func recordMeasurements(_ event: [String: JSONValue]) {
+        guard event["kind"]?.text == "work_measurements", let metrics = event["measurements"]?.object else { return }
+        taskMeasurements.append(metrics.merging(["operation": event["method"] ?? .null]) { _, new in new })
+        if taskMeasurements.count > 20 { taskMeasurements.removeFirst() }
+    }
+
+    private func workflowMeasurements(_ taskID: UUID) -> @Sendable ([String: JSONValue]) -> Void {
+        { [weak self] event in
+            guard event["kind"]?.text == "work_measurements" else { return }
+            Task { @MainActor in
+                guard let self, self.environmentWorkflow.taskID == taskID else { return }
+                self.recordMeasurements(event)
+            }
+        }
+    }
+
+    private func retainReadyPlan(_ plan: DeploymentPlan, scope: String) {
+        recentReadyPlan = plan.executable.isEmpty && plan.firstUnverifiedSetupOperation == nil
+            ? (plan, scope, ProcessInfo.processInfo.systemUptime) : nil
+    }
+
     func firstRunAction(_ method: String, receipt: UUID? = nil, selected: Set<String> = []) {
         guard !tasks.busy else { return }
+        recentReadyPlan = nil
         if method == "first_run_fex_install" { firstRunFEXRestore = receipt }
         let generation = UUID(); firstRunEventGeneration = generation
         let started = ProcessInfo.processInfo.systemUptime
@@ -235,6 +264,7 @@ final class AppState: ObservableObject {
         let plan = firstRunPlan
         firstRunFailure = nil
         credentialIssue = nil
+        taskMeasurements = []; reusedChecks = []
         firstRunState = method == "first_run_detect" || ["first_run_fex_audit", "first_run_fex_build"].contains(method) ? .Checking : method == "first_run_receipts" ? firstRunState : .AwaitingAuthorization
         tasks.start { [weak self] in
             guard let self else { return }
@@ -272,6 +302,7 @@ final class AppState: ObservableObject {
                 let reply = try await self.core.request(method, timeout: method == "first_run_fex_build" ? 6500 : method == "first_run_deploy" ? 1500 : method.hasPrefix("first_run_fex_") ? 400 : 180, params: input) { [weak self] event in
                     Task { @MainActor in
                         guard let self, self.firstRunEventGeneration == generation else { return }
+                        self.recordMeasurements(event)
                         if event["kind"]?.text == "credential_status", event["status"]?.text == "authenticated",
                            let role = event["credential_kind"]?.text.flatMap(CredentialKind.init(rawValue:)), let value = authInput[role.bridgeField]?.text {
                             await self.credentials.authenticated(role, value: value, target: requestCredentialTarget)
@@ -310,6 +341,7 @@ final class AppState: ObservableObject {
                     let plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(value))
                     try self.credentials.observeGuest(plan.snapshot.boot)
                     self.firstRunPlan = plan
+                    self.retainReadyPlan(plan, scope: credentialTarget)
                     self.firstRunState = plan.detectionState
                 }
                 if let value = reply.result["receipt"] {
@@ -321,6 +353,7 @@ final class AppState: ObservableObject {
                     let next = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(value))
                     try self.credentials.observeGuest(next.snapshot.boot)
                     self.firstRunPlan = next
+                    self.retainReadyPlan(next, scope: credentialTarget)
                     if [.Completed, .NeedsConfiguration].contains(self.firstRunState) {
                         self.firstRunState = next.detectionState == .Ready ? .Completed : next.detectionState
                     }
@@ -494,6 +527,7 @@ final class AppState: ObservableObject {
         if GUIAction(rawValue: method) != nil { guiSnapshots = [:] }
         operationError = nil; operationResult = [:]; operationEvents = []
         credentialIssue = nil
+        taskMeasurements = []; reusedChecks = []
         if method.hasPrefix("performance_") { performanceConfigurationState.preview = [:] }
         tasks.start { [weak self] in
             guard let self else { return }
@@ -535,6 +569,7 @@ final class AppState: ObservableObject {
                 let reply = try await self.core.request(method, timeout: operationTimeout, params: input) { [weak self] event in
                     Task { @MainActor in
                         guard let self, self.operationGeneration == generation else { return }
+                        self.recordMeasurements(event)
                         if method == "launch_game" { self.launchSession.consume(event) }
                         if event["kind"]?.text == "credential_status",
                            let role = event["credential_kind"]?.text.flatMap(CredentialKind.init(rawValue:)) {
@@ -794,6 +829,7 @@ final class AppState: ObservableObject {
             return
         }
         credentialIssue = nil
+        taskMeasurements = []; reusedChecks = []
         environmentWorkflow = EnvironmentWorkflow(phase: .startingFX, launchesGame: launchGame)
         let taskID = environmentWorkflow.taskID
         workflowStarted = ProcessInfo.processInfo.systemUptime; workflowPhaseStarted = workflowStarted
@@ -826,7 +862,11 @@ final class AppState: ObservableObject {
                 let target = root + "|" + revision + "|" + identity
                 if let scope = self.credentials.scope, scope != target { self.clearSessionCredentials() }
                 await self.credentials.prepare(for: target, savedTarget: binding.result["persistence_identity"]?.text)
+                if let boot = binding.result["guest_boot"]?.text { try self.credentials.observeGuest(boot) }
                 input.merge(try self.credentials.parameters(for: target)) { _, value in value }
+                if binding.result["guest_boot"] == nil && self.credentials.hasPersistenceTarget {
+                    input.removeValue(forKey: "credential_guest_boot")
+                }
                 input["credential_revision"] = .string(revision)
                 input["credential_host_identity"] = .string(identity)
                 if resumeGraphics {
@@ -836,19 +876,30 @@ final class AppState: ObservableObject {
                     self.firstRunState = .Completed
                     return
                 }
-                let connected = try await self.core.request("test_ssh", timeout: 90, params: input)
-                guard let boot = connected.result["guest_boot"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
+                self.workflowPhase(.detecting)
+                var raw: JSONValue
+                var plan: DeploymentPlan
+                if let recent = self.recentReadyPlan, recent.scope == target,
+                   recent.plan.snapshot.boot == binding.result["guest_boot"]?.text,
+                   ProcessInfo.processInfo.systemUptime - recent.observed < 30 {
+                    plan = recent.plan
+                    raw = try JSONDecoder().decode(JSONValue.self, from: JSONEncoder().encode(plan))
+                    self.recordCheckReuse("verified_environment_same_boot")
+                } else {
+                    let detected = try await self.core.request("first_run_detect", timeout: 240, params: input, onEvent: self.workflowMeasurements(taskID))
+                    guard let report = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
+                    raw = report
+                    plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
+                    if detected.result["ssh_password_verified"]?.boolean == true, let password = input["password"]?.text {
+                        await self.credentials.authenticated(.ssh, value: password, target: target)
+                    }
+                }
+                let boot = plan.snapshot.boot
                 try self.credentials.observeGuest(boot)
+                input["credential_guest_boot"] = .string(boot)
                 self.environmentWorkflow.evidence["ssh_connected"] = .bool(true)
                 self.environmentWorkflow.evidence["guest_ready"] = .bool(true)
-                if connected.result["ssh_password_verified"]?.boolean == true, let password = input["password"]?.text {
-                    await self.credentials.authenticated(.ssh, value: password, target: target)
-                }
                 self.environmentWorkflow.completedSteps = 2
-                self.workflowPhase(.detecting)
-                var detected = try await self.core.request("first_run_detect", timeout: 240, params: input)
-                guard var raw = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
-                var plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
                 let repairableFXReasons: Set<String> = [
                     "FEX_MISSING", "FEX_NOT_EXECUTABLE", "FEX_ARCHITECTURE",
                     "FEX_INTEGRATION_MISSING", "FEX_CHANGED", "FEX_INTEGRITY_FAILED",
@@ -873,6 +924,7 @@ final class AppState: ObservableObject {
                         }
                         Task { @MainActor in
                             guard let self, self.environmentWorkflow.taskID == taskID else { return }
+                            self.recordMeasurements(event)
                             self.workflowEvent(event, taskID: taskID)
                         }
                     }
@@ -881,7 +933,7 @@ final class AppState: ObservableObject {
                     self.environmentWorkflow.evidence["fx_runtime_verification"] = repaired.result["verification"] ?? .null
                     self.workflowLog(taskID, "FX runtime: automatic repair verified")
                     self.workflowPhase(.detecting)
-                    detected = try await self.core.request("first_run_detect", timeout: 240, params: input)
+                    let detected = try await self.core.request("first_run_detect", timeout: 240, params: input, onEvent: self.workflowMeasurements(taskID))
                     guard let refreshed = detected.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
                     raw = refreshed
                     plan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
@@ -898,7 +950,9 @@ final class AppState: ObservableObject {
                 }
                 self.environmentWorkflow.evidence["steam_running"] = .bool(plan.snapshot.steamRunning)
                 self.workflowPhase(.deploying)
+                var verifiedPlan = plan
                 if !plan.executable.isEmpty {
+                    self.recentReadyPlan = nil
                     input["deployment_plan"] = raw
                     input["approved_steps"] = .array(plan.executable.map { .string($0.id) })
                     input["restart_vm_approved"] = .bool(true)
@@ -911,6 +965,7 @@ final class AppState: ObservableObject {
                         }
                         Task { @MainActor in
                             guard let self, self.environmentWorkflow.taskID == taskID else { return }
+                            self.recordMeasurements(event)
                             self.workflowEvent(event, taskID: taskID)
                             if self.environmentWorkflow.phase == .deploying, let stage = event["deployment_state"]?.text, DeploymentState(rawValue: stage) != nil {
                                 self.environmentWorkflow.deploymentStage = stage
@@ -932,13 +987,21 @@ final class AppState: ObservableObject {
                         input["credential_host_identity"] = .string(identity)
                         input["credential_guest_boot"] = .string(new)
                     }
+                    if let next = deployed.result["next_plan"] {
+                        verifiedPlan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(next))
+                        self.recordCheckReuse("deployment_postcheck")
+                    } else {
+                        let verified = try await self.core.request("first_run_detect", timeout: 240, params: input, onEvent: self.workflowMeasurements(taskID))
+                        guard let next = verified.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
+                        verifiedPlan = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(next))
+                    }
+                } else {
+                    self.recordCheckReuse("configuration_unchanged")
                 }
                 self.environmentWorkflow.completedSteps = 4
                 self.workflowPhase(.verifying)
                 try Task.checkCancellation()
-                let verified = try await self.core.request("first_run_detect", timeout: 240, params: input)
-                guard let raw = verified.result["plan"] else { throw ErrorState("PROTOCOL_ERROR") }
-                let fresh = try JSONDecoder().decode(DeploymentPlan.self, from: JSONEncoder().encode(raw))
+                let fresh = verifiedPlan
                 self.firstRunPlan = fresh
                 if let pending = fresh.executable.first {
                     throw ErrorState("VERIFY_FAILED", details: ["component": .string(pending.component)])
@@ -949,6 +1012,8 @@ final class AppState: ObservableObject {
                 if !launchGame, let unverified = fresh.firstUnverifiedSetupOperation {
                     throw ErrorState(unverified.blocked ?? "VERIFY_FAILED", details: ["component": .string(unverified.component)])
                 }
+                let verifiedTarget = root + "|" + revision + "|" + (input["credential_host_identity"]?.text ?? identity)
+                self.retainReadyPlan(fresh, scope: verifiedTarget)
                 self.firstRunState = .Completed
                 self.environmentWorkflow.completedSteps = 5
                 if requestedMode == .dx11 {
@@ -961,6 +1026,7 @@ final class AppState: ObservableObject {
                         Task { @MainActor in
                             guard let self, self.environmentWorkflow.taskID == taskID else { return }
                             self.launchSession.consume(event)
+                            self.recordMeasurements(event)
                             self.workflowEvent(event, taskID: taskID)
                         }
                     }
@@ -982,6 +1048,7 @@ final class AppState: ObservableObject {
                     self.graphicsConfigured = nil
                     self.graphicsStage = nil
                 }
+                self.recentReadyPlan = nil
                 self.environmentWorkflow.failure = ErrorState(failure.code, details: self.credentials.redactor.diagnostic(failure.details))
                 let reason = self.environmentWorkflow.failure?.details["reason"]?.text.map { String($0.prefix(300)) }
                 let exitCode = failure.details["steam_exit_code"]?.integer ?? failure.details["exit_code"]?.integer
@@ -1040,7 +1107,9 @@ final class AppState: ObservableObject {
                 if !passphrase.isEmpty { input["passphrase"] = .string(passphrase) }
                 input["credential_revision"] = .string(revision)
                 input["credential_host_identity"] = .string(identity)
-                let reply = try await self.core.request("test_ssh", timeout: 90, params: input)
+                let reply = try await self.core.request("test_ssh", timeout: 90, params: input) { [weak self] event in
+                    Task { @MainActor in self?.recordMeasurements(event) }
+                }
                 guard let boot = reply.result["guest_boot"]?.text else { throw ErrorState("PROTOCOL_ERROR") }
                 try self.credentials.observeGuest(boot)
                 self.credentials.passphrase = passphrase
@@ -1119,7 +1188,7 @@ final class AppState: ObservableObject {
     func confirmMainMenu() { launchSession.confirmMainMenu(); recordLaunch() }
     func confirmSinglePlayer() { launchSession.confirmSinglePlayer(); recordLaunch() }
     func forgetSavedCredentials() { credentials.forgetSaved(); SSHTransport.closeOwnedMasters() }
-    func clearSessionCredentials() { credentials.clear(); SSHTransport.closeOwnedMasters(); firstRunFEX = [:]; firstRunFEXTicket = nil; firstRunFEXRestore = nil }
+    func clearSessionCredentials() { recentReadyPlan = nil; credentials.clear(); SSHTransport.closeOwnedMasters(); firstRunFEX = [:]; firstRunFEXTicket = nil; firstRunFEXRestore = nil }
     func endSession() { networkLaunchPending = false; tasks.cancel(); clearSessionCredentials() }
     func value(_ method: String, _ key: String) -> String { results[method]?[key]?.text ?? t("ui.366") }
     func rows(_ method: String, _ key: String) -> [[String: JSONValue]] { results[method]?[key]?.array.map(\.object) ?? [] }
