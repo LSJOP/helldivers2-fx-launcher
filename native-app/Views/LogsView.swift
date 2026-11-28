@@ -58,6 +58,10 @@ struct LogsView: View {
             TacticalPageHeader(title: state.t("ui.306"))
             TacticalRefreshButton(state: state, tasks: state.tasks)
             TacticalWarningBanner(text: state.t("ui.017"))
+            TacticalButton(title: state.t("ui.setup.copyDiagnostic"), symbol: "list.clipboard") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(state.firstRunDiagnosticReport(), forType: .string)
+            }
             if exportFailed { TacticalWarningBanner(text: state.t("ui.logs.exportFailed"), isError: true) }
             DisclosureGroup(state.t("ui.096")) { LegacyOperationsView(state: state, scope: "logs") }
             ViewThatFits(in: .horizontal) {

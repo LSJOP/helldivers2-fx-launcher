@@ -1162,26 +1162,54 @@ final class AppState: ObservableObject {
             let status = operation.blocked ?? (firstRunPlan?.setupObservationVerified(operation) == true ? "PASS" : operation.changes.isEmpty ? "UNVERIFIED" : "REPAIR_REQUIRED")
             return "- \(name): \(status)"
         }.joined(separator: "\n") ?? "- unavailable"
-        let details = failure.map { $0.details.isEmpty ? "none" : CoreJSON.encode(.object($0.details)) } ?? "none"
-        let source = environmentWorkflow.evidence["fx_runtime_resource_source"]?.text
-            ?? snapshot?.facts["fex_source_type"] ?? "unknown"
+        let evidence = environmentWorkflow.evidence
+        let allowedEvidence = [
+            "renderer", "actual_graphics_argument", "d3d_feature_level", "wmtr_drawables", "wmtr_sha256",
+            "dxmt_d3d11_sha256", "dxmt_winemetal_sha256", "taa", "audio_profile", "audio_restore",
+            "capture_streams", "non_monitor_capture_streams", "game_capture_streams", "playback_monitor_muted",
+            "game_process_detected", "game_process_count", "steam_running", "ssh_connected", "guest_ready",
+            "wmtr_connection_observed", "render_device_lost", "capture_timeout_200ms", "out_of_memory",
+            "wine_exception", "fex_assertion", "shader_failure"
+        ]
+        let tested = allowedEvidence.map { key in
+            "- \(key): " + (evidence[key].map { CoreJSON.encode($0) } ?? "unverified")
+        }.joined(separator: "\n")
+        let facts = snapshot?.facts ?? [:]
+        let allowedFacts = ["os_build", "kernel", "guest_cpus", "guest_mem_kib", "fex_release",
+                            "fex_executable_sha256", "fex_tree", "proton_manifest", "runtime_build",
+                            "runtime_version", "steam_runtime_build", "steam_runtime_version", "vulkan", "kosmickrisp", "network"]
+        let environment = allowedFacts.map { "- \($0): \(facts[$0] ?? "unverified")" }.joined(separator: "\n")
+        let details = failure?.details.filter {
+            ["reason", "diagnostic_reason", "stage", "exit_code", "steam_exit_code", "component"].contains($0.key)
+        } ?? [:]
+        let fxBuild = fxSelection.selectedPath.flatMap { path in
+            Bundle(url: URL(fileURLWithPath: path))?.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+        }
         let report = """
         \(product)
         App version: \(info["CFBundleShortVersionString"] as? String ?? "unknown") (\(info["CFBundleVersion"] as? String ?? "unknown"))
-        FX Steam Launcher version: \(snapshot?.fxVersion ?? fxVersion)
+        Mac model: \(SystemProbe.sysctlString("hw.model") ?? "unknown")
+        Mac chip: \(SystemProbe.chipName() ?? "unknown")
+        Mac memory (bytes): \(SystemProbe.memoryBytes().map(String.init) ?? "unknown")
+        macOS: \(SystemProbe.systemInfo()["os_version"]?.text ?? "unknown") (\(SystemProbe.sysctlString("kern.osversion") ?? "unknown"))
+        FX Steam Launcher version: \(snapshot?.fxVersion ?? fxVersion) (\(fxBuild ?? "unknown"))
         SteamOS version: \(snapshot?.osVersion ?? "unknown")
-        Failed stage: \(environmentWorkflow.phase.rawValue)
-        Internal error code: \(failure?.code ?? firstRunFailure ?? "none")
-        Actual reason: \(snapshot?.facts["fex_diagnostic_reason"] ?? failure?.details["diagnostic_reason"]?.text ?? "unknown")
+        Workflow phase: \(environmentWorkflow.phase.rawValue)
+        Error code: \(failure?.code ?? firstRunFailure ?? operationError?.code ?? "none")
+        Graphics selected: \(graphicsChoice.rawValue)
+        Graphics configured: \(graphicsConfigured?.rawValue ?? "unverified")
+        Game process state: \(launchSession.processDetected ? "observed" : "unverified")
+        Game main menu: \(launchSession.mainMenuConfirmedAt == nil ? "unverified" : "user_confirmed")
+        Ship bridge: unverified by the launcher
+        Environment evidence:
+        \(environment)
         Component checks:
         \(operations)
-        Automatic repair attempted: \(environmentWorkflow.evidence["fx_runtime_repair_attempted"]?.boolean == true ? "yes" : "no")
-        Resource source: \(source)
-        Verification: \(CoreJSON.encode(environmentWorkflow.evidence["fx_runtime_verification"] ?? .null))
-        FX runtime executable SHA-256: \(snapshot?.facts["fex_executable_sha256"] ?? "unknown")
-        FX runtime tree SHA-256: \(snapshot?.facts["fex_tree"] ?? "unknown")
-        Permission diagnostic: \(snapshot?.facts["fex_diagnostic_reason"] ?? "unknown")
-        Technical details: \(details)
+        Launch and audio evidence:
+        \(tested)
+        Task measurements: \(CoreJSON.encode(.array(taskMeasurements.map(JSONValue.object))))
+        Reused checks: \(reusedChecks.isEmpty ? "none recorded" : reusedChecks.joined(separator: ", "))
+        Technical details: \(CoreJSON.encode(.object(details)))
         """
         return CoreRedaction.scrub(credentials.redactor.text(report))
     }
