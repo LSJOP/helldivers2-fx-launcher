@@ -1,6 +1,6 @@
 # HD2FXNative 开发状态
 
-> 2026-11-28 · DX11/DXMT 成功基准已归档。开发候选复用同盘游戏与 Runtime，对 Proton 工具、prefix、Steam 映射、TAA 和 Guest 音频做事务管理。各阶段的实机状态见[成功环境基准](environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)。独立工作副本的舰桥实机通过与候选 App 双向切换分开记录。
+> 2026-11-28 · `dev/core` 候选已在 FX 1.9.15 测试盘通过双向切换及已有游戏环境的 DXMT 首次配置。DX12 恢复原环境并进入舰桥，DX11 回切复用隔离工具和 prefix，舰桥操控、菜单与声音通过。运行中恢复被拦截，退出游戏后可重试。[成功环境与验收](environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)
 
 > 2026-11-27 · 正式 v1.0.8（2026112703）为 GitHub Stable / Latest。受保护 FX 1.9.9 母本已建立并多次验证恢复。v1.0.8 修复 Steam 排队入口和 RF 复验，正式首配及 v1.0.7 组件级增量升级均通过。详见[基线验收](testing/FX199_FRESH_USER_BASELINE.md)。
 

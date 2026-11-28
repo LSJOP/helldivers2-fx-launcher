@@ -64,7 +64,19 @@ FEX_DISKCACHE=0 FEX_NEEDSSECCOMP=1 PRESSURE_VESSEL_EMULATOR=<RF_EMULATOR_JSON> P
 - `audio/SHA256SUMS.txt` 的 SHA-256 为 `0c88e8e14e2108d4760d6ce3f4ba381a7abea02f9c8948d138f24d19748ac664`。索引含 `dxmt-output-only.txt`（CoreAudio、PipeWire、宿主应用音频振幅、游戏 D3D11）、`dxmt-virtual-capture.txt`（BlackHole 997 Hz 下行采集和游戏录音绑定）和两组游戏 HUD 性能截屏。游戏截图及原始文件保留在本地证据目录。
 - 同机同舰桥视角，1280×800、原始渲染比例、TAA 关的五个游戏 HUD 样本中位数为 DXMT 98 FPS、DX12 42 FPS。DXMT 的宿主 Metal 回调样本另为 98.23/s。两组音频模式不同，宿主 swap 约 15.8 和 25.3 GiB，结果仅限该短测。
 - 已知限制包括 TAA 开启时网格伪影，禁用即可规避；带音频停帧和采集超时存在时间关联，底层原因待定位；实体麦克风、游戏内语音传输、多人及战斗尚未验收。FX DXMT 扩大可信 Guest 对宿主的访问面。GE-Proton x86_64 在图形初始化前退出，DXVK/Venus/KosmicKrisp 仍有提交超时。
-- 此记录的 DXMT 验收来自独立工作副本。同盘两种模式自动切换、新用户 App 部署及异常回退需要各自的实机验收。已验证的原 DX12 工作流、成功基准和记录继续保留。
+- 上述 DXMT 音频、性能和呈现诊断来自独立工作副本。App 同盘验收单独记录在下方。原 DX12 工作流及其历史成功记录继续保留。
+
+### Native App 同盘验收 · 2026-11-28
+
+在既有的独立测试盘完成 App 双向切换。关闭 DX11 后，同一块盘启动到 Vulkan，恢复原 Proton-JE 映射、启动参数、声音和 DX12 prefix。启动参数、prefix 版本元数据和原画质文件经核对。游戏加载 VKD3D-Proton 3.1.0、Wine Vulkan 和 Venus/KosmicKrisp，进入舰桥并可移动。重新启用后，隔离 Proton、DX11 prefix、DX12 prefix 与 Steam 管理的 Runtime 均有相同文件系统和 inode 证据。DX11 游戏实际加载官方 DXMT/WineMetal，初始化 FL12_1，舰桥移动及菜单通过，FX 声音采样 RMS 约 0.03294。
+
+FX 的 DXMT 安装逻辑修改兼容工具与 prefix 内的 DLL。App 对原 JE 保持独立，使用只指向已知隔离目录的 FX 服务范围。Guest 当次实际分配约 1.96 GiB，覆盖隔离 Proton 和 DX11 prefix。重启后在游戏启动前重新检查仅输出和 monitor 静音，保留原 DX12 音频记录。DX11 采用独立 FX 偏好域和关闭宿主目录共享的设置。游戏运行期间请求恢复时，App 保留当前虚拟机和 prefix，退出测试游戏后重试成功。还验证了重复启动按钮保护、撤销初次授权、在写入前取消活动配置，以及从已关闭 App 和 FX 的持久化收据继续恢复。
+
+候选来源为 `dev/core`。核心实机使用 `a39f377c56096acfded0e5bfd3e5b83d352acab2`，后续 `db9f789bb3f79363b9035323911f079f84062e28` 保留已有启动结果，同时在总览显示图形模式。版本均为 `1.0.8 (2026112703)`。候选包为本机 ad hoc 签名 arm64 构建，批准的 RF FEX 和 Proton-JE 载荷校验通过。技术日志、运行证据和中英文实拍保存在原专项报告旁。
+
+最终构建在已有 FX、SteamOS 和游戏、无活动 DXMT 配置及缓存的测试盘通过首次配置。App 创建了新的 DXMT 工具和 prefix，并从总览启动到舰桥。原 DX12 prefix 和 Steam Runtime 的 inode 未变。DXMT FL12_1、角色移动与宿主声音已验证，宿主应用输出 RMS 约 0.03642。验证期间出现一次本地 SSH 转发端口占用，重试后通过。游戏仍可能显示驱动版本提示，测试中从游戏窗口选择继续。实体麦克风、游戏内语音、联机与其它 FX 版本未纳入本次 App 验收。
+
+本地证据目录中，`app/SHA256SUMS.txt` SHA-256 为 `b0c14de8bfa25c625eddf5835a1377a00cdd6b46eef5b153a545e78db724b3c3`。初次交接的 `handoff/SHA256SUMS.txt` SHA-256 为 `cb2d81ed81a07961fc96370a0a1a000b13cf404d65e6660c190123ccadb58dea`。最终候选可执行文件 SHA-256 为 `fad9b4b99b0527967af0e788b4e0b3c1f7025131435f286df1982b55d9d5d437`。
 
 ### 长期维护
 

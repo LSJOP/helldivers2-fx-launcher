@@ -1,6 +1,6 @@
 # 功能与开发状态索引
 
-> 2026-11-28 · DX11/DXMT 成功基准已归档。开发候选复用同盘游戏与 Runtime，对 Proton 工具、prefix、Steam 映射、TAA 和 Guest 音频做事务管理。各阶段的实机状态见[成功环境基准](environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)。独立工作副本的舰桥实机通过与候选 App 双向切换分开记录。
+> 2026-11-28 · `dev/core` 增加 FX 1.9.15 的 DX11/DXMT 实验模式。默认 DX12，通过游戏性能配置页选择并复用总览启动入口。双向切换、DXMT 首次配置、运行时检测、音频和指定恢复路径已在同一测试盘验收。[成功环境与验收](environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)
 
 > 2026-11-27 · `FX199_FRESH_USER_BASELINE` 已从独立 FX 1.9.9 副本恢复并验证，三个目标组件缺失，保留原 ARM64/FEX 环境、Steam 登录与游戏。正式 v1.0.7 实机发现 Steam 安装确认框及 RF 复验路径编码故障。main 的 `c686f7b` 修复两项问题并发布 v1.0.8（2026112703）。正式首次配置、首页一键配置并启动、重启复用、单人实际操作、四人联机与 v1.0.7 组件级增量升级均通过。范围与证据见[首次配置验收](testing/FX199_FRESH_USER_BASELINE.md)。
 

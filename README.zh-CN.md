@@ -24,7 +24,7 @@ FX 1.9.9 测试盘已恢复历史验证的 RF 运行组件，通过 GUI 启动�
 
 ### 实验性图形模式（开发分支）
 
-游戏性能配置页的 DXMT 候选功能复用总览启动按钮。它独立切换 HELLDIVERS 2 的兼容工具和前缀，在同一磁盘复用 Steam 管理的游戏及 Runtime，并提供恢复 DX12 操作。已验证的渲染器基线为 FX 1.9.15。DXMT 会扩大 Guest 对 Mac 的访问范围，需要主动确认。实验模式采用仅输出音频并关闭 TAA。独立参考环境见[图形成功环境基准](docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md#dx11--dxmt-已验证成功环境--2026-11-28)。
+在游戏性能配置页启用 DirectX 11（DXMT），然后使用总览原有的启动按钮。开发候选复用同一磁盘上的 Steam 游戏和 Runtime，并为 HELLDIVERS 2 的 DXMT 模式提供独立的兼容工具与前缀。退出游戏后再关闭 DX11 或使用「恢复 DX12」。FX 1.9.15 上的 DXMT 已在测试盘实测。DXMT 可能扩大 Guest 对 Mac 的访问范围，需主动确认。实验模式采用仅输出音频并关闭 TAA。[图形成功环境基准及验收结果](docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md#dx11--dxmt-已验证成功环境--2026-11-28)
 
 ### 软件截图
 

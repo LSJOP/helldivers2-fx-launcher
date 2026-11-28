@@ -8,7 +8,7 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 
 ## Unreleased
 
-- Develop an opt-in DXMT mode with a scoped Proton tool and prefix, graphics/audio verification, and a DX12 recovery action. This entry describes the development candidate.
+- Add an opt-in DXMT mode to the development candidate, with an isolated Proton tool and prefix, runtime detection, playback-only audio, and a same-disk DX12 restore action.
 
 ### v1.0.8 — 2026-11-27
 

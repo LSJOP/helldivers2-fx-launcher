@@ -24,7 +24,7 @@ FX 1.9.9 test-Guest repair now reaches the game through the GUI with the histori
 
 ### Experimental graphics mode (development branch)
 
-The DXMT candidate in Game Performance uses the existing Dashboard launch action. It switches the HELLDIVERS 2 compatibility tool and prefix independently, keeps Steam-managed game files and runtime on the same disk, and includes a DX12 restore action. FX 1.9.15 is the verified renderer baseline. DXMT expands the guest’s access to the Mac and requires consent. The experiment uses playback-only audio and disables TAA. The independent reference setup is documented in the [graphics environment baseline](docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md#dx11--dxmt-已验证成功环境--2026-11-28).
+Enable DirectX 11 (DXMT) in Game Performance, then use the existing Dashboard launch button. The development candidate keeps the Steam-managed game files and runtime on one disk and gives HELLDIVERS 2 an isolated compatibility tool and prefix for DXMT. Exit the game before switching off DX11 or using Restore DX12. DXMT on FX 1.9.15 has been verified on the test disk. The experiment requires consent because DXMT can extend the guest’s access to the Mac. It uses playback-only audio and disables TAA. [Graphics environment baseline and test results](docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md#dx11--dxmt-已验证成功环境--2026-11-28)
 
 ### Screenshots
 
