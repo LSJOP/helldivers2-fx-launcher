@@ -1,7 +1,7 @@
 # HD2FXNative development rules
 
-Instruction version: **v1.2.42** · Updated: **2026-11-29**.
-Change: use one Settings credential entry, reuse verified task evidence, and preserve game settings across graphics modes.
+Instruction version: **v1.2.43** · Updated: **2026-11-29**.
+Change: maintain stable README fields, bilingual release notes and published screenshot evidence.
 
 ## Authority and task lifecycle
 
@@ -54,6 +54,8 @@ Change: use one Settings credential entry, reuse verified task evidence, and pre
 - Preserve military tactical style, dark default, supplied App icon without an added mask, existing artwork and native shortcuts. Keep ordinary UI simple; no duplicate state cards/flows. Theme/language changes must preserve business state. Host/process/Steam/menu/mission/EAC/multiplayer evidence are separate.
 - Every user-visible text change must maintain zh-CN, en, ja, ko, ru, es, de, fr, pt-BR and zh-TW resources. No hardcoded prose, placeholders or silent English fallback counted as translation. Check static localization and negative fixtures; manually assess dynamic strings and naturalness. Menu/bundle localization uses system resources/App-only preference, not global language changes.
 - Maintain paired README.md/README.zh-CN.md and CHANGELOG.md/CHANGELOG.zh-CN.md for affected behavior/install/version/compatibility changes. Keep unfinished delivery under Unreleased. No invented release version/date or capability claim. Pure internal/docs changes record why UI resources/screenshots are unchanged.
+- Keep the README brand, version, download and release highlights in distinct blocks. Reserve the README for player-facing information and link to archived technical records. Label capabilities and tests according to the actual scope of verification.
+- On formal release, prepare equivalent English and Simplified Chinese CHANGELOG and Release Notes entries, including current limitations. Use the existing Latest release workflow to synchronize the version, direct DMG URL, build and source commit in both READMEs. Review highlights as prose outside the automated fields. Validate HTML structure, local image paths, language anchors and the real download URL.
 - Actual screenshots only: English under docs/images/en, Chinese under docs/images/zh-CN, with source/build/time/hash provenance. Recapture affected UI and review language, clipping and secrets. Never update a fingerprint or PASS marker without review. Mark unavailable captures pending; do not present old captures as current.
 
 ## Versioning and releases

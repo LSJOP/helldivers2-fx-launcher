@@ -1,12 +1,22 @@
 # Localized Native screenshots / 本地化原生截图
 
-The DX11 section reuses real windows from the FX 1.9.15 acceptance on 2026-11-28. The English windows are from two isolated Release candidates. The Simplified Chinese windows are from an earlier isolated Debug candidate. Individual records identify each source snapshot. The screenshots retain their original v1.0.8 build labels. The reviewed UI fingerprint includes the DXMT views carried forward into v1.1.0.
+## v1.1.1 Stable / 正式版
 
-DX11 章节复用 2026-11-28 FX 1.9.15 实机验收的真实窗口。英文图取自两次隔离 Release 候选，简体中文图取自较早的隔离 Debug 候选。逐图记录标明来源，保留原有 v1.0.8 构建号。审阅的界面指纹覆盖 v1.1.0 沿用的 DXMT 页面。
+The homepage uses six pages per language from the unmodified, mounted v1.1.1 Stable DMG (build `2026112906`, commit `7a0e2b1`). Captures use the native 1179×775 window at 2× in Dark appearance, separate temporary App data and no saved credentials. The viewports were checked for language, primary artwork, and personal information. Status tiles are idle and unverified. These are UI captures.
 
-The six current README pages in **en/** and **zh-CN/** are real, reviewed windows from the 2026-11-22 overview Debug candidate. The capture copy uses a separate bundle identifier, no selected runtime and disabled credential autoload. These are Unreleased development screenshots, not images of a published release. Other images retain their individual historical provenance.
+首页使用 v1.1.1 正式 DMG 挂载后原样运行的中英文各六个页面（构建 `2026112906`，提交 `7a0e2b1`）。深色主题，原生窗口 1179×775，2×，使用独立临时 App 数据，无已保存凭据。已检查界面语言、主要插画和隐私内容。状态卡是空闲未验证状态，截图仅展示界面。
 
-**en/** 与 **zh-CN/** 中当前 README 引用的六个页面来自 2026-11-22 总览候选的真实 Debug 窗口。采集副本使用独立包标识、未选择运行目录且禁用凭据自动加载；未执行 Guest 操作。这些图展示未发布开发改动，不代表正式发布版。其他图片保留各自的历史来源记录。
+The [social preview](../assets/social-preview.png) combines the project icon, English Dashboard capture and authorized MOTR7 artwork, attributed on the image.
+
+## Historical captures / 历史截图
+
+The historical DX11 captures reuse real windows from the FX 1.9.15 acceptance on 2026-11-28. The English windows are from two isolated Release candidates. The Simplified Chinese windows are from an earlier isolated Debug candidate. Individual records identify each source snapshot. The screenshots retain their original v1.0.8 build labels. The reviewed UI fingerprint includes the DXMT views carried forward into v1.1.0.
+
+历史 DX11 截图复用 2026-11-28 FX 1.9.15 实机验收的真实窗口。英文图取自两次隔离 Release 候选，简体中文图取自较早的隔离 Debug 候选。逐图记录标明来源，保留原有 v1.0.8 构建号。审阅的界面指纹覆盖 v1.1.0 沿用的 DXMT 页面。
+
+The six archived overview candidate pages in **en/** and **zh-CN/** are real, reviewed windows from the 2026-11-22 overview Debug candidate. The capture copy uses a separate bundle identifier, no selected runtime and disabled credential autoload. These are Unreleased development screenshots, not images of a published release. Other images retain their individual historical provenance.
+
+**en/** 与 **zh-CN/** 中归档的六个页面来自 2026-11-22 总览候选的真实 Debug 窗口。采集副本使用独立包标识、未选择运行目录且禁用凭据自动加载；未执行 Guest 操作。这些图展示未发布开发改动，不代表正式发布版。其他图片保留各自的历史来源记录。
 
 Individual source baseline, dirty-source marker, capture timestamp, build, dimensions and SHA-256 are recorded in [manifest.json](manifest.json). The reviewed UI fingerprint identifies the exact UI source used for capture. The model matrix is isolated test evidence; the real captured homepage has no verified runtime and correctly displays gray indicators.
 

@@ -34,6 +34,16 @@ Preserve the independent Update Helper and its verification, transactional repla
 
 版本采用 MAJOR.MINOR.PATCH；核查远程标签，禁止复用已发布版本。发布从 main 打 Tag，更新版本、递增构建号及中英文 CHANGELOG／README。准备可追溯的 arm64 Release、DMG、ZIP、SHA-256 和 Ed25519 签名清单；版本一致性、签名和产物完整性不可豁免。代码、依赖和环境一致时复用已有产物与证据；按影响范围检查本地化和测试，并遵守必需 CI。默认完成安装、升级和失败恢复验收；用户明确授权可跳过指定的非安全验收，必须逐项标记未验证，隔离测试不能冒充真实 App 验收。发布后验证公开链接、签名和渠道；未豁免时验证 App 识别并记录结果。保持 Stable 与预发布分离、私钥不入 Git、独立 Update Helper 和既有安全机制不变；允许 ad-hoc 签名，不要求 Developer ID 或公证。
 
+### README publishing / 首页发布
+
+Prepare the English and Simplified Chinese changelog entries and Release Notes together. Check parity with the bilingual homepage and the standalone Chinese README. Update the highlights under their own headings during release preparation. Include each known acceptance gap, and keep development notes in the documentation archive. Recapture published App windows only when the UI or shown features change.
+
+The existing Latest-release workflow updates only the three single-line `stable-version`, `stable-download` and `stable-build` blocks after verifying signed assets and matching changelog releases. The primary button uses the verified tag-specific DMG URL; publishing the next Latest release advances that URL. Verify both documents with `python3 script/check_docs.py` and `python3 native-app/script/check_readme_screenshots.py`. Review the rendered GitHub homepage in light/dark and at narrow width, follow the language links and confirm the DMG opens the published asset.
+
+中英文 CHANGELOG 和 Release Notes 一起准备，并核对双语首页和独立中文版 README。发布准备时在独立标题下更新亮点，注明尚未验收的项目，开发记录保留在文档归档中。仅当界面或展示功能变化时重拍正式 App 窗口。
+
+现有 Latest 发布工作流核对签名资源和双语 CHANGELOG 后，只同步两个 README 的三个单行标记区。下载按钮直接使用经校验的版本专属 DMG 链接，新正式版发布后随工作流更新。检查 HTML 结构、截图路径及来源、语言锚点和下载链接，并查看 GitHub 深浅主题及窄窗口的实际渲染。
+
 ## Historical update design and audit / 历史设计与审计
 
 The following dated sections record earlier states and may be superseded by current code, the policy above and later sections. Verify live configuration and actual release status rather than treating historical statements as current.

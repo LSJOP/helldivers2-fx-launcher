@@ -3,6 +3,7 @@ import hashlib
 import json
 from pathlib import Path
 import plistlib
+import re
 import tempfile
 import unittest
 import sys
@@ -97,14 +98,24 @@ class StableReleaseChecks(unittest.TestCase):
             self.assertEqual((self.root / name).read_text(), content)
 
     def test_readme_sync_is_scoped_and_idempotent(self):
-        doc = (sync.Path(__file__).resolve().parents[1] / "README.md").read_text()
-        expected = sync.updated_readme(doc, "9.1.0", "123", self.dmg, "2026-11-15")
-        self.assertIn("Stable Release · v9.1.0", expected)
-        self.assertIn("releases/latest/download/" + self.dmg, expected)
-        self.assertEqual(sync.updated_readme(expected, "9.1.0", "123", self.dmg, "2026-11-15"), expected)
-        self.assertIn("v1.0.1 cannot install the published v1.0.2", expected)
-        with self.assertRaises(ValueError):
-            sync.updated_readme(doc.replace("<!-- stable-install:end -->", ""), "9.1.0", "123", self.dmg, "2026-11-15")
+        for name in ("README.md", "README.zh-CN.md"):
+            with self.subTest(name=name):
+                doc = (Path(__file__).resolve().parents[1] / name).read_text()
+                original = sync.updated_readme(doc, "9.1.0", "123", self.dmg, self.commit)
+                self.assertIn("Stable Release · v9.1.0", original)
+                self.assertEqual(original.count(f"/download/v9.1.0/{self.dmg}"), 1)
+                self.assertEqual(sync.updated_readme(original, "9.1.0", "123", self.dmg, self.commit), original)
+                version = re.search(r"Stable Release · v([0-9.]+)", doc)[1]
+                build, commit = re.search(r"`([0-9]+)` · .*?/commit/([a-f0-9]{40})", doc).groups()
+                restore = sync.updated_readme(original, version, build,
+                                             f"HD2FXNative-v{version}-macOS-arm64.dmg", commit)
+                self.assertEqual(restore, doc)
+                for bad in (
+                    doc.replace("<!-- stable-download:end -->", ""),
+                    doc.replace("<!-- stable-build:start -->", "<!-- stable-build:start -->\nUnexpected prose"),
+                ):
+                    with self.assertRaises(ValueError):
+                        sync.updated_readme(bad, "9.1.0", "123", self.dmg, self.commit)
 
 if __name__ == "__main__":
     unittest.main()

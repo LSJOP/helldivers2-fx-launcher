@@ -2,7 +2,6 @@
 """Verify a GitHub release and synchronize the stable blocks in both READMEs."""
 import argparse
 import base64
-import datetime
 import hashlib
 import json
 import os
@@ -173,25 +172,33 @@ def replace_block(text, name, transform):
         raise ValueError(f"Expected one {name} block")
     return re.sub(pattern, lambda match: match[1] + transform(match[2]) + match[3], text, flags=re.S)
 
-def updated_readme(text, version, build, dmg, date):
-    def substitute(pattern, replacement, block, expected):
-        updated, count = re.subn(pattern, replacement, block)
-        if count != expected:
-            raise ValueError(f"Expected {expected} occurrences for {pattern}, found {count}")
-        return updated
-    def download(block):
-        block = substitute(r"Stable Release · v\d+\.\d+\.\d+", f"Stable Release · v{version}", block, 1)
-        return substitute(r"releases/latest/download/HD2FXNative-v\d+\.\d+\.\d+-macOS-arm64\.dmg",
-                          f"releases/latest/download/{dmg}", block, 2)
-    def install(block):
-        block = substitute(r"(`)[0-9]+\.[0-9]+\.[0-9]+(`)", rf"\g<1>{version}\2", block, 1)
-        return substitute(r"(build `|构建 `)[0-9]+(`)", rf"\g<1>{build}\2", block, 1)
-    def history(block):
-        block = substitute(r"\[v\d+\.\d+\.\d+ — \d{4}-\d{2}-\d{2}\]", f"[v{version} — {date}]", block, 1)
-        return substitute(r"(build `|构建 `)[0-9]+(`)", rf"\g<1>{build}\2", block, 1)
-    for name, transform in (("download", download), ("install", install), ("version", history)):
-        text = replace_block(text, name, transform)
+def updated_readme(text, version, build, dmg, commit):
+    if (not TAG.fullmatch(f"v{version}") or not re.fullmatch(r"[0-9]+", build)
+            or not re.fullmatch(r"[a-f0-9]{40}", commit)
+            or dmg != f"HD2FXNative-v{version}-macOS-arm64.dmg"):
+        raise ValueError("Invalid stable README fields")
+    tag_pattern = TAG.pattern
+    patterns = {
+        "version": (r'(<p align="center">Stable Release · )' + tag_pattern + r'(</p>)',
+                    lambda m: f"{m[1]}v{version}{m[5]}"),
+        "download": (r'(<p align="center"><a href=")' + re.escape(BASE)
+                     + r'/download/(?P<tag>v[0-9]+\.[0-9]+\.[0-9]+)/HD2FXNative-(?P=tag)-macOS-arm64\.dmg'
+                     + r'("><img src="docs/assets/download-dmg(?:-zh-CN)?\.png" width="192" alt="[^"<>]+"></a></p>)',
+                     lambda m: f"{m[1]}{BASE}/download/v{version}/{dmg}{m[3]}"),
+        "build": (r'(Build|构建) `[0-9]+` · \[(Release commit|发布提交) `(?P<short>[a-f0-9]{7})`\]\('
+                  + re.escape(BASE.removesuffix("/releases")) + r'/commit/(?P=short)[a-f0-9]{33}\)',
+                  lambda m: f"{m[1]} `{build}` · [{m[2]} `{commit[:7]}`]({BASE.removesuffix('/releases')}/commit/{commit})"),
+    }
+    for name, (pattern, replacement) in patterns.items():
+        def update(block):
+            match = re.fullmatch(pattern, block)
+            if not match:
+                raise ValueError(f"Unexpected content in stable {name} block")
+            return replacement(match)
+
+        text = replace_block(text, name, update)
     return text
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -218,19 +225,22 @@ def main():
                 raise ValueError("Public DMG download URL is unavailable")
             response.read(1)
     subprocess.run(["python3", "native-app/script/check_localization.py"], cwd=ROOT, check=True, stdout=subprocess.DEVNULL)
-    when = release.get("published_at")
-    date = datetime.datetime.fromisoformat(when.replace("Z", "+00:00")).astimezone(datetime.timezone(datetime.timedelta(hours=8))).date().isoformat() if when else datetime.date.today().isoformat()
-    changed = []
+    commit = run("git", "rev-parse", f"{release['tag_name']}^{{commit}}")
+    changes = {}
     for name in ("README.md", "README.zh-CN.md"):
         path = ROOT / name
         original = path.read_text()
-        updated = updated_readme(original, version, build, dmg, date)
+        updated = updated_readme(original, version, build, dmg, commit)
         if updated != original:
-            changed.append(name)
-            if args.write:
-                path.write_text(updated)
-                if updated_readme(path.read_text(), version, build, dmg, date) != updated:
-                    raise ValueError(f"README synchronization failed: {name}")
+            changes[path] = updated
+    for check in ("script/check_docs.py", "native-app/script/check_readme_screenshots.py"):
+        subprocess.run(["python3", check], cwd=ROOT, check=True)
+    if args.write:
+        if release["draft"] or release_for(None)["tag_name"] != release["tag_name"]:
+            raise ValueError("README updates require the published Latest release")
+        for path, updated in changes.items():
+            path.write_text(updated)
+    changed = [path.name for path in changes]
     if changed and not args.write:
         if not release["draft"]:
             raise ValueError("Stable README blocks are out of date: " + ", ".join(changed))

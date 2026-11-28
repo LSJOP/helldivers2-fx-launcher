@@ -1,0 +1,10 @@
+name: "Feature suggestion / 功能建议"
+description: "What would you like to do and how do you do it today? / 希望实现什么？目前如何操作？"
+body:
+  - type: textarea
+    id: details
+    attributes:
+      label: "Details / 详细信息"
+      description: "What would you like to do and how do you do it today? / 希望实现什么？目前如何操作？"
+    validations:
+      required: true

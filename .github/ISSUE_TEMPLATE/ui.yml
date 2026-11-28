@@ -1,0 +1,31 @@
+name: "Interface issue / 界面问题"
+description: "Which page, language, theme and window size show the issue? Include a redacted screenshot if possible. / 涉及哪个页面、语言、主题及窗口大小？可附脱敏截图。"
+body:
+  - type: textarea
+    id: details
+    attributes:
+      label: "Details / 详细信息"
+      description: "Which page, language, theme and window size show the issue? Include a redacted screenshot if possible. / 涉及哪个页面、语言、主题及窗口大小？可附脱敏截图。"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps and expected result / 操作步骤与预期结果"
+      description: "What did you do and what should happen? / 你执行了什么操作？预期是什么？"
+    validations:
+      required: true
+  - type: textarea
+    id: versions
+    attributes:
+      label: "Environment / 使用环境"
+      description: "Mac model, memory, macOS, FX, launcher version and build, graphics mode / Mac 型号、内存、macOS、FX、启动器版本及构建号、图形模式"
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: "Redacted diagnostics / 脱敏诊断"
+      description: "If relevant, copy the report from Logs. Remove passwords, keys, account names and personal paths. / 如适用，从日志复制报告，删除密码、密钥、账号名和个人路径。"
+    validations:
+      required: false

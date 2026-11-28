@@ -26,10 +26,20 @@ def check(root):
     except (KeyError,TypeError,AttributeError):return ['Invalid screenshot provenance records'],0
     reviewed=manifest.get('reviewed_ui_source_sha256',manifest.get('ui_source_sha256'))
     if reviewed and reviewed!=ui_fingerprint(root):errors.append('UI source changed since screenshot review; recapture visible changes or explicitly document/review unchanged UI')
-    for name,language in [('README.md','en'),('README.zh-CN.md','zh-CN')]:
-        path=root/name
-        if not path.is_file():errors.append(name+': missing README');continue
-        source=path.read_text()
+    english = root / 'README.md'
+    chinese = root / 'README.zh-CN.md'
+    if not english.is_file() or not chinese.is_file():
+        return ['Missing English or Chinese README'], 0
+    homepage = english.read_text()
+    standalone = chinese.read_text()
+    sections = homepage.split('\n## 简体中文\n')
+    if len(sections) != 2:
+        return ['Homepage requires English and Simplified Chinese sections'], 0
+    for name, language, source in (
+        ('README.md', 'en', sections[0]),
+        ('README.md', 'zh-CN', sections[1]),
+        ('README.zh-CN.md', 'zh-CN', standalone),
+    ):
         images=re.findall(r'!\[[^\]]*\]\(<?([^\s)>]+)>?(?:\s+"[^"]*")?\)',source)
         images+=re.findall(r'<img\b[^>]*\bsrc=[\"\']([^\"\']+)',source,re.I)
         for image in images:
@@ -59,8 +69,6 @@ def check(root):
                 except (ValueError, TypeError, AttributeError):
                     errors.append(name+': screenshot capture timestamp missing or invalid '+local)
                 if record.get('sha256')!=hashlib.sha256(target.read_bytes()).hexdigest():errors.append(name+': screenshot bytes changed since review '+local)
-        for other in ('README.md','README.zh-CN.md'):
-            if ']('+other+')' not in source:errors.append(name+': relative language link missing '+other)
     if count==0:errors.append('No localized README screenshots referenced; document missing captures explicitly')
     return errors,count
 

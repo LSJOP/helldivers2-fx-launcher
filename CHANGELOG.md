@@ -8,6 +8,8 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 
 ## Unreleased
 
+- Reorganize the GitHub homepage with v1.1.1 screenshots, scoped DX11/DX12 benchmark results and issue forms. Stable release verification updates the README version and direct DMG link.
+
 ## Releases
 
 ### v1.1.1 — 2026-11-29

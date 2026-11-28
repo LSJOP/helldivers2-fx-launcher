@@ -11,10 +11,14 @@ Checks (HD2_README_CHANGELOG_POLICY_V1):
 
 Exit 0 when all checks pass, 1 otherwise. Semantic consistency still needs human review.
 """
+from html.parser import HTMLParser
 import re
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
+
+from sync_stable_release import BASE, updated_readme
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -67,6 +71,97 @@ def has_link(readme, target):
         return False
 
 
+class BrandHTML(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.stack = []
+        self.roots = []
+        self.links = []
+        self.images = []
+        self.errors = []
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if not self.stack:
+            self.roots.append(tag)
+            if attrs.get("align") != "center":
+                self.errors.append("top-level brand elements must be centered")
+        if tag == "img":
+            self.images.append(attrs.get("src", ""))
+        elif tag in {"p", "h1", "a"}:
+            self.stack.append(tag)
+            if tag == "a":
+                self.links.append(attrs.get("href", ""))
+        else:
+            self.errors.append(f"unexpected brand HTML tag {tag}")
+
+    def handle_endtag(self, tag):
+        if self.stack and tag == self.stack[-1]:
+            self.stack.pop()
+        else:
+            self.errors.append(f"unmatched closing tag {tag}")
+
+    def handle_data(self, data):
+        if data.strip() and not self.stack:
+            self.errors.append("unwrapped brand text")
+
+
+def headings(source):
+    return {
+        re.sub(r"[^\w-]", "", value.lower().replace(" ", "-"))
+        for value in re.findall(r"(?m)^#{1,6} (.+)$", source)
+    }
+
+
+def check_readme(path):
+    source = path.read_text()
+    parts = re.split(r"(?m)(?=^## )", source, maxsplit=1)
+    if len(parts) != 2:
+        return ["README has no language section"]
+    header, body = parts
+    parser = BrandHTML()
+    parser.feed(header)
+    parser.close()
+    errors = parser.errors
+    if parser.stack or parser.roots != ["p", "h1", "p", "p", "p", "p", "p"]:
+        errors.append("expected seven separate, closed brand blocks")
+    language = ["#简体中文", "#english" if path == README_EN else "README.md#english"]
+    if parser.links[:2] != language:
+        errors.append("language navigation differs from the required anchors")
+    if len(parser.images) != 2 or parser.images[0] != "docs/assets/app-icon.png":
+        errors.append("expected an independent app icon and download image")
+    for value in parser.images + parser.links + re.findall(r"\]\(([^\s)]+)\)", body):
+        url = urlsplit(value)
+        if url.scheme or url.netloc:
+            continue
+        target = ROOT / unquote(url.path) if url.path else path
+        if not target.is_file():
+            errors.append(f"missing local path {value}")
+        elif url.fragment and target.suffix == ".md":
+            if unquote(url.fragment) not in headings(target.read_text()):
+                errors.append(f"missing anchor {value}")
+    try:
+        version = re.search(r"Stable Release · v([0-9.]+)", header)[1]
+        build, commit = re.search(r"`([0-9]+)` · .*?/commit/([a-f0-9]{40})", body).groups()
+        dmg = f"HD2FXNative-v{version}-macOS-arm64.dmg"
+        if updated_readme(source, version, build, dmg, commit) != source:
+            errors.append("stable version fields disagree")
+        if source.count(f"{BASE}/download/v{version}/{dmg}") != 1:
+            errors.append("expected a single direct DMG link")
+    except (AttributeError, TypeError, ValueError) as error:
+        errors.append(f"invalid stable field structure: {error}")
+    return errors
+
+
+def chinese_body(source):
+    _, marker, body = source.partition("\n## 简体中文\n")
+    if not marker:
+        return None
+    body = re.sub(r"<!-- stable-build:start -->.*?<!-- stable-build:end -->", "", body, flags=re.S)
+    body = body.replace("[查看正式构建号及发布提交](#changelog)", "")
+    return body.replace("[独立中文版](README.zh-CN.md#简体中文) · ", "").strip()
+
+
 def main():
     checks = []
 
@@ -117,6 +212,13 @@ def main():
     # 6. Referenced local changelog paths exist (redundant with #1, kept explicit).
     check("CHANGELOG path valid", CHANGELOG_EN.is_file())
     check("CHANGELOG.zh-CN path valid", CHANGELOG_ZH.is_file())
+
+    for path in (README_EN, README_ZH):
+        errors = check_readme(path)
+        check(f"{path.name} brand, anchors and local links", not errors, "; ".join(errors))
+    homepage_chinese = chinese_body(README_EN.read_text())
+    check("Simplified Chinese homepage copy matches standalone README",
+          homepage_chinese is not None and homepage_chinese == chinese_body(README_ZH.read_text()))
 
     failed = 0
     for name, ok, detail in checks:
