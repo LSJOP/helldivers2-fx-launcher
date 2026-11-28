@@ -126,7 +126,8 @@ enum GraphicsModeService {
             throw CoreError("FX_IDENTITY_UNVERIFIED")
         }
         let args = Array(fields[1...argc])
-        let argumentKeys = ["--cpus", "--mem", "--display", "--vulkan-driver", "--cmdline"]
+        let argumentKeys = ["--cpus", "--mem", "--display", "--vulkan-driver", "--cmdline",
+                            "--refresh", "--dpi", "--display-mm", "--mouse", "--pad", "--steam-client"]
         var overrides: [String] = []
         for key in argumentKeys {
             let matches = args.indices.filter { args[$0] == key }
@@ -138,7 +139,8 @@ enum GraphicsModeService {
                 overrides += [key, args[index + 1]]
             }
         }
-        for key in ["--perf-stats", "--no-share", "--no-share-library"] where args.contains(key) {
+        for key in ["--perf-stats", "--no-share", "--no-share-library", "--no-gamepad",
+                    "--lan-remote-play", "--no-lan-remote-play", "--no-sound"] where args.contains(key) {
             overrides.append(key)
         }
         let domainKey = "STEAMAC_DEFAULTS_DOMAIN="
@@ -152,13 +154,42 @@ enum GraphicsModeService {
         return (overrides, domain, drawables)
     }
 
-    private static func profile() throws {
+    // FX reads these from its active defaults domain whenever no CLI override
+    // exists. Mirror only non-path settings into the isolated DX11 domain.
+    static let inheritedFXPreferences = [
+        "cpus", "memMiB", "network", "lanRemotePlay", "steamClient", "followMacTime", "vulkanDriver",
+        "windowWidth", "windowHeight", "windowSizePreset", "retinaResolution", "openFullscreen",
+        "followWindowSize", "refreshRate", "dpiSource", "fixedDPI", "fixedWidthMM", "fixedHeightMM",
+        "metalHUD", "superResolution", "perfStats", "virtualPad", "padType", "swapABXY", "stickDeadzone",
+        "soundOutputUID", "soundVolume", "soundMute", "soundLatency", "muteInBackground", "pauseInBackground"
+    ]
+
+    static func configureProfile(inheriting sourceDomain: String?, destinationDomain: String = profileDomain) throws {
         let key = "profile.553850" as CFString
         let data = Data(#"{"env":"","gfx":"dxmt"}"#.utf8)
-        let domain = profileDomain as CFString
-        if let previous = CFPreferencesCopyValue(key, domain, kCFPreferencesCurrentUser, kCFPreferencesAnyHost) as? Data,
-           previous != data { throw CoreError("GRAPHICS_PROFILE_CONFLICT") }
-        CFPreferencesSetValue(key, data as CFData, domain, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        let domain = destinationDomain as CFString
+        if let previous = CFPreferencesCopyValue(key, domain, kCFPreferencesCurrentUser, kCFPreferencesAnyHost),
+           previous as? Data != data { throw CoreError("GRAPHICS_PROFILE_CONFLICT") }
+
+        var values: [String: Any] = [key as String: data]
+        var keysToRemove: [String] = []
+        if let sourceDomain, sourceDomain != destinationDomain {
+            let source = sourceDomain as CFString
+            guard CFPreferencesSynchronize(source, kCFPreferencesCurrentUser, kCFPreferencesAnyHost) else {
+                throw CoreError("GRAPHICS_PROFILE_CONFLICT")
+            }
+            let inherited = CFPreferencesCopyMultiple(inheritedFXPreferences as CFArray, source,
+                kCFPreferencesCurrentUser, kCFPreferencesAnyHost) as NSDictionary
+            for name in inheritedFXPreferences {
+                if let value = inherited[name], value is NSNumber || value is String {
+                    values[name] = value
+                } else {
+                    keysToRemove.append(name)
+                }
+            }
+        }
+        CFPreferencesSetMultiple(values as CFDictionary, keysToRemove as CFArray, domain,
+            kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
         guard CFPreferencesSynchronize(domain, kCFPreferencesCurrentUser, kCFPreferencesAnyHost) else {
             throw CoreError("GRAPHICS_PROFILE_CONFLICT")
         }
@@ -175,7 +206,9 @@ enum GraphicsModeService {
         arguments += record.launchOverrides ?? []
         if mode == .dx11 {
             try capability(fx)
-            try profile()
+            let source = record.launchOverrides.map { _ in record.originalPreferenceDomain ?? PerformanceDomain.name }
+            try configureProfile(inheriting: source)
+            arguments.removeAll { $0 == "--no-sound" }
             for flag in ["--no-share", "--no-share-library"] where !arguments.contains(flag) { arguments.append(flag) }
             arguments += ["--wmtr-lib", wmtr(fx).path]
         } else {

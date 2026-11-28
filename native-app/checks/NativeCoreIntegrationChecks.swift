@@ -1,4 +1,5 @@
 import Foundation
+import CoreFoundation
 
 // SwiftUI <-> Native Core contract and orchestration regression checks.
 // Exercises the real NativeCoreService surface; no FX/Guest/Steam/game is started.
@@ -26,6 +27,33 @@ struct NativeCoreIntegrationChecks {
         let cwd = FileManager.default.currentDirectoryPath
         setenv("HD2FX_LAUNCH_RESOURCES", cwd + "/Resources/launch", 1)
         defer { try? FileManager.default.removeItem(at: root) }
+
+        let suffix = UUID().uuidString
+        let sourceDomain = "local.hd2fx-check-source." + suffix
+        let destinationDomain = "local.hd2fx-check-dx11." + suffix
+        let sourceStore = CFPreferencesStore(domain: sourceDomain)
+        let destinationStore = CFPreferencesStore(domain: destinationDomain)
+        defer {
+            for domain in [sourceDomain, destinationDomain] {
+                let application = domain as CFString
+                let names = CFPreferencesCopyKeyList(application, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+                CFPreferencesSetMultiple(nil, names, application, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+                CFPreferencesSynchronize(application, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+            }
+        }
+        let settings: [String: JSONValue] = ["cpus": .number(6), "memMiB": .number(7168),
+            "windowWidth": .number(1440), "retinaResolution": .bool(false), "network": .bool(true)]
+        try! sourceStore.write(settings.mapValues(Optional.some).merging(
+            ["diskImage": .string("/fixture/original.img"), "sharedFolder": .string("/fixture/share")]) { _, value in value })
+        try! destinationStore.write(["refreshRate": .number(144), "unrelated": .string("preserved")])
+        try! GraphicsModeService.configureProfile(inheriting: sourceDomain, destinationDomain: destinationDomain)
+        let originalPreferences = try! sourceStore.read()
+        let isolatedPreferences = try! destinationStore.read()
+        ok(settings.allSatisfy { isolatedPreferences[$0.key] == $0.value && originalPreferences[$0.key] == $0.value },
+           "isolated graphics profile preserves CPU, memory, display and network preferences")
+        ok(isolatedPreferences["diskImage"] == nil && isolatedPreferences["sharedFolder"] == nil &&
+           isolatedPreferences["refreshRate"] == nil && isolatedPreferences["unrelated"] == .string("preserved"),
+           "isolated graphics profile excludes paths and clears only obsolete inherited preferences")
 
         // PROTOCOL_ERROR regression: get_logs contract now matches AppState validation.
         let logs = run("get_logs")
