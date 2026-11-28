@@ -216,7 +216,7 @@ struct NavigationCommands: Commands {
                         if option("--artwork-fixture-preview", fallback: "") == "failure" {
                             EnvironmentWorkflowProgressView(state: state, tasks: state.tasks, showIdle: true, showStepsInline: true)
                         } else if option("--artwork-fixture-preview", fallback: "") == "completion" {
-                            FirstRunSetupView(state: state, tasks: state.tasks, credentials: state.credentials)
+                            FirstRunSetupView(state: state, tasks: state.tasks)
                         } else {
                             DashboardView(state: state, tasks: state.tasks)
                         }

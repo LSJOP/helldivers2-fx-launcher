@@ -124,11 +124,9 @@ private extension Dictionary where Key == String, Value == JSONValue {
 struct LegacyOperationSheet: View {
     @ObservedObject var state: AppState
     let operation: String
-    @ObservedObject private var credentials: SessionCredentialManager
     @ObservedObject private var tasks: TaskManager
     init(state: AppState, operation: String) {
         self.state = state; self.operation = operation
-        self._credentials = ObservedObject(wrappedValue: state.credentials)
         self._tasks = ObservedObject(wrappedValue: state.tasks)
     }
     @Environment(\.dismiss) private var dismiss
@@ -180,9 +178,6 @@ struct LegacyOperationSheet: View {
                         Text(state.t("ui.195")).font(TacticalTypography.caption)
                     }
                 }
-                if ["connect_fx","inspect_guest_environment","start_steam","test_ssh","test_guest_sudo","restore_guest_ipv6","inspect_guest","launch_game","apply_performance","save_network_snapshot"].contains(operation) {
-                    CredentialInputFields(state: state, credentials: credentials, tasks: tasks, operation: operation)
-                }
                 if operation == "save_configuration" {
                     Text(state.operationResult["target"]?.text ?? state.t("ui.247")).textSelection(.enabled)
                     TacticalButton(title: state.t("ui.266"), symbol: "arrow.clockwise") { state.runOperation("read_configuration") }
@@ -206,7 +201,9 @@ struct LegacyOperationSheet: View {
                 if operation == "test_ssh" {
                     SSHDiagnosisView(state: state)
                 }
-                if let error = state.operationError {
+                if let error = state.operationError, AppState.credentialErrorCodes.contains(error.code) {
+                    CredentialSettingsLink(state: state, error: error)
+                } else if let error = state.operationError {
                     TacticalWarningBanner(text: error.message(state.languageCode), isError: true)
                     if let change = error.details["change"] {
                         Text(pretty(change)).font(TacticalTypography.log).textSelection(.enabled)
@@ -252,7 +249,6 @@ struct LegacyOperationSheet: View {
             }
             .task {
                 if operation == "save_configuration" { state.runOperation("read_configuration") }
-                else if !tasks.busy { await state.prepareCredentials() }
             }
     }
     private func pretty(_ value: JSONValue) -> String {
@@ -276,49 +272,27 @@ struct LegacyOperationSheet: View {
 }
 
 
-private struct CredentialInputFields: View {
-    @ObservedObject var state: AppState
-    @ObservedObject var credentials: SessionCredentialManager
-    @ObservedObject var tasks: TaskManager
-    let operation: String
-    @State private var expanded = false
-    var body: some View {
-        DisclosureGroup(state.t("ui.session.title"), isExpanded: $expanded) {
-            VStack(alignment: .leading, spacing: 10) {
-                SecureField(state.t("ui.305"), text: $credentials.password)
-                SecureField(state.t("ui.168"), text: $credentials.passphrase)
-                if operation == "test_guest_sudo" {
-                    SecureField(state.t("ui.304"), text: $credentials.sudoPassword)
-                    Button(state.t("ui.credentials.useSSHForSudo")) { credentials.useSSHPasswordForSudo() }
-                        .disabled(credentials.password.isEmpty)
-                }
-                Text(state.t("ui.session.policy"))
-                    .font(TacticalTypography.caption).foregroundStyle(.secondary)
-                Button(state.t("ui.067")) { state.forgetSavedCredentials() }
-            }.padding(.top, 8).disabled(tasks.busy)
-        }
-        .onAppear { expanded = ["test_ssh","test_guest_sudo"].contains(operation) || needsInput }
-        .onChange(of: state.operationError?.code) { if needsInput { expanded = true } }
-    }
-    private var needsInput: Bool { ["AUTH_REQUIRED","SSH_AUTH_FAILED","SUDO_AUTH_FAILED"].contains(state.operationError?.code ?? "") }
-}
-
 private struct CredentialManagementView: View {
     @ObservedObject var state: AppState
     @ObservedObject var credentials: SessionCredentialManager
     @ObservedObject var tasks: TaskManager
     @State private var password = ""
+    @State private var passphrase = ""
 
     var body: some View {
         TacticalPanel(number: "K", title: state.t("ui.session.title"), symbol: "key") {
             SecureField(state.t(credentials.saved.contains(.ssh) ? "ui.credentials.savedPlaceholder" : "ui.credentials.passwordPlaceholder"), text: $password)
+            if state.sshConfiguration["configuration"]?.object["ssh"]?.object["auth"]?.text == "key" {
+                SecureField(state.t("ui.168"), text: $passphrase)
+            }
             HStack {
                 Button(state.t("ui.credentials.connect")) {
-                    state.connectCredential(password)
+                    state.connectCredential(password, keyPassphrase: passphrase)
                 }
                 Button(state.t("ui.credentials.clear")) {
                     state.clearCurrentCredentials()
                     password = ""
+                    passphrase = ""
                     state.credentialConnectionStatus = "idle"
                     state.credentialConnectionError = nil
                 }
@@ -334,9 +308,8 @@ private struct CredentialManagementView: View {
             }
         }.disabled(tasks.busy)
             .onChange(of: state.credentialConnectionStatus) { status in
-                if status == "connected" { password = "" }
+                if status == "connected" { password = ""; passphrase = "" }
             }
-            .task { if !tasks.busy { await state.prepareCredentials() } }
     }
 }
 

@@ -4,7 +4,6 @@ import AppKit
 struct FirstRunSetupView: View {
     @ObservedObject var state: AppState
     @ObservedObject var tasks: TaskManager
-    @ObservedObject var credentials: SessionCredentialManager
     @Environment(\.colorScheme) private var scheme
     @State private var authorize = false
     @State private var fexAction: String?
@@ -120,11 +119,9 @@ struct FirstRunSetupView: View {
                 TacticalFlowArtwork(asset: "MOTR7Democracy") { welcomeContent }
             }
             TacticalPanel(number: "2", title: state.t("ui.setup.connect"), symbol: "key") {
-                SecureField(state.t("ui.305"), text: $credentials.password)
-                SecureField(state.t("ui.304"), text: $credentials.sudoPassword)
-                Button(state.t("ui.credentials.useSSHForSudo")) { credentials.useSSHPasswordForSudo() }
-                    .disabled(credentials.password.isEmpty || tasks.busy)
-                Text(state.t("ui.setup.credentials")).font(.caption)
+                TacticalButton(title: state.t("ui.credentials.openSettings"), symbol: "gearshape") {
+                    state.openCredentialSettings()
+                }
                 HStack {
                     Button(state.t("ui.setup.detect")) { state.firstRunAction("first_run_detect") }
                     Button(state.t("ui.setup.sudo")) { state.operationSelection = NativeOperation(method: "test_guest_sudo") }
@@ -352,10 +349,12 @@ struct EnvironmentWorkflowProgressView: View {
                     }
                 }
                 if let failure = workflow.failure {
-                    Text(["ARTIFACT_UNAVAILABLE", "ARTIFACT_UNAPPROVED"].contains(failure.code) && failure.details["component"]?.text == "fex"
-                         ? "FX · " + state.t("ui.setup.artifactUnavailable")
-                         : failure.message(state.languageCode))
-                        .foregroundStyle(.orange)
+                    if !AppState.credentialErrorCodes.contains(failure.code) {
+                        Text(["ARTIFACT_UNAVAILABLE", "ARTIFACT_UNAPPROVED"].contains(failure.code) && failure.details["component"]?.text == "fex"
+                             ? "FX · " + state.t("ui.setup.artifactUnavailable")
+                             : failure.message(state.languageCode))
+                            .foregroundStyle(.orange)
+                    }
                     DisclosureGroup(state.t("ui.setup.details")) {
                         Text(failure.code).font(.caption.monospaced())
                         Text(CoreJSON.encode(.object(failure.details))).font(.caption.monospaced()).textSelection(.enabled)

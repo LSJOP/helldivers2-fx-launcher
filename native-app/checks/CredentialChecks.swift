@@ -13,26 +13,26 @@ import Foundation
         try check(manager.status(.ssh) == .notProvided && manager.status(.sudo) == .notProvided, "independent absent states")
         await manager.prepare(for: "canonical-fx|hash|pid-start|config")
         manager.password = fake
-        try check(manager.status(.ssh) == .provided && manager.status(.sudo) == .notProvided, "input is provided, not verified")
-        manager.sudoPassword = fake + "-sudo"
-        try check(manager.status(.sudo) == .provided, "sudo input is independent")
+        try check(manager.status(.ssh) == .provided && manager.status(.sudo) == .provided, "one input supplies both challenges")
         let first = try manager.parameters(for: "canonical-fx|hash|pid-start|config")
-        try check(first["password"]?.text == fake && first["sudo_password"]?.text == fake + "-sudo", "separate fields reach native core")
+        try check(first["password"]?.text == fake && first["sudo_password"]?.text == fake, "one value reaches both native challenge fields")
         await manager.authenticated(.ssh, value: fake, target: "foreign-target")
         try check(!manager.reusable(.ssh), "foreign proof rejected")
         await manager.authenticated(.ssh, value: "stale-input", target: manager.scope!)
         try check(!manager.reusable(.ssh), "stale input proof rejected")
         await manager.authenticated(.ssh, value: fake, target: manager.scope!)
         try check(manager.status(.ssh) == .verified && manager.status(.sudo) == .provided, "SSH proof never verifies sudo")
-        await manager.authenticated(.sudo, value: fake + "-sudo", target: manager.scope!)
+        await manager.authenticated(.sudo, value: fake, target: manager.scope!)
         try check(manager.reusable(.sudo), "actual sudo proof marks sudo verified")
         try check(try manager.parameters(for: manager.scope!).count == 2, "same-session reuse without reentry")
         manager.password = fake + "-changed"
-        try check(manager.status(.ssh) == .provided && manager.reusable(.sudo), "editing invalidates only that role")
+        try check(manager.status(.ssh) == .provided && manager.status(.sudo) == .provided, "editing revokes both proofs")
         manager.reject(.sudo)
-        try check(manager.status(.sudo) == .failed && manager.sudoPassword.isEmpty, "rejected credential stops reuse")
-        manager.sudoPassword = fake + "-retry"
-        try check(manager.status(.sudo) == .provided, "fresh input can retry without infinite automatic retry")
+        let rejected = try manager.parameters(for: manager.scope!)
+        try check(manager.status(.sudo) == .failed && rejected["sudo_password"] == nil && rejected["password"] != nil,
+                  "sudo rejection suppresses sudo retry while keeping SSH usable")
+        await manager.acceptSharedPassword(fake + "-changed", target: manager.scope!)
+        try check(manager.status(.sudo) == .provided, "Settings confirmation enables a fresh sudo check")
         try manager.bindGuest("boot-a")
         try check(try manager.parameters(for: manager.scope!)["credential_guest_boot"]?.text == "boot-a", "verified boot bound to request")
         do { try manager.bindGuest("boot-b"); throw ErrorState("EXPECTED_FAILURE") }
@@ -47,31 +47,29 @@ import Foundation
         manager.password = fake
         do { _ = try manager.parameters(for: "target-c"); throw ErrorState("EXPECTED_FAILURE") }
         catch let e as ErrorState { try check(e.code == "CREDENTIAL_SCOPE_CHANGED" && manager.isEmpty, "scope mismatch blocks transmission") }
-        manager.password = fake; manager.sudoPassword = fake + "s"; manager.clear()
+        manager.password = fake; manager.clear()
         try check(manager.isEmpty && manager.guestBoot == nil && manager.scope == nil, "user clear invalidates all binding and authentication")
         var owned: SessionCredentialManager? = SessionCredentialManager(); weak var weakOwned = owned
         owned?.password = fake; owned = nil
         try check(weakOwned == nil, "no persistent manager owner after exit")
         let nextProcessModel = SessionCredentialManager()
         try check(nextProcessModel.isEmpty && !nextProcessModel.reusable(.ssh), "new process model cannot restore credentials")
-        let shared = SessionCredentialManager()
-        shared.password = fake
-        shared.useSSHPasswordForSudo()
-        try check(shared.sudoPassword == fake && !shared.reusable(.sudo), "explicit SSH password copy still requires sudo authentication")
-        shared.password = ""
-        shared.sudoPassword = "fixture-retained"
-        shared.useSSHPasswordForSudo()
-        try check(shared.sudoPassword == "fixture-retained", "empty SSH input cannot overwrite sudo input")
         let rebootManager = SessionCredentialManager()
-        await rebootManager.prepare(for: "fixture-reboot-target")
-        rebootManager.password = fake; rebootManager.sudoPassword = fake
+        await rebootManager.prepare(for: "fixture-reboot-target", savedTarget: "verified-fixture-disk")
+        rebootManager.password = fake
         let oldBoot = UUID().uuidString, newBoot = UUID().uuidString
         try rebootManager.bindGuest(oldBoot)
         await rebootManager.authenticated(.ssh, value: fake, target: "fixture-reboot-target")
         try rebootManager.acceptExpectedReboot(from: oldBoot, to: newBoot, target: "fixture-reboot-target")
         try check(rebootManager.password == fake && rebootManager.guestBoot == newBoot && !rebootManager.reusable(.ssh), "approved reboot retains memory input while revoking old authorization")
+        await rebootManager.authenticated(.ssh, value: fake, target: "fixture-reboot-target")
+        let observed = UUID().uuidString
+        try rebootManager.observeGuest(observed)
+        try check(rebootManager.password == fake && rebootManager.guestBoot == observed && !rebootManager.reusable(.ssh),
+                  "fresh proof of new boot on the same disk revokes live authorization")
+
         do {
-            try rebootManager.acceptExpectedReboot(from: newBoot, to: UUID().uuidString, target: "other-target")
+            try rebootManager.acceptExpectedReboot(from: observed, to: UUID().uuidString, target: "other-target")
             try check(false, "foreign target rejected")
         } catch { try check(rebootManager.isEmpty, "foreign reboot target clears credentials") }
         let redactor = CredentialRedactor(secrets: [fake])

@@ -38,7 +38,7 @@ struct EnvironmentView: View {
                 LegacyOperationsView(state: state, scope: "fx")
             }
             .accessibilityIdentifier("environment.fx-diagnostics")
-            SteamOSNetworkPanel(state: state, tasks: state.tasks, credentials: state.credentials)
+            SteamOSNetworkPanel(state: state, tasks: state.tasks)
             TacticalAdaptiveLayout(minimumWidth: 140, maximumColumns: 4) {
                 TacticalMetric(title: "macOS", value: state.value("get_system_info", "os_version"), symbol: "apple.logo")
                 TacticalMetric(title: state.t("ui.026"), value: state.value("get_system_info", "arch"), symbol: "cpu")
@@ -107,7 +107,6 @@ private extension Dictionary where Key == String, Value == JSONValue {
 private struct SteamOSNetworkPanel: View {
     @ObservedObject var state: AppState
     @ObservedObject var tasks: TaskManager
-    @ObservedObject var credentials: SessionCredentialManager
     @State private var details = false
     private var applying: Bool { tasks.busy && state.guiRecords["apply_steamos_ipv6"]?.status == .running }
     private var reading: Bool { tasks.busy && state.guiRecords["read_steamos_ipv6"]?.status == .running }
@@ -221,8 +220,6 @@ private struct SteamOSNetworkPanel: View {
                 ForEach((state.networkPlan["before"]?.object ?? [:]).keys.sorted(), id: \.self) { key in
                     TacticalInfoRow(title: key, value: (state.networkPlan["before"]?.object[key]?.text ?? "?") + " → " + (state.networkPlan["after"]?.object[key]?.text ?? "?"))
                 }
-                SecureField(state.t("ui.session.sudo"), text: $credentials.sudoPassword)
-                Text(state.t("ui.session.policy")).font(TacticalTypography.caption).foregroundStyle(.secondary)
                 HStack {
                     Button(state.t("ui.net.cancel")) { state.networkPlan = [:]; state.networkShowConfirmation = false }
                     Button(state.t("ui.net.apply")) { state.applyIPv6Plan() }.disabled(tasks.busy)

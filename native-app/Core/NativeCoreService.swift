@@ -125,7 +125,7 @@ actor NativeCoreService {
                 throw CoreError("CONFIRMATION_REQUIRED")
             }
             if let expected = params["credential_host_identity"]?.text {
-                guard try credentialTarget(params, context: context)["identity"]?.text == expected else { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
+                guard try credentialTarget(params, context: context, includeGuest: false)["identity"]?.text == expected else { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
             }
             let result = try dispatch(method, params: params, context: context, emit: emit)
             return CoreReply(result: result, observedAt: CoreClock.stamp(), requestID: requestID)
@@ -390,7 +390,8 @@ actor NativeCoreService {
                 "reason": .string("legacy_broad_profile_apply_disabled_use_scoped_performance_panel")]
     }
 
-    static func credentialTarget(_ params: [String: JSONValue], context: CoreContext) throws -> [String: JSONValue] {
+    static func credentialTarget(_ params: [String: JSONValue], context: CoreContext,
+                                 includeGuest: Bool = true) throws -> [String: JSONValue] {
         let (configuration, revision) = try ConfigurationService.read()
         guard let path = params["fx_path"]?.text, let identity = FXDiscoveryService.identity(of: path), identity.valid else { throw CoreError("FX_UNAVAILABLE") }
         let fx = URL(fileURLWithPath: identity.path)
@@ -399,19 +400,31 @@ actor NativeCoreService {
         let executable = LaunchService.normalizedExecutable(fx)
         let processes = rows.values.filter { LaunchService.normalizedCommand($0.command) == executable }
             .sorted { $0.pid < $1.pid }.map { "\($0.pid):\($0.ppid):\($0.start)" }.joined(separator: "|")
-        let key = CoreHash.sha256(Data((identity.path + "|" + digest + "|" + revision + "|" + processes).utf8))
+        let diskIdentity: String?
+        if !processes.isEmpty, let disk = try? GraphicsModeService.observedDisk(fx, rows: rows, context: context) {
+            diskIdentity = try? GraphicsModeService.id(ofDisk: disk)
+        } else if processes.isEmpty, let record = try GraphicsModeService.load(),
+                  record.fxPath == identity.path, record.executable == digest,
+                  (try? GraphicsModeService.id(ofDisk: record.disk)) == record.diskIdentity {
+            diskIdentity = record.diskIdentity
+        } else {
+            diskIdentity = nil
+        }
+        let key = CoreHash.sha256(Data((identity.path + "|" + digest + "|" + revision + "|" + processes + "|" + (diskIdentity ?? "")).utf8))
         let ssh = configuration["ssh"]?.object ?? [:]
         let persistentBinding: [String: JSONValue] = [
             "fx": .string(LaunchService.normalizedExecutable(fx)), "executable_sha256": .string(digest),
             "host": ssh["host"] ?? .null, "port": ssh["port"] ?? .null,
             "username": ssh["username"] ?? .null, "auth": ssh["auth"] ?? .null,
-            "identity_file": ssh["identity_file"] ?? .null]
-        let persistentKey = CoreHash.sha256(Data(CoreJSON.encode(.object(persistentBinding)).utf8))
+            "identity_file": ssh["identity_file"] ?? .null, "guest_disk": diskIdentity.map(JSONValue.string) ?? .null]
         var value: [String: JSONValue] = ["identity": .string(key), "revision": .string(revision),
-                                         "persistence_identity": .string(persistentKey)]
+                                         "fx_running": .bool(!processes.isEmpty)]
+        if diskIdentity != nil {
+            value["persistence_identity"] = .string(CoreHash.sha256(Data(CoreJSON.encode(.object(persistentBinding)).utf8)))
+        }
         let transport = SSHTransport.make(configuration)
         if !processes.isEmpty { _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context) }
-        if transport.masterPID(context: context) != nil {
+        if includeGuest, transport.masterPID(context: context) != nil {
             _ = try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context, requireCDP: false, allowPublisherNetwork: true)
             value["guest_boot"] = try GuestService.inspect(transport, context: context,
                 allowDXMT: try GraphicsModeService.load() != nil)["boot"]
