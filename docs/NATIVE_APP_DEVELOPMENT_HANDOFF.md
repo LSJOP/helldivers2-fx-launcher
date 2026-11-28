@@ -1,5 +1,7 @@
 # HD2FXNative 接续开发交接
 
+> 2026-11-29 · 候选 `2026112905` 完成回切 DX11、舰桥和前台播放信号验收。保留原 FX 偏好域中的 CPU、内存和窗口尺寸。此前 `2026112904` 同盘恢复后重新进入 DX12 舰桥。实体麦克风及双工仍待测，故障用户样本未复现。[详细证据](environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)
+
 > 2026-11-29 · 最终候选 `2026112904` 在隔离 FX 1.9.15 实机进入 DX11 舰桥，移动和菜单通过。完成设置页 SSH 认证、独立 sudo、App 重开后复用及同盘 DX12 恢复，最新渲染比例与其余非 TAA 设置逐字节保留。完整验收范围和未验证事项见[成功环境基准](environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)。
 
 > 2026-11-29 · v1.1.1 候选在 `dev/core`。基线 `ce92762` 直接继承 `5886b11`，正式核心差异为隔离 SSH 转发端口分配与重试。PR #22 冲突整合 `57f2e75` 的重合并差异集中在 Content、首配、日志和设置视图，SSH/sudo 的双角色服务已在此前存在。源码证据确认旧 Prefix 设置复用和重复检测，用户卡在过场后的原始原因仍未复现。[成功环境及接续记录](environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)
