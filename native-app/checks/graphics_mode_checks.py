@@ -18,13 +18,57 @@ class GraphicsChecks(unittest.TestCase):
                 MODULE["dx11_options"](invalid)
 
     def test_taa_edit_is_scoped(self):
-        original = "resolution = [1920 1080]\nrender_settings = {\n\tupscaling_method = 2\n}\nv_sync = false\n"
-        updated = MODULE["settings_text"](original)
+        original = ("resolution = [1920 1080]\r\nrender_settings = {\r\n\tupscaling_method = 2\r\n"
+                    "\trender_resolution_factor_index = 3\r\n}\r\nv_sync = false\r\n")
+        updated = MODULE["edit_taa"](original, "0")
         self.assertEqual(updated, original.replace("method = 2", "method = 0"))
-        self.assertEqual(MODULE["settings_text"](updated), updated)
+        self.assertEqual(MODULE["edit_taa"](updated, "2"), original)
         for invalid in ("", original + "upscaling_method = 1\n"):
             with self.assertRaises(MODULE["Refused"]):
-                MODULE["settings_text"](invalid)
+                MODULE["edit_taa"](invalid, "0")
+
+    def test_restore_preserves_new_steam_options(self):
+        original = "FEX_DISKCACHE=0 %command% --custom"
+        dx11 = MODULE["dx11_options"](original)
+        record = {"launch": original, "launch_dxmt": dx11}
+        self.assertEqual(MODULE["restore_options"](dx11, record), original)
+        self.assertEqual(MODULE["restore_options"](dx11 + ' --new "two words"', record),
+                         original + ' --new "two words"')
+        with self.assertRaises(MODULE["Refused"]):
+            MODULE["restore_options"]("--use-d3d11 %command% --custom", record)
+
+    def test_config_transfer_retries_after_rename_and_retains_both_versions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source, target, receipt = [root / name for name in ("current", "parked", "receipt")]
+            source.write_text("latest settings")
+            target.write_text("previous settings")
+            before = [MODULE["sha"](path) for path in (source, target)]
+            staging = root / "staging"
+            # Simulate the state after the atomic exchange and before receipt completion.
+            source.rename(staging)
+            target.rename(source)
+            staging.rename(target)
+            record = {"settings_dx12": before}
+            MODULE["carry_settings"](source, target, receipt, record, "dx12")
+            self.assertEqual(record["settings_dx12"], "complete")
+            self.assertEqual((target.read_text(), source.read_text()), ("latest settings", "previous settings"))
+            target.write_text("changed after completion")
+            MODULE["carry_settings"](source, target, receipt, record, "dx12")
+            self.assertEqual(target.read_text(), "changed after completion")
+
+    def test_config_handoff_to_empty_prefix_and_conflict(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source, target, receipt = [root / name for name in ("current", "parked", "receipt")]
+            source.write_text("latest")
+            MODULE["carry_settings"](source, target, receipt, {}, "dx11")
+            self.assertFalse(source.exists())
+            self.assertEqual(target.read_text(), "latest")
+            source.write_text("edited")
+            with self.assertRaises(MODULE["Refused"]):
+                MODULE["carry_settings"](source, target, receipt, {"settings_dx12": ["unknown", None]}, "dx12")
+            self.assertEqual((source.read_text(), target.read_text()), ("edited", "latest"))
 
     def test_only_default_virtio_output_is_selected(self):
         selected = {"name": "pci-virtio-card", "active_profile": "duplex", "profiles": {
@@ -71,6 +115,10 @@ class GraphicsChecks(unittest.TestCase):
         try:
             def set_mute(*args):
                 nonlocal mute
+                if args[-1] == "sources":
+                    return json.dumps([{"name": "analog.monitor", "index": 1}])
+                if args[-1] == "source-outputs":
+                    return json.dumps([{"source": 1}])
                 commands.append(args)
                 mute = True
 

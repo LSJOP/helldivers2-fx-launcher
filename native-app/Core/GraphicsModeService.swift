@@ -23,6 +23,8 @@ enum GraphicsModeService {
         let revision: String
         var stage: Stage
         var shutdownIdentity: String?
+        var launchOverrides: [String]?
+        var originalPreferenceDomain: String?
     }
 
     enum Stage: String, Codable { case preparing, armed, restoring }
@@ -63,7 +65,7 @@ enum GraphicsModeService {
         try CoreFS.atomicWrite(JSONEncoder().encode(state), to: receipt)
     }
 
-    private static func id(ofDisk path: String) throws -> String {
+    static func id(ofDisk path: String) throws -> String {
         let attributes = try FileManager.default.attributesOfItem(atPath: path)
         guard attributes[.type] as? FileAttributeType == .typeRegular,
               let device = attributes[.systemNumber] as? NSNumber,
@@ -73,8 +75,7 @@ enum GraphicsModeService {
         return "\(device):\(inode)"
     }
 
-    private static func observedDisk(_ fx: URL, context: CoreContext) throws -> String {
-        let table = try LaunchService.processTable(context: context)
+    static func observedDisk(_ fx: URL, rows table: [Int: LaunchService.ProcessRow], context: CoreContext) throws -> String {
         let executable = LaunchService.normalizedExecutable(fx)
         let pid = try LaunchService.fxSupervisorPID(rows: table, executable: executable)
         let children = table.values.filter { $0.ppid == pid && LaunchService.normalizedCommand($0.command) == executable }
@@ -103,6 +104,54 @@ enum GraphicsModeService {
         return path
     }
 
+    private static func observedDisk(_ fx: URL, context: CoreContext) throws -> String {
+        try observedDisk(fx, rows: LaunchService.processTable(context: context), context: context)
+    }
+
+    private static func observedLaunch(_ fx: URL, context: CoreContext) throws -> (overrides: [String], domain: String?, drawables: String?) {
+        let executable = LaunchService.normalizedExecutable(fx)
+        let pid = try LaunchService.fxSupervisorPID(rows: LaunchService.processTable(context: context), executable: executable)
+        var mib = [CTL_KERN, KERN_PROCARGS2, Int32(pid)]
+        var size = 0
+        guard sysctl(&mib, 3, nil, &size, nil, 0) == 0, size > 4, size <= CoreLimits.maxOutput else {
+            throw CoreError("FX_IDENTITY_UNVERIFIED")
+        }
+        var bytes = [UInt8](repeating: 0, count: size)
+        guard sysctl(&mib, 3, &bytes, &size, nil, 0) == 0, size > 4 else {
+            throw CoreError("FX_IDENTITY_UNVERIFIED")
+        }
+        let argc = bytes.withUnsafeBytes { Int($0.loadUnaligned(as: Int32.self)) }
+        let fields = bytes[4..<size].split(separator: 0).map { String(decoding: $0, as: UTF8.self) }
+        guard argc >= 1, fields.count > argc, LaunchService.normalizedCommand(fields[1]) == executable else {
+            throw CoreError("FX_IDENTITY_UNVERIFIED")
+        }
+        let args = Array(fields[1...argc])
+        let argumentKeys = ["--cpus", "--mem", "--display", "--vulkan-driver", "--cmdline"]
+        var overrides: [String] = []
+        for key in argumentKeys {
+            let matches = args.indices.filter { args[$0] == key }
+            guard matches.count <= 1 else { throw CoreError("GRAPHICS_PROFILE_CONFLICT") }
+            if let index = matches.first {
+                guard index + 1 < args.count, !args[index + 1].hasPrefix("--") else {
+                    throw CoreError("GRAPHICS_PROFILE_CONFLICT")
+                }
+                overrides += [key, args[index + 1]]
+            }
+        }
+        for key in ["--perf-stats", "--no-share", "--no-share-library"] where args.contains(key) {
+            overrides.append(key)
+        }
+        let domainKey = "STEAMAC_DEFAULTS_DOMAIN="
+        let domain = fields.dropFirst(argc + 1).first(where: { $0.hasPrefix(domainKey) })
+            .map { String($0.dropFirst(domainKey.count)) }
+        guard domain == nil || domain?.range(of: #"^[a-zA-Z0-9.-]{1,128}$"#, options: .regularExpression) != nil else {
+            throw CoreError("GRAPHICS_PROFILE_CONFLICT")
+        }
+        let drawables = fields.dropFirst(argc + 1).first(where: { $0.hasPrefix("WMTR_DRAWABLES=") })
+            .map { String($0.dropFirst("WMTR_DRAWABLES=".count)) }
+        return (overrides, domain, drawables)
+    }
+
     private static func profile() throws {
         let key = "profile.553850" as CFString
         let data = Data(#"{"env":"","gfx":"dxmt"}"#.utf8)
@@ -121,17 +170,24 @@ enum GraphicsModeService {
         guard !rows.values.contains(where: { LaunchService.normalizedCommand($0.command) == LaunchService.normalizedExecutable(fx) }) else {
             throw CoreError("FX_ALREADY_RUNNING")
         }
-        var arguments = LaunchService.launchArguments(transport: transport)
-        guard !arguments.isEmpty else { throw CoreError("GVPROXY_UNAVAILABLE") }
+        guard let wrapper = LaunchResources.wrapper else { throw CoreError("GVPROXY_UNAVAILABLE") }
+        var arguments = ["--gvproxy", wrapper.path, "--ssh-port", String(transport.settings.port)]
+        arguments += record.launchOverrides ?? []
         if mode == .dx11 {
             try capability(fx)
             try profile()
-            arguments.removeAll { $0 == "--no-wmtr" }
-            arguments += ["--no-share", "--no-share-library", "--wmtr-lib", wmtr(fx).path]
+            for flag in ["--no-share", "--no-share-library"] where !arguments.contains(flag) { arguments.append(flag) }
+            arguments += ["--wmtr-lib", wmtr(fx).path]
+        } else {
+            arguments.append("--no-wmtr")
         }
         arguments += ["--disk", record.disk, "--disk", fx.appendingPathComponent("Contents/Resources/steamac-layer.img").path + ":ro"]
-        let environment = mode == .dx11
-            ? ["--env", "STEAMAC_DEFAULTS_DOMAIN=\(profileDomain)", "--env", "WMTR_DRAWABLES=3"] : []
+        var environment: [String] = []
+        if mode == .dx11 {
+            environment = ["--env", "STEAMAC_DEFAULTS_DOMAIN=\(profileDomain)", "--env", "WMTR_DRAWABLES=3"]
+        } else if let domain = record.originalPreferenceDomain {
+            environment = ["--env", "STEAMAC_DEFAULTS_DOMAIN=\(domain)"]
+        }
         let opened = try CoreProcess.run("/usr/bin/open", ["-a", fx.path] + environment + ["--args"] + arguments,
                                          timeout: 20, context: request.context)
         guard opened.status == 0 else { throw CoreError("FX_START_FAILED") }
@@ -170,6 +226,7 @@ enum GraphicsModeService {
               let source = try? String(contentsOf: url, encoding: .utf8), !source.contains("\nHD2FX_GRAPHICS_PROGRAM\n") else {
             throw CoreError("GRAPHICS_WORKER_UNAVAILABLE")
         }
+        context.record("graphics_" + operation)
         let command = "python3 - \(operation) \(boot) <<'HD2FX_GRAPHICS_PROGRAM'\n" + source + "\nHD2FX_GRAPHICS_PROGRAM\n"
         let result = try transport.run(command, timeout: 200, context: context)
         let state = try GuestService.parse(result.stdout, expected: "GRAPHICS_TRANSACTION_FAILED")
@@ -241,8 +298,10 @@ enum GraphicsModeService {
         if record == nil {
             guard runningMode == .dx12 else { throw CoreError("GRAPHICS_RECOVERY_REQUIRED") }
             let path = try observedDisk(fx, context: request.context)
+            let original = try observedLaunch(fx, context: request.context)
             record = Transaction(fxPath: fx.path, disk: path, diskIdentity: try id(ofDisk: path),
-                                 machine: machine, executable: executable, revision: revision, stage: .preparing)
+                                 machine: machine, executable: executable, revision: revision, stage: .preparing,
+                                 launchOverrides: original.overrides, originalPreferenceDomain: original.domain)
             try save(record!)
         }
         guard var active = record else { throw CoreError("GRAPHICS_RECOVERY_REQUIRED") }
@@ -295,10 +354,6 @@ enum GraphicsModeService {
             return restored
         }
 
-        stage("VerifyingDXMT")
-        var result = try worker("verify", boot: session.boot, transport: transport, context: request.context)
-        guard result["machine"]?.text == active.machine else { throw CoreError("TARGET_CHANGED") }
-        if initialBoot != session.boot { result["previous_boot"] = .string(initialBoot) }
         if launch {
             stage("StartingSteam")
             do {
@@ -308,6 +363,20 @@ enum GraphicsModeService {
             } catch let failure as CoreError where failure.code == "VM_RECONNECT_TIMEOUT" {
                 throw CoreError("GAME_START_FAILED", ["reason": .string("steam_login_not_observed")])
             }
+        }
+        // Steam can apply cloud configuration while signing in. Check the
+        // effective settings after that step and before dispatching the game.
+        stage("VerifyingDXMT")
+        let hostGraphics = try observedLaunch(fx, context: request.context)
+        guard hostGraphics.domain == profileDomain, hostGraphics.drawables == "3" else {
+            throw CoreError("GRAPHICS_PROFILE_CONFLICT")
+        }
+        var result = try worker("verify", boot: session.boot, transport: transport, context: request.context)
+        guard result["machine"]?.text == active.machine else { throw CoreError("TARGET_CHANGED") }
+        if initialBoot != session.boot { result["previous_boot"] = .string(initialBoot) }
+        result["wmtr_drawables"] = .number(3)
+        result["wmtr_sha256"] = .string(wmtHash)
+        if launch {
             _ = try GuestService.verify(transport, session: session, context: request.context, allowDXMT: true) {
                 try LaunchService.hostIdentity(fx: fx, gvproxy: network, transport: transport, context: request.context)
             }
@@ -319,7 +388,12 @@ enum GraphicsModeService {
             result["game_process_count"] = .number(Double(count))
             let runtime = try? worker("runtime", boot: session.boot, transport: transport, context: request.context)
             try request.context.check()
-            result["renderer"] = runtime?["renderer"] ?? .string("unverified")
+            let fields = ["renderer", "actual_graphics_argument", "dxmt_d3d11_sha256", "dxmt_winemetal_sha256",
+                          "d3d_feature_level", "wmtr_connection_observed", "render_device_lost", "capture_timeout_200ms",
+                          "out_of_memory", "wine_exception", "fex_assertion", "shader_failure",
+                          "capture_streams", "non_monitor_capture_streams", "game_capture_streams"]
+            for field in fields { result[field] = runtime?[field] ?? result[field] }
+            if result["renderer"] == nil { result["renderer"] = .string("unverified") }
         }
         return result
     }

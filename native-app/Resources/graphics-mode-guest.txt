@@ -1,4 +1,5 @@
 """Fixed SSH worker for the verified FX 1.9.15 graphics layout."""
+import ctypes
 import fcntl
 import hashlib
 import json
@@ -99,22 +100,91 @@ def select_vdf(steam, parse):
     return choices[0]
 
 
-def dx11_options(options):
+def launch_words(options):
     lexer = shlex.shlex(options, posix=True, punctuation_chars=";&|")
     lexer.whitespace_split = True
     lexer.commenters = ""
     words = list(lexer)
-    require(words.count("%command%") == 1 and "--use-d3d11" not in words and
+    require(words.count("%command%") == 1 and
             not any(set(word) <= set(";&|") for word in words) and "\n" not in options,
             "steam_launch_command_unverified")
+    return words
+
+
+def dx11_options(options):
+    require("--use-d3d11" not in launch_words(options), "steam_launch_command_unverified")
     return options.rstrip() + " --use-d3d11"
 
 
-def settings_text(contents):
-    matches = list(re.finditer(r"(?m)^([ \t]*upscaling_method[ \t]*=[ \t]*)([0-9]+)([ \t]*)$", contents))
-    require(len(matches) == 1, "game_antialias_slot_unverified")
+def restore_options(options, record):
+    if options == record["launch_dxmt"]:
+        return record["launch"]
+    words = launch_words(options)
+    if "--use-d3d11" not in words:
+        return options
+    matches = list(re.finditer(r"(?<!\S)--use-d3d11(?=\s|$)", options))
+    require(words.count("--use-d3d11") == len(matches) == 1 and
+            words.index("--use-d3d11") > words.index("%command%"), "steam_settings_changed")
     hit = matches[0]
-    return contents[:hit.start(2)] + "0" + contents[hit.end(2):]
+    return options[:hit.start() - 1] + options[hit.end():]
+
+
+def taa_field(contents):
+    matches = list(re.finditer(r"(?m)^([ \t]*upscaling_method[ \t]*=[ \t]*)([0-9]+)([ \t]*\r?)$", contents))
+    require(len(matches) <= 1, "game_antialias_slot_unverified")
+    return matches[0] if matches else None
+
+
+def read_config(path):
+    return path.read_bytes().decode("utf-8") if path.is_file() else None
+
+
+def edit_taa(contents, value):
+    if contents is None:
+        require(value == "0", "game_antialias_slot_unverified")
+        return "render_settings = {\n\tupscaling_method = 0\n}\n"
+    hit = taa_field(contents)
+    require(hit is not None, "game_antialias_slot_unverified")
+    if value is None:
+        end = hit.end() + int(contents[hit.end():].startswith("\n"))
+        return contents[:hit.start()] + contents[end:]
+    return contents[:hit.start(2)] + value + contents[hit.end(2):]
+
+
+def exchange_settings(source, target):
+    if not target.exists():
+        source.rename(target)
+        return
+    exchange = ctypes.CDLL(None, use_errno=True).renameat2
+    exchange.argtypes = (ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint)
+    # RENAME_EXCHANGE retains both files and changes their names atomically.
+    if exchange(-100, os.fsencode(source), -100, os.fsencode(target), 2) != 0:
+        raise OSError(ctypes.get_errno(), "settings exchange failed")
+
+
+def carry_settings(source, target, receipt, record, stage):
+    key = "settings_" + stage
+    transfer = record.get(key)
+    if transfer == "complete":
+        return
+    if not target.parent.exists() and source.is_file():
+        target.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
+    current = [sha(path) if path.is_file() else None for path in (source, target)]
+    if transfer is None:
+        transfer = current
+        record[key] = transfer
+        write(receipt, json.dumps(record))
+    if transfer[0] is not None and current != transfer[::-1]:
+        require(current == transfer, "game_settings_changed_during_transfer")
+        exchange_settings(source, target)
+        for parent in {source.parent, target.parent}:
+            fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+    record[key] = "complete"
+    write(receipt, json.dumps(record))
 
 
 def audio_card():
@@ -129,7 +199,10 @@ def audio_card():
     require(len(cards) == 1 and "virtio" in name.lower(), "audio_card_not_virtio")
     card = cards[0]
     profiles = [key for key, item in card["profiles"].items()
-                if item["sinks"] > 0 and item["sources"] == 0 and item["available"] and key.startswith("output:")]
+                if item["sinks"] > 0 and item["sources"] == 0 and
+                item["available"] in (True, "yes", "unknown") and key.startswith("output:")]
+    if "output:stereo-fallback" in profiles:
+        profiles = ["output:stereo-fallback"]
     require(len(profiles) == 1, "audio_output_profile_unverified")
     monitor = sink["monitor_source"]
     sources = [item for item in json.loads(run("pactl", "-f", "json", "list", "sources"))
@@ -152,6 +225,77 @@ def apply_output_audio(record):
     if not muted:
         run("pactl", "set-source-mute", monitor, "1")
         require(audio_card()[4], "audio_monitor_not_muted")
+    return {"audio_profile": output, "playback_monitor_muted": True, **capture_metrics()}
+
+
+def capture_metrics():
+    try:
+        sources = json.loads(run("pactl", "-f", "json", "list", "sources"))
+        streams = json.loads(run("pactl", "-f", "json", "list", "source-outputs"))
+        monitor_indexes = {source["index"] for source in sources if source.get("monitor_of_sink") is not None}
+        return {"capture_streams": len(streams),
+                "non_monitor_capture_streams": sum(stream["source"] not in monitor_indexes for stream in streams),
+                "game_capture_streams": sum(stream.get("properties", {}).get("application.name") == "HELLDIVERS 2"
+                                            for stream in streams)}
+    except (OSError, Refused, ValueError, KeyError, subprocess.SubprocessError):
+        return {}
+
+
+def proton_log_signals(pid, home):
+    """Return fixed classifications from this game process's recent Proton log."""
+    process = Path("/proc") / pid
+    try:
+        # Linux /proc stat field 22 is the start time since boot in clock ticks.
+        ticks = int((process / "stat").read_text().rsplit(")", 1)[1].split()[19])
+        boot_epoch = time.time() - float(Path("/proc/uptime").read_text().split()[0])
+        booted_at = boot_epoch + ticks / os.sysconf("SC_CLK_TCK")
+        entries = (process / "environ").read_bytes().split(b"\0")
+        directory = next((os.fsdecode(item.split(b"=", 1)[1]) for item in entries
+                          if item.startswith(b"PROTON_LOG_DIR=")), str(home))
+        prefix = Path(directory).resolve()
+        if not any(prefix.is_relative_to(root) for root in (home, Path("/tmp"))):
+            return {}
+        log = prefix / "steam-553850.log"
+        if log.is_symlink() or not log.is_file() or log.stat().st_mtime < booted_at:
+            return {}
+        with log.open("rb") as file:
+            file.seek(max(0, log.stat().st_size - 131_072))
+            tail = file.read(131_072).decode("utf-8", errors="replace")
+    except (OSError, ValueError, IndexError):
+        return {}
+    patterns = {
+        "wmtr_connection_observed": r"wmtr: connected:",
+        "render_device_lost": r"device lost|VK_ERROR_DEVICE_LOST",
+        "capture_timeout_200ms": r"capture start exceeded 200 ms",
+        "out_of_memory": r"out of memory|oom.kill",
+        "wine_exception": r"Unhandled exception|Unhandled page fault",
+        "fex_assertion": r"FEX[^\n]{0,80}assert",
+        "shader_failure": r"shader[^\n]{0,80}(?:compilation failed|timed out)",
+    }
+    results = {key: len(re.findall(pattern, tail, re.IGNORECASE)) for key, pattern in patterns.items()}
+    if match := re.search(r"Using feature level D3D_FEATURE_LEVEL_(11_[01]|12_[012])\b", tail):
+        results["d3d_feature_level"] = match.group(1).replace("_", ".")
+    return results
+
+
+def restore_audio(record):
+    card, current, _output, monitor, muted = audio_card()
+    if card != record["card"] or monitor != record["monitor"] or current not in (record["audio"], record["output"]):
+        return "user_audio_preserved"
+    if current != record["audio"]:
+        run("pactl", "set-card-profile", card, record["audio"])
+        card, current, _output, monitor, muted = audio_card()
+        require(card == record["card"] and current == record["audio"], "audio_profile_not_restored")
+        if monitor != record["monitor"]:
+            return "user_audio_preserved"
+        # The profile switch may rebuild the monitor in its default state.
+        changed_profile = True
+    else:
+        changed_profile = False
+    if (muted or changed_profile) and muted != record["monitor_mute"]:
+        run("pactl", "set-source-mute", monitor, "1" if record["monitor_mute"] else "0")
+        require(audio_card()[4] == record["monitor_mute"], "audio_monitor_not_restored")
+    return "restored"
 
 
 def dxmt_loaded(pid, metal, dll):
@@ -270,6 +414,39 @@ def main(action, expected_boot):
     def prefix_owned(path):
         return path.is_dir() and not path.is_symlink() and (path / ".hd2fx-dx11").is_file()
 
+    def game_config(prefix):
+        return mutable_path(prefix / GAME_CONFIG, home)
+
+    def enforce_taa(path):
+        contents = read_config(path)
+        hit = taa_field(contents or "")
+        if hit is None and contents is not None:
+            raise Refused("game_antialias_slot_unverified")
+        before = hit.group(2) if hit else None
+        if "taa_before" not in record or before not in (None, "0"):
+            original = None
+            if before == "0" and record.get("settings_dx11") is None and prefix_owned(live):
+                original = taa_field(read_config(game_config(saved)) or "")
+            record["taa_before"] = original.group(2) if original else before
+            write(receipt, json.dumps(record))
+        if before != "0":
+            path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            write(path, edit_taa(contents, "0"))
+
+    def restore_taa(path):
+        contents = read_config(path)
+        hit = taa_field(contents or "")
+        if hit is None or hit.group(2) != "0":
+            return
+        if "taa_before" in record:
+            before = record["taa_before"]
+        else:
+            # v1.1.0 prepared a DX11 copy and kept the DX12 file intact.
+            original = taa_field(read_config(game_config(saved)) or "")
+            before = original.group(2) if original else None
+        if before != "0":
+            write(path, edit_taa(contents, before))
+
     lock = (data / "lock").open("a")
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     record = json.loads(receipt.read_text()) if receipt.exists() else None
@@ -315,15 +492,7 @@ def main(action, expected_boot):
         if not prefix_owned(live) and not parked.exists():
             with tempfile.TemporaryDirectory(dir=data) as root:
                 fresh = Path(root) / "prefix"
-                settings = (live / GAME_CONFIG) if record["original_prefix"] and live.exists() else saved / GAME_CONFIG
                 fresh.mkdir()
-                out = fresh / GAME_CONFIG
-                out.parent.mkdir(parents=True)
-                # Keep user preferences but build a fresh Wine prefix for the experimental tool.
-                if settings.is_file():
-                    write(out, settings_text(settings.read_text()))
-                else:
-                    write(out, "render_settings = {\n\tupscaling_method = 0\n}\n")
                 write(fresh / ".hd2fx-dx11", "1\n")
                 fresh.rename(parked)
 
@@ -333,6 +502,12 @@ def main(action, expected_boot):
         require(str(path) == record["local"] and list(key) == record["key"] and
                 options in (record["launch"], record["launch_dxmt"]) and
                 mapping in (record["mapping"], expected_mapping), "steam_settings_changed")
+        if not prefix_owned(live):
+            require(prefix_owned(parked), "prefix_recovery_required")
+            if record["original_prefix"]:
+                carry_settings(game_config(saved if saved.exists() else live), game_config(parked),
+                               receipt, record, "dx11")
+            enforce_taa(game_config(parked))
         if record["original_prefix"] and not saved.exists():
             require(live.is_dir() and not prefix_owned(live), "prefix_recovery_required")
             live.rename(saved)
@@ -356,41 +531,53 @@ def main(action, expected_boot):
         path, key, options, mapping = steam_values()
         expected_mapping = {**record["mapping"], "name": TOOL}
         require(str(path) == record["local"] and list(key) == record["key"] and
-                options in (record["launch"], record["launch_dxmt"]) and
                 mapping in (record["mapping"], expected_mapping), "steam_settings_changed")
-        card, current, output, monitor, _muted = audio_card()
-        require(card == record["card"] and current in (record["audio"], record["output"]), "audio_profile_changed")
-        if current != record["audio"]:
-            run("pactl", "set-card-profile", card, record["audio"])
-        current_audio = audio_card()
-        require(current_audio[1] == record["audio"] and current_audio[3] == record["monitor"], "audio_profile_not_restored")
-        run("pactl", "set-source-mute", current_audio[3], "1" if record["monitor_mute"] else "0")
-        require(audio_card()[4] == record["monitor_mute"], "audio_monitor_not_restored")
+        restored_options = restore_options(options, record)
         # Leave scoped FX hooks armed until a Vulkan boot, or a Steam autostart could
         # run the global DXMT hook on the just-restored prefix before FX has quit.
         if gfx == "dxmt":
             record["phase"] = "restoring"
             write(receipt, json.dumps(record))
             return {"state": "restoring", "boot": boot, "machine": machine}
+        try:
+            audio = restore_audio(record)
+        except (Refused, OSError, ValueError, KeyError, subprocess.SubprocessError):
+            audio = "audio_restore_unverified"
+        require(audio != "audio_restore_unverified", audio)
+        # A cancelled prepare can have transferred settings before moving either prefix.
+        # Retry the recorded exchange first, then use the same field-level restore.
+        if record.get("settings_dx11") not in (None, "complete"):
+            carry_settings(game_config(saved if saved.exists() else live), game_config(parked),
+                           receipt, record, "dx11")
+        if prefix_owned(live) or record.get("settings_dx11") == "complete" or "taa_before" in record:
+            dx11 = live if prefix_owned(live) else parked
+            if record.get("settings_dx12") is None and ("taa_before" in record or record.get("settings_dx11") is None):
+                restore_taa(game_config(dx11))
+            if record.get("settings_dx12") != "complete":
+                dx12 = saved if saved.exists() or not record["original_prefix"] else live
+                carry_settings(game_config(dx11), game_config(dx12), receipt, record, "dx12")
         if prefix_owned(live):
             require(not parked.exists(), "prefix_recovery_required")
             live.rename(parked)
         if saved.exists():
-            require(record["original_prefix"] and not live.exists(), "prefix_recovery_required")
+            require(not live.exists(), "prefix_recovery_required")
             saved.rename(live)
-        require(live.exists() == record["original_prefix"] and not prefix_owned(live), "prefix_restore_unverified")
-        steam_set(path, key, record["launch"], record["mapping"])
-        require(steam_values()[2:] == (record["launch"], record["mapping"]), "steam_restore_unverified")
+        require((not record["original_prefix"] or live.is_dir()) and not prefix_owned(live), "prefix_restore_unverified")
+        steam_set(path, key, restored_options, record["mapping"])
+        require(steam_values()[2:] == (restored_options, record["mapping"]), "steam_restore_unverified")
         dropins(False)
         receipt.unlink()
         run("systemctl", "--user", "start", "--no-block", "steam.service")
-        return {"state": "restored", "boot": boot, "machine": machine}
+        return {"state": "restored", "boot": boot, "machine": machine, "audio_restore": audio}
 
     require(action in {"verify", "runtime"}, "unknown_graphics_operation")
     require(gfx == "dxmt" and record and record["phase"] == "armed" and prefix_owned(live),
             "graphics_mode_not_active")
-    _path, _key, options, mapping = steam_values()
-    require(mapping == {**record["mapping"], "name": TOOL} and options == record["launch_dxmt"], "steam_settings_changed")
+    path, key, options, mapping = steam_values()
+    arguments = launch_words(options)
+    require(str(path) == record["local"] and list(key) == record["key"] and
+            mapping == {**record["mapping"], "name": TOOL} and arguments.count("--use-d3d11") == 1 and
+            arguments.index("--use-d3d11") > arguments.index("%command%"), "steam_settings_changed")
     marker = tool / "files/lib/wine/.steamac-dxmt"
     metal = tool / "files/lib/wine/x86_64-unix/winemetal.so"
     require(marker.is_file() and metal.is_file() and sha(metal) == sha(payload / "x86_64-unix/winemetal.so"),
@@ -398,19 +585,27 @@ def main(action, expected_boot):
     if action == "runtime":
         dll = live / "pfx/drive_c/windows/system32/d3d11.dll"
         verified = False
+        runtime = {}
         deadline = time.monotonic() + 18
         while time.monotonic() < deadline:
             pids = run("pgrep", "-u", str(os.getuid()), "-x", "helldivers2.exe", optional=True).split()
-            if any(pid.isdecimal() and dxmt_loaded(pid, metal, dll) for pid in pids):
+            pid = next((pid for pid in pids if pid.isdecimal() and dxmt_loaded(pid, metal, dll)), None)
+            if pid is not None:
                 verified = native_d3d11_matches(payload / "x86_64-windows/d3d11.dll", dll)
+                runtime = {"actual_graphics_argument": "--use-d3d11", "dxmt_d3d11_sha256": sha(dll),
+                           "dxmt_winemetal_sha256": sha(metal), **proton_log_signals(pid, home)}
                 break
             time.sleep(0.5)
         return {"state": "configured", "boot": boot, "machine": machine,
-                "renderer": "dxmt_loaded" if verified else "unverified"}
-    require(settings_text((live / GAME_CONFIG).read_text()) == (live / GAME_CONFIG).read_text(),
-            "taa_enabled")
-    apply_output_audio(record)
-    return {"state": "configured", "boot": boot, "machine": machine}
+                "renderer": "dxmt_loaded" if verified else "unverified", **capture_metrics(), **runtime}
+    config = game_config(live)
+    if run("pgrep", "-u", str(os.getuid()), "-ix", "helldivers2.exe", optional=True).strip():
+        hit = taa_field(read_config(config) or "")
+        require(hit is not None and hit.group(2) == "0", "taa_enabled")
+    else:
+        enforce_taa(config)
+    audio = apply_output_audio(record)
+    return {"state": "configured", "boot": boot, "machine": machine, "taa": "disabled", **audio}
 
 
 if __name__ == "__main__":

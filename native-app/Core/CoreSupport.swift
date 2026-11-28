@@ -30,6 +30,8 @@ enum CoreClock {
 final class CoreContext: @unchecked Sendable {
     private let lock = NSLock()
     private var cancelled = false
+    private var counters: [String: Int] = [:]
+    private let started = CoreClock.monotonic
     let deadline: TimeInterval
     init(timeout: TimeInterval) { deadline = CoreClock.monotonic + max(0.05, timeout) }
     func cancel() { lock.lock(); cancelled = true; lock.unlock() }
@@ -37,6 +39,16 @@ final class CoreContext: @unchecked Sendable {
     func check() throws {
         if isCancelled { throw CoreError("CANCELLED") }
         if CoreClock.monotonic >= deadline { throw CoreError("TIMEOUT") }
+    }
+    func record(_ event: String) {
+        lock.lock(); defer { lock.unlock() }
+        counters[event, default: 0] += 1
+    }
+    var measurements: [String: JSONValue] {
+        lock.lock(); defer { lock.unlock() }
+        var values = counters.mapValues { JSONValue.number(Double($0)) }
+        values["elapsed_ms"] = .number((CoreClock.monotonic - started) * 1_000)
+        return values
     }
 }
 
