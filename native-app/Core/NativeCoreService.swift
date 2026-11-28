@@ -547,15 +547,35 @@ actor NativeCoreService {
         _ = try LaunchService.checkFXEntry(request: request, fx: fx, requireRunning: false)
         guard let gvproxy = LaunchResources.gvproxyBinary else { throw CoreError("GVPROXY_UNAVAILABLE") }
         _ = try LaunchService.endpointIdentity(fx: fx, gvproxy: gvproxy, transport: transport, context: context)
+        let graphics = try GraphicsModeService.load()
+        let allowDXMT: Bool
+        if let graphics, graphics.stage == .armed, graphics.fxPath == fx.path {
+            let rows = try LaunchService.processTable(context: context)
+            let disk = try GraphicsModeService.observedDisk(fx, rows: rows, context: context)
+            guard disk == graphics.disk, try GraphicsModeService.id(ofDisk: disk) == graphics.diskIdentity,
+                  try CoreHash.sha256File(URL(fileURLWithPath: LaunchService.normalizedExecutable(fx))) == graphics.executable else {
+                throw CoreError("TARGET_CHANGED")
+            }
+            try GraphicsModeService.capability(fx)
+            allowDXMT = true
+        } else {
+            allowDXMT = false
+        }
         let session = try GuestService.connect(transport, password: request.password, passphrase: request.passphrase,
-                                               context: context) {
+                                               context: context, allowDXMT: allowDXMT) {
             try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!,
                                            transport: transport, context: context, requireCDP: false, allowPublisherNetwork: true)
+        }
+        if session.plan["graphics"]?.text == "dxmt" {
+            let guest = try transport.run("cat /etc/machine-id", timeout: 10, context: context)
+            guard guest.status == 0, guest.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == graphics?.machine else {
+                throw CoreError("TARGET_CHANGED")
+            }
         }
         if let expected = params["credential_guest_boot"]?.text, expected != session.boot { throw CoreError("CREDENTIAL_SCOPE_CHANGED") }
         var result = try GuestPrivilegedExecutor.run(transport, operation: .verify, password: request.sudoPassword,
             context: context) {
-                _ = try GuestService.verify(transport, session: session, context: context) {
+                _ = try GuestService.verify(transport, session: session, context: context, allowDXMT: allowDXMT) {
                     try LaunchService.hostIdentity(fx: fx, gvproxy: LaunchResources.gvproxyBinary!, transport: transport, context: context, requireCDP: false, allowPublisherNetwork: true)
                 }
             }
