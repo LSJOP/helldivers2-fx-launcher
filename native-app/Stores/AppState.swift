@@ -1194,7 +1194,9 @@ final class AppState: ObservableObject {
             ["reason", "diagnostic_reason", "stage", "exit_code", "steam_exit_code", "component"].contains($0.key)
         } ?? [:]
         let fxBuild = fxSelection.selectedPath.flatMap { path in
-            Bundle(url: URL(fileURLWithPath: path))?.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+            let bundle = Bundle(url: URL(fileURLWithPath: path))
+            return bundle?.object(forInfoDictionaryKey: "SteamacGitCommit") as? String
+                ?? bundle?.object(forInfoDictionaryKey: "CFBundleVersion") as? String
         }
         let report = """
         \(product)
