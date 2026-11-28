@@ -8,9 +8,10 @@ final class SSHTransport {
     private static let namespace = "\(getpid())-" + String(UUID().uuidString.prefix(8))
     // Keep each App process's Steam API tunnel separate from other running copies.
     // OpenSSH still rejects a bind race and endpointIdentity verifies its ownership.
-    private static let automaticCDPPort: Int = {
+    private static let automaticCDPPort = availableCDPPort() ?? 18094
+    private static func availableCDPPort() -> Int? {
         let fd = socket(AF_INET, SOCK_STREAM, 0)
-        guard fd >= 0 else { return 18094 }
+        guard fd >= 0 else { return nil }
         defer { close(fd) }
         var address = sockaddr_in()
         address.sin_family = sa_family_t(AF_INET)
@@ -20,15 +21,15 @@ final class SSHTransport {
                 bind(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
             }
         }
-        guard bound == 0 else { return 18094 }
+        guard bound == 0 else { return nil }
         var length = socklen_t(MemoryLayout<sockaddr_in>.size)
         let result = withUnsafeMutablePointer(to: &address) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
                 getsockname(fd, $0, &length)
             }
         }
-        return result == 0 ? Int(UInt16(bigEndian: address.sin_port)) : 18094
-    }()
+        return result == 0 ? Int(UInt16(bigEndian: address.sin_port)) : nil
+    }
     private static let ownershipLock = NSLock()
     private static var owned: Set<String> = []
     private static var reconnected: [String: Settings] = [:]
@@ -92,10 +93,40 @@ final class SSHTransport {
     }
 
     /// Setup/sudo checks own a fresh master and never alter/reuse the launch CDP tunnel.
-    static func isolatedSetup(_ configuration: [String: JSONValue]) -> SSHTransport {
+    static func isolatedSetup(_ configuration: [String: JSONValue]) throws -> SSHTransport {
+        guard let port = availableCDPPort() else { throw CoreError("SSH_LOCAL_PORT_BUSY") }
         var settings = make(configuration).settings
+        settings.cdpLocalPort = port
         settings.socketPath = "/tmp/hd2fx-setup-\(getuid())-\(UUID().uuidString).sock"
         return SSHTransport(settings: settings)
+    }
+
+    /// A local forwarding bind race can retry once without weakening host checks.
+    static func connectIsolatedSetup(_ configuration: [String: JSONValue], password: String?, passphrase: String?,
+                                     context: CoreContext, endpointIdentity: (SSHTransport) throws -> String,
+                                     onRetry: (String, Int) -> Void) throws -> SSHTransport {
+        let first = try isolatedSetup(configuration)
+        let pinnedEndpoint = try endpointIdentity(first)
+        func connect(_ candidate: SSHTransport) throws -> SSHTransport {
+            candidate.setSecret(password: password, passphrase: passphrase)
+            do {
+                try candidate.connectWhileGuestStarts(context: context, endpointIdentity: {
+                    let identity = try endpointIdentity(candidate)
+                    guard identity == pinnedEndpoint else { throw CoreError("FX_IDENTITY_UNVERIFIED") }
+                    return identity
+                }, onRetry: onRetry)
+                return candidate
+            } catch {
+                candidate.closeMaster()
+                throw error
+            }
+        }
+        do { return try connect(first) }
+        catch let failure as CoreError where failure.code == "SSH_LOCAL_PORT_BUSY" {
+            try context.check()
+            onRetry(failure.code, 2)
+            return try connect(isolatedSetup(configuration))
+        }
     }
 
     static func localHost(_ host: String) -> Bool {

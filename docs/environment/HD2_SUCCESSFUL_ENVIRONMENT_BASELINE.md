@@ -78,6 +78,12 @@ FX 的 DXMT 安装逻辑修改兼容工具与 prefix 内的 DLL。App 对原 JE 
 
 本地证据目录中，`app/SHA256SUMS.txt` SHA-256 为 `b0c14de8bfa25c625eddf5835a1377a00cdd6b46eef5b153a545e78db724b3c3`。初次交接的 `handoff/SHA256SUMS.txt` SHA-256 为 `cb2d81ed81a07961fc96370a0a1a000b13cf404d65e6660c190123ccadb58dea`。最终候选可执行文件 SHA-256 为 `fad9b4b99b0527967af0e788b4e0b3c1f7025131435f286df1982b55d9d5d437`。
 
+### v1.1.0 Stable 发布基线
+
+正式构建 `2026112801` 继承 `dev/core` 提交 `5886b11a1c4f76d8adc3ce814931a8e755cca099` 的 FX 1.9.15 舰桥、声音、首次配置、同盘切换与 DX12 恢复实机证据。发布源码保留 DX12 为默认。首次配置中的隔离 SSH 连接改用系统分配的转发端口，遇到本地绑定冲突时在同一已验证 FX 目标上重试一次。发布阶段复用历史游戏证据，不再次启动 FX。
+
+FX 1.9.12 的历史 DX12 环境另有只读归档。FX 1.9.15 的 DX12 实测使用原 Proton-JE、VKD3D-Proton 3.1.0 和 Venus/KosmicKrisp。启用 DX11 后恢复 DX12 的步骤是退出游戏，再关闭游戏性能配置中的 DX11 开关或选择「恢复 DX12」。[FX 1.9.12 历史成功环境](FEX_SUCCESS_ENVIRONMENT_REPORT_FX1912_20261115.md) · [中英文界面证据](../images/README.md) · [v1.1.0 更新日志](../../CHANGELOG.zh-CN.md#v110--2026-11-28)
+
 ### 长期维护
 
 FX、SteamOS、内核、FEX、Proton、DXMT、WMTR、驱动、音频或启动参数变更，以及 DX11/DX12 切换，先参照两套成功基准。新增实机通过的组合应增量记录版本、配置、实测结果、回归、回退方式、Git 提交和证据索引。保存历史验收和校验历史，使用仓库文档保留非敏感配置及指纹。

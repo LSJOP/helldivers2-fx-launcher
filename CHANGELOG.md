@@ -8,7 +8,17 @@ v1.0.4 (2026111601) was published on 2026-11-16. Real cross-version in-app upgra
 
 ## Unreleased
 
-- Add an opt-in DXMT mode to the development candidate, with an isolated Proton tool and prefix, runtime detection, playback-only audio, and a same-disk DX12 restore action.
+## Releases
+
+### v1.1.0 — 2026-11-28
+
+#### v1.1.0 — DirectX 11 Performance Mode
+
+- Add experimental DirectX 11 through FX’s built-in DXMT and Metal. DX12 remains the default. Enable DX11 in Game Performance, then launch from Dashboard.
+- Configure a separate Proton-JE tool and Wine prefix, select DXMT for HELLDIVERS 2, and verify that the running game loaded it. Keep game audio through the playback-only profile.
+- Switch graphics modes on the same disk while reusing the installed game and Steam Runtime. Restore the original DX12 settings after the game exits. Recovery preserves a running game and can be retried.
+- Reuse approved compatibility assets, improve first-time configuration and retry an isolated setup SSH forwarding collision once on the verified target.
+- DX11 was tested on FX 1.9.15. DX11 on FX 1.9.12, multiplayer and full combat scenarios remain unverified. The experiment disables TAA and microphone input, requires consent for DXMT’s extended Guest access, and may show a game driver prompt that needs manual confirmation.
 
 ### v1.0.8 — 2026-11-27
 

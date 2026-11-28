@@ -666,18 +666,15 @@ extension NativeCoreService {
         guard FXDiscoveryService.launchAllowed(integrity) else {
             throw CoreError("FX_ENTRY_MISMATCH", ["integrity_state": integrity["state"] ?? .string("unverified")])
         }
-        var setupSettings = SSHTransport.isolatedSetup(request.configuration).settings
-        setupSettings.cdpLocalPort = Int.random(in: 30000...59000)
-        let transport = SSHTransport(settings: setupSettings)
-        defer { transport.closeMaster() }
-        guard SSHTransport.localHost(transport.settings.host) else { throw CoreError("LOCAL_FX_REQUIRED") }
         guard let gvproxy = LaunchResources.gvproxyBinary else { throw CoreError("GVPROXY_UNAVAILABLE") }
-        transport.setSecret(password: request.password, passphrase: request.passphrase)
-        try transport.connectWhileGuestStarts(context: context, endpointIdentity: {
-            try LaunchService.endpointIdentity(fx: fx, gvproxy: gvproxy, transport: transport, context: context)
+        let transport = try SSHTransport.connectIsolatedSetup(
+            request.configuration, password: request.password, passphrase: request.passphrase,
+            context: context, endpointIdentity: { candidate in
+            try LaunchService.endpointIdentity(fx: fx, gvproxy: gvproxy, transport: candidate, context: context)
         }, onRetry: { code, attempt in
             emit("INFO", "SSH handshake retry", ["reason": .string(code), "attempt": .number(Double(attempt))])
         })
+        defer { transport.closeMaster() }
         let backend = try SSHEnvironmentBackend(fx: fx, transport: transport, context: context, revision: ConfigurationService.read().revision)
         backend.archiveProgress = { component, phase in
             emit("INFO", "Bundle archive stage", ["kind": .string("bundle_archive_stage"),

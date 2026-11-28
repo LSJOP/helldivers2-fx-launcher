@@ -1,6 +1,6 @@
 <div align="center">
 
-v1.0.8 修复 FX 1.9.9 新用户环境的 Steam Runtime 4 自动安装和 RF FEX 复验。首页和首次配置共用部署事务，优先使用已校验的内置 RF FEX 与 Proton-JE。见 [FX 1.9.9 验收记录](docs/testing/FX199_FRESH_USER_BASELINE.md)。
+v1.1.0 为 FX Steam Launcher 1.9.15 加入实验性 DirectX 11 高性能模式。安装和升级后，DirectX 12 仍为默认模式。
   <img src="docs/assets/app-icon.png" width="128" alt="绝地潜兵 2 FX 启动器 icon">
   <h1>绝地潜兵 2 FX 启动器</h1>
   <p>HELLDIVERS 2 FX Launcher · Apple Silicon macOS</p>
@@ -9,26 +9,30 @@ v1.0.8 修复 FX 1.9.9 新用户环境的 Steam Runtime 4 自动安装和 RF FEX
 [简体中文](README.zh-CN.md) | [English](README.md)
 
 <!-- stable-download:start -->
-### [🟨 ⬇️ 下载 绝地潜兵 2 FX 启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.8-macOS-arm64.dmg)
+### [🟨 ⬇️ 下载 绝地潜兵 2 FX 启动器 最新正式版](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.1.0-macOS-arm64.dmg)
 
-**🟨 Stable Release · v1.0.8** · **macOS · Apple Silicon / arm64**
+**🟨 Stable Release · v1.1.0** · **macOS · Apple Silicon / arm64**
 
-**[⬇️ 立即下载 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.8-macOS-arm64.dmg)** · [查看所有版本](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**[⬇️ 立即下载 DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.1.0-macOS-arm64.dmg)** · [查看所有版本](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
 <!-- stable-download:end -->
 
 ## 简体中文
 
 绝地潜兵 2 FX 启动器是面向 Apple Silicon Mac 的第三方社区启动与管理工具，使用 SwiftUI 和原生核心，帮助用户检查 FX 环境、配置运行环境和管理游戏性能设置。
 
-FX 1.9.9 测试盘已恢复历史验证的 RF 运行组件，通过 GUI 启动游戏，主菜单／飞船获用户确认；单人、多人及自动更新完整闭环仍未测试。正式 FX 1.9.12 仅离线只读调查。见[修复证据](docs/environment/FX199_RF_REPAIR_20261114.md)。
+DX12 沿用原启动流程。参考记录覆盖 FX 1.9.12 的历史 Vulkan 环境，以及 FX 1.9.15 已通过实测的同盘 DX12 恢复。[FX 1.9.12 历史记录](docs/environment/FEX_SUCCESS_ENVIRONMENT_REPORT_FX1912_20261115.md) · [图形环境基准](docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)
 
-### 实验性图形模式（开发分支）
+### DirectX 11 高性能模式（实验性）
 
-在游戏性能配置页启用 DirectX 11（DXMT），然后使用总览原有的启动按钮。开发候选复用同一磁盘上的 Steam 游戏和 Runtime，并为 HELLDIVERS 2 的 DXMT 模式提供独立的兼容工具与前缀。退出游戏后再关闭 DX11 或使用「恢复 DX12」。FX 1.9.15 上的 DXMT 已在测试盘实测。DXMT 可能扩大 Guest 对 Mac 的访问范围，需主动确认。实验模式采用仅输出音频并关闭 TAA。[图形成功环境基准及验收结果](docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md#dx11--dxmt-已验证成功环境--2026-11-28)
+在游戏性能配置页启用 DirectX 11（DXMT），然后从总览启动。App 自动配置独立的 Proton-JE 工具和 Wine 前缀。FX 内置 DXMT 通过 Metal 渲染，并保留游戏声音。两种模式共用已有游戏、Steam Runtime 和虚拟磁盘，无需重新下载游戏或复制磁盘。退出游戏后再关闭 DX11，或点击「恢复 DX12」以恢复原配置。
+
+DX11 已在 FX 1.9.15 实机验证，FX 1.9.12 的 DX11 和多人联机尚未完成本轮验收。DXMT 可能扩大 Guest 对 Mac 的访问范围，需主动确认。当前配置关闭 TAA 和麦克风输入。游戏可能提示驱动版本，需要手动选择继续。[图形环境和恢复方法](docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md#dx11--dxmt-已验证成功环境--2026-11-28)
+
+Apple M4 Pro、24 GB 统一内存，1280×800 舰桥同场景短测的游戏帧率中位数为 **DX12 42 FPS**、**DX11 + DXMT 98 FPS**，约 **2.33 倍**。两组音频模式和宿主内存压力存在差异，结果仅覆盖本次场景和设备。[测试条件](docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md#验收索引和限界)
 
 ### 软件截图
 
-截图来自隔离 Debug 构建。软件更新面板的截图使用捕获专用 App，服务显示未配置。见[截图记录](docs/images/README.md)。
+DX11 截图复用版本号为 v1.0.8 的真实验收候选。其余截图来自早期隔离 Debug 构建。[截图记录](docs/images/README.md)
 
 总览 V003 集中提供基于路径的 FX 实例选择与控制，运行环境保留高级诊断。滚动条隐藏，页面仍可滚动。四张状态卡显示 FX、Steam、EAC 和联机，Guest 证据在运行环境查看。
 
@@ -39,6 +43,10 @@ FX 1.9.9 测试盘已恢复历史验证的 RF 运行组件，通过 GUI 启动�
 | ![运行环境](docs/images/zh-CN/environment.png) | ![日志](docs/images/zh-CN/logs.png) |
 | 游戏性能配置 | 设置 |
 | ![游戏性能配置](docs/images/zh-CN/performance.png) | ![设置](docs/images/zh-CN/settings.png) |
+| 总览的 DX11 模式 | DXMT 图形设置 |
+| ![总览的 DX11 模式](docs/images/zh-CN/dxmt-dashboard.png) | ![DXMT 图形设置](docs/images/zh-CN/dxmt-performance.png) |
+
+[DXMT 首次启用风险提示](docs/images/zh-CN/dxmt-consent.png)
 
 ### 主要功能
 
@@ -57,7 +65,7 @@ FX 1.9.9 测试盘已恢复历史验证的 RF 运行组件，通过 GUI 启动�
 ### 安装说明
 
 <!-- stable-install:start -->
-当前 App：`1.0.8`（构建 `2026112703`），适用于 macOS 14+ Apple Silicon arm64。采用 ad-hoc 签名，无 Apple Developer ID 签名，未经 Apple 公证。Gatekeeper 可能拦截下载副本；打开前核对 [SHA-256 文件](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt)。若被拦截，对已核验 App 使用「隐私与安全性 → 仍要打开」。
+当前 App：`1.1.0`（构建 `2026112801`），适用于 macOS 14+ Apple Silicon arm64。采用 ad-hoc 签名，无 Apple Developer ID 签名，未经 Apple 公证。Gatekeeper 可能拦截下载副本；打开前核对 [SHA-256 文件](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt)。若被拦截，对已核验 App 使用「隐私与安全性 → 仍要打开」。
 <!-- stable-install:end -->
 
 1. 从正式 Release 下载 macOS arm64 DMG。
@@ -71,24 +79,19 @@ FX 1.9.9 测试盘已恢复历史验证的 RF 运行组件，通过 GUI 启动�
 
 ### 已知问题
 
-FX 1.9.9 历史实测记录了游戏主菜单及飞船。单人、EAC、多人及全新环境部署仍待验证。
-
-
-- FX 和 SteamOS 兼容性取决于所选构建和实测能力。当前启动路径有已记录的代理不匹配问题。安全停止或重启 FX 暂不可用。
-- 实验性 FX 运行组件候选曾在真实 Guest 中构建成功，但可执行文件的哈希未通过部署审核。候选的安装、恢复和游戏兼容性均待验证。其他 Proton-JE 构建和全新 SteamOS 部署仍需验收。
-- 首次配置现在会在 FX 运行组件缺失时自动进入修复，并区分权限、可执行位、架构、完整性和实际运行失败。公开 RF 资源及已验证备用下载仍待完成来源和再分发审核，因此全新用户安装会如实阻塞，不会使用未经审核的二进制。
-- 11 月 5 日的历史 Native 构建曾进入游戏主菜单／舰桥。正式包启动、单人任务、EAC 和多人联机仍需分别验证。
+- FX 和 SteamOS 兼容性取决于所选构建与运行环境。DX11 本轮从已安装游戏验证至舰桥，其他 Proton 版本、实体麦克风及游戏内语音不在本轮验收范围内。
+- 部分 Guest 可能遇到 Steam 登录或驱动提示。App 保留原 DX12 环境供恢复。
 - v1.0.1 会在 ZIP 安全检查时拒绝已发布的 v1.0.2 更新包，请使用 DMG 升级。App 使用 ad-hoc 签名且未经公证，可能受到 Gatekeeper 拦截。
 - [验收报告](docs/acceptance/RELEASE_READINESS_REPORT.md) · [已知问题详情](docs/acceptance/KNOWN_ISSUES.md) · [首次运行验收](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md) · [更新机制](docs/NATIVE_UPDATES.md) · [性能设置限制](docs/GAME_PERFORMANCE.md)
 
 ### v1.0.7 组件审核
 
-v1.0.7 审核候选将 RF FEX 和 Proton-JE 的许可权利、制品来源与实机验收分开记录。候选 RF 包排除两个无法确认授权的 Steam 回收脚本，改用项目自有 wrapper 和 FEX MIT 声明。Proton-JE 归档绑定上游标签、二进制校验值和 62 个递归源码子模块。该工作尚不是 Stable 发布：仍须公布对应源码、使用现有密钥签名，并完成真实 Guest/游戏验收。见 [RF 审核](docs/audits/RF_FEX_Redistribution_Audit.md)、[Proton-JE 审核](docs/audits/Proton_JE_Redistribution_Audit.md) 和 [v1.0.7 就绪报告](docs/acceptance/v1.0.7_Release_Readiness.md)。
+v1.0.7 审核记录了 RF FEX 和 Proton-JE 的许可、来源及实机验收。RF 包使用项目自有 wrapper 与 FEX MIT 声明。Proton-JE 归档绑定上游标签、二进制校验值和 62 个递归源码子模块。[RF 审核](docs/audits/RF_FEX_Redistribution_Audit.md) · [Proton-JE 审核](docs/audits/Proton_JE_Redistribution_Audit.md) · [v1.0.7 就绪报告](docs/acceptance/v1.0.7_Release_Readiness.md)
 
 ### 更新日志
 
 <!-- stable-version:start -->
-[v1.0.8 — 2026-11-27](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · 正式稳定版，构建 `2026112703`。见[发布说明](CHANGELOG.zh-CN.md)。
+[v1.1.0 — 2026-11-28](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · 正式稳定版，构建 `2026112801`。见[发布说明](CHANGELOG.zh-CN.md)。
 <!-- stable-version:end -->
 
 当前功能状态、验证范围和未合并成果见[功能索引](docs/FEATURE_REGISTRY.md)、[更新日志](CHANGELOG.zh-CN.md)及[原版启动器历史](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script)。

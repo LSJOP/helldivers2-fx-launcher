@@ -31,10 +31,12 @@ import Darwin
               "automatic tunnel port is stable within this App process")
         let customPort = SSHTransport.make(["ssh": .object(["cdp_local_port": .number(19094)])])
         check(customPort.settings.cdpLocalPort == 19094, "explicit custom tunnel port is retained")
-        let isolatedA = SSHTransport.isolatedSetup([:]), isolatedB = SSHTransport.isolatedSetup([:])
+        let isolatedA = try SSHTransport.isolatedSetup([:]), isolatedB = try SSHTransport.isolatedSetup([:])
         check(isolatedA.settings.socketPath != isolatedB.settings.socketPath, "setup actions own distinct SSH masters")
         check(isolatedA.settings.socketPath != transport.settings.socketPath, "setup never occupies the launch tunnel socket")
         check(isolatedA.settings.host == transport.settings.host && isolatedA.settings.port == transport.settings.port, "setup retains effective local endpoint")
+        check(isolatedA.settings.cdpLocalPort >= 1024 && isolatedA.settings.cdpLocalPort <= 65_535,
+              "setup uses a kernel-selected nonprivileged tunnel port")
         let binding = try SSHEnvironmentBackend.deploymentBinding("100|[200]|300|127.0.0.1:2222|fixture-start", fxPath: "/fixture/FX.app")
         check(binding == (try SSHEnvironmentBackend.deploymentBinding("100|[200]|301|127.0.0.1:2222|fixture-start", fxPath: "/fixture/FX.app")), "new authenticated master preserves deployment target")
         check(binding != (try SSHEnvironmentBackend.deploymentBinding("101|[200]|301|127.0.0.1:2222|fixture-start", fxPath: "/fixture/FX.app")), "changed FX process invalidates deployment target")

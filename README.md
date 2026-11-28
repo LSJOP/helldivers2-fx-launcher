@@ -1,6 +1,6 @@
 <div align="center">
 
-v1.0.8 fixes automatic Steam Runtime 4 installation and the RF FEX verification path on a restored FX 1.9.9 environment. The Dashboard and First-Run Setup share the same transaction, with verified bundled RF FEX and Proton-JE. See the [FX 1.9.9 acceptance record](docs/testing/FX199_FRESH_USER_BASELINE.md) for live results.
+v1.1.0 adds an experimental DirectX 11 performance mode for FX Steam Launcher 1.9.15. DirectX 12 remains the default after installation or upgrade.
   <img src="docs/assets/app-icon.png" width="128" alt="HD2 FX Launcher icon">
   <h1>HELLDIVERS 2 FX Launcher</h1>
   <p>HELLDIVERS 2 FX Launcher · Apple Silicon macOS</p>
@@ -9,26 +9,30 @@ v1.0.8 fixes automatic Steam Runtime 4 installation and the RF FEX verification 
 [简体中文](README.zh-CN.md) | [English](README.md)
 
 <!-- stable-download:start -->
-### [🟨 ⬇️ Download HD2 FX Launcher — Latest Stable](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.8-macOS-arm64.dmg)
+### [🟨 ⬇️ Download HD2 FX Launcher — Latest Stable](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.1.0-macOS-arm64.dmg)
 
-**🟨 Stable Release · v1.0.8** · **macOS · Apple Silicon / arm64**
+**🟨 Stable Release · v1.1.0** · **macOS · Apple Silicon / arm64**
 
-**[⬇️ Download DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.0.8-macOS-arm64.dmg)** · [All Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
+**[⬇️ Download DMG](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/HD2FXNative-v1.1.0-macOS-arm64.dmg)** · [All Releases](https://github.com/LSJOP/helldivers2-fx-launcher/releases)
 <!-- stable-download:end -->
 
 ## English
 
 HELLDIVERS 2 FX Launcher is an unofficial community launcher and management tool for Apple Silicon Macs. Built with SwiftUI and a native core, it helps users inspect FX, configure the runtime environment and manage game performance settings.
 
-FX 1.9.9 test-Guest repair now reaches the game through the GUI with the historically verified RF runtime components. Main menu/ship was confirmed by the user; single-player, multiplayer and end-to-end updating remain untested. Production FX 1.9.12 was inspected offline without writes. See [repair evidence](docs/environment/FX199_RF_REPAIR_20261114.md).
+DX12 retains the existing startup workflow. The reference records cover the historical FX 1.9.12 Vulkan environment and the verified FX 1.9.15 same-disk DX12 restore. [FX 1.9.12 history](docs/environment/FEX_SUCCESS_ENVIRONMENT_REPORT_FX1912_20261115.md) · [Graphics environment baseline](docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md)
 
-### Experimental graphics mode (development branch)
+### DirectX 11 performance mode (experimental)
 
-Enable DirectX 11 (DXMT) in Game Performance, then use the existing Dashboard launch button. The development candidate keeps the Steam-managed game files and runtime on one disk and gives HELLDIVERS 2 an isolated compatibility tool and prefix for DXMT. Exit the game before switching off DX11 or using Restore DX12. DXMT on FX 1.9.15 has been verified on the test disk. The experiment requires consent because DXMT can extend the guest’s access to the Mac. It uses playback-only audio and disables TAA. [Graphics environment baseline and test results](docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md#dx11--dxmt-已验证成功环境--2026-11-28)
+Enable DirectX 11 (DXMT) in Game Performance and launch from Dashboard. The App sets up an isolated Proton-JE tool and Wine prefix. Built-in FX DXMT renders the game through Metal with game audio. Both modes reuse the game installation, Steam Runtime and virtual disk, so switching requires neither a game download nor a full disk copy. Exit the game before switching off DX11 or using **Restore DX12** to restore the previous DX12 configuration.
+
+DX11 was tested on FX 1.9.15. DX11 on FX 1.9.12 and multiplayer are unverified for this release. DXMT can extend the Guest’s access to the Mac and requires consent. The current configuration disables TAA and microphone input. The game may ask you to continue past a driver version prompt. [Graphics environment and recovery](docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md#dx11--dxmt-已验证成功环境--2026-11-28)
+
+On an Apple M4 Pro with 24 GB of unified memory, a short ship-bridge comparison at 1280×800 recorded median game performance of **42 FPS in DX12** and **98 FPS in DX11 + DXMT**, about **2.33×**. Audio modes and host memory pressure differed. The comparison covers this scene and test hardware. [Test conditions](docs/environment/HD2_SUCCESSFUL_ENVIRONMENT_BASELINE.md#验收索引和限界)
 
 ### Screenshots
 
-Screenshots come from isolated Debug builds. The update panel capture uses a separate App identity and shows the service as unconfigured. See [capture provenance](docs/images/README.md).
+The DX11 screenshots reuse real v1.0.8-numbered acceptance candidates. The remaining screenshots come from earlier isolated Debug builds. [Capture provenance](docs/images/README.md)
 
 Dashboard V003 consolidates FX controls and path-based selection, keeps advanced diagnostics in Environment, and hides scroll indicators while preserving scrolling. Four status cards show FX, Steam, EAC and multiplayer. Guest evidence remains in Environment.
 
@@ -39,6 +43,10 @@ Dashboard V003 consolidates FX controls and path-based selection, keeps advanced
 | ![Environment](docs/images/en/environment.png) | ![Logs](docs/images/en/logs.png) |
 | Game Performance | Settings |
 | ![Game Performance](docs/images/en/performance.png) | ![Settings](docs/images/en/settings.png) |
+| Dashboard with DX11 selected | DXMT graphics settings |
+| ![Dashboard with DX11 selected](docs/images/en/dxmt-dashboard.png) | ![DXMT graphics settings](docs/images/en/dxmt-performance.png) |
+
+[DXMT first-use risk prompt](docs/images/en/dxmt-consent.png)
 
 ### Features
 
@@ -57,7 +65,7 @@ The Logs page displays local system time, streams bounded task events, supports 
 ### Installation
 
 <!-- stable-install:start -->
-Current App: `1.0.8` (build `2026112703`), macOS 14+ Apple Silicon arm64. Ad-hoc signed; no Apple Developer ID signature or Apple notarization. Gatekeeper may block the download. Verify the [SHA-256 file](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt) before opening. If blocked, use Privacy & Security → Open Anyway for the verified App.
+Current App: `1.1.0` (build `2026112801`), macOS 14+ Apple Silicon arm64. Ad-hoc signed; no Apple Developer ID signature or Apple notarization. Gatekeeper may block the download. Verify the [SHA-256 file](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest/download/SHA256SUMS.txt) before opening. If blocked, use Privacy & Security → Open Anyway for the verified App.
 <!-- stable-install:end -->
 
 1. Download the macOS arm64 DMG from the published release.
@@ -71,24 +79,19 @@ For source builds, see the [development guide](docs/NATIVE_DEVELOPMENT.md).
 
 ### Known Issues
 
-Earlier FX 1.9.9 testing reached the game menu and ship. Single-player, EAC, multiplayer and fresh environment deployment remain unverified.
-
-
-- FX and SteamOS compatibility depends on the selected build and runtime evidence. The current launch path has a recorded proxy mismatch. Safe FX stop/restart remains unavailable.
-- A real Guest built an experimental FX runtime candidate. Its executable hash failed deployment review. Candidate installation, recovery and game compatibility remain unverified. Alternate Proton-JE builds and fresh SteamOS deployment require validation.
-- First-run setup now enters automatic repair when the FX runtime is missing and distinguishes permission, executable, architecture, integrity and runtime failures. The public RF payload and verified fallback are still awaiting provenance and redistribution approval, so real fresh-user installation remains blocked rather than using an unreviewed binary.
-- A historical Native build reached the game menu/ship on November 5. Final-package launch, single-player missions, EAC and multiplayer remain separately unverified.
+- FX and SteamOS compatibility depends on the selected build and runtime. The DX11 evaluation covered an installed game and ended at the ship bridge. Alternate Proton builds, physical microphones and in-game voice remain outside that evaluation.
+- Some Guests can encounter Steam sign-in or driver prompts. The App keeps the prior DX12 setup available for recovery.
 - v1.0.1 rejects the published v1.0.2 update archive during ZIP safety checks. Use the DMG for this upgrade. Gatekeeper may block the ad-hoc signed, unnotarized App.
 - [Acceptance report](docs/acceptance/RELEASE_READINESS_REPORT.md) · [Known issues detail](docs/acceptance/KNOWN_ISSUES.md) · [First-run acceptance](docs/testing/NATIVE_FIRST_RUN_ACCEPTANCE.md) · [Update integration](docs/NATIVE_UPDATES.md) · [Performance limits](docs/GAME_PERFORMANCE.md)
 
 ### v1.0.7 component review
 
-The v1.0.7 review candidate records RF FEX and Proton-JE rights, provenance and runtime acceptance independently. The candidate RF package removes two recovered Steam scripts with unverified rights and uses a project-owned wrapper plus the FEX MIT notice. The Proton-JE archive is bound to its upstream tag, binary checksums and 62 recursive source submodules. This work is not yet a Stable release: corresponding-source publication, existing-key update signatures and real Guest/game acceptance remain required. See the [RF audit](docs/audits/RF_FEX_Redistribution_Audit.md), [Proton-JE audit](docs/audits/Proton_JE_Redistribution_Audit.md) and [v1.0.7 readiness](docs/acceptance/v1.0.7_Release_Readiness.md).
+The v1.0.7 review recorded RF FEX and Proton-JE rights, provenance and runtime acceptance. The RF package uses a project-owned wrapper and the FEX MIT notice. The Proton-JE archive is bound to its upstream tag, binary checksums and 62 recursive source submodules. [RF audit](docs/audits/RF_FEX_Redistribution_Audit.md) · [Proton-JE audit](docs/audits/Proton_JE_Redistribution_Audit.md) · [v1.0.7 readiness](docs/acceptance/v1.0.7_Release_Readiness.md)
 
 ### Changelog
 
 <!-- stable-version:start -->
-[v1.0.8 — 2026-11-27](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · Stable release, build `2026112703`. See [release notes](CHANGELOG.md).
+[v1.1.0 — 2026-11-28](https://github.com/LSJOP/helldivers2-fx-launcher/releases/latest) · Stable release, build `2026112801`. See [release notes](CHANGELOG.md).
 <!-- stable-version:end -->
 
 For current feature status, verification and unmerged work, see the [feature registry](docs/FEATURE_REGISTRY.md), [changelog](CHANGELOG.md) and [original launcher history](https://github.com/LSJOP/helldivers2-fx-launcher/tree/legacy-script).
